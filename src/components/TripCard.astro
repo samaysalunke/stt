@@ -1,0 +1,146 @@
+---
+import Badge from './Badge.astro';
+
+interface Props {
+  slug: string;
+  name: string;
+  status: string;
+  featuredImage?: string | null;
+  shortDescription: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  duration?: string | null;
+  pricePerPerson?: number | null;
+  difficulty?: string | null;
+  maxGroupSize?: number | null;
+  currentBookings?: number | null;
+  categories?: readonly string[] | string[];
+}
+
+const {
+  slug,
+  name,
+  status,
+  featuredImage,
+  shortDescription,
+  startDate,
+  endDate,
+  duration,
+  pricePerPerson,
+  difficulty,
+  maxGroupSize,
+  currentBookings,
+  categories = [],
+} = Astro.props;
+
+const seatsLeft = maxGroupSize && currentBookings !== null && currentBookings !== undefined
+  ? maxGroupSize - currentBookings
+  : null;
+
+const formattedPrice = pricePerPerson
+  ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(pricePerPerson)
+  : null;
+
+function formatDate(d: string | null | undefined) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop&q=80';
+---
+
+<article class="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group flex flex-col">
+  <!-- Image -->
+  <a href={`/trips/${slug}/`} class="block relative overflow-hidden aspect-[16/10]">
+    <img
+      src={featuredImage ?? placeholderImg}
+      alt={name}
+      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      loading="lazy"
+    />
+    <!-- Overlay gradient -->
+    <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <!-- Status badge top-left -->
+    <div class="absolute top-3 left-3">
+      <Badge variant="status" value={status} />
+    </div>
+    {seatsLeft !== null && seatsLeft <= 5 && seatsLeft > 0 && (
+      <div class="absolute top-3 right-3">
+        <span class="px-2.5 py-1 rounded-full text-xs font-bold text-white" style="background-color: var(--color-danger);">
+          {seatsLeft} left!
+        </span>
+      </div>
+    )}
+    {seatsLeft === 0 && (
+      <div class="absolute inset-0 flex items-center justify-center">
+        <span class="text-white font-bold text-lg bg-black/60 px-4 py-2 rounded-lg">Sold Out</span>
+      </div>
+    )}
+  </a>
+
+  <!-- Content -->
+  <div class="p-5 flex flex-col flex-1">
+    <!-- Category pills -->
+    {categories.length > 0 && (
+      <div class="flex flex-wrap gap-1.5 mb-2.5">
+        {categories.slice(0, 3).map((cat) => (
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full capitalize" style="background-color: var(--color-primary-light); color: var(--color-primary);">
+            {cat}
+          </span>
+        ))}
+      </div>
+    )}
+
+    <h3 class="font-display font-bold text-lg leading-snug mb-2 group-hover:opacity-80 transition-opacity">
+      <a href={`/trips/${slug}/`} class="hover:underline">{name}</a>
+    </h3>
+
+    <p class="text-sm leading-relaxed mb-4 flex-1" style="color: var(--color-text-secondary);">
+      {shortDescription}
+    </p>
+
+    <!-- Trip meta -->
+    <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs mb-4" style="color: var(--color-text-secondary);">
+      {startDate && (
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {formatDate(startDate)}
+        </span>
+      )}
+      {duration && (
+        <span class="flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {duration}
+        </span>
+      )}
+      {difficulty && <Badge variant="difficulty" value={difficulty} />}
+    </div>
+
+    <!-- Price + CTA -->
+    <div class="flex items-center justify-between pt-4 border-t" style="border-color: var(--color-border);">
+      <div>
+        {formattedPrice ? (
+          <div>
+            <span class="text-xl font-display font-extrabold" style="color: var(--color-primary);">
+              {formattedPrice}
+            </span>
+            <span class="text-xs ml-1" style="color: var(--color-text-secondary);">/ person</span>
+          </div>
+        ) : (
+          <span class="text-sm font-medium" style="color: var(--color-text-secondary);">Price TBD</span>
+        )}
+      </div>
+      <a
+        href={`/trips/${slug}/`}
+        class="font-bold text-sm text-white px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
+        style={`background-color: ${status === 'sold-out' ? 'var(--color-text-secondary)' : 'var(--color-accent)'};`}
+      >
+        {status === 'sold-out' ? 'View Details' : 'Book Now →'}
+      </a>
+    </div>
+  </div>
+</article>

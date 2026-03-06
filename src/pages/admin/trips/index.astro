@@ -1,0 +1,142 @@
+---
+export const prerender = false;
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listTrips } from '../../../lib/content';
+
+const trips = listTrips();
+
+const statusColors: Record<string, string> = {
+  'booking-open': '#16a34a',
+  'upcoming':     '#2563eb',
+  'draft':        '#6b7280',
+  'sold-out':     '#dc2626',
+  'completed':    '#7c3aed',
+};
+const statusLabels: Record<string, string> = {
+  'booking-open': 'Booking Open',
+  'upcoming':     'Upcoming',
+  'draft':        'Draft',
+  'sold-out':     'Sold Out',
+  'completed':    'Completed',
+};
+---
+
+<AdminLayout title="Trips" activeTab="trips">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Trips</h1>
+    <a href="/admin/trips/new" style="background:var(--color-primary); color:white; padding:0.5rem 1.25rem; border-radius:0.5rem; text-decoration:none; font-weight:600; font-size:0.875rem;">+ New Trip</a>
+  </div>
+
+  {trips.length === 0 ? (
+    <div style="text-align:center; padding:4rem 2rem; color:var(--color-text-secondary);">
+      <p style="font-size:1.1rem; margin-bottom:1rem;">No trips yet.</p>
+      <a href="/admin/trips/new" style="background:var(--color-primary); color:white; padding:0.6rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">Create your first trip</a>
+    </div>
+  ) : (
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
+    <div style="background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; overflow:hidden; min-width:600px;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid var(--color-border);">
+            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Name</th>
+            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Status</th>
+            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Dates</th>
+            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Price</th>
+            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Bookings</th>
+            <th style="text-align:right; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trips.map((trip, i) => (
+            <tr style={`border-bottom:1px solid var(--color-border); ${i % 2 === 0 ? '' : 'background:rgba(255,255,255,0.02);'}`}>
+              <td style="padding:0.75rem 1rem;">
+                <div style="font-weight:600; color:var(--color-text-primary);">{trip.name || trip.slug}</div>
+                <div style="color:var(--color-text-muted); font-size:0.75rem; margin-top:0.1rem;">{trip.slug}</div>
+              </td>
+              <td style="padding:0.75rem 1rem;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span style={`display:inline-block; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.75rem; font-weight:600; background:${statusColors[trip.status] ?? '#6b7280'}22; color:${statusColors[trip.status] ?? '#6b7280'};`}>
+                    {statusLabels[trip.status] ?? trip.status}
+                  </span>
+                  <select
+                    class="status-select"
+                    data-slug={trip.slug}
+                    style="font-size:0.75rem; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); border-radius:0.3rem; padding:0.15rem 0.4rem; cursor:pointer;"
+                  >
+                    {['booking-open','upcoming','draft','sold-out','completed'].map(s => (
+                      <option value={s} selected={s === trip.status}>{statusLabels[s]}</option>
+                    ))}
+                  </select>
+                </div>
+              </td>
+              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
+                {trip.startDate ? `${trip.startDate}${trip.endDate ? ' → ' + trip.endDate : ''}` : '—'}
+              </td>
+              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
+                {trip.pricePerPerson ? `₹${Number(trip.pricePerPerson).toLocaleString('en-IN')}` : '—'}
+              </td>
+              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
+                {trip.currentBookings ?? 0} / {trip.maxGroupSize ?? '?'}
+              </td>
+              <td style="padding:0.75rem 1rem; text-align:right;">
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                  <a href={`/admin/trips/${trip.slug}`} style="font-size:0.8rem; color:var(--color-primary); text-decoration:none; border:1px solid var(--color-primary); border-radius:0.35rem; padding:0.2rem 0.65rem; font-weight:500;">Edit</a>
+                  <button
+                    class="delete-trip-btn"
+                    data-slug={trip.slug}
+                    data-name={trip.name || trip.slug}
+                    style="font-size:0.8rem; color:#dc2626; background:none; border:1px solid #dc2626; border-radius:0.35rem; padding:0.2rem 0.65rem; cursor:pointer; font-weight:500;"
+                  >Delete</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+// Quick status toggle
+document.querySelectorAll('.status-select').forEach(sel => {
+  sel.addEventListener('change', async (e) => {
+    const target = e.target as HTMLSelectElement;
+    const slug = target.dataset.slug!;
+    const status = target.value;
+    try {
+      const res = await fetch('/api/admin/trips/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, status }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      window.location.reload();
+    } catch {
+      alert('Failed to update status. Try again.');
+    }
+  });
+});
+
+// Delete trip
+document.querySelectorAll('.delete-trip-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const target = e.target as HTMLButtonElement;
+    const slug = target.dataset.slug!;
+    const name = target.dataset.name!;
+    if (!confirm(`Delete trip "${name}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch('/api/admin/trips/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      window.location.reload();
+    } catch {
+      alert('Failed to delete trip. Try again.');
+    }
+  });
+});
+</script>

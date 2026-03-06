@@ -1,0 +1,58 @@
+---
+import '../../styles/global.css';
+export const prerender = false;
+
+const hasError = Astro.url.searchParams.get('error') === '1';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login — Seek the Thrill</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body style="background-color: var(--color-primary-dark); min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: var(--font-sans);">
+    <div style="background: white; border-radius: 1rem; padding: 2.5rem; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏔️</div>
+        <h1 style="font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: var(--color-primary-dark); margin: 0 0 0.25rem;">STT Admin</h1>
+        <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">Seek the Thrill Dashboard</p>
+      </div>
+
+      {hasError && (
+        <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 0.5rem; padding: 0.75rem 1rem; margin-bottom: 1.25rem; color: #DC2626; font-size: 0.875rem;">
+          Incorrect password. Please try again.
+        </div>
+      )}
+
+      <form method="POST" action="/api/admin/login">
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 0.4rem;">
+            Password
+          </label>
+          <input
+            type="password"
+            name="password"
+            required
+            autofocus
+            placeholder="Enter admin password"
+            style="width: 100%; padding: 0.65rem 0.875rem; border: 1.5px solid var(--color-border); border-radius: 0.5rem; font-size: 0.95rem; font-family: var(--font-sans); outline: none; box-sizing: border-box; transition: border-color 0.15s;"
+          />
+        </div>
+        <button
+          type="submit"
+          style="width: 100%; padding: 0.75rem; background-color: var(--color-primary); color: white; border: none; border-radius: 0.5rem; font-size: 0.95rem; font-weight: 700; font-family: var(--font-sans); cursor: pointer;"
+        >
+          Login
+        </button>
+      </form>
+
+      <p style="text-align: center; margin-top: 1.5rem; margin-bottom: 0;">
+        <a href="/" style="color: var(--color-text-secondary); font-size: 0.8rem; text-decoration: none;">← Back to website</a>
+      </p>
+    </div>
+  </body>
+</html>

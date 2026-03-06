@@ -1,0 +1,106 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const allAlbums = await reader.collections.albums.all();
+const albums = allAlbums
+  .filter((a) => a.entry.published)
+  .sort((a, b) => (b.entry.date ?? '').localeCompare(a.entry.date ?? ''));
+
+function formatDate(d: string | null | undefined) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+const placeholderImgs = [
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=600&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=600&auto=format&fit=crop&q=80',
+];
+---
+
+<BaseLayout
+  title="Photo Vault — Seek the Thrill"
+  description="Browse photos from all our past adventures. Relive the memories from our group trips across India."
+>
+  <!-- Hero -->
+  <section
+    class="relative flex items-center justify-center overflow-hidden pt-20"
+    style="height: 35vh; background-image: url('https://images.unsplash.com/photo-1533669955142-6a73332af4db?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
+    <div class="relative z-10 text-center px-4">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">
+        Our Adventures in Pictures
+      </h1>
+      <p class="text-base md:text-lg text-white/80">Relive the memories from our past trips</p>
+    </div>
+  </section>
+
+  <!-- Albums grid -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-surface);">
+    <div class="container-app">
+      {albums.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {albums.map((album, i) => (
+            <a
+              href={`/photo-vault/${album.slug}/`}
+              class="group block relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
+              style="aspect-ratio: 4/3;"
+            >
+              <img
+                src={album.entry.coverImage ?? placeholderImgs[i % placeholderImgs.length]}
+                alt={`${(album.entry.name as string) || album.slug} album`}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
+                  {(album.entry.name as string) || album.slug}
+                </h3>
+                {album.entry.location && (
+                  <p class="text-white/80 text-sm flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    {album.entry.location}
+                  </p>
+                )}
+                <div class="flex items-center justify-between mt-2">
+                  <span class="text-white/60 text-xs">{formatDate(album.entry.date)}</span>
+                  <span class="text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    View Album →
+                  </span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <!-- Placeholder albums when none exist -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { title: 'Spiti Valley 2023', loc: 'Himachal Pradesh', img: placeholderImgs[0] },
+            { title: 'Gokarna Beach 2024', loc: 'Karnataka', img: placeholderImgs[1] },
+            { title: 'Rishikesh Weekend', loc: 'Uttarakhand', img: placeholderImgs[2] },
+            { title: 'Meghalaya Trek', loc: 'Northeast India', img: placeholderImgs[3] },
+          ].map((p) => (
+            <div class="relative overflow-hidden rounded-2xl shadow-md reveal" style="aspect-ratio: 4/3;">
+              <img src={p.img} alt={p.title} class="w-full h-full object-cover" loading="lazy" />
+              <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <h3 class="font-extrabold text-lg text-white" style="font-family: var(--font-display);">{p.title}</h3>
+                <p class="text-white/70 text-sm">{p.loc}</p>
+                <span class="text-xs text-white/50 mt-1 block">Coming soon</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</BaseLayout>

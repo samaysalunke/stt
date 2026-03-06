@@ -1,0 +1,231 @@
+---
+export const prerender = false;
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { readAlbum } from '../../../lib/content';
+
+const { slug } = Astro.params;
+const album = slug ? readAlbum(slug) : null;
+if (!album) return Astro.redirect('/admin/photo-vault');
+
+const photos: Array<{ image: string; caption?: string }> = Array.isArray(album.photos) ? album.photos : [];
+---
+
+<AdminLayout title={`Edit: ${album.name ?? slug}`} activeTab="photo-vault">
+  <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+    <a href="/admin/photo-vault" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Photo Vault</a>
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Edit: {album.name ?? slug}</h1>
+  </div>
+
+  <!-- Metadata form -->
+  <div class="form-section" style="margin-bottom:1.5rem;">
+    <h2 class="section-title">Album Details</h2>
+    <form method="POST" action="/api/admin/albums/update" enctype="multipart/form-data">
+      <input type="hidden" name="slug" value={slug} />
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Album Name *</label>
+          <input type="text" name="name" required class="form-input" value={album.name ?? ''} />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-input" value={album.location ?? ''} />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="text" name="date" class="form-input" value={album.date ?? ''} />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-input" rows="4">{album.description ?? ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cover Image</label>
+          {album.coverImage && (
+            <div style="margin-bottom:0.5rem;">
+              <img src={album.coverImage} alt="Cover" style="max-height:120px; border-radius:0.5rem; object-fit:cover;" />
+              <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.25rem;">Current cover</div>
+            </div>
+          )}
+          <input type="file" name="coverImage" accept="image/*" class="form-input" onchange="previewImage(this,'cover-preview')" />
+          <img id="cover-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem; object-fit:cover;" />
+          <p class="img-hint"><strong>Recommended:</strong> 800 × 600 px · 4:3 ratio · JPG or PNG · Max 10 MB. Shown as the album cover card on the Photo Vault listing page.</p>
+          <input type="hidden" name="existingCoverImage" value={album.coverImage ?? ''} />
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
+          <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" name="published" value="true" checked={album.published === true} style="width:1rem; height:1rem;" />
+            Published (visible on site)
+          </label>
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <button type="submit" style="background:var(--color-primary); color:white; padding:0.55rem 1.5rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:600; font-size:0.875rem;">Save Album Details</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Photo Grid -->
+  <div class="form-section">
+    <h2 class="section-title">Photos ({photos.length})</h2>
+
+    {photos.length > 0 && (
+      <form id="captions-form">
+        <input type="hidden" name="slug" value={slug} />
+        <div id="photo-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; margin-bottom:1rem;">
+          {photos.map((photo, i) => (
+            <div class="photo-card" data-index={i}>
+              <div style="position:relative; aspect-ratio:4/3; overflow:hidden; border-radius:0.5rem; background:var(--color-surface);">
+                <img src={photo.image} alt={photo.caption ?? ''} style="width:100%; height:100%; object-fit:cover;" loading="lazy" />
+                <button
+                  type="button"
+                  class="delete-photo-btn"
+                  data-slug={slug}
+                  data-photo={photo.image}
+                  style="position:absolute; top:0.4rem; right:0.4rem; background:rgba(220,38,38,0.9); color:white; border:none; border-radius:50%; width:1.6rem; height:1.6rem; cursor:pointer; font-size:0.8rem; display:flex; align-items:center; justify-content:center;"
+                  title="Delete photo"
+                >✕</button>
+              </div>
+              <input
+                type="text"
+                name={`caption_${i}`}
+                value={photo.caption ?? ''}
+                placeholder="Caption..."
+                data-photo={photo.image}
+                class="form-input caption-input"
+                style="margin-top:0.4rem; font-size:0.8rem;"
+              />
+            </div>
+          ))}
+        </div>
+        <button type="button" id="save-captions-btn" style="background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-secondary); padding:0.5rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; font-weight:500;">Save Captions</button>
+        <span id="captions-status" style="font-size:0.8rem; color:var(--color-text-muted); margin-left:0.75rem;"></span>
+      </form>
+    )}
+
+    {photos.length === 0 && (
+      <p style="color:var(--color-text-muted); font-size:0.875rem; margin-bottom:1rem;">No photos yet. Add some below.</p>
+    )}
+
+    <!-- Add photos -->
+    <div style="margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--color-border);">
+      <h3 style="font-size:0.95rem; font-weight:600; color:var(--color-text-secondary); margin:0 0 0.75rem;">Add Photos</h3>
+      <input type="file" id="photo-upload-input" accept="image/*" multiple style="display:none;" />
+      <label for="photo-upload-input" style="display:inline-block; background:var(--color-surface); border:1px dashed var(--color-border); color:var(--color-text-secondary); padding:0.75rem 1.5rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem;">
+        📷 Choose Photos (multi-select)
+      </label>
+      <p class="img-hint"><strong>Recommended:</strong> Min 1200 px wide · Any aspect ratio · JPG or PNG · Max 10 MB each. Use multi-select to upload several photos at once.</p>
+      <div id="upload-status" style="margin-top:0.75rem; font-size:0.875rem; color:var(--color-text-muted);"></div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+.form-section { background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; }
+.section-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin:0 0 1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border); }
+.form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
+.form-group { display:flex; flex-direction:column; gap:0.35rem; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
+.form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
+.form-input:focus { border-color:var(--color-primary); }
+
+/* ===== RESPONSIVE FIXES ===== */
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .form-section { padding: 1rem; }
+  #photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+}
+.img-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #9CA3AF;
+}
+.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+</style>
+
+<script define:vars={{ slug, photos }}>
+function previewImage(input, previewId) {
+  const img = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    img.src = URL.createObjectURL(input.files[0]);
+    img.style.display = 'block';
+  }
+}
+
+// Delete photo
+document.querySelectorAll('.delete-photo-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const target = e.target;
+    const photoUrl = target.dataset.photo;
+    const albumSlug = target.dataset.slug;
+    if (!confirm('Remove this photo from the album?')) return;
+    try {
+      const res = await fetch('/api/admin/albums/delete-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: albumSlug, photoUrl }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      target.closest('.photo-card').remove();
+    } catch {
+      alert('Failed to delete photo.');
+    }
+  });
+});
+
+// Save captions
+const saveCaptionsBtn = document.getElementById('save-captions-btn');
+if (saveCaptionsBtn) {
+  saveCaptionsBtn.addEventListener('click', async () => {
+    const status = document.getElementById('captions-status');
+    const inputs = document.querySelectorAll('.caption-input');
+    const updatedPhotos = Array.from(inputs).map(input => ({
+      image: input.dataset.photo,
+      caption: input.value,
+    }));
+    try {
+      status.textContent = 'Saving...';
+      const res = await fetch('/api/admin/albums/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, photosOnly: true, photos: updatedPhotos }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      status.textContent = '✓ Saved';
+      setTimeout(() => { status.textContent = ''; }, 2000);
+    } catch {
+      status.textContent = '✗ Failed';
+    }
+  });
+}
+
+// Upload photos
+const uploadInput = document.getElementById('photo-upload-input');
+const uploadStatus = document.getElementById('upload-status');
+if (uploadInput) {
+  uploadInput.addEventListener('change', async () => {
+    const files = Array.from(uploadInput.files ?? []);
+    if (!files.length) return;
+    uploadStatus.textContent = `Uploading 0 / ${files.length}...`;
+    let uploaded = 0;
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('slug', slug);
+      fd.append('photo', file);
+      fd.append('caption', '');
+      try {
+        const res = await fetch('/api/admin/albums/add-photo', { method: 'POST', body: fd });
+        if (res.ok) uploaded++;
+        uploadStatus.textContent = `Uploading ${uploaded} / ${files.length}...`;
+      } catch { /* skip */ }
+    }
+    uploadStatus.textContent = `✓ Uploaded ${uploaded} photo${uploaded !== 1 ? 's' : ''}. Reloading...`;
+    setTimeout(() => window.location.reload(), 800);
+  });
+}
+</script>

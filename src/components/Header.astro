@@ -1,0 +1,136 @@
+---
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/trips/', label: 'Trips' },
+  { href: '/photo-vault/', label: 'Photo Vault' },
+  { href: '/about/', label: 'About' },
+  { href: '/contact/', label: 'Contact' },
+];
+
+const pathname = Astro.url.pathname;
+---
+
+<header
+  id="site-header"
+  class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+  style="background-color: rgba(26, 61, 40, 0);"
+>
+  <div class="container-app">
+    <div class="flex items-center justify-between h-16 lg:h-20">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-extrabold text-white text-lg" style="background-color: var(--color-accent);">
+          ST
+        </div>
+        <div class="hidden sm:block">
+          <div class="font-display font-extrabold text-white text-lg leading-tight group-hover:opacity-90 transition-opacity">
+            Seek the Thrill
+          </div>
+          <div class="text-xs text-white/70 tracking-wide font-sans">Adventure Awaits</div>
+        </div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden lg:flex items-center gap-8">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            class={`font-sans font-medium text-sm transition-all duration-200 hover:opacity-100 ${
+              pathname === link.href
+                ? 'text-white opacity-100 border-b-2 pb-0.5'
+                : 'text-white/80 hover:text-white'
+            }`}
+            style={pathname === link.href ? 'border-color: var(--color-accent);' : ''}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href="/trips/"
+          class="font-sans font-bold text-sm text-white px-5 py-2.5 rounded-lg transition-all duration-200 hover:opacity-90"
+          style="background-color: var(--color-accent);"
+        >
+          Book a Trip
+        </a>
+      </nav>
+
+      <!-- Mobile Menu Button -->
+      <button
+        id="mobile-menu-btn"
+        class="lg:hidden p-2 text-white rounded-lg hover:bg-white/10 transition-colors"
+        aria-label="Toggle menu"
+        aria-expanded="false"
+      >
+        <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div
+    id="mobile-menu"
+    class="lg:hidden hidden"
+    style="background-color: var(--color-primary-dark);"
+  >
+    <div class="container-app py-4 pb-6 flex flex-col gap-1">
+      {navLinks.map((link) => (
+        <a
+          href={link.href}
+          class={`font-sans font-medium py-3 px-4 rounded-lg transition-colors ${
+            pathname === link.href
+              ? 'text-white'
+              : 'text-white/80 hover:text-white hover:bg-white/10'
+          }`}
+          style={pathname === link.href ? 'background-color: rgba(232,117,42,0.2);' : ''}
+        >
+          {link.label}
+        </a>
+      ))}
+      <a
+        href="/trips/"
+        class="font-sans font-bold text-white text-center py-3 px-4 rounded-lg mt-2 transition-opacity hover:opacity-90"
+        style="background-color: var(--color-accent);"
+      >
+        Book a Trip
+      </a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const header = document.getElementById('site-header') as HTMLElement;
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const menuIcon = document.getElementById('menu-icon');
+  const closeIcon = document.getElementById('close-icon');
+
+  // Scroll effect
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 60) {
+      header.style.backgroundColor = 'rgba(26, 61, 40, 0.97)';
+      header.style.backdropFilter = 'blur(8px)';
+      header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.3)';
+    } else {
+      header.style.backgroundColor = 'rgba(26, 61, 40, 0)';
+      header.style.backdropFilter = 'none';
+      header.style.boxShadow = 'none';
+    }
+  });
+
+  // Trigger scroll check on load
+  window.dispatchEvent(new Event('scroll'));
+
+  // Mobile menu toggle
+  mobileMenuBtn?.addEventListener('click', () => {
+    const isOpen = mobileMenu?.classList.contains('hidden');
+    mobileMenu?.classList.toggle('hidden');
+    menuIcon?.classList.toggle('hidden', !isOpen!);
+    closeIcon?.classList.toggle('hidden', isOpen!);
+    mobileMenuBtn.setAttribute('aria-expanded', String(!mobileMenu?.classList.contains('hidden')));
+  });
+</script>

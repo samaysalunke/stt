@@ -1,0 +1,98 @@
+---
+export const prerender = false;
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="New Album" activeTab="photo-vault">
+  <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+    <a href="/admin/photo-vault" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Photo Vault</a>
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">New Album</h1>
+  </div>
+
+  <form method="POST" action="/api/admin/albums/create" enctype="multipart/form-data">
+    <div class="form-section">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Album Name *</label>
+          <input type="text" name="name" required class="form-input" placeholder="e.g. Spiti Valley 2024" oninput="autoSlug(this.value)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug *</label>
+          <input type="text" name="slug" id="slug-field" required class="form-input" placeholder="spiti-valley-2024" />
+          <span class="form-hint">URL: /photo-vault/[slug]</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-input" placeholder="e.g. Himachal Pradesh, India" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="text" name="date" class="form-input" placeholder="e.g. December 2024" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-input" rows="4" placeholder="A brief description of this album..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cover Image</label>
+          <input type="file" name="coverImage" accept="image/*" class="form-input" onchange="previewImage(this,'cover-preview')" />
+          <img id="cover-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:200px; border-radius:0.5rem; object-fit:cover;" />
+          <p class="img-hint"><strong>Recommended:</strong> 800 × 600 px · 4:3 ratio · JPG or PNG · Max 10 MB. Shown as the album cover card on the Photo Vault listing page.</p>
+        </div>
+        <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
+          <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" name="published" value="true" style="width:1rem; height:1rem;" />
+            Published (visible on site)
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:1rem;">
+      <button type="submit" style="background:var(--color-primary); color:white; padding:0.65rem 2rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:600; font-size:0.95rem;">Create Album</button>
+      <a href="/admin/photo-vault" style="background:var(--color-surface-elevated); color:var(--color-text-secondary); padding:0.65rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:500; font-size:0.95rem; border:1px solid var(--color-border);">Cancel</a>
+    </div>
+  </form>
+</AdminLayout>
+
+<style>
+.form-section { background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; margin-bottom:1.5rem; }
+.form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
+.form-group { display:flex; flex-direction:column; gap:0.35rem; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
+.form-hint { font-size:0.75rem; color:var(--color-text-muted); }
+.form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
+.form-input:focus { border-color:var(--color-primary); }
+
+/* ===== RESPONSIVE FIXES ===== */
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .form-section { padding: 1rem; }
+}
+.img-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #9CA3AF;
+}
+.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+</style>
+
+<script>
+function slugify(s) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function autoSlug(name) {
+  const field = document.getElementById('slug-field');
+  if (field) field.value = slugify(name);
+}
+function previewImage(input, previewId) {
+  const img = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    img.src = URL.createObjectURL(input.files[0]);
+    img.style.display = 'block';
+  }
+}
+</script>

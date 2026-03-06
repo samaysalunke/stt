@@ -1,0 +1,385 @@
+---
+export const prerender = false;
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="New Trip" activeTab="trips">
+  <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+    <a href="/admin/trips" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Trips</a>
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">New Trip</h1>
+  </div>
+
+  <form method="POST" action="/api/admin/trips/create" enctype="multipart/form-data" id="trip-form">
+
+    <!-- Section 1: Basic Info -->
+    <div class="form-section">
+      <h2 class="section-title">Basic Info</h2>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Trip Name *</label>
+          <input type="text" name="name" required class="form-input" placeholder="e.g. Spiti Valley Winter Trek" oninput="autoSlug(this.value)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slug *</label>
+          <input type="text" name="slug" id="slug-field" required class="form-input" placeholder="spiti-valley-winter-trek" />
+          <span class="form-hint">URL: /trips/[slug]</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status *</label>
+          <select name="status" required class="form-input">
+            <option value="draft">Draft</option>
+            <option value="booking-open">Booking Open</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="sold-out">Sold Out</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Start Date</label>
+          <input type="date" name="startDate" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">End Date</label>
+          <input type="date" name="endDate" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Duration</label>
+          <input type="text" name="duration" class="form-input" placeholder="e.g. 7 Days / 6 Nights" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price Per Person (₹)</label>
+          <input type="number" name="pricePerPerson" class="form-input" placeholder="15000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Difficulty</label>
+          <select name="difficulty" class="form-input">
+            <option value="">Select...</option>
+            <option value="easy">Easy</option>
+            <option value="moderate">Moderate</option>
+            <option value="challenging">Challenging</option>
+            <option value="extreme">Extreme</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Min Group Size</label>
+          <input type="number" name="minGroupSize" class="form-input" placeholder="6" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Group Size</label>
+          <input type="number" name="maxGroupSize" class="form-input" placeholder="15" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Current Bookings</label>
+          <input type="number" name="currentBookings" class="form-input" value="0" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Registration Deadline</label>
+          <input type="date" name="registrationDeadline" class="form-input" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" name="registrationEnabled" value="true" checked style="width:1rem; height:1rem;" />
+            Registration Enabled
+          </label>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Categories</label>
+          <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.25rem;">
+            {['india','international','adventure','cultural','beach','mountain','weekend','week-long','extended'].map(cat => (
+              <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.875rem; color:var(--color-text-secondary);">
+                <input type="checkbox" name="categories" value={cat} style="width:0.9rem; height:0.9rem;" />
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Content -->
+    <div class="form-section">
+      <h2 class="section-title">Content</h2>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Short Description <span id="shortDesc-count" style="color:var(--color-text-muted); font-weight:400;">(0/200)</span></label>
+          <textarea name="shortDescription" class="form-input" rows="3" maxlength="200" placeholder="A brief enticing summary shown in listings..." oninput="document.getElementById('shortDesc-count').textContent = '('+this.value.length+'/200)'"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Full Description</label>
+          <textarea name="description" class="form-input" rows="8" placeholder="Detailed trip description..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Who Should Join</label>
+          <textarea name="whoShouldJoin" class="form-input" rows="4" placeholder="This trip is perfect for..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Highlights</label>
+          <div id="highlights-list" class="dynamic-list"></div>
+          <button type="button" class="add-item-btn" onclick="addItem('highlights-list','highlights[]','Add a highlight...')">+ Add Highlight</button>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Included</label>
+          <div id="included-list" class="dynamic-list"></div>
+          <button type="button" class="add-item-btn" onclick="addItem('included-list','included[]','e.g. Accommodation, Meals...')">+ Add Inclusion</button>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Not Included</label>
+          <div id="notIncluded-list" class="dynamic-list"></div>
+          <button type="button" class="add-item-btn" onclick="addItem('notIncluded-list','notIncluded[]','e.g. Flight tickets...')">+ Add Exclusion</button>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Packing List</label>
+          <div id="packingList-list" class="dynamic-list"></div>
+          <button type="button" class="add-item-btn" onclick="addItem('packingList-list','packingList[]','e.g. Warm jacket...')">+ Add Item</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Logistics -->
+    <div class="form-section">
+      <h2 class="section-title">Logistics</h2>
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Meeting Point</label>
+          <textarea name="meetingPoint" class="form-input" rows="3" placeholder="Where participants should gather..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Meeting Time</label>
+          <input type="text" name="meetingTime" class="form-input" placeholder="e.g. 6:00 AM" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Important Notes</label>
+          <textarea name="importantNotes" class="form-input" rows="4" placeholder="Any special instructions or warnings..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Cancellation Policy</label>
+          <textarea name="cancellationPolicy" class="form-input" rows="4" placeholder="Cancellation and refund terms..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Itinerary -->
+    <div class="form-section">
+      <h2 class="section-title">Itinerary</h2>
+      <div id="itinerary-container"></div>
+      <button type="button" onclick="addDay()" style="margin-top:0.75rem; background:var(--color-surface-elevated); border:1px dashed var(--color-border); color:var(--color-text-secondary); padding:0.6rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; width:100%;">+ Add Day</button>
+      <input type="hidden" name="itinerary_json" id="itinerary_json" />
+    </div>
+
+    <!-- Section 5: Media & Payment -->
+    <div class="form-section">
+      <h2 class="section-title">Media & Payment</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Featured Image</label>
+          <input type="file" name="featuredImage" accept="image/*" class="form-input" onchange="previewImage(this,'featured-preview')" />
+          <img id="featured-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem; object-fit:cover;" />
+          <p class="img-hint"><strong>Recommended:</strong> 1200 × 675 px · 16:9 ratio · JPG or PNG · Max 10 MB. Used as trip hero banner and listing card thumbnail.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment QR Code</label>
+          <input type="file" name="paymentQrCode" accept="image/*" class="form-input" onchange="previewImage(this,'qr-preview')" />
+          <img id="qr-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem; object-fit:contain;" />
+          <p class="img-hint"><strong>Recommended:</strong> 400 × 400 px · 1:1 square · PNG preferred · Max 2 MB. Must be scannable at small sizes.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Advance / Booking Amount (₹)</label>
+          <input type="number" name="paymentAmount" class="form-input" placeholder="e.g. 5000 (paid now to confirm spot)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Full Trip Payment Amount (₹)</label>
+          <input type="number" name="fullPaymentAmount" class="form-input" placeholder="e.g. 15000 (due 15 days before trip)" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Payment Instructions</label>
+          <textarea name="paymentInstructions" class="form-input" rows="3" placeholder="How to complete payment..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:1rem; margin-top:1rem;">
+      <button type="submit" style="background:var(--color-primary); color:white; padding:0.65rem 2rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:600; font-size:0.95rem;">Create Trip</button>
+      <a href="/admin/trips" style="background:var(--color-surface-elevated); color:var(--color-text-secondary); padding:0.65rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:500; font-size:0.95rem; border:1px solid var(--color-border);">Cancel</a>
+    </div>
+  </form>
+</AdminLayout>
+
+<style>
+.form-section {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-group.full { grid-column: 1 / -1; }
+.form-label { font-size: 0.875rem; font-weight: 600; color: var(--color-text-secondary); }
+.form-hint { font-size: 0.75rem; color: var(--color-text-muted); }
+.form-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.form-input:focus { border-color: var(--color-primary); }
+.dynamic-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
+.dynamic-item { display: flex; gap: 0.4rem; }
+.dynamic-item input { flex: 1; }
+.remove-btn {
+  background: none; border: 1px solid #dc2626; color: #dc2626; border-radius: 0.35rem;
+  padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+}
+.add-item-btn {
+  background: none; border: 1px dashed var(--color-border); color: var(--color-text-muted);
+  border-radius: 0.35rem; padding: 0.35rem 0.75rem; cursor: pointer; font-size: 0.8rem;
+}
+.day-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.day-title { font-weight: 600; font-size: 0.9rem; color: var(--color-text-primary); }
+.day-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.6rem; }
+.day-grid .full { grid-column: 1/-1; }
+.day-label { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.2rem; }
+.day-input { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 0.4rem 0.6rem; color: var(--color-text-primary); font-size: 0.8rem; width: 100%; box-sizing: border-box; outline: none; }
+.meal-row { display: flex; gap: 1rem; }
+.meal-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; }
+
+/* ===== RESPONSIVE FIXES ===== */
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+  .day-grid { grid-template-columns: 1fr; }
+  .day-grid .full { grid-column: 1; }
+  .form-section { padding: 1rem; }
+}
+.img-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #9CA3AF;
+}
+.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+</style>
+
+<script>
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function autoSlug(name: string) {
+  const field = document.getElementById('slug-field') as HTMLInputElement;
+  if (field) field.value = slugify(name);
+}
+function previewImage(input: HTMLInputElement, previewId: string) {
+  const img = document.getElementById(previewId) as HTMLImageElement;
+  if (input.files && input.files[0]) {
+    img.src = URL.createObjectURL(input.files[0]);
+    img.style.display = 'block';
+  }
+}
+function addItem(listId: string, name: string, placeholder: string) {
+  const list = document.getElementById(listId)!;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item';
+  div.innerHTML = `<input type="text" name="${name}" placeholder="${placeholder}" class="form-input" /><button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(div);
+}
+
+// Itinerary
+let dayCount = 0;
+function addDay() {
+  dayCount++;
+  const container = document.getElementById('itinerary-container')!;
+  const div = document.createElement('div');
+  div.className = 'day-card';
+  div.dataset.day = String(dayCount);
+  div.innerHTML = `
+    <div class="day-header">
+      <span class="day-title">Day ${dayCount}</span>
+      <button type="button" class="remove-btn" onclick="this.closest('.day-card').remove(); renumberDays();">✕ Remove</button>
+    </div>
+    <div class="day-grid">
+      <div class="full">
+        <div class="day-label">Day Title</div>
+        <input type="text" class="day-input day-dayTitle" placeholder="e.g. Arrive in Manali" />
+      </div>
+      <div class="full">
+        <div class="day-label">Activities</div>
+        <textarea class="day-input day-activities" rows="3" placeholder="What happens on this day..."></textarea>
+      </div>
+      <div>
+        <div class="day-label">Accommodation</div>
+        <input type="text" class="day-input day-accommodation" placeholder="e.g. Hotel/Homestay" />
+      </div>
+      <div>
+        <div class="day-label">Transport</div>
+        <input type="text" class="day-input day-transport" placeholder="e.g. Shared SUV" />
+      </div>
+      <div class="full">
+        <div class="day-label">Meals Included</div>
+        <div class="meal-row">
+          <label class="meal-label"><input type="checkbox" class="day-breakfast" /> Breakfast</label>
+          <label class="meal-label"><input type="checkbox" class="day-lunch" /> Lunch</label>
+          <label class="meal-label"><input type="checkbox" class="day-dinner" /> Dinner</label>
+        </div>
+      </div>
+      <div class="full">
+        <div class="day-label">Special Notes</div>
+        <input type="text" class="day-input day-specialNotes" placeholder="Any special notes for this day..." />
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+}
+function renumberDays() {
+  document.querySelectorAll('.day-card').forEach((card, i) => {
+    (card.querySelector('.day-title') as HTMLElement).textContent = `Day ${i + 1}`;
+  });
+}
+function serializeItinerary(): object[] {
+  const days: object[] = [];
+  document.querySelectorAll('.day-card').forEach((card, i) => {
+    days.push({
+      day: i + 1,
+      dayTitle: (card.querySelector('.day-dayTitle') as HTMLInputElement)?.value ?? '',
+      activities: (card.querySelector('.day-activities') as HTMLTextAreaElement)?.value ?? '',
+      accommodation: (card.querySelector('.day-accommodation') as HTMLInputElement)?.value ?? '',
+      transport: (card.querySelector('.day-transport') as HTMLInputElement)?.value ?? '',
+      breakfast: (card.querySelector('.day-breakfast') as HTMLInputElement)?.checked ?? false,
+      lunch: (card.querySelector('.day-lunch') as HTMLInputElement)?.checked ?? false,
+      dinner: (card.querySelector('.day-dinner') as HTMLInputElement)?.checked ?? false,
+      specialNotes: (card.querySelector('.day-specialNotes') as HTMLInputElement)?.value ?? '',
+    });
+  });
+  return days;
+}
+
+document.getElementById('trip-form')!.addEventListener('submit', () => {
+  const el = document.getElementById('itinerary_json') as HTMLInputElement;
+  el.value = JSON.stringify(serializeItinerary());
+});
+</script>

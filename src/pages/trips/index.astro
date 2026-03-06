@@ -1,0 +1,52 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import FilterBar from '../../components/FilterBar';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const allTrips = await reader.collections.trips.all();
+
+const trips = allTrips
+  .filter((t) => t.entry.status !== 'draft')
+  .map((t) => ({
+    slug: t.slug,
+    name: (t.entry.name as string) || t.slug,
+    status: t.entry.status ?? 'upcoming',
+    featuredImage: t.entry.featuredImage ?? null,
+    shortDescription: t.entry.shortDescription ?? '',
+    startDate: t.entry.startDate ?? null,
+    endDate: t.entry.endDate ?? null,
+    duration: t.entry.duration ?? null,
+    pricePerPerson: t.entry.pricePerPerson ?? null,
+    difficulty: t.entry.difficulty ?? null,
+    maxGroupSize: t.entry.maxGroupSize ?? null,
+    currentBookings: t.entry.currentBookings ?? null,
+    categories: (t.entry.categories as string[]) ?? [],
+  }));
+---
+
+<BaseLayout
+  title="Upcoming Adventure Trips — Seek the Thrill"
+  description="Browse all upcoming group adventure trips in India. Trekking, rafting, beach getaways, and more. Budget-friendly trips for young Indian travelers."
+>
+  <!-- Hero -->
+  <section
+    class="relative flex items-center justify-center overflow-hidden pt-20"
+    style="height: 40vh; background-image: url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center 40%;"
+  >
+    <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
+    <div class="relative z-10 text-center px-4">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">
+        Our Adventures
+      </h1>
+      <p class="text-base md:text-lg text-white/80 max-w-xl mx-auto">
+        Find your next escape — from weekend getaways to week-long expeditions
+      </p>
+    </div>
+  </section>
+
+  <!-- Filter Bar + Trip Grid (React island) -->
+  <FilterBar trips={trips} client:load />
+
+</BaseLayout>

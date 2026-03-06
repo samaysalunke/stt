@@ -1,0 +1,40 @@
+email: zahra@seekthethrill.in
+phone: '+91-7975027491'
+whatsappLink: 'https://wa.me/917975027491'
+address: "India"
+instagram: 'https://instagram.com/seekthethrill'
+facebook: 'https://facebook.com/seekthethrill'
+youtube: 'https://youtube.com/@seekthethrill'
+linkedin: 'https://linkedin.com/company/seekthethrill'
+tripsCompleted: 25
+happyTravelers: 500
+destinationsCovered: 15
+yearsOfAdventure: 4
+cancellationPolicy: |
+  Cancellations made 30+ days before trip: Full refund minus ₹500 processing fee.
+  Cancellations 15-29 days before: 50% refund.
+  Cancellations 7-14 days before: 25% refund.
+  Cancellations less than 7 days: No refund.
+  All cancellations must be made in writing to zahra@seekthethrill.in.
+termsAndConditions: |
+  By registering for a Seek the Thrill trip, you agree to these terms and conditions.
+  Participants must be 18+ years old (or accompanied by guardian).
+  Seek the Thrill reserves the right to modify or cancel trips due to safety concerns.
+  Participants are responsible for their own travel insurance.
+privacyPolicy: |
+  We collect personal information necessary to process your trip registration.
+  Your data is never sold to third parties. We may contact you about upcoming trips.
+  You can unsubscribe at any time by emailing zahra@seekthethrill.in.
+defaultPaymentInstructions: |
+  1. Scan the QR code with any UPI app (GPay, PhonePe, Paytm, etc.)
+  2. Pay the exact amount mentioned
+  3. Take a screenshot of the successful payment
+  4. Upload the screenshot in the form below
+  5. Enter your transaction ID from the payment app
+bankDetails: |
+  Account Name: Seek the Thrill
+  Account Number: XXXXXXXXXX
+  IFSC Code: XXXXXXXXX
+  Bank: HDFC Bank
+googleAnalyticsId: ''
+copyrightText: '© 2024 Seek the Thrill. All rights reserved.'

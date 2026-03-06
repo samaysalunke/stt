@@ -1,0 +1,63 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+export const prerender = false;
+
+const subscribers = getDb()
+  .prepare('SELECT * FROM newsletter_subscribers ORDER BY id DESC')
+  .all() as Record<string, any>[];
+
+const active = subscribers.filter(s => s.active === 1).length;
+
+function fmt(date: string) {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+---
+
+<AdminLayout title="Newsletter" activeTab="newsletter">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+    <div>
+      <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-primary-dark);margin:0 0 0.25rem;">Newsletter Subscribers</h1>
+      <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{active} active · {subscribers.length} total</p>
+    </div>
+    <a
+      href="/api/admin/export?type=newsletter"
+      style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
+    >
+      ↓ Export CSV
+    </a>
+  </div>
+
+  <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
+  <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;overflow:hidden;min-width:400px;">
+    {subscribers.length === 0 ? (
+      <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);">No subscribers yet.</p>
+    ) : (
+      <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+        <thead>
+          <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
+            {['#', 'Email', 'Status', 'Subscribed'].map(h => (
+              <th style="padding:0.65rem 0.875rem;text-align:left;font-size:0.75rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {subscribers.map((s, i) => (
+            <tr style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}>
+              <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{s.id}</td>
+              <td style="padding:0.65rem 0.875rem;font-weight:500;">{s.email}</td>
+              <td style="padding:0.65rem 0.875rem;">
+                <span style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${s.active ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}`}>
+                  {s.active ? 'active' : 'unsubscribed'}
+                </span>
+              </td>
+              <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(s.subscribed_at as string)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+  </div>
+</AdminLayout>

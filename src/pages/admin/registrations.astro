@@ -1,0 +1,304 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+export const prerender = false;
+
+const registrations = getDb()
+  .prepare('SELECT * FROM registrations ORDER BY id DESC')
+  .all() as Record<string, any>[];
+
+const total = registrations.length;
+const pending = registrations.filter(r => r.status === 'pending').length;
+const confirmed = registrations.filter(r => r.status === 'confirmed').length;
+const rejected = registrations.filter(r => r.status === 'rejected').length;
+const totalRevenue = registrations
+  .filter(r => r.status !== 'rejected')
+  .reduce((s, r) => s + (r.amount_paid ?? 0), 0);
+
+function statusStyle(status: string) {
+  if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
+  if (status === 'rejected') return 'background:#FEE2E2;color:#991B1B;';
+  return 'background:#FEF3C7;color:#92400E;';
+}
+
+function fmt(date: string) {
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtCurrency(n: number) {
+  return '₹' + (n ?? 0).toLocaleString('en-IN');
+}
+---
+
+<AdminLayout title="Registrations" activeTab="registrations">
+  <!-- Stats row -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
+    {[
+      { label: 'Total', value: total, color: 'var(--color-primary)' },
+      { label: 'Pending', value: pending, color: '#D97706' },
+      { label: 'Confirmed', value: confirmed, color: 'var(--color-success)' },
+      { label: 'Rejected', value: rejected, color: 'var(--color-danger)' },
+      { label: 'Revenue', value: fmtCurrency(totalRevenue), color: 'var(--color-primary)' },
+    ].map(s => (
+      <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;padding:1rem 1.25rem;">
+        <p style="margin:0 0 0.25rem;font-size:0.75rem;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">{s.label}</p>
+        <p style={`margin:0;font-size:1.5rem;font-weight:800;font-family:var(--font-display);color:${s.color};`}>{s.value}</p>
+      </div>
+    ))}
+  </div>
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <input
+        type="text"
+        id="search"
+        placeholder="Search name, email, trip…"
+        style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);width:220px;"
+      />
+      <select id="statusFilter" style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </div>
+    <a
+      href="/api/admin/export?type=registrations"
+      style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
+    >
+      ↓ Export CSV
+    </a>
+  </div>
+
+  <!-- Table -->
+  <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
+  <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;overflow:hidden;min-width:700px;">
+    {registrations.length === 0 ? (
+      <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);">No registrations yet.</p>
+    ) : (
+      <table id="regTable" style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+        <thead>
+          <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
+            {['#', 'Name', 'Email', 'Phone', 'Trip', 'Amount', 'Status', 'Date', ''].map(h => (
+              <th style="padding:0.65rem 0.875rem;text-align:left;font-size:0.75rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {registrations.map((r, i) => (
+            <>
+              <tr
+                class="reg-row"
+                data-name={(r.full_name as string).toLowerCase()}
+                data-email={(r.email as string).toLowerCase()}
+                data-trip={(r.trip_name as string ?? '').toLowerCase()}
+                data-status={r.status}
+                style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}
+              >
+                <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{r.id}</td>
+                <td style="padding:0.65rem 0.875rem;font-weight:600;">{r.full_name}</td>
+                <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);">{r.email}</td>
+                <td style="padding:0.65rem 0.875rem;">{r.phone}</td>
+                <td style="padding:0.65rem 0.875rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{r.trip_name}</td>
+                <td style="padding:0.65rem 0.875rem;font-weight:600;">{fmtCurrency(r.amount_paid)}</td>
+                <td style="padding:0.65rem 0.875rem;">
+                  <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${statusStyle(r.status)}`}>
+                    {r.status}
+                  </span>
+                </td>
+                <td style="padding:0.65rem 0.875rem;white-space:nowrap;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(r.created_at as string)}</td>
+                <td style="padding:0.65rem 0.875rem;">
+                  <button
+                    onclick={`toggleDetail(${r.id})`}
+                    style="font-size:0.75rem;color:var(--color-primary);background:none;border:1px solid var(--color-primary);border-radius:0.35rem;padding:0.2rem 0.6rem;cursor:pointer;"
+                  >
+                    Details
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Expandable detail row -->
+              <tr id={`detail-${r.id}`} style="display:none;" class="detail-row">
+                <td colspan="9" style="padding:0;border-bottom:2px solid var(--color-border);">
+                  <div style="padding:1.25rem 1.5rem;background:#F0FDF4;">
+
+                    <!-- Two columns: info + actions -->
+                    <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+
+                      <!-- Left: all fields -->
+                      <div>
+                        <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
+                          {[
+                            ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
+                            ['Date of Birth', r.date_of_birth ?? '—'], ['Gender', r.gender ?? '—'],
+                            ['City', r.city], ['State', r.state ?? '—'], ['Country', r.country ?? '—'],
+                            ['Pincode', r.pincode ?? '—'], ['Address', r.address ?? '—'],
+                            ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
+                            ['Emergency Relation', r.emergency_relationship],
+                            ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
+                            ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
+                            ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
+                            ['Experience', r.experience_level ?? '—'], ['T-Shirt Size', r.tshirt_size ?? '—'],
+                            ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
+                            ['Amount Paid', fmtCurrency(r.amount_paid)], ['Payment Method', r.payment_method ?? '—'],
+                            ['Transaction ID', r.transaction_id], ['Payment Date', r.payment_date ?? '—'],
+                            ['Source', r.source ?? '—'], ['Special Requests', r.special_requests ?? '—'],
+                            ['Photo Consent', r.photo_consent ? 'Yes' : 'No'],
+                          ].map(([label, val]) => (
+                            <div>
+                              <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
+                              <span>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {r.payment_screenshot_url && (
+                          <div style="margin-top:0.75rem;">
+                            <a
+                              href={r.payment_screenshot_url}
+                              target="_blank"
+                              style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
+                            >
+                              View Payment Screenshot →
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      <!-- Right: status update + admin notes -->
+                      <div style="background:white;border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
+                        <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
+                        <div id={`status-section-${r.id}`}>
+                          <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
+                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                            {['pending', 'confirmed', 'rejected'].map(s => (
+                              <button
+                                onclick={`updateStatus(${r.id}, '${s}')`}
+                                style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
+                                  r.status === s
+                                    ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
+                                    : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
+                                }`}
+                              >
+                                {s.charAt(0).toUpperCase() + s.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                          <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
+                          <textarea
+                            id={`notes-${r.id}`}
+                            rows={3}
+                            placeholder="Add internal notes…"
+                            style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
+                          >{r.admin_notes ?? ''}</textarea>
+                          <button
+                            onclick={`saveNotes(${r.id})`}
+                            style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
+                          >
+                            Save Notes
+                          </button>
+                          <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+  </div>
+
+  <p id="noResults" style="display:none;text-align:center;padding:2rem;color:var(--color-text-secondary);">No matching registrations.</p>
+</AdminLayout>
+
+<script>
+  function toggleDetail(id: number) {
+    const row = document.getElementById('detail-' + id);
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+  }
+
+  async function updateStatus(id: number, status: string) {
+    const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
+    const adminNotes = notesEl?.value ?? '';
+    const res = await fetch('/api/admin/update-registration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status, admin_notes: adminNotes }),
+    });
+    if (res.ok) {
+      // Update badge
+      const badge = document.querySelector(`.status-badge[data-id="${id}"]`) as HTMLElement | null;
+      if (badge) {
+        badge.textContent = status;
+        badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${
+          status === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' :
+          status === 'rejected'  ? 'background:#FEE2E2;color:#991B1B;' :
+                                   'background:#FEF3C7;color:#92400E;'
+        }`;
+      }
+      // Update row data-status for filtering
+      const rows = document.querySelectorAll(`.reg-row`);
+      rows.forEach(row => {
+        const btn = row.querySelector(`button[onclick*="toggleDetail(${id})"]`);
+        if (btn) (row as HTMLElement).dataset.status = status;
+      });
+      const msgEl = document.getElementById('msg-' + id);
+      if (msgEl) { msgEl.style.display = 'block'; setTimeout(() => msgEl.style.display = 'none', 2000); }
+    }
+  }
+
+  async function saveNotes(id: number) {
+    const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
+    const adminNotes = notesEl?.value ?? '';
+    // Get current status from badge
+    const badge = document.querySelector(`.status-badge[data-id="${id}"]`) as HTMLElement | null;
+    const status = badge?.textContent?.trim() ?? 'pending';
+    const res = await fetch('/api/admin/update-registration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status, admin_notes: adminNotes }),
+    });
+    if (res.ok) {
+      const msgEl = document.getElementById('msg-' + id);
+      if (msgEl) { msgEl.style.display = 'block'; setTimeout(() => msgEl.style.display = 'none', 2000); }
+    }
+  }
+
+  // Search + filter
+  const searchEl = document.getElementById('search') as HTMLInputElement | null;
+  const filterEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
+
+  function applyFilters() {
+    const q = searchEl?.value.toLowerCase() ?? '';
+    const s = filterEl?.value ?? '';
+    const rows = document.querySelectorAll<HTMLTableRowElement>('.reg-row');
+    let visible = 0;
+    rows.forEach(row => {
+      const matchQ = !q || row.dataset.name?.includes(q) || row.dataset.email?.includes(q) || row.dataset.trip?.includes(q);
+      const matchS = !s || row.dataset.status === s;
+      const show = !!(matchQ && matchS);
+      row.style.display = show ? '' : 'none';
+      const id = row.querySelector('button')?.getAttribute('onclick')?.match(/\d+/)?.[0];
+      const detailRow = id ? document.getElementById('detail-' + id) : null;
+      if (!show && detailRow) detailRow.style.display = 'none';
+      if (show) visible++;
+    });
+    const noResults = document.getElementById('noResults');
+    if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  searchEl?.addEventListener('input', applyFilters);
+  filterEl?.addEventListener('change', applyFilters);
+
+  // expose to onclick handlers
+  (window as any).toggleDetail = toggleDetail;
+  (window as any).updateStatus = updateStatus;
+  (window as any).saveNotes = saveNotes;
+</script>

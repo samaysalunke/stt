@@ -1,0 +1,79 @@
+---
+export const prerender = false;
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listAlbums } from '../../../lib/content';
+
+const albums = listAlbums();
+---
+
+<AdminLayout title="Photo Vault" activeTab="photo-vault">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Photo Vault</h1>
+    <a href="/admin/photo-vault/new" style="background:var(--color-primary); color:white; padding:0.5rem 1.25rem; border-radius:0.5rem; text-decoration:none; font-weight:600; font-size:0.875rem;">+ New Album</a>
+  </div>
+
+  {albums.length === 0 ? (
+    <div style="text-align:center; padding:4rem 2rem; color:var(--color-text-secondary);">
+      <p style="font-size:1.1rem; margin-bottom:1rem;">No albums yet.</p>
+      <a href="/admin/photo-vault/new" style="background:var(--color-primary); color:white; padding:0.6rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">Create your first album</a>
+    </div>
+  ) : (
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1.25rem;">
+      {albums.map(album => {
+        const photos = Array.isArray(album.photos) ? album.photos : [];
+        return (
+          <div style="background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; overflow:hidden;">
+            <div style="height:160px; overflow:hidden; background:var(--color-surface); position:relative;">
+              {album.coverImage ? (
+                <img src={album.coverImage} alt={album.name} style="width:100%; height:100%; object-fit:cover;" />
+              ) : photos[0]?.image ? (
+                <img src={photos[0].image} alt={album.name} style="width:100%; height:100%; object-fit:cover;" />
+              ) : (
+                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:2rem;">🖼️</div>
+              )}
+              <div style={`position:absolute; top:0.5rem; right:0.5rem; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.7rem; font-weight:700; ${album.published ? 'background:#16a34a22; color:#16a34a;' : 'background:#6b728022; color:#6b7280;'}`}>
+                {album.published ? 'Published' : 'Draft'}
+              </div>
+            </div>
+            <div style="padding:1rem;">
+              <div style="font-weight:700; color:var(--color-text-primary); margin-bottom:0.25rem;">{album.name ?? album.slug}</div>
+              <div style="font-size:0.8rem; color:var(--color-text-secondary); margin-bottom:0.15rem;">{album.location ?? ''}</div>
+              <div style="font-size:0.8rem; color:var(--color-text-muted);">{photos.length} photo{photos.length !== 1 ? 's' : ''}</div>
+              <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+                <a href={`/admin/photo-vault/${album.slug}`} style="flex:1; text-align:center; font-size:0.8rem; color:var(--color-primary); text-decoration:none; border:1px solid var(--color-primary); border-radius:0.35rem; padding:0.3rem 0.5rem; font-weight:500;">Edit</a>
+                <button
+                  class="delete-album-btn"
+                  data-slug={album.slug}
+                  data-name={album.name ?? album.slug}
+                  style="flex:1; font-size:0.8rem; color:#dc2626; background:none; border:1px solid #dc2626; border-radius:0.35rem; padding:0.3rem 0.5rem; cursor:pointer; font-weight:500;"
+                >Delete</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+document.querySelectorAll('.delete-album-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const target = e.target as HTMLButtonElement;
+    const slug = target.dataset.slug!;
+    const name = target.dataset.name!;
+    if (!confirm(`Delete album "${name}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch('/api/admin/albums/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      window.location.reload();
+    } catch {
+      alert('Failed to delete album. Try again.');
+    }
+  });
+});
+</script>

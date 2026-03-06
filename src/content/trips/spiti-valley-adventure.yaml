@@ -1,0 +1,138 @@
+name: Spiti Valley Adventure
+status: booking-open
+shortDescription: Journey through the mystical landscapes of Spiti Valley, often called
+  'Little Tibet'. High-altitude passes, ancient monasteries, and stargazing await.
+categories:
+  - india
+  - adventure
+  - mountain
+  - week-long
+startDate: '2026-05-15'
+endDate: '2026-05-21'
+duration: 7 Days, 6 Nights
+pricePerPerson: 18500
+minGroupSize: 8
+maxGroupSize: 15
+currentBookings: 6
+difficulty: moderate-challenging
+highlights:
+  - Visit Key Monastery, perched at 13,668 ft
+  - Explore the highest village in Asia - Komic
+  - Witness the stunning Chandratal Lake
+  - Experience local Tibetan culture and cuisine
+  - Drive through Kunzum Pass (15,059 ft)
+  - Visit the ancient Tabo Monastery
+  - Stargazing in the clear Himalayan skies
+itinerary:
+  - dayNumber: 1
+    dayTitle: Delhi to Shimla
+    activities: Early morning departure from Delhi. Scenic drive through Himachal. Arrive
+      Shimla by evening. Group introductions and dinner.
+    accommodation: Hotel in Shimla
+    breakfast: false
+    lunch: false
+    dinner: true
+    mealsNotes: ''
+    transport: Volvo bus Delhi to Shimla
+    specialNotes: ''
+  - dayNumber: 2
+    dayTitle: Shimla to Kalpa
+    activities: Drive to Kalpa via Rampur. Visit Narkanda for apple orchards. Reach Kalpa
+      with views of Kinner Kailash. Evening walk in local market.
+    accommodation: Homestay in Kalpa
+    breakfast: true
+    lunch: false
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 3
+    dayTitle: Kalpa to Tabo
+    activities: Cross Khab Bridge and enter Spiti. Visit ancient Tabo Monastery (996 AD).
+      Explore the mud-brick village. Witness sunset over Spiti Valley.
+    accommodation: Guesthouse in Tabo
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 4
+    dayTitle: Tabo to Kaza
+    activities: Drive to Kaza (Spiti headquarters). Visit Dhankar Monastery and Lake. Stop
+      at Pin Valley viewpoint. Evening free to explore Kaza market.
+    accommodation: Hotel in Kaza
+    breakfast: true
+    lunch: false
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 5
+    dayTitle: Kaza Exploration - Komic, Key, Kibber
+    activities: Visit highest motorable village - Komic. Explore iconic Key Monastery. Drive
+      to Kibber village. Optional short hike to viewpoints. Return to Kaza.
+    accommodation: Hotel in Kaza
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 6
+    dayTitle: Kaza to Chandratal via Kunzum Pass
+    activities: Early departure. Cross Kunzum Pass at 15,059 ft. Reach Chandratal (Moon
+      Lake). Camping by the lake. Bonfire and stargazing.
+    accommodation: Camps at Chandratal
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: Carry warm clothes! Temperature can drop significantly at night.
+  - dayNumber: 7
+    dayTitle: Chandratal to Manali and Return
+    activities: Sunrise at Chandratal. Drive to Manali via Rohtang Pass. Trip concludes in
+      Manali. Evening bus/flight to Delhi.
+    accommodation: ''
+    breakfast: true
+    lunch: false
+    dinner: false
+    mealsNotes: ''
+    transport: Tempo Traveller to Manali
+    specialNotes: ''
+included:
+  - Transportation from Delhi to Delhi (Volvo/Tempo Traveller)
+  - 6 nights accommodation
+  - 6 Breakfasts, 3 Lunches, 6 Dinners
+  - Experienced trip leader
+  - All monastery entry fees
+  - Inner line permits
+  - First aid kit
+  - Camping equipment at Chandratal
+notIncluded:
+  - Personal expenses
+  - Any meals not mentioned
+  - Travel insurance
+  - Emergency evacuation charges
+  - Tips and gratuities
+  - Additional activities not in itinerary
+meetingPoint: Assembly at ISBT Kashmiri Gate, Delhi at 6:00 PM on Day 0 (14th May). Look
+  for the Seek the Thrill banner near Gate 3.
+meetingTime: '18:00'
+packingList:
+  - Warm clothing (temperatures can drop below 0°C)
+  - Trekking shoes
+  - Sunglasses and sunscreen
+  - Personal medications
+  - Power bank
+  - Reusable water bottle
+  - Torch/headlamp
+  - Personal toiletries
+  - Camera
+  - Altitude sickness medication (Diamox — consult doctor)
+importantNotes: This is a high-altitude trip. Please consult your doctor before booking
+  if you have any heart or respiratory conditions. Acclimatization is built into the
+  itinerary.
+registrationEnabled: true
+registrationDeadline: '2026-05-10'

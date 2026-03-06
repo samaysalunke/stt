@@ -1,0 +1,111 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import 'glightbox/dist/css/glightbox.css';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const reader = createReader(process.cwd(), keystaticConfig);
+const album = await reader.collections.albums.read(slug!);
+
+if (!album) return Astro.redirect('/photo-vault/');
+
+const name = (album.name as string) || slug;
+const photos = (album.photos ?? []) as any[];
+
+function formatDate(d: string | null | undefined) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+---
+
+<BaseLayout
+  title={`${name} — Photo Vault | Seek the Thrill`}
+  description={album.description ?? `Photos from our ${name} adventure.`}
+>
+  <!-- Back link + header -->
+  <div class="pt-24 pb-8" style="background-color: var(--color-primary-dark);">
+    <div class="container-app">
+      <a href="/photo-vault/" class="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors mb-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Photo Vault
+      </a>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-2" style="font-family: var(--font-display);">{name}</h1>
+      <div class="flex flex-wrap items-center gap-4 text-white/70 text-sm">
+        {album.location && (
+          <span class="flex items-center gap-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+            {album.location}
+          </span>
+        )}
+        {album.date && <span>{formatDate(album.date)}</span>}
+        {photos.length > 0 && <span>{photos.length} photos</span>}
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo grid -->
+  <section class="py-10" style="background-color: var(--color-surface);">
+    <div class="container-app">
+      {photos.length > 0 ? (
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+          {photos.map((p, i) => (
+            <a
+              href={p.image}
+              data-glightbox="type: image"
+              data-gallery="album"
+              data-title={p.caption ?? `Photo ${i + 1} of ${name}`}
+              class="block relative overflow-hidden rounded-xl group aspect-square"
+            >
+              <img
+                src={p.image}
+                alt={p.caption ?? `${name} photo ${i + 1}`}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style="background: rgba(0,0,0,0.3);">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              {p.caption && (
+                <div class="absolute bottom-0 left-0 right-0 p-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity" style="background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);">
+                  {p.caption}
+                </div>
+              )}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-20">
+          <svg class="w-20 h-20 mx-auto mb-6" style="color: var(--color-border);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 class="text-xl font-bold mb-2" style="font-family: var(--font-display);">Photos Coming Soon</h3>
+          <p style="color: var(--color-text-secondary);">We're uploading the memories from this trip!</p>
+          <a href="/photo-vault/" class="inline-block mt-6 font-bold px-6 py-3 rounded-xl text-white" style="background-color: var(--color-accent);">
+            ← Back to Photo Vault
+          </a>
+        </div>
+      )}
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // GLightbox initialization
+  import('glightbox').then(({ default: GLightbox }) => {
+    GLightbox({
+      selector: '[data-glightbox]',
+      touchNavigation: true,
+      loop: true,
+      autoplayVideos: false,
+    });
+  });
+</script>

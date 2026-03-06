@@ -1,0 +1,56 @@
+---
+interface Props {
+  variant?: 'status' | 'difficulty' | 'category';
+  value: string;
+}
+
+const { variant = 'status', value } = Astro.props;
+
+const statusStyles: Record<string, string> = {
+  'booking-open': 'background-color: #dcfce7; color: #166534;',
+  'upcoming': 'background-color: #dbeafe; color: #1e40af;',
+  'sold-out': 'background-color: #fee2e2; color: #991b1b;',
+  'completed': 'background-color: #f3f4f6; color: #374151;',
+  'draft': 'background-color: #fef9c3; color: #713f12;',
+};
+
+const statusLabels: Record<string, string> = {
+  'booking-open': 'Booking Open',
+  'upcoming': 'Upcoming',
+  'sold-out': 'Sold Out',
+  'completed': 'Completed',
+  'draft': 'Draft',
+};
+
+const difficultyStyles: Record<string, string> = {
+  'easy': 'background-color: #dcfce7; color: #166534;',
+  'moderate': 'background-color: #fef9c3; color: #854d0e;',
+  'challenging': 'background-color: #fee2e2; color: #991b1b;',
+  'moderate-challenging': 'background-color: #ffedd5; color: #9a3412;',
+};
+
+const difficultyLabels: Record<string, string> = {
+  'easy': 'Easy',
+  'moderate': 'Moderate',
+  'challenging': 'Challenging',
+  'moderate-challenging': 'Mod–Challenging',
+};
+
+let style = '';
+let label = value;
+
+if (variant === 'status') {
+  style = statusStyles[value] ?? statusStyles['upcoming'];
+  label = statusLabels[value] ?? value;
+} else if (variant === 'difficulty') {
+  style = difficultyStyles[value] ?? difficultyStyles['moderate'];
+  label = difficultyLabels[value] ?? value;
+}
+---
+
+<span
+  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide"
+  style={style}
+>
+  {label}
+</span>

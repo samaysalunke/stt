@@ -1,0 +1,129 @@
+name: Meghalaya - Living Root Bridges Trek
+status: upcoming
+shortDescription: Trek through Meghalaya's living root bridges, explore limestone caves, and
+  discover the magic of India's Northeast. An adventure like no other.
+categories:
+  - india
+  - adventure
+  - mountain
+  - cultural
+  - week-long
+startDate: '2026-10-20'
+endDate: '2026-10-25'
+duration: 6 Days, 5 Nights
+pricePerPerson: 22000
+minGroupSize: 8
+maxGroupSize: 12
+currentBookings: 3
+difficulty: challenging
+highlights:
+  - Double-decker living root bridge trek
+  - Rainbow Falls waterfall
+  - Dawki river (crystal clear waters)
+  - Mawlynnong - Asia's cleanest village
+  - Limestone caves exploration
+  - Local Khasi culture experience
+  - Homestays in remote villages
+itinerary:
+  - dayNumber: 1
+    dayTitle: Guwahati to Cherrapunji
+    activities: Arrival in Guwahati (morning flight/train). Drive to Cherrapunji (5-6 hours).
+      En route Umiam Lake stop. Check-in to homestay. Evening Nohkalikai Falls viewpoint. Group
+      orientation and trek briefing. Dinner with local family.
+    accommodation: Homestay in Cherrapunji
+    breakfast: false
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: Private cab from Guwahati
+    specialNotes: Carry raincoat from Day 1 — Cherrapunji is the wettest place on earth!
+  - dayNumber: 2
+    dayTitle: Double-Decker Root Bridge Trek
+    activities: Early breakfast (6 AM). Begin trek to Nongriat village (3,500 steps down). Visit
+      single-decker root bridge. Continue to famous double-decker root bridge. Swim in natural pool.
+      Lunch at local village home. Optional trek to Rainbow Falls. Evening stay in village homestay.
+    accommodation: Homestay in Nongriat
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: Lunch will be a local meal at the village
+    transport: ''
+    specialNotes: This is a demanding trek. 3,500 steps down and same back up. Good trekking shoes essential!
+  - dayNumber: 3
+    dayTitle: Trek Back & Mawlynnong
+    activities: Breakfast in village. Begin uphill trek back (3,500 steps up). Lunch in Cherrapunji.
+      Drive to Mawlynnong (Asia's cleanest village). Explore village and sky-view platform. Walk
+      through living root bridge in village. Evening relax in homestay.
+    accommodation: Homestay in Mawlynnong
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 4
+    dayTitle: Dawki & Shnongpdeng
+    activities: Breakfast. Visit Dawki river (crystal clear waters). Boat ride on Dawki
+      (Indo-Bangladesh border). Drive to Shnongpdeng. Riverside camping setup. Optional activities
+      cliff jumping, kayaking, snorkeling. Bonfire and local music night.
+    accommodation: Riverside camps at Shnongpdeng
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: Optional adventure activities charged separately.
+  - dayNumber: 5
+    dayTitle: Caves & Shillong
+    activities: Morning kayaking session. Drive to Mawsmai Caves (limestone caves). Cave exploration.
+      Continue to Shillong. Evening Police Bazaar market visit. Overnight in Shillong.
+    accommodation: Hotel in Shillong
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: ''
+  - dayNumber: 6
+    dayTitle: Shillong to Guwahati Departure
+    activities: Breakfast. Visit Elephant Falls. Drive to Guwahati (3 hours). Airport/railway station
+      drop. Trip concludes.
+    accommodation: ''
+    breakfast: true
+    lunch: false
+    dinner: false
+    mealsNotes: ''
+    transport: Private cab to Guwahati
+    specialNotes: ''
+included:
+  - All transportation (Guwahati to Guwahati)
+  - 5 nights accommodation (mix of homestays, camps, hotel)
+  - All meals (5 Breakfasts, 6 Lunches, 5 Dinners)
+  - Experienced local trek leader
+  - All entry fees and permits
+  - Dawki boat ride
+  - Mawsmai caves entry
+  - Camping equipment
+  - First aid kit and emergency support
+notIncluded:
+  - Flights/trains to Guwahati
+  - Travel insurance
+  - Optional adventure activities at Shnongpdeng
+  - Personal expenses and tips
+  - Any meals not mentioned
+meetingPoint: Guwahati Airport/Railway Station pickup. Coordinator will receive you.
+meetingTime: '09:00'
+packingList:
+  - Trekking shoes (must have good grip)
+  - Quick-dry trek clothes
+  - Raincoat/poncho (essential!)
+  - Swimwear
+  - Towel
+  - Trekking poles (recommended)
+  - Personal medications
+  - Torch/headlamp
+  - Waterproof bag for essentials
+  - Power bank
+  - Sunscreen and insect repellent
+registrationEnabled: true
+registrationDeadline: '2026-10-10'

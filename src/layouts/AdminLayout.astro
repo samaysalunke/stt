@@ -1,0 +1,105 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  activeTab?: 'trips' | 'photo-vault' | 'registrations' | 'contacts' | 'newsletter';
+}
+
+const { title, activeTab } = Astro.props;
+
+const tabs = [
+  { href: '/admin/trips',         label: 'Trips',         key: 'trips' },
+  { href: '/admin/photo-vault',   label: 'Photo Vault',   key: 'photo-vault' },
+  { href: '/admin/registrations', label: 'Registrations', key: 'registrations' },
+  { href: '/admin/contacts',      label: 'Contacts',      key: 'contacts' },
+  { href: '/admin/newsletter',    label: 'Newsletter',    key: 'newsletter' },
+];
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — Seek the Thrill Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body style="background-color: var(--color-surface); color: var(--color-text-primary); font-family: var(--font-sans); min-height: 100vh;">
+
+    <!-- Top bar -->
+    <header style="background-color: var(--color-primary-dark); position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 0 1.5rem; display: flex; align-items: center; justify-content: space-between; height: 56px;">
+        <div id="admin-left" style="display: flex; align-items: center; gap: 2rem;">
+          <a href="/admin/trips" style="font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: white; text-decoration: none; flex-shrink: 0;">
+            🏔️ STT Admin
+          </a>
+          <nav id="admin-nav" style="display: flex; gap: 0.25rem;">
+            {tabs.map(tab => (
+              <a
+                href={tab.href}
+                style={`padding: 0.35rem 0.85rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; text-decoration: none; transition: background 0.15s; ${
+                  activeTab === tab.key
+                    ? 'background: rgba(255,255,255,0.2); color: white;'
+                    : 'color: rgba(255,255,255,0.75);'
+                }`}
+              >
+                {tab.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+        <form method="POST" action="/api/admin/logout">
+          <button
+            type="submit"
+            style="font-size: 0.8rem; color: rgba(255,255,255,0.7); background: none; border: 1px solid rgba(255,255,255,0.25); border-radius: 0.4rem; padding: 0.3rem 0.75rem; cursor: pointer; transition: all 0.15s;"
+          >
+            Logout
+          </button>
+        </form>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main id="admin-main" style="max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem;">
+      <slot />
+    </main>
+  <style>
+    /* ===== ADMIN LAYOUT: RESPONSIVE FIXES ===== */
+
+    /* Mobile (< 640px): nav tabs scroll horizontally */
+    @media (max-width: 639px) {
+      #admin-left {
+        overflow: hidden;
+        flex: 1 1 0;
+        min-width: 0;
+        gap: 0.5rem;
+      }
+      #admin-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        flex-shrink: 1;
+      }
+      #admin-nav::-webkit-scrollbar { display: none; }
+      #admin-nav a {
+        white-space: nowrap;
+        font-size: 0.78rem !important;
+        padding: 0.3rem 0.6rem !important;
+      }
+      #admin-main {
+        padding: 1rem !important;
+      }
+    }
+
+    /* Tablet (640–1023px): tighter padding */
+    @media (min-width: 640px) and (max-width: 1023px) {
+      #admin-main {
+        padding: 1.5rem 1rem !important;
+      }
+    }
+  </style>
+  </body>
+</html>

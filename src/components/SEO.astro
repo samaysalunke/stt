@@ -1,0 +1,40 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  type?: 'website' | 'article';
+  canonical?: string;
+}
+
+const {
+  title,
+  description,
+  image = '/images/og-default.jpg',
+  type = 'website',
+  canonical,
+} = Astro.props;
+
+const siteUrl = 'https://seekthethrill.in';
+const fullTitle = title.includes('Seek the Thrill') ? title : `${title} | Seek the Thrill`;
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, siteUrl).href;
+const imageUrl = image.startsWith('http') ? image : new URL(image, siteUrl).href;
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Open Graph -->
+<meta property="og:type" content={type} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:site_name" content="Seek the Thrill" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />

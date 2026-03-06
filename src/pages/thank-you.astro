@@ -1,0 +1,79 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const tripName = Astro.url.searchParams.get('trip') ?? 'your trip';
+---
+
+<BaseLayout
+  title="Registration Successful — Seek the Thrill"
+  description="Your trip registration was successful! Get ready for an adventure."
+>
+  <div class="min-h-screen flex items-center justify-center py-20 px-4" style="background-color: var(--color-surface);">
+    <div class="max-w-xl w-full text-center">
+
+      <!-- Big green check -->
+      <div class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg" style="background-color: var(--color-success);">
+        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+
+      <h1 class="text-3xl md:text-4xl font-extrabold mb-3" style="font-family: var(--font-display);">
+        🎉 Registration Successful!
+      </h1>
+      <p class="text-lg mb-8" style="color: var(--color-text-secondary);">
+        Thank you for registering for <strong>{tripName}</strong>!
+      </p>
+
+      <!-- What's next card -->
+      <div class="bg-white rounded-2xl shadow-md p-6 lg:p-8 mb-8 text-left border-l-4" style="border-color: var(--color-primary);">
+        <h2 class="font-bold text-lg mb-4" style="font-family: var(--font-display); color: var(--color-primary);">
+          What Happens Next?
+        </h2>
+        <ul class="space-y-3">
+          {[
+            { icon: '✓', text: 'Booking confirmation within 24 hours' },
+            { icon: '✓', text: 'Trip preparation guide sent to your email' },
+            { icon: '✓', text: 'You\'ll be added to the trip WhatsApp group' },
+            { icon: '✓', text: 'Pre-trip briefing details shared closer to the date' },
+            { icon: '✓', text: 'Payment verification by our team' },
+          ].map((item) => (
+            <li class="flex items-start gap-3 text-sm">
+              <span class="font-bold flex-shrink-0 mt-0.5" style="color: var(--color-primary);">{item.icon}</span>
+              <span style="color: var(--color-text-secondary);">{item.text}</span>
+            </li>
+          ))}
+        </ul>
+        <p class="text-sm mt-4 p-3 rounded-lg" style="background-color: var(--color-primary-light); color: var(--color-primary);">
+          A confirmation email has been sent to your email address.
+        </p>
+      </div>
+
+      <!-- Contact info -->
+      <p class="text-sm mb-8" style="color: var(--color-text-secondary);">
+        Questions? Email us at <a href="mailto:zahra@seekthethrill.in" class="underline" style="color: var(--color-accent);">zahra@seekthethrill.in</a>
+        or call <a href="tel:+917975027491" class="underline" style="color: var(--color-accent);">+91-7975027491</a>
+      </p>
+
+      <!-- CTAs -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a
+          href="/trips/"
+          class="font-bold text-white px-8 py-3.5 rounded-xl transition-all hover:opacity-90"
+          style="background-color: var(--color-accent);"
+        >
+          Browse More Trips
+        </a>
+        <a
+          href="/photo-vault/"
+          class="font-bold px-8 py-3.5 rounded-xl border-2 transition-all"
+          style="border-color: var(--color-primary); color: var(--color-primary);"
+          onmouseover="this.style.backgroundColor='var(--color-primary)'; this.style.color='white';"
+          onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-primary)';"
+        >
+          View Photo Vault
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

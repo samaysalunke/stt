@@ -1,0 +1,215 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import StatsCounter from '../components/StatsCounter';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+
+let settings: any = {};
+try {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  settings = await reader.singletons.siteSettings.read() ?? {};
+} catch (e) {}
+
+const stats = [
+  { value: settings.tripsCompleted ?? 25, label: 'Trips Completed' },
+  { value: settings.happyTravelers ?? 500, label: 'Happy Travelers' },
+  { value: settings.destinationsCovered ?? 15, label: 'Destinations Covered' },
+  { value: settings.yearsOfAdventure ?? 4, label: 'Years of Adventure' },
+];
+
+const founderImg = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800&auto=format&fit=crop&q=80';
+
+const values = [
+  {
+    icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
+    title: 'Authentic Experiences',
+    desc: 'We go beyond tourist spots to give you real, local experiences that transform perspective.',
+  },
+  {
+    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    title: 'Small, Meaningful Groups',
+    desc: 'We keep groups small (8-20 people) so you actually connect with fellow travelers.',
+  },
+  {
+    icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    title: 'Budget-Conscious Quality',
+    desc: 'We believe great experiences don\'t need to cost a fortune. Value is our promise.',
+  },
+  {
+    icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    title: 'Safety First Always',
+    desc: 'Every trip is planned with safety protocols, experienced leaders, and emergency support.',
+  },
+];
+
+const features = [
+  {
+    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+    title: 'Small Group Sizes',
+    desc: 'Max 20 travelers per trip for a personal, connected experience.',
+  },
+  {
+    icon: 'M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
+    title: 'Curated Itineraries',
+    desc: 'Every detail planned so you can focus on enjoying the journey.',
+  },
+  {
+    icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    title: 'Budget-Friendly',
+    desc: 'Premium experiences at prices that make sense for young travelers.',
+  },
+  {
+    icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    title: 'Safety First',
+    desc: 'Experienced leaders, first aid kits, emergency protocols always in place.',
+  },
+  {
+    icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+    title: 'Experienced Leaders',
+    desc: 'Every trip led by a trained, passionate trip leader who knows the terrain.',
+  },
+  {
+    icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+    title: 'Local Immersion',
+    desc: 'We support local businesses and give you genuine cultural experiences.',
+  },
+];
+---
+
+<BaseLayout
+  title="About Us — Seek the Thrill"
+  description="Learn about Seek the Thrill — how we started, what we stand for, and why we're the best adventure travel company for young Indian travelers."
+>
+  <!-- Hero -->
+  <section
+    class="relative flex items-center justify-center overflow-hidden pt-20"
+    style="height: 45vh; background-image: url('https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
+    <div class="relative z-10 text-center px-4 max-w-3xl mx-auto">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">
+        About Seek the Thrill
+      </h1>
+      <p class="text-base md:text-xl text-white/80">
+        Adventure shouldn't be expensive. Exploring India should be accessible to everyone.
+      </p>
+    </div>
+  </section>
+
+  <!-- Our Story -->
+  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
+    <div class="container-app">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div class="reveal">
+          <img
+            src={founderImg}
+            alt="Zahra Shakir - Founder of Seek the Thrill"
+            class="w-full rounded-2xl shadow-xl object-cover"
+            style="aspect-ratio: 4/3;"
+            loading="lazy"
+          />
+        </div>
+
+        <div class="reveal">
+          <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--color-accent);">Our Story</span>
+          <h2 class="text-3xl lg:text-4xl font-extrabold mt-2 mb-6 leading-tight" style="font-family: var(--font-display);">
+            Born in a Lockdown,<br />Built for Adventure
+          </h2>
+          <div class="space-y-4 text-base leading-relaxed" style="color: var(--color-text-secondary);">
+            <p>
+              Seek the Thrill was born from a simple belief: adventure shouldn't be expensive, and exploring India should be accessible to every young traveler.
+            </p>
+            <p>
+              In 2020, during the pandemic lockdown, founder Zahra Shakir realized that while everyone dreamed of travel, most young Indians couldn't afford luxury tour packages or didn't want to travel alone. There was a gap in the market for budget-friendly, group adventures that didn't compromise on experience or safety.
+            </p>
+            <p>
+              What started as organizing weekend trips for friends soon turned into a passion project. The first official Seek the Thrill trip to Rishikesh had just 8 people. Today, we've created unforgettable memories for hundreds of travelers across India and beyond.
+            </p>
+          </div>
+
+          <!-- Pull quote -->
+          <blockquote class="mt-8 pl-5 border-l-4 py-2" style="border-color: var(--color-accent);">
+            <p class="text-xl italic leading-relaxed" style="font-family: var(--font-accent); color: var(--color-primary);">
+              "We don't just take you to destinations; we create experiences that change you."
+            </p>
+            <footer class="text-sm mt-2 font-medium" style="color: var(--color-text-secondary);">— Zahra Shakir, Founder</footer>
+          </blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mission & Values -->
+  <section class="py-20 lg:py-24 bg-white">
+    <div class="container-app">
+      <div class="text-center mb-12 reveal">
+        <h2 class="text-2xl lg:text-3xl font-extrabold" style="font-family: var(--font-display);">What We Stand For</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {values.map((v) => (
+          <div class="reveal text-center p-6 rounded-2xl border hover:shadow-md transition-shadow" style="border-color: var(--color-border);">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background-color: var(--color-accent);">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={v.icon} />
+              </svg>
+            </div>
+            <h3 class="font-bold text-base mb-2" style="font-family: var(--font-display); color: var(--color-primary);">{v.title}</h3>
+            <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">{v.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Choose Us -->
+  <section class="py-20 lg:py-24" style="background-color: var(--color-primary-light);">
+    <div class="container-app">
+      <div class="text-center mb-12 reveal">
+        <h2 class="text-2xl lg:text-3xl font-extrabold" style="font-family: var(--font-display);">Why Travel With Us</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {features.map((f) => (
+          <div class="reveal flex items-start gap-4 p-6 bg-white rounded-2xl shadow-sm">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: var(--color-primary-light);">
+              <svg class="w-6 h-6" style="color: var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={f.icon} />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-bold text-base mb-1" style="font-family: var(--font-display);">{f.title}</h3>
+              <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">{f.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="py-16 lg:py-20 bg-white">
+    <div class="container-app">
+      <div class="reveal">
+        <StatsCounter stats={stats} client:visible />
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section
+    class="py-20 lg:py-24 relative overflow-hidden"
+    style="background-image: url('https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background: rgba(26,61,40,0.85);"></div>
+    <div class="relative z-10 text-center px-4">
+      <h2 class="text-3xl lg:text-4xl font-extrabold text-white mb-4" style="font-family: var(--font-display);">
+        Ready for Your Adventure?
+      </h2>
+      <p class="text-white/80 mb-8 max-w-lg mx-auto">
+        Join hundreds of travelers who've found their thrill with us. Your next adventure is just one click away.
+      </p>
+      <a href="/trips/" class="inline-flex items-center font-bold text-white px-10 py-4 rounded-xl text-base transition-all hover:opacity-90" style="background-color: var(--color-accent);">
+        Explore Trips →
+      </a>
+    </div>
+  </section>
+</BaseLayout>

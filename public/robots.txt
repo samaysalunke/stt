@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Block admin panel from crawlers
+Disallow: /keystatic/
+Disallow: /admin/
+Disallow: /uploads/
+Disallow: /api/
+
+Sitemap: https://seekthethrill.in/sitemap-index.xml

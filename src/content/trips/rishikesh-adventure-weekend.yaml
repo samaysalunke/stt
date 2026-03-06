@@ -1,0 +1,94 @@
+name: Rishikesh Adventure Weekend
+status: booking-open
+shortDescription: Experience the adventure capital of India with rafting, cliff jumping,
+  and camping by the sacred Ganges river.
+categories:
+  - india
+  - adventure
+  - weekend
+startDate: '2026-02-01'
+endDate: '2026-05-31'
+duration: 3 Days, 2 Nights
+pricePerPerson: 6500
+minGroupSize: 12
+maxGroupSize: 20
+currentBookings: 8
+difficulty: moderate
+highlights:
+  - 16 km white-water rafting
+  - Cliff jumping (5m, 10m, 15m)
+  - Waterfall trek
+  - Beach camping by the Ganges
+  - Bonfire nights with music
+  - Visit to Beatles Ashram
+  - Ganga Aarti experience
+itinerary:
+  - dayNumber: 1
+    dayTitle: Delhi to Rishikesh - Arrival & Setup
+    activities: Early morning departure from Delhi (6 AM). Arrive Rishikesh by 11 AM. Check-in
+      to riverside camp. Lunch. Safety briefing and gear distribution. Short cliff jumping
+      session at camp beach. Evening visit to Laxman Jhula and market. Attend Ganga Aarti at
+      Parmarth Niketan. Return to camp for dinner and bonfire.
+    accommodation: Riverside camps
+    breakfast: false
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: AC bus from Delhi ISBT
+    specialNotes: ''
+  - dayNumber: 2
+    dayTitle: Rafting Day!
+    activities: Early breakfast. Drive to rafting start point (Shivpuri). Safety briefing and
+      training. 16 km white-water rafting (Grade 2-3 rapids). Beach stops for cliff jumping.
+      Body surfing opportunities. Beach lunch during rafting. Return to camp by evening. Free time
+      to relax or swim. Dinner and bonfire with music.
+    accommodation: Riverside camps
+    breakfast: true
+    lunch: true
+    dinner: true
+    mealsNotes: ''
+    transport: ''
+    specialNotes: All safety equipment provided. No prior experience needed.
+  - dayNumber: 3
+    dayTitle: Waterfall Trek & Departure
+    activities: Morning yoga by the river (optional). Breakfast. Trek to Neer Garh Waterfall (3
+      km each way). Swimming at the waterfall. Return and quick lunch. Visit Beatles Ashram (if
+      time permits). Depart for Delhi by 2 PM.
+    accommodation: ''
+    breakfast: true
+    lunch: true
+    dinner: false
+    mealsNotes: ''
+    transport: AC bus back to Delhi
+    specialNotes: ''
+included:
+  - Transportation Delhi-Rishikesh-Delhi
+  - 2 nights camping accommodation
+  - 2 Breakfasts, 3 Lunches, 2 Dinners
+  - 16 km white-water rafting with gear
+  - Safety equipment (life jackets, helmets)
+  - Waterfall trek with guide
+  - Cliff jumping sessions
+  - Bonfire setup
+  - Trip leader throughout
+  - First aid support
+notIncluded:
+  - Personal expenses
+  - Beatles Ashram entry fee
+  - Any adventure activities not mentioned
+  - Travel insurance
+  - Tips for guides and drivers
+meetingPoint: Boarding from Majnu Ka Tilla, Delhi at 6:00 AM sharp.
+meetingTime: '06:00'
+packingList:
+  - Quick-dry clothes
+  - Swimwear
+  - Extra pair of shoes (will get wet)
+  - Sunscreen (waterproof)
+  - Towel
+  - Cap/hat
+  - Personal medications
+  - Change of warm clothes
+  - Waterproof phone pouch
+registrationEnabled: true
+registrationDeadline: '2026-05-25'
