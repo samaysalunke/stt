@@ -1,0 +1,147 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const lastUpdated = 'March 2025';
+const email = 'zahra@seekthethrill.in';
+const phone = '+91-7975027491';
+---
+
+<BaseLayout
+  title="Privacy Policy — Seek the Thrill"
+  description="Learn how Seek the Thrill collects, uses, and protects your personal information when you book trips with us."
+>
+  <!-- Hero -->
+  <section class="relative flex items-center justify-center overflow-hidden pt-20" style="height: 28vh; min-height: 180px; background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);">
+    <div class="relative z-10 text-center px-4">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">Privacy Policy</h1>
+      <p class="text-white/70 text-sm">Last updated: {lastUpdated}</p>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <section class="py-16">
+    <div class="container-app max-w-3xl">
+      <div class="prose-style">
+
+        <p class="text-base leading-relaxed mb-8" style="color: var(--color-text-secondary);">
+          Seek the Thrill ("we", "us", "our") is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.
+        </p>
+
+        <h2>1. Information We Collect</h2>
+        <p>When you interact with our website or book a trip, we may collect:</p>
+        <ul>
+          <li><strong>Personal details:</strong> Full name, email address, phone number, date of birth, gender.</li>
+          <li><strong>Address details:</strong> City, state, country, pincode.</li>
+          <li><strong>Health information:</strong> Dietary preferences, food allergies, medical conditions, medications — collected only for trip safety purposes.</li>
+          <li><strong>Emergency contact:</strong> Name, phone number, and relationship of your emergency contact person.</li>
+          <li><strong>Payment information:</strong> Payment amount, method, transaction reference, and a screenshot of your payment. We do not collect credit/debit card numbers.</li>
+          <li><strong>Trip preferences:</strong> Experience level, T-shirt size, special requests, and why you want to join a trip.</li>
+          <li><strong>Communication data:</strong> Messages submitted through the contact form.</li>
+          <li><strong>Email address</strong> if you subscribe to our newsletter.</li>
+        </ul>
+
+        <h2>2. How We Use Your Information</h2>
+        <ul>
+          <li>To process your trip registration and confirm your booking.</li>
+          <li>To send you trip-related communication (confirmation, preparation guides, updates).</li>
+          <li>To ensure your safety during trips (health and emergency contact info).</li>
+          <li>To send newsletters and trip announcements (only if you subscribed).</li>
+          <li>To respond to your contact form queries.</li>
+          <li>To improve our website and trip offerings.</li>
+        </ul>
+
+        <h2>3. How We Share Your Information</h2>
+        <p>We do <strong>not</strong> sell, rent, or trade your personal information to third parties. We may share information with:</p>
+        <ul>
+          <li>Our trip leaders — only information required for trip safety and management (e.g., health info, emergency contacts).</li>
+          <li>Email service providers — solely for sending transactional and marketing emails.</li>
+          <li>Legal authorities — only if required by law or to protect our rights.</li>
+        </ul>
+
+        <h2>4. Data Storage & Security</h2>
+        <ul>
+          <li>Your data is stored on secure servers. Registration data is stored in an encrypted database.</li>
+          <li>Payment screenshots are stored securely and are only accessible to our admin team.</li>
+          <li>We implement reasonable technical and organisational measures to protect your data from unauthorised access, loss, or misuse.</li>
+          <li>However, no online transmission is 100% secure. You share data at your own risk.</li>
+        </ul>
+
+        <h2>5. Data Retention</h2>
+        <p>
+          We retain your registration data for up to 3 years for record-keeping and safety purposes. Newsletter subscriptions are retained until you unsubscribe. Contact form submissions are retained for up to 1 year.
+        </p>
+
+        <h2>6. Your Rights</h2>
+        <p>You have the right to:</p>
+        <ul>
+          <li><strong>Access</strong> the personal data we hold about you.</li>
+          <li><strong>Correct</strong> inaccurate or incomplete data.</li>
+          <li><strong>Delete</strong> your data (subject to legal or safety obligations).</li>
+          <li><strong>Unsubscribe</strong> from our newsletter at any time by emailing us.</li>
+          <li><strong>Object</strong> to processing of your data for marketing purposes.</li>
+        </ul>
+        <p>To exercise any of these rights, contact us at <a href={`mailto:${email}`}>{email}</a>.</p>
+
+        <h2>7. Cookies</h2>
+        <p>
+          Our website uses essential session cookies for admin authentication only. We do not use third-party tracking or advertising cookies. We do not use Google Analytics or similar tracking services.
+        </p>
+
+        <h2>8. Third-Party Links</h2>
+        <p>
+          Our website may contain links to external sites (Instagram, Google Maps, etc.). We are not responsible for the privacy practices of those sites and encourage you to review their privacy policies.
+        </p>
+
+        <h2>9. Children's Privacy</h2>
+        <p>
+          Our trips are designed for adults (18+). We do not knowingly collect data from anyone under 18 without parental consent. If you believe a minor has submitted data to us, please contact us immediately.
+        </p>
+
+        <h2>10. Changes to This Policy</h2>
+        <p>
+          We may update this Privacy Policy from time to time. The "Last updated" date at the top of this page will reflect any changes. Continued use of our services after updates constitutes acceptance of the revised policy.
+        </p>
+
+        <h2>11. Contact Us</h2>
+        <p>
+          For any privacy-related questions or requests:<br />
+          📧 <a href={`mailto:${email}`}>{email}</a><br />
+          📞 <a href={`tel:${phone}`}>{phone}</a>
+        </p>
+
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .prose-style h2 {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 2rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--color-border);
+  }
+  .prose-style p,
+  .prose-style li {
+    font-size: 0.925rem;
+    line-height: 1.75;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.6rem;
+  }
+  .prose-style ul {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+    list-style: disc;
+  }
+  .prose-style a {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+  .prose-style strong {
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+</style>

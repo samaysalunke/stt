@@ -82,6 +82,12 @@ const statusLabels: Record<string, string> = {
                 <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
                   <a href={`/admin/trips/${trip.slug}`} style="font-size:0.8rem; color:var(--color-primary); text-decoration:none; border:1px solid var(--color-primary); border-radius:0.35rem; padding:0.2rem 0.65rem; font-weight:500;">Edit</a>
                   <button
+                    class="duplicate-trip-btn"
+                    data-slug={trip.slug}
+                    style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; border-radius:0.35rem; padding:0.2rem 0.65rem; cursor:pointer; font-weight:500;"
+                    title="Duplicate this trip as a draft"
+                  >Copy</button>
+                  <button
                     class="delete-trip-btn"
                     data-slug={trip.slug}
                     data-name={trip.name || trip.slug}
@@ -115,6 +121,30 @@ document.querySelectorAll('.status-select').forEach(sel => {
       window.location.reload();
     } catch {
       alert('Failed to update status. Try again.');
+    }
+  });
+});
+
+// Duplicate trip
+document.querySelectorAll('.duplicate-trip-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const target = e.target as HTMLButtonElement;
+    const slug = target.dataset.slug!;
+    target.disabled = true;
+    target.textContent = '...';
+    try {
+      const res = await fetch('/api/admin/trips/duplicate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error('Failed');
+      window.location.href = `/admin/trips/${data.newSlug}`;
+    } catch {
+      alert('Failed to duplicate trip. Try again.');
+      target.disabled = false;
+      target.textContent = 'Copy';
     }
   });
 });

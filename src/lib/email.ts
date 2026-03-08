@@ -119,6 +119,88 @@ export async function sendAdminRegistrationNotification(data: Record<string, any
   );
 }
 
+export async function sendRegistrationStatusConfirmed(data: {
+  full_name: string;
+  email: string;
+  trip_name: string;
+  trip_date?: string;
+}) {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Booking Confirmed!</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f7;">
+  <div style="background: #1A3D28; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Seek the Thrill 🏔️</h1>
+  </div>
+  <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h2 style="color: #2D5F3E; margin-top: 0;">🎉 Your booking is confirmed!</h2>
+    <p>Hi <strong>${data.full_name}</strong>,</p>
+    <p>Great news — your booking for <strong>${data.trip_name}</strong> has been <strong style="color:#2D5F3E;">confirmed</strong>! We're thrilled to have you on board.</p>
+    ${data.trip_date ? `<p style="background:#E8F5EC;padding:12px 16px;border-radius:8px;"><strong>Trip Date:</strong> ${data.trip_date}</p>` : ''}
+    <div style="background:#E8F5EC;border-radius:8px;padding:20px;margin:20px 0;">
+      <h3 style="color:#2D5F3E;margin-top:0;">What happens next:</h3>
+      <ul style="color:#333;padding-left:20px;">
+        <li>You'll receive a detailed trip preparation guide shortly</li>
+        <li>You'll be added to the trip WhatsApp group</li>
+        <li>Pre-trip briefing details will be shared a few days before departure</li>
+        <li>Ensure your remaining balance is paid before departure</li>
+      </ul>
+    </div>
+    <p style="color:#666;font-size:14px;">Questions? <a href="https://wa.me/917975027491" style="color:#E8752A;font-weight:bold;">WhatsApp us at +91-7975027491</a> or reply to this email.</p>
+    <div style="background:#1A3D28;border-radius:8px;padding:20px;margin-top:20px;text-align:center;">
+      <p style="color:white;margin:0;font-size:18px;font-style:italic;">Adventure awaits! 🌄</p>
+      <p style="color:rgba(255,255,255,0.8);margin:8px 0 0;font-size:13px;">Team Seek the Thrill | +91-7975027491</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(
+    data.email,
+    `🎉 Booking Confirmed — ${data.trip_name} | Seek the Thrill`,
+    html
+  );
+}
+
+export async function sendRegistrationStatusRejected(data: {
+  full_name: string;
+  email: string;
+  trip_name: string;
+}) {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Booking Update</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f7;">
+  <div style="background: #1A3D28; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">Seek the Thrill 🏔️</h1>
+  </div>
+  <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <h2 style="color: #333; margin-top: 0;">An update on your booking</h2>
+    <p>Hi <strong>${data.full_name}</strong>,</p>
+    <p>Thank you for your interest in <strong>${data.trip_name}</strong>. Unfortunately, we're unable to confirm your spot on this trip.</p>
+    <p>This can happen due to the trip being fully booked, a payment verification issue, or other circumstances. We're sorry for the inconvenience.</p>
+    <div style="background:#FEF3C7;border-radius:8px;padding:16px;margin:16px 0;">
+      <p style="margin:0;color:#92400E;"><strong>What you can do:</strong> Browse our other upcoming trips or contact us on WhatsApp to discuss alternatives.</p>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:20px;">
+      <a href="https://seekthethrill.in/trips/" style="display:inline-block;background:#1A3D28;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Browse Other Trips</a>
+      <a href="https://wa.me/917975027491" style="display:inline-block;background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">WhatsApp Us</a>
+    </div>
+    <p style="color:#666;font-size:13px;margin-top:24px;">If you believe this is a mistake or have questions, please reach out — we'd love to help.</p>
+    <p style="color:#666;font-size:13px;">Team Seek the Thrill | +91-7975027491</p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(
+    data.email,
+    `Booking Update — ${data.trip_name} | Seek the Thrill`,
+    html
+  );
+}
+
 export async function sendContactConfirmation(name: string, email: string, message: string) {
   const html = `
 <!DOCTYPE html>

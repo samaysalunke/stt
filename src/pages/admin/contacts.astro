@@ -32,6 +32,19 @@ function statusStyle(status: string) {
     </a>
   </div>
 
+  <!-- Filter bar -->
+  <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+    {['all','new','resolved'].map(s => (
+      <button
+        class="contact-filter"
+        data-filter={s}
+        style={`padding:0.35rem 0.9rem;border-radius:9999px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1.5px solid var(--color-border);background:${s==='all'?'var(--color-primary)':'var(--color-surface)'};color:${s==='all'?'white':'var(--color-text-secondary)'};`}
+      >
+        {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+      </button>
+    ))}
+  </div>
+
   <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
   <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;overflow:hidden;min-width:600px;">
     {contacts.length === 0 ? (
@@ -48,7 +61,7 @@ function statusStyle(status: string) {
         <tbody>
           {contacts.map((c, i) => (
             <>
-              <tr style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}>
+              <tr class="contact-row" data-status={c.status ?? 'new'} style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}>
                 <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{c.id}</td>
                 <td style="padding:0.65rem 0.875rem;font-weight:600;">{c.full_name}</td>
                 <td style="padding:0.65rem 0.875rem;">
@@ -85,13 +98,20 @@ function statusStyle(status: string) {
                       <p style="font-size:0.82rem;font-weight:600;color:var(--color-text-secondary);margin:0 0 0.4rem;">Message:</p>
                       <div style="background:white;border:1px solid var(--color-border);border-radius:0.5rem;padding:0.875rem;font-size:0.875rem;white-space:pre-wrap;line-height:1.6;">{c.message}</div>
                     </div>
-                    <div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;min-width:140px;">
                       <a
                         href={`mailto:${c.email}?subject=Re: ${encodeURIComponent(c.subject)}`}
                         style="display:block;padding:0.5rem 1.25rem;background:var(--color-accent);color:white;border-radius:0.5rem;font-size:0.82rem;font-weight:700;text-decoration:none;text-align:center;white-space:nowrap;"
                       >
                         Reply via Email
                       </a>
+                      <button
+                        onclick={`toggleResolved(${c.id}, '${c.status ?? 'new'}')`}
+                        id={`resolve-btn-${c.id}`}
+                        style={`padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${(c.status ?? 'new') === 'resolved' ? 'background:#F3F4F6;color:#6B7280;' : 'background:#D1FAE5;color:#065F46;'}`}
+                      >
+                        {(c.status ?? 'new') === 'resolved' ? '↩ Reopen' : '✓ Mark Resolved'}
+                      </button>
                     </div>
                   </div>
                 </td>
@@ -111,5 +131,75 @@ function statusStyle(status: string) {
     if (!row) return;
     row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
   }
+
+  async function toggleResolved(id: number, currentStatus: string) {
+    const newStatus = currentStatus === 'resolved' ? 'new' : 'resolved';
+    try {
+      const res = await fetch('/api/admin/mark-contact-resolved', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      // Update badge in the main row
+      const rows = document.querySelectorAll<HTMLTableRowElement>('.contact-row');
+      rows.forEach(row => {
+        const btn = row.querySelector(`button[onclick*="toggleContact(${id})"]`);
+        if (btn) {
+          row.dataset.status = newStatus;
+          const badge = row.querySelector('span[style*="border-radius:9999px"]') as HTMLElement | null;
+          if (badge) {
+            badge.textContent = newStatus;
+            badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${newStatus === 'resolved' ? 'background:#D1FAE5;color:#065F46;' : 'background:#FEF3C7;color:#92400E;'}`;
+          }
+        }
+      });
+      // Update the resolve button
+      const resolveBtn = document.getElementById('resolve-btn-' + id) as HTMLButtonElement | null;
+      if (resolveBtn) {
+        resolveBtn.textContent = newStatus === 'resolved' ? '↩ Reopen' : '✓ Mark Resolved';
+        resolveBtn.style.cssText = `padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${newStatus === 'resolved' ? 'background:#F3F4F6;color:#6B7280;' : 'background:#D1FAE5;color:#065F46;'}`;
+        resolveBtn.setAttribute('onclick', `toggleResolved(${id}, '${newStatus}')`);
+      }
+      // Apply active filter
+      applyContactFilter();
+    } catch {
+      alert('Failed to update status.');
+    }
+  }
+
+  // Filter buttons
+  let activeFilter = 'all';
+  function applyContactFilter() {
+    const rows = document.querySelectorAll<HTMLTableRowElement>('.contact-row');
+    rows.forEach(row => {
+      const status = row.dataset.status ?? 'new';
+      const show = activeFilter === 'all' || status === activeFilter;
+      row.style.display = show ? '' : 'none';
+      // Hide open detail row too
+      const viewBtn = row.querySelector('button[onclick*="toggleContact"]');
+      const id = viewBtn?.getAttribute('onclick')?.match(/\d+/)?.[0];
+      if (!show && id) {
+        const detail = document.getElementById('contact-' + id);
+        if (detail) detail.style.display = 'none';
+      }
+    });
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.contact-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.filter ?? 'all';
+      // Update button styles
+      document.querySelectorAll<HTMLButtonElement>('.contact-filter').forEach(b => {
+        const active = b.dataset.filter === activeFilter;
+        b.style.background = active ? 'var(--color-primary)' : 'var(--color-surface)';
+        b.style.color = active ? 'white' : 'var(--color-text-secondary)';
+        b.style.borderColor = active ? 'var(--color-primary)' : 'var(--color-border)';
+      });
+      applyContactFilter();
+    });
+  });
+
   (window as any).toggleContact = toggleContact;
+  (window as any).toggleResolved = toggleResolved;
 </script>

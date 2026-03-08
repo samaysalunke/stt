@@ -84,11 +84,11 @@ const address = settings.address ?? 'India';
         <h3 class="font-display font-bold text-base mb-5">Support</h3>
         <ul class="flex flex-col gap-2.5">
           {[
-            { href: '/contact/#faq', label: 'FAQ' },
+            { href: '/faq/', label: 'FAQ' },
             { href: '/contact/', label: 'Contact Us' },
-            { href: '/trips/', label: 'Cancellation Policy' },
-            { href: '/trips/', label: 'Terms & Conditions' },
-            { href: '/trips/', label: 'Privacy Policy' },
+            { href: '/terms/#cancellation', label: 'Cancellation Policy' },
+            { href: '/terms/', label: 'Terms & Conditions' },
+            { href: '/privacy/', label: 'Privacy Policy' },
           ].map((link) => (
             <li>
               <a href={link.href} class="text-white/70 text-sm hover:text-white transition-colors">
