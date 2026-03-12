@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getDb } from '../../lib/db';
+import { listTrips } from '../../lib/content';
 export const prerender = false;
 
 const registrations = getDb()
@@ -15,10 +16,52 @@ const totalRevenue = registrations
   .filter(r => r.status !== 'rejected')
   .reduce((s, r) => s + (r.amount_paid ?? 0), 0);
 
+// Build trip status lookup from YAML content
+const allTrips = listTrips() as Array<{ name: string; status?: string; slug: string }>;
+const tripStatusMap = new Map(allTrips.map(t => [t.name as string, (t.status as string) || 'upcoming']));
+
+// Group registrations by trip_name
+const regsByTrip = new Map<string, typeof registrations>();
+for (const reg of registrations) {
+  const tn = reg.trip_name as string;
+  if (!regsByTrip.has(tn)) regsByTrip.set(tn, []);
+  regsByTrip.get(tn)!.push(reg);
+}
+
+// Sort groups: booking-open → upcoming → sold-out → completed → draft → unknown
+const STATUS_ORDER = ['booking-open', 'upcoming', 'sold-out', 'completed', 'draft'];
+const tripGroups = [...regsByTrip.entries()].sort(([aName], [bName]) => {
+  const aIdx = STATUS_ORDER.indexOf(tripStatusMap.get(aName) ?? '');
+  const bIdx = STATUS_ORDER.indexOf(tripStatusMap.get(bName) ?? '');
+  return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+});
+
+function groupStats(regs: typeof registrations) {
+  return {
+    pending:   regs.filter(r => r.status === 'pending').length,
+    confirmed: regs.filter(r => r.status === 'confirmed').length,
+    rejected:  regs.filter(r => r.status === 'rejected').length,
+  };
+}
+
 function statusStyle(status: string) {
   if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
   if (status === 'rejected') return 'background:#FEE2E2;color:#991B1B;';
   return 'background:#FEF3C7;color:#92400E;';
+}
+
+function tripStatusBadgeStyle(status: string) {
+  if (status === 'booking-open') return 'background:#D1FAE5;color:#065F46;';
+  if (status === 'upcoming')     return 'background:#FEF3C7;color:#92400E;';
+  if (status === 'sold-out')     return 'background:#FEE2E2;color:#991B1B;';
+  if (status === 'completed')    return 'background:#E5E7EB;color:#374151;';
+  return 'background:#F3F4F6;color:#6B7280;';
+}
+
+function tripGroupHeaderStyle(status: string) {
+  if (status === 'booking-open') return 'border-left:4px solid #22A654;background:#f0fdf4;';
+  if (status === 'upcoming')     return 'border-left:4px solid #D4A854;background:#fffdf0;';
+  return 'border-left:4px solid #E5E5E0;background:white;';
 }
 
 function fmt(date: string) {
@@ -49,7 +92,7 @@ function fmtCurrency(n: number) {
   </div>
 
   <!-- Toolbar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
       <input
         type="text"
@@ -72,152 +115,197 @@ function fmtCurrency(n: number) {
     </a>
   </div>
 
-  <!-- Table -->
-  <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
-  <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;overflow:hidden;min-width:700px;">
-    {registrations.length === 0 ? (
-      <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);">No registrations yet.</p>
-    ) : (
-      <table id="regTable" style="width:100%;border-collapse:collapse;font-size:0.875rem;">
-        <thead>
-          <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
-            {['#', 'Name', 'Email', 'Phone', 'Trip', 'Amount', 'Status', 'Date', ''].map(h => (
-              <th style="padding:0.65rem 0.875rem;text-align:left;font-size:0.75rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {registrations.map((r, i) => (
-            <>
-              <tr
-                class="reg-row"
-                data-name={(r.full_name as string).toLowerCase()}
-                data-email={(r.email as string).toLowerCase()}
-                data-trip={(r.trip_name as string ?? '').toLowerCase()}
-                data-status={r.status}
-                style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}
-              >
-                <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{r.id}</td>
-                <td style="padding:0.65rem 0.875rem;font-weight:600;">{r.full_name}</td>
-                <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);">{r.email}</td>
-                <td style="padding:0.65rem 0.875rem;">{r.phone}</td>
-                <td style="padding:0.65rem 0.875rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{r.trip_name}</td>
-                <td style="padding:0.65rem 0.875rem;font-weight:600;">{fmtCurrency(r.amount_paid)}</td>
-                <td style="padding:0.65rem 0.875rem;">
-                  <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${statusStyle(r.status)}`}>
-                    {r.status}
-                  </span>
-                </td>
-                <td style="padding:0.65rem 0.875rem;white-space:nowrap;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(r.created_at as string)}</td>
-                <td style="padding:0.65rem 0.875rem;">
-                  <button
-                    onclick={`toggleDetail(${r.id})`}
-                    style="font-size:0.75rem;color:var(--color-primary);background:none;border:1px solid var(--color-primary);border-radius:0.35rem;padding:0.2rem 0.6rem;cursor:pointer;"
-                  >
-                    Details
-                  </button>
-                </td>
-              </tr>
+  <!-- Grouped registrations -->
+  {registrations.length === 0 ? (
+    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border-radius:0.75rem;border:1px solid var(--color-border);">No registrations yet.</p>
+  ) : (
+    <div id="trip-groups-container">
+      {tripGroups.map(([tripName, regs], groupIdx) => {
+        const tripStatus = tripStatusMap.get(tripName) ?? 'upcoming';
+        const stats = groupStats(regs);
+        const groupId = `group-${groupIdx}`;
+        return (
+          <div class="trip-group" data-group-id={groupId} style="margin-bottom:1.25rem;">
 
-              <!-- Expandable detail row -->
-              <tr id={`detail-${r.id}`} style="display:none;" class="detail-row">
-                <td colspan="9" style="padding:0;border-bottom:2px solid var(--color-border);">
-                  <div style="padding:1.25rem 1.5rem;background:#F0FDF4;">
+            <!-- Group header -->
+            <div
+              class={`trip-group-header ${tripStatus.replace('-', '_')}`}
+              onclick={`toggleGroup('${groupId}')`}
+              style={`display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1.25rem;cursor:pointer;border-radius:0.75rem 0.75rem 0 0;flex-wrap:wrap;gap:0.5rem;user-select:none;${tripGroupHeaderStyle(tripStatus)}`}
+            >
+              <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
+                <span style="font-weight:700;font-size:0.95rem;color:var(--color-text-primary);">{tripName}</span>
+                <span style={`padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;${tripStatusBadgeStyle(tripStatus)}`}>
+                  {tripStatus.replace(/-/g, ' ')}
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                {stats.pending > 0 && (
+                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEF3C7;color:#92400E;">{stats.pending} pending</span>
+                )}
+                {stats.confirmed > 0 && (
+                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#D1FAE5;color:#065F46;">{stats.confirmed} confirmed</span>
+                )}
+                {stats.rejected > 0 && (
+                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEE2E2;color:#991B1B;">{stats.rejected} rejected</span>
+                )}
+                <span class="trip-chevron" style="font-size:0.9rem;color:var(--color-text-secondary);margin-left:0.25rem;">▾</span>
+              </div>
+            </div>
 
-                    <!-- Two columns: info + actions -->
-                    <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
-
-                      <!-- Left: all fields -->
-                      <div>
-                        <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
-                          {[
-                            ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
-                            ['Date of Birth', r.date_of_birth ?? '—'], ['Gender', r.gender ?? '—'],
-                            ['City', r.city], ['State', r.state ?? '—'], ['Country', r.country ?? '—'],
-                            ['Pincode', r.pincode ?? '—'], ['Address', r.address ?? '—'],
-                            ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
-                            ['Emergency Relation', r.emergency_relationship],
-                            ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
-                            ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
-                            ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
-                            ['Experience', r.experience_level ?? '—'], ['T-Shirt Size', r.tshirt_size ?? '—'],
-                            ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
-                            ['Amount Paid', fmtCurrency(r.amount_paid)], ['Payment Method', r.payment_method ?? '—'],
-                            ['Transaction ID', r.transaction_id], ['Payment Date', r.payment_date ?? '—'],
-                            ['Source', r.source ?? '—'], ['Special Requests', r.special_requests ?? '—'],
-                            ['Photo Consent', r.photo_consent ? 'Yes' : 'No'],
-                          ].map(([label, val]) => (
-                            <div>
-                              <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
-                              <span>{val}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {r.payment_screenshot_url && (
-                          <div style="margin-top:0.75rem;">
-                            <a
-                              href={r.payment_screenshot_url}
-                              target="_blank"
-                              style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
-                            >
-                              View Payment Screenshot →
-                            </a>
-                          </div>
-                        )}
-                      </div>
-
-                      <!-- Right: status update + admin notes -->
-                      <div style="background:white;border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
-                        <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
-                        <div id={`status-section-${r.id}`}>
-                          <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
-                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                            {['pending', 'confirmed', 'rejected'].map(s => (
-                              <button
-                                onclick={`updateStatus(${r.id}, '${s}')`}
-                                style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
-                                  r.status === s
-                                    ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
-                                    : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
-                                }`}
-                              >
-                                {s.charAt(0).toUpperCase() + s.slice(1)}
-                              </button>
-                            ))}
-                          </div>
-                          <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
-                          <textarea
-                            id={`notes-${r.id}`}
-                            rows={3}
-                            placeholder="Add internal notes…"
-                            style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
-                          >{r.admin_notes ?? ''}</textarea>
-                          <button
-                            onclick={`saveNotes(${r.id})`}
-                            style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
+            <!-- Registrations table for this trip -->
+            <div class="trip-group-table" id={groupId}>
+              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 0.75rem 0.75rem;">
+                <div style="background:white;border:1px solid var(--color-border);border-top:none;border-radius:0 0 0.75rem 0.75rem;min-width:700px;">
+                  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                    <thead>
+                      <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
+                        {['#', 'Name', 'Email', 'Phone', 'Amount', 'Status', 'Date', ''].map(h => (
+                          <th style="padding:0.55rem 0.875rem;text-align:left;font-size:0.72rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {regs.map((r, i) => (
+                        <>
+                          <tr
+                            class="reg-row"
+                            data-name={(r.full_name as string).toLowerCase()}
+                            data-email={(r.email as string).toLowerCase()}
+                            data-trip={(r.trip_name as string ?? '').toLowerCase()}
+                            data-status={r.status}
+                            style={`border-bottom:1px solid var(--color-border);cursor:pointer;${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}
                           >
-                            Save Notes
-                          </button>
-                          <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </>
-          ))}
-        </tbody>
-      </table>
-    )}
-  </div>
-  </div>
+                            <td style="padding:0.6rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{r.id}</td>
+                            <td style="padding:0.6rem 0.875rem;font-weight:600;">{r.full_name}</td>
+                            <td style="padding:0.6rem 0.875rem;color:var(--color-text-secondary);">{r.email}</td>
+                            <td style="padding:0.6rem 0.875rem;">{r.phone}</td>
+                            <td style="padding:0.6rem 0.875rem;font-weight:600;">{fmtCurrency(r.amount_paid)}</td>
+                            <td style="padding:0.6rem 0.875rem;">
+                              <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${statusStyle(r.status)}`}>
+                                {r.status}
+                              </span>
+                            </td>
+                            <td style="padding:0.6rem 0.875rem;white-space:nowrap;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(r.created_at as string)}</td>
+                            <td style="padding:0.6rem 0.875rem;">
+                              <button
+                                onclick={`toggleDetail(${r.id})`}
+                                style="font-size:0.75rem;color:var(--color-primary);background:none;border:1px solid var(--color-primary);border-radius:0.35rem;padding:0.2rem 0.6rem;cursor:pointer;"
+                              >
+                                Details
+                              </button>
+                            </td>
+                          </tr>
+
+                          <!-- Expandable detail row -->
+                          <tr id={`detail-${r.id}`} style="display:none;" class="detail-row">
+                            <td colspan="8" style="padding:0;border-bottom:2px solid var(--color-border);">
+                              <div style="padding:1.25rem 1.5rem;background:#F0FDF4;">
+
+                                <!-- Two columns: info + actions -->
+                                <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+
+                                  <!-- Left: fields -->
+                                  <div>
+                                    <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
+                                      {[
+                                        ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
+                                        ['Gender', r.gender ?? '—'], ['City', r.city], ['Country', r.country ?? '—'],
+                                        ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
+                                        ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
+                                        ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
+                                        ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
+                                        ['Special Requests', r.special_requests ?? '—'],
+                                        ['Why Joining', r.why_join ?? '—'],
+                                        ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
+                                        ['Amount Paid', fmtCurrency(r.amount_paid)],
+                                      ].map(([label, val]) => (
+                                        <div>
+                                          <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
+                                          <span>{val}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {r.payment_screenshot_url && (
+                                      <div style="margin-top:0.75rem;">
+                                        <a
+                                          href={r.payment_screenshot_url}
+                                          target="_blank"
+                                          style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
+                                        >
+                                          View Payment Screenshot →
+                                        </a>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <!-- Right: status update + admin notes -->
+                                  <div style="background:white;border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
+                                    <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
+                                    <div id={`status-section-${r.id}`}>
+                                      <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
+                                      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                                        {['pending', 'confirmed', 'rejected'].map(s => (
+                                          <button
+                                            onclick={`updateStatus(${r.id}, '${s}')`}
+                                            style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
+                                              r.status === s
+                                                ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
+                                                : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
+                                            }`}
+                                          >
+                                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
+                                      <textarea
+                                        id={`notes-${r.id}`}
+                                        rows={3}
+                                        placeholder="Add internal notes…"
+                                        style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
+                                      >{r.admin_notes ?? ''}</textarea>
+                                      <button
+                                        onclick={`saveNotes(${r.id})`}
+                                        style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
+                                      >
+                                        Save Notes
+                                      </button>
+                                      <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        );
+      })}
+    </div>
+  )}
 
   <p id="noResults" style="display:none;text-align:center;padding:2rem;color:var(--color-text-secondary);">No matching registrations.</p>
 </AdminLayout>
 
 <script>
+  function toggleGroup(groupId: string) {
+    const tableEl = document.getElementById(groupId);
+    const groupEl = tableEl?.closest('.trip-group') as HTMLElement | null;
+    if (!tableEl || !groupEl) return;
+    const isCollapsed = groupEl.classList.contains('collapsed');
+    groupEl.classList.toggle('collapsed', !isCollapsed);
+    tableEl.style.display = isCollapsed ? '' : 'none';
+  }
+
   function toggleDetail(id: number) {
     const row = document.getElementById('detail-' + id);
     if (!row) return;
@@ -225,6 +313,8 @@ function fmtCurrency(n: number) {
   }
 
   async function updateStatus(id: number, status: string) {
+    const label = status.charAt(0).toUpperCase() + status.slice(1);
+    if (!confirm(`Mark this registration as "${label}"?\n\nThis will send a notification email to the registrant.`)) return;
     const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
     const adminNotes = notesEl?.value ?? '';
     const res = await fetch('/api/admin/update-registration', {
@@ -244,7 +334,7 @@ function fmtCurrency(n: number) {
         }`;
       }
       // Update row data-status for filtering
-      const rows = document.querySelectorAll(`.reg-row`);
+      const rows = document.querySelectorAll('.reg-row');
       rows.forEach(row => {
         const btn = row.querySelector(`button[onclick*="toggleDetail(${id})"]`);
         if (btn) (row as HTMLElement).dataset.status = status;
@@ -257,7 +347,6 @@ function fmtCurrency(n: number) {
   async function saveNotes(id: number) {
     const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
     const adminNotes = notesEl?.value ?? '';
-    // Get current status from badge
     const badge = document.querySelector(`.status-badge[data-id="${id}"]`) as HTMLElement | null;
     const status = badge?.textContent?.trim() ?? 'pending';
     const res = await fetch('/api/admin/update-registration', {
@@ -279,25 +368,48 @@ function fmtCurrency(n: number) {
     const q = searchEl?.value.toLowerCase() ?? '';
     const s = filterEl?.value ?? '';
     const rows = document.querySelectorAll<HTMLTableRowElement>('.reg-row');
-    let visible = 0;
+    let totalVisible = 0;
+
     rows.forEach(row => {
       const matchQ = !q || row.dataset.name?.includes(q) || row.dataset.email?.includes(q) || row.dataset.trip?.includes(q);
       const matchS = !s || row.dataset.status === s;
       const show = !!(matchQ && matchS);
       row.style.display = show ? '' : 'none';
-      const id = row.querySelector('button')?.getAttribute('onclick')?.match(/\d+/)?.[0];
+      // Hide open detail row when parent is hidden
+      const id = row.querySelector('button[onclick*="toggleDetail"]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
       const detailRow = id ? document.getElementById('detail-' + id) : null;
       if (!show && detailRow) detailRow.style.display = 'none';
-      if (show) visible++;
+      if (show) totalVisible++;
     });
+
+    // Hide trip groups with no visible rows
+    document.querySelectorAll<HTMLElement>('.trip-group').forEach(group => {
+      const groupTable = group.querySelector<HTMLElement>('.trip-group-table');
+      if (groupTable && groupTable.style.display === 'none') {
+        // Group is collapsed — check if it has matching rows to decide visibility
+        const anyMatch = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
+          row => row.style.display !== 'none'
+        );
+        group.style.display = anyMatch ? '' : 'none';
+        return;
+      }
+      const visibleRows = group.querySelectorAll<HTMLElement>('.reg-row:not([style*="display: none"])');
+      // Also count rows that haven't been explicitly hidden (no style attr)
+      const anyVisible = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
+        row => row.style.display !== 'none'
+      );
+      group.style.display = anyVisible ? '' : 'none';
+    });
+
     const noResults = document.getElementById('noResults');
-    if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
+    if (noResults) noResults.style.display = totalVisible === 0 ? 'block' : 'none';
   }
 
   searchEl?.addEventListener('input', applyFilters);
   filterEl?.addEventListener('change', applyFilters);
 
-  // expose to onclick handlers
+  // Expose to onclick handlers
+  (window as any).toggleGroup = toggleGroup;
   (window as any).toggleDetail = toggleDetail;
   (window as any).updateStatus = updateStatus;
   (window as any).saveNotes = saveNotes;

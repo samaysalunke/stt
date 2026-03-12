@@ -52,11 +52,11 @@ export const POST: APIRoute = async ({ request }) => {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO registrations (
-        trip_name, trip_date, full_name, email, phone,
+        trip_name, trip_date, full_name, email, phone, gender,
         city, emergency_name, emergency_phone,
         payment_screenshot_url, why_join, status
       ) VALUES (
-        ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, 'pending'
       )
@@ -68,6 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
       required.fullName,
       required.email,
       required.phone,
+      sanitizeInput(body.gender) || null,
       required.city,
       required.emergencyName,
       required.emergencyPhone,
@@ -89,6 +90,7 @@ export const POST: APIRoute = async ({ request }) => {
       full_name:       required.fullName,
       email:           required.email,
       phone:           required.phone,
+      gender:          sanitizeInput(body.gender) || '—',
       city:            required.city,
       emergency_name:  required.emergencyName,
       emergency_phone: required.emergencyPhone,

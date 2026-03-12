@@ -9,11 +9,11 @@ interface Props {
 const { title, activeTab } = Astro.props;
 
 const tabs = [
-  { href: '/admin/trips',         label: 'Trips',         key: 'trips' },
-  { href: '/admin/photo-vault',   label: 'Photo Vault',   key: 'photo-vault' },
-  { href: '/admin/registrations', label: 'Registrations', key: 'registrations' },
-  { href: '/admin/contacts',      label: 'Contacts',      key: 'contacts' },
-  { href: '/admin/newsletter',    label: 'Newsletter',    key: 'newsletter' },
+  { href: '/admin/trips',         label: 'Trips',         icon: '🗺️',  key: 'trips' },
+  { href: '/admin/photo-vault',   label: 'Photo Vault',   icon: '📷',  key: 'photo-vault' },
+  { href: '/admin/registrations', label: 'Registrations', icon: '📋',  key: 'registrations' },
+  { href: '/admin/contacts',      label: 'Contacts',      icon: '💬',  key: 'contacts' },
+  { href: '/admin/newsletter',    label: 'Newsletter',    icon: '📧',  key: 'newsletter' },
 ];
 ---
 
@@ -39,13 +39,14 @@ const tabs = [
             {tabs.map(tab => (
               <a
                 href={tab.href}
-                style={`padding: 0.35rem 0.85rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; text-decoration: none; transition: background 0.15s; ${
+                style={`padding: 0.35rem 0.85rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; text-decoration: none; transition: background 0.15s; display: flex; align-items: center; gap: 0.35rem; ${
                   activeTab === tab.key
-                    ? 'background: rgba(255,255,255,0.2); color: white;'
+                    ? 'background: rgba(255,255,255,0.2); color: white; border-bottom: 2px solid var(--color-accent); border-radius: 0.5rem 0.5rem 0 0;'
                     : 'color: rgba(255,255,255,0.75);'
                 }`}
               >
-                {tab.label}
+                <span>{tab.icon}</span>
+                <span class="tab-label">{tab.label}</span>
               </a>
             ))}
           </nav>
@@ -98,6 +99,59 @@ const tabs = [
     @media (min-width: 640px) and (max-width: 1023px) {
       #admin-main {
         padding: 1.5rem 1rem !important;
+      }
+    }
+
+    /* Hide tab label on very small screens — icon only */
+    @media (max-width: 400px) {
+      .tab-label { display: none; }
+    }
+
+    /* ===== ADMIN GLOBAL UI POLISH ===== */
+
+    /* Table row hover */
+    .reg-row:hover, .contact-row:hover {
+      background: rgba(45, 95, 62, 0.04) !important;
+      transition: background 0.12s;
+    }
+
+    /* Nav tab hover (inactive) */
+    #admin-nav a:hover {
+      background: rgba(255,255,255,0.12) !important;
+    }
+
+    /* Universal button transition */
+    button {
+      transition: all 0.15s ease;
+    }
+
+    /* Focus rings for admin inputs */
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--color-primary) !important;
+      outline-offset: -1px;
+    }
+
+    /* Trip group header */
+    .trip-group-header {
+      transition: filter 0.15s;
+    }
+    .trip-group-header:hover {
+      filter: brightness(0.97);
+    }
+
+    /* Chevron collapse animation */
+    .trip-chevron {
+      transition: transform 0.2s ease;
+      display: inline-block;
+    }
+    .trip-group.collapsed .trip-chevron {
+      transform: rotate(-90deg);
+    }
+
+    /* Detail panel responsive — stack on small screens */
+    @media (max-width: 768px) {
+      .detail-panel-grid {
+        grid-template-columns: 1fr !important;
       }
     }
   </style>

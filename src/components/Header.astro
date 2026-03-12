@@ -134,4 +134,14 @@ const pathname = Astro.url.pathname;
     closeIcon?.classList.toggle('hidden', isOpen!);
     mobileMenuBtn.setAttribute('aria-expanded', String(!mobileMenu?.classList.contains('hidden')));
   });
+
+  // Close mobile menu when a nav link is tapped (SPA-style navigation)
+  document.querySelectorAll('#mobile-menu a').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu?.classList.add('hidden');
+      menuIcon?.classList.remove('hidden');
+      closeIcon?.classList.add('hidden');
+      mobileMenuBtn?.setAttribute('aria-expanded', 'false');
+    });
+  });
 </script>

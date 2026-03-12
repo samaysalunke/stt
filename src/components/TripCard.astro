@@ -120,6 +120,26 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
       {difficulty && <Badge variant="difficulty" value={difficulty} />}
     </div>
 
+    <!-- Spots progress bar -->
+    {maxGroupSize && currentBookings != null && (
+      <div class="mb-3">
+        <div class="flex justify-between text-xs mb-1" style="color: var(--color-text-secondary);">
+          <span>{seatsLeft !== null && seatsLeft > 0 ? `${seatsLeft} spot${seatsLeft === 1 ? '' : 's'} left` : 'Fully booked'}</span>
+          <span>{currentBookings}/{maxGroupSize} booked</span>
+        </div>
+        <div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-border);">
+          <div
+            class="h-full rounded-full transition-all duration-500"
+            style={`width: ${Math.min(100, ((currentBookings ?? 0) / maxGroupSize) * 100)}%; background-color: ${
+              seatsLeft !== null && seatsLeft <= 3 ? 'var(--color-danger)' :
+              seatsLeft !== null && seatsLeft <= 5 ? 'var(--color-gold)' :
+              'var(--color-success)'
+            };`}
+          />
+        </div>
+      </div>
+    )}
+
     <!-- Price + CTA -->
     <div class="flex items-center justify-between pt-4 border-t" style="border-color: var(--color-border);">
       <div>
