@@ -14,14 +14,14 @@ const pathname = Astro.url.pathname;
 <header
   id="site-header"
   class="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-  style="background-color: rgba(26, 61, 40, 0);"
+  style="background-color: rgba(13, 44, 77, 0);"
 >
   <div class="container-app">
     <div class="flex items-center justify-between h-16 lg:h-20">
       <!-- Logo -->
       <a href="/" class="group flex items-center hover:opacity-90 transition-opacity">
         <img
-          src="/logo.png"
+          src="/logo.jpg"
           alt="Seek the Thrill"
           class="h-10 lg:h-12 w-auto rounded-xl"
         />
@@ -83,7 +83,7 @@ const pathname = Astro.url.pathname;
               ? 'text-white'
               : 'text-white/80 hover:text-white hover:bg-white/10'
           }`}
-          style={pathname === link.href ? 'background-color: rgba(232,117,42,0.2);' : ''}
+          style={pathname === link.href ? 'background-color: rgba(255,87,51,0.2);' : ''}
         >
           {link.label}
         </a>
@@ -109,11 +109,11 @@ const pathname = Astro.url.pathname;
   // Scroll effect
   window.addEventListener('scroll', () => {
     if (window.scrollY > 60) {
-      header.style.backgroundColor = 'rgba(26, 61, 40, 0.97)';
+      header.style.backgroundColor = 'rgba(13, 44, 77, 0.97)';
       header.style.backdropFilter = 'blur(8px)';
       header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.3)';
     } else {
-      header.style.backgroundColor = 'rgba(26, 61, 40, 0)';
+      header.style.backgroundColor = 'rgba(13, 44, 77, 0)';
       header.style.backdropFilter = 'none';
       header.style.boxShadow = 'none';
     }
