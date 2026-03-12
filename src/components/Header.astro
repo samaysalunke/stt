@@ -18,17 +18,11 @@ const pathname = Astro.url.pathname;
 >
   <div class="container-app">
     <div class="flex items-center justify-between h-16 lg:h-20">
-      <!-- Logo -->
-      <a href="/" class="flex items-center gap-3 group">
-        <div class="w-10 h-10 rounded-full flex items-center justify-center font-display font-extrabold text-white text-lg" style="background-color: var(--color-accent);">
-          ST
-        </div>
-        <div class="hidden sm:block">
-          <div class="font-display font-extrabold text-white text-lg leading-tight group-hover:opacity-90 transition-opacity">
-            Seek the Thrill
-          </div>
-          <div class="text-xs text-white/70 tracking-wide font-sans">Adventure Awaits</div>
-        </div>
+      <!-- Logo (Caveat wordmark) -->
+      <a href="/" class="group flex items-center hover:opacity-90 transition-opacity">
+        <span class="text-white font-semibold" style="font-family: var(--font-accent); font-size: clamp(1.3rem, 4vw, 1.6rem); line-height: 1;">
+          Seek the Thrill
+        </span>
       </a>
 
       <!-- Desktop Nav -->

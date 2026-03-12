@@ -36,13 +36,17 @@ try {
 
 const stats = [
   { value: settings.tripsCompleted ?? 25, label: 'Trips Completed' },
-  { value: settings.happyTravelers ?? 500, label: 'Happy Travelers' },
+  { value: settings.happyTravelers ?? 500, label: 'Travelers & Counting' },
   { value: settings.destinationsCovered ?? 15, label: 'Destinations Covered' },
   { value: settings.yearsOfAdventure ?? 4, label: 'Years of Adventure' },
 ];
 
 const heroImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 const aboutImg = 'https://images.unsplash.com/photo-1533692328991-08159ff19fca?w=800&auto=format&fit=crop&q=80';
+// TODO: Replace Unsplash stock photos with real trip photos from public/vault/
+// Recommended: 6 photos (portrait or landscape), min 800px wide
+// Name format: trip-name-01.jpg  (e.g. meghalaya-01.jpg)
+// Upload to public/vault/ and update the src paths below
 const vaultImages = [
   { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', trip: 'Spiti Valley', span: 'row-span-2' },
   { src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80', trip: 'Gokarna Beach', span: '' },
@@ -91,14 +95,14 @@ const valueCards = [
     <div class="relative z-10 text-center px-4 max-w-4xl mx-auto pt-20">
       <div class="reveal">
         <span class="inline-block text-xs font-bold uppercase tracking-widest text-white/80 mb-6 border border-white/30 px-4 py-1.5 rounded-full" style="backdrop-filter: blur(4px);">
-          Adventure Group Travel
+          Small Groups. Real India. Zero Tourist Traps.
         </span>
         <h1 class="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6" style="font-family: var(--font-display);">
-          Seek the Thrill:<br class="hidden sm:block" />
-          <span style="color: var(--color-accent);">Adventure Awaits</span>
+          India's Most Adventurous<br class="hidden sm:block" />
+          <span style="color: var(--color-accent);">Group Trips</span>
         </h1>
         <p class="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Join us for unforgettable group trips and experiences across India and beyond!
+          Handpicked treks, beaches, and offbeat escapes — designed for young Indian travelers who want to go deeper, spend smarter, and travel together.
         </p>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a href="/trips/" class="font-bold text-white px-8 py-4 rounded-xl text-base transition-all hover:opacity-90 shadow-lg" style="background-color: var(--color-accent);">
@@ -148,8 +152,12 @@ const valueCards = [
           <p class="leading-relaxed mb-3" style="color: var(--color-text-secondary);">
             Seek the Thrill was born from a simple belief: adventure shouldn't be expensive, and exploring India should be accessible to every young traveler.
           </p>
-          <p class="leading-relaxed mb-8" style="color: var(--color-text-secondary);">
+          <p class="leading-relaxed mb-5" style="color: var(--color-text-secondary);">
             What started as organizing weekend trips for friends soon turned into a passion project. Today, we've created unforgettable memories for hundreds of travelers across India and beyond.
+          </p>
+
+          <p class="text-center italic mb-6" style="font-family: var(--font-accent); font-size: 1.4rem; color: var(--color-primary);">
+            "Adventure shouldn't be expensive."
           </p>
 
           <div class="grid grid-cols-2 gap-4">
@@ -173,7 +181,7 @@ const valueCards = [
   </section>
 
   <!-- FEATURED TRIPS -->
-  <section class="py-20 lg:py-24 bg-white">
+  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
     <div class="container-app">
       <div class="text-center mb-12 reveal">
         <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
@@ -212,10 +220,9 @@ const valueCards = [
       <div class="text-center reveal">
         <a
           href="/trips/"
-          class="inline-flex items-center gap-2 font-bold text-base px-8 py-3 rounded-xl border-2 transition-all"
+          id="view-all-trips-btn"
+          class="inline-flex items-center gap-2 font-bold text-base px-8 py-3 rounded-xl border-2 transition-all duration-200"
           style="border-color: var(--color-primary); color: var(--color-primary);"
-          onmouseover="this.style.backgroundColor='var(--color-primary)'; this.style.color='white';"
-          onmouseout="this.style.backgroundColor='transparent'; this.style.color='var(--color-primary)';"
         >
           View All Trips →
         </a>
@@ -243,7 +250,7 @@ const valueCards = [
   </section>
 
   <!-- PHOTO VAULT TEASER -->
-  <section class="py-20 lg:py-24 bg-white">
+  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
     <div class="container-app">
       <div class="text-center mb-12 reveal">
         <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
@@ -331,6 +338,14 @@ const valueCards = [
   </section>
 
 </BaseLayout>
+
+<style>
+  /* View All Trips button — CSS hover (replaces inline JS) */
+  #view-all-trips-btn:hover {
+    background-color: var(--color-primary);
+    color: white !important;
+  }
+</style>
 
 <script>
   const form = document.getElementById('newsletter-form') as HTMLFormElement;

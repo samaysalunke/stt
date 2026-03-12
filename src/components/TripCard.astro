@@ -91,6 +91,11 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
       </div>
     )}
 
+    {status === 'booking-open' && (
+      <p class="italic mb-1" style="font-family: var(--font-accent); font-size: 0.9rem; color: var(--color-accent);">
+        spots filling up!
+      </p>
+    )}
     <h3 class="font-display font-bold text-lg leading-snug mb-2 group-hover:opacity-80 transition-opacity">
       <a href={`/trips/${slug}/`} class="hover:underline">{name}</a>
     </h3>
