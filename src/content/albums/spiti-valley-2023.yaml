@@ -1,6 +1,12 @@
 name: Spiti Valley 2023
 location: Himachal Pradesh, India
-date: '2023-09-20'
-description: Memories from our incredible Spiti Valley trip — monasteries, passes, and stargazing!
+date: 2023-09-20
+description: Memories from our incredible Spiti Valley trip — monasteries,
+  passes, and stargazing!
 published: true
-photos: []
+photos:
+  - image: /images/albums/photos/d9032335-2805-4100-91c4-df9b924a8a0a.png
+    caption: ""
+  - image: /images/albums/photos/42b862d3-2b6d-4180-ac1d-0a8903547c34.png
+    caption: ""
+coverImage: null
