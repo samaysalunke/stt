@@ -3,6 +3,8 @@ import SEO from '../components/SEO.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
 
 interface Props {
   title: string;
@@ -12,6 +14,33 @@ interface Props {
 }
 
 const { title, description, image, canonical } = Astro.props;
+
+let settings: any = {};
+try {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  settings = await reader.singletons.siteSettings.read() ?? {};
+} catch (e) {}
+
+const orgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Seek the Thrill',
+  url: 'https://seekthethrill.in',
+  logo: 'https://seekthethrill.in/logo.jpg',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: settings.phone ?? '+91-7975027491',
+    contactType: 'customer service',
+  },
+  sameAs: [
+    settings.instagram,
+    settings.facebook,
+    settings.youtube,
+    settings.linkedin,
+  ].filter(Boolean),
+};
+
+const gaId = settings.googleAnalyticsId ?? '';
 ---
 
 <!doctype html>
@@ -31,8 +60,28 @@ const { title, description, image, canonical } = Astro.props;
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <SEO {title} {description} {image} {canonical} />
+
+    <!-- Organization structured data -->
+    <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} />
+
+    <!-- Per-page structured data slot -->
+    <slot name="head" />
+
+    <!-- Google Analytics -->
+    {gaId && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
+        <script define:vars={{ gaId }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', gaId);
+        </script>
+      </>
+    )}
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--color-surface); color: var(--color-text-primary);">
     <Header />
