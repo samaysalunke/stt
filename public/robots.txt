@@ -7,4 +7,4 @@ Disallow: /admin/
 Disallow: /uploads/
 Disallow: /api/
 
-Sitemap: https://seekthethrill.in/sitemap-index.xml
+Sitemap: https://seekthethrill.in/sitemap.xml

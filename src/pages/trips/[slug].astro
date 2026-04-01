@@ -57,6 +57,41 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
   image={trip.featuredImage ?? undefined}
 >
 
+  <!-- Structured data -->
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'TouristTrip',
+      name: name,
+      description: trip.shortDescription ?? `Join us for ${name} — an adventure with Seek the Thrill.`,
+      touristType: 'Adventure',
+      image: trip.featuredImage ?? 'https://seekthethrill.in/images/og-default.jpg',
+      offers: price ? {
+        '@type': 'Offer',
+        price: price,
+        priceCurrency: 'INR',
+        availability: 'https://schema.org/InStock',
+        url: `https://seekthethrill.in/trips/${slug}`,
+      } : undefined,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      provider: {
+        '@type': 'Organization',
+        name: 'Seek the Thrill',
+        url: 'https://seekthethrill.in',
+      },
+    })} />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://seekthethrill.in/' },
+        { '@type': 'ListItem', position: 2, name: 'Trips', item: 'https://seekthethrill.in/trips' },
+        { '@type': 'ListItem', position: 3, name: name, item: `https://seekthethrill.in/trips/${slug}` },
+      ],
+    })} />
+  </Fragment>
+
   <!-- HERO -->
   <section
     class="relative overflow-hidden pt-16"
