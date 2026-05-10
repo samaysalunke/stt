@@ -2,7 +2,11 @@ import { defineMiddleware } from 'astro:middleware';
 import crypto from 'node:crypto';
 
 export const onRequest = defineMiddleware(async ({ url, cookies, redirect }, next) => {
-  const isAdminRoute = url.pathname.startsWith('/admin');
+  const isAdminRoute =
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/api/admin') ||
+    url.pathname.startsWith('/api/uploads') ||
+    url.pathname.startsWith('/keystatic');
   const isLoginRoute =
     url.pathname === '/admin/login' ||
     url.pathname.startsWith('/api/admin/login');

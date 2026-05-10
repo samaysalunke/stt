@@ -1,14 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { readAlbum } from '../../lib/content';
 import 'glightbox/dist/css/glightbox.css';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
-const reader = createReader(process.cwd(), keystaticConfig);
-const album = await reader.collections.albums.read(slug!);
+const album = readAlbum(slug!);
 
 if (!album) return Astro.redirect('/photo-vault/');
 

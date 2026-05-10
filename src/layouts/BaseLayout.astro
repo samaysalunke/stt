@@ -3,8 +3,7 @@ import SEO from '../components/SEO.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { readSiteSettings } from '../lib/content';
 
 interface Props {
   title: string;
@@ -17,8 +16,7 @@ const { title, description, image, canonical } = Astro.props;
 
 let settings: any = {};
 try {
-  const reader = createReader(process.cwd(), keystaticConfig);
-  settings = await reader.singletons.siteSettings.read() ?? {};
+  settings = readSiteSettings();
 } catch (e) {}
 
 const orgSchema = {

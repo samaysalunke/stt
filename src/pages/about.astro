@@ -1,13 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import StatsCounter from '../components/StatsCounter';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { readSiteSettings } from '../lib/content';
 
 let settings: any = {};
 try {
-  const reader = createReader(process.cwd(), keystaticConfig);
-  settings = await reader.singletons.siteSettings.read() ?? {};
+  settings = readSiteSettings();
 } catch (e) {}
 
 const stats = [

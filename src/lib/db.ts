@@ -1,15 +1,11 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(process.cwd(), 'data', 'seekthethrill.db');
-
-// Ensure data directory exists
 import fs from 'fs';
-const dataDir = path.join(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
+const DB_PATH = path.join(DATA_DIR, 'seekthethrill.db');
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
 let _db: Database.Database | null = null;

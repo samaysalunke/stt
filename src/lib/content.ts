@@ -7,6 +7,8 @@ const CWD = process.cwd();
 const CONTENT_BASE = process.env.CONTENT_DIR ?? path.join(CWD, 'src', 'content');
 const TRIPS_DIR = path.join(CONTENT_BASE, 'trips');
 const ALBUMS_DIR = path.join(CONTENT_BASE, 'albums');
+const TESTIMONIALS_DIR = path.join(CONTENT_BASE, 'testimonials');
+const SITE_SETTINGS_FILE = path.join(CONTENT_BASE, 'site-settings.yaml');
 
 // ── YAML helpers ─────────────────────────────────────────────────────────────
 
@@ -82,6 +84,29 @@ export function writeAlbum(slug: string, data: Record<string, any>): void {
 export function deleteAlbum(slug: string): void {
   const filePath = path.join(ALBUMS_DIR, `${slug}.yaml`);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
+// ── Site Settings ────────────────────────────────────────────────────────────
+
+export function readSiteSettings(): Record<string, any> {
+  if (!fs.existsSync(SITE_SETTINGS_FILE)) return {};
+  const raw = fs.readFileSync(SITE_SETTINGS_FILE, 'utf-8');
+  return YAML.parse(raw) ?? {};
+}
+
+// ── Testimonials ─────────────────────────────────────────────────────────────
+
+export function listTestimonials(): Array<Record<string, any>> {
+  ensureDir(TESTIMONIALS_DIR);
+  return fs
+    .readdirSync(TESTIMONIALS_DIR)
+    .filter(f => f.endsWith('.yaml'))
+    .map(f => {
+      const slug = f.replace('.yaml', '');
+      const raw = fs.readFileSync(path.join(TESTIMONIALS_DIR, f), 'utf-8');
+      const data = YAML.parse(raw) ?? {};
+      return { slug, ...data };
+    });
 }
 
 // ── Image upload ──────────────────────────────────────────────────────────────

@@ -3,6 +3,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const CONTENT_DIR = process.env.CONTENT_DIR;
+const DATA_DIR = process.env.DATA_DIR;
+
+// Ensure uploads directory exists inside DATA_DIR
+if (DATA_DIR) {
+  const uploadsDir = path.join(DATA_DIR, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    console.log('[seed] Created uploads directory at', uploadsDir);
+  }
+}
 
 if (!CONTENT_DIR) {
   process.exit(0);
