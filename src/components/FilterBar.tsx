@@ -158,9 +158,9 @@ function TripCardMini({ trip }: { trip: Trip }) {
           <a
             href={`/trips/${trip.slug}/`}
             className="font-bold text-sm text-white px-4 py-2 rounded-lg transition-all hover:opacity-90"
-            style={{ backgroundColor: trip.status === 'sold-out' ? '#5C5C5C' : 'var(--color-accent)' }}
+            style={{ backgroundColor: trip.status === 'booking-open' ? 'var(--color-accent)' : '#5C5C5C' }}
           >
-            {trip.status === 'sold-out' ? 'View Details' : 'Book Now →'}
+            {trip.status === 'booking-open' ? 'Book Now →' : 'View Details'}
           </a>
         </div>
       </div>
