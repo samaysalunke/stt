@@ -10,7 +10,6 @@ interface Trip {
   endDate: string | null;
   duration: string | null;
   pricePerPerson: number | null;
-  difficulty: string | null;
   maxGroupSize: number | null;
   currentBookings: number | null;
   categories: string[];
@@ -26,14 +25,6 @@ const STATUS_TABS = [
   { label: 'Upcoming', value: 'upcoming' },
   { label: 'Sold Out', value: 'sold-out' },
   { label: 'Past Trips', value: 'completed' },
-];
-
-const DIFFICULTY_OPTIONS = [
-  { label: 'Any Difficulty', value: '' },
-  { label: 'Easy', value: 'easy' },
-  { label: 'Moderate', value: 'moderate' },
-  { label: 'Challenging', value: 'challenging' },
-  { label: 'Moderate–Challenging', value: 'moderate-challenging' },
 ];
 
 const DURATION_OPTIONS = [
@@ -71,20 +62,6 @@ const STATUS_LABELS: Record<string, string> = {
   'upcoming': 'Upcoming',
   'sold-out': 'Sold Out',
   'completed': 'Completed',
-};
-
-const DIFF_LABELS: Record<string, string> = {
-  'easy': 'Easy',
-  'moderate': 'Moderate',
-  'challenging': 'Challenging',
-  'moderate-challenging': 'Mod–Challenging',
-};
-
-const DIFF_COLORS: Record<string, { bg: string; text: string }> = {
-  easy: { bg: '#dcfce7', text: '#166534' },
-  moderate: { bg: '#fef9c3', text: '#854d0e' },
-  challenging: { bg: '#fee2e2', text: '#991b1b' },
-  'moderate-challenging': { bg: '#ffedd5', text: '#9a3412' },
 };
 
 function formatINR(n: number) {
@@ -163,17 +140,6 @@ function TripCardMini({ trip }: { trip: Trip }) {
               {trip.duration}
             </span>
           )}
-          {trip.difficulty && (
-            <span
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide"
-              style={{
-                backgroundColor: DIFF_COLORS[trip.difficulty]?.bg ?? '#f3f4f6',
-                color: DIFF_COLORS[trip.difficulty]?.text ?? '#374151'
-              }}
-            >
-              {DIFF_LABELS[trip.difficulty] ?? trip.difficulty}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
@@ -204,7 +170,6 @@ function TripCardMini({ trip }: { trip: Trip }) {
 
 export default function FilterBar({ trips }: Props) {
   const [statusFilter, setStatusFilter] = useState('all');
-  const [difficultyFilter, setDifficultyFilter] = useState('');
   const [durationFilter, setDurationFilter] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('date-asc');
@@ -216,10 +181,6 @@ export default function FilterBar({ trips }: Props) {
 
     if (statusFilter !== 'all') {
       result = result.filter((t) => t.status === statusFilter);
-    }
-
-    if (difficultyFilter) {
-      result = result.filter((t) => t.difficulty === difficultyFilter);
     }
 
     if (durationFilter) {
@@ -248,7 +209,7 @@ export default function FilterBar({ trips }: Props) {
     });
 
     return result;
-  }, [trips, statusFilter, difficultyFilter, durationFilter, search, sort]);
+  }, [trips, statusFilter, durationFilter, search, sort]);
 
   const visible = filtered.slice(0, visibleCount);
 
@@ -291,15 +252,6 @@ export default function FilterBar({ trips }: Props) {
               </div>
 
               <select
-                value={difficultyFilter}
-                onChange={(e) => { setDifficultyFilter(e.target.value); setVisibleCount(9); }}
-                className="border rounded-lg px-3 py-2 text-sm outline-none cursor-pointer"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                {DIFFICULTY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-
-              <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
                 className="border rounded-lg px-3 py-2 text-sm outline-none cursor-pointer"
@@ -333,14 +285,6 @@ export default function FilterBar({ trips }: Props) {
                 className="px-4 py-2 border rounded-lg text-sm outline-none"
                 style={{ borderColor: 'var(--color-border)' }}
               />
-              <select
-                value={difficultyFilter}
-                onChange={(e) => { setDifficultyFilter(e.target.value); setVisibleCount(9); }}
-                className="border rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                {DIFFICULTY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
@@ -397,7 +341,7 @@ export default function FilterBar({ trips }: Props) {
               No trips match your current filters. Try adjusting your search.
             </p>
             <button
-              onClick={() => { setStatusFilter('all'); setDifficultyFilter(''); setDurationFilter(''); setSearch(''); }}
+              onClick={() => { setStatusFilter('all'); setDurationFilter(''); setSearch(''); }}
               className="font-bold text-white px-6 py-3 rounded-xl transition-all hover:opacity-90"
               style={{ backgroundColor: 'var(--color-accent)' }}
             >

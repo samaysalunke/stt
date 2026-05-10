@@ -62,15 +62,6 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
           <input type="number" name="pricePerPerson" class="form-input" value={trip.pricePerPerson ?? ''} />
         </div>
         <div class="form-group">
-          <label class="form-label">Difficulty</label>
-          <select name="difficulty" class="form-input">
-            <option value="">Select...</option>
-            {['easy','moderate','challenging','extreme'].map(d => (
-              <option value={d} selected={d === trip.difficulty}>{d.charAt(0).toUpperCase()+d.slice(1)}</option>
-            ))}
-          </select>
-        </div>
-        <div class="form-group">
           <label class="form-label">Min Group Size</label>
           <input type="number" name="minGroupSize" class="form-input" value={trip.minGroupSize ?? ''} />
         </div>
