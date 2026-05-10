@@ -2,16 +2,12 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@astrojs/react';
-import keystatic from '@keystatic/astro';
 import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://seekthethrill.in',
+  site: process.env.SITE_URL ?? 'https://seekthethrill.in',
   output: 'server',
-  security: {
-    checkOrigin: false,
-  },
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
@@ -24,5 +20,5 @@ export default defineConfig({
     },
   },
   adapter: node({ mode: 'standalone' }),
-  integrations: [react(), keystatic()],
+  integrations: [react()],
 });

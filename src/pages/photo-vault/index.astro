@@ -1,13 +1,11 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { listAlbums } from '../../lib/content';
 
-const reader = createReader(process.cwd(), keystaticConfig);
-const allAlbums = await reader.collections.albums.all();
+const allAlbums = listAlbums();
 const albums = allAlbums
-  .filter((a) => a.entry.published)
-  .sort((a, b) => (b.entry.date ?? '').localeCompare(a.entry.date ?? ''));
+  .filter((a) => a.published)
+  .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
 
 function formatDate(d: string | null | undefined) {
   if (!d) return '';
@@ -52,26 +50,26 @@ const placeholderImgs = [
               style="aspect-ratio: 4/3;"
             >
               <img
-                src={album.entry.coverImage ?? placeholderImgs[i % placeholderImgs.length]}
-                alt={`${(album.entry.name as string) || album.slug} album`}
+                src={album.coverImage ?? placeholderImgs[i % placeholderImgs.length]}
+                alt={`${(album.name as string) || album.slug} album`}
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
               />
               <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);"></div>
               <div class="absolute bottom-0 left-0 right-0 p-5">
                 <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
-                  {(album.entry.name as string) || album.slug}
+                  {(album.name as string) || album.slug}
                 </h3>
-                {album.entry.location && (
+                {album.location && (
                   <p class="text-white/80 text-sm flex items-center gap-1">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     </svg>
-                    {album.entry.location}
+                    {album.location}
                   </p>
                 )}
                 <div class="flex items-center justify-between mt-2">
-                  <span class="text-white/60 text-xs">{formatDate(album.entry.date)}</span>
+                  <span class="text-white/60 text-xs">{formatDate(album.date)}</span>
                   <span class="text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
                     View Album →
                   </span>

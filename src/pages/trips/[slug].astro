@@ -2,23 +2,20 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Badge from '../../components/Badge.astro';
 import ItineraryAccordion from '../../components/ItineraryAccordion';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { readTrip, readSiteSettings } from '../../lib/content';
 import { formatCurrency, formatDateRange } from '../../lib/utils';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
 
-const reader = createReader(process.cwd(), keystaticConfig);
-const trip = await reader.collections.trips.read(slug!);
+const trip = readTrip(slug!);
 
 if (!trip) return Astro.redirect('/trips/');
 
-// Load site settings for fallback payment info
 let settings: any = {};
 try {
-  settings = await reader.singletons.siteSettings.read() ?? {};
+  settings = readSiteSettings();
 } catch (e) {}
 
 const name = (trip.name as string) || slug;

@@ -1,6 +1,13 @@
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
+
+function escapeHtml(str: any): string {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 const SMTP_HOST = import.meta.env.SMTP_HOST || process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587');
@@ -8,17 +15,22 @@ const SMTP_USER = import.meta.env.SMTP_USER || process.env.SMTP_USER;
 const SMTP_PASS = import.meta.env.SMTP_PASS || process.env.SMTP_PASS;
 const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'zahra@seekthethrill.in';
 
+let _transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
+
 function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.warn('[Email] SMTP not configured — emails will be logged to console only.');
     return null;
   }
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+  }
+  return _transporter;
 }
 
 async function sendEmail(to: string, subject: string, html: string, from?: string) {
@@ -53,8 +65,8 @@ export async function sendRegistrationConfirmation(data: {
   </div>
   <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     <h2 style="color: #FF5733; margin-top: 0;">Registration Confirmed! 🎉</h2>
-    <p>Hi <strong>${data.name}</strong>,</p>
-    <p>Thank you for registering for <strong>${data.tripName}</strong>! We've received your registration and payment details.</p>
+    <p>Hi <strong>${escapeHtml(data.name)}</strong>,</p>
+    <p>Thank you for registering for <strong>${escapeHtml(data.tripName)}</strong>! We've received your registration and payment details.</p>
     <div style="background: #FFF0EB; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #FF5733; margin-top: 0;">What happens next:</h3>
       <ul style="color: #333; padding-left: 20px;">
@@ -68,9 +80,9 @@ export async function sendRegistrationConfirmation(data: {
     <div style="border-top: 2px solid #E5E5E0; padding-top: 20px; margin-top: 20px;">
       <h3 style="color: #FF5733;">Your Registration Details</h3>
       <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 8px; color: #666;">Trip</td><td style="padding: 8px; font-weight: bold;">${data.tripName}</td></tr>
-        <tr style="background: #f9f9f7;"><td style="padding: 8px; color: #666;">Dates</td><td style="padding: 8px; font-weight: bold;">${data.tripDate}</td></tr>
-        <tr><td style="padding: 8px; color: #666;">Duration</td><td style="padding: 8px; font-weight: bold;">${data.duration}</td></tr>
+        <tr><td style="padding: 8px; color: #666;">Trip</td><td style="padding: 8px; font-weight: bold;">${escapeHtml(data.tripName)}</td></tr>
+        <tr style="background: #f9f9f7;"><td style="padding: 8px; color: #666;">Dates</td><td style="padding: 8px; font-weight: bold;">${escapeHtml(data.tripDate)}</td></tr>
+        <tr><td style="padding: 8px; color: #666;">Duration</td><td style="padding: 8px; font-weight: bold;">${escapeHtml(data.duration)}</td></tr>
       </table>
     </div>
     <p style="color: #666; font-size: 14px;">Have questions? Reply to this email or <a href="https://wa.me/917975027491" style="color: #E67E66; font-weight: bold;">WhatsApp us at +91-7975027491</a>.</p>
@@ -99,12 +111,12 @@ export async function sendAdminRegistrationNotification(data: Record<string, any
     <h2 style="color: white; margin: 0;">🔔 New Trip Registration</h2>
   </div>
   <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #E5E5E0;">
-    <h3 style="color: #FF5733; margin-top: 0;">Trip: ${data.trip_name}</h3>
+    <h3 style="color: #FF5733; margin-top: 0;">Trip: ${escapeHtml(data.trip_name)}</h3>
     <table style="width: 100%; border-collapse: collapse;">
       ${Object.entries(data).map(([k, v]) =>
         `<tr style="border-bottom: 1px solid #f0f0f0;">
-          <td style="padding: 8px; color: #666; width: 40%; text-transform: capitalize;">${k.replace(/_/g, ' ')}</td>
-          <td style="padding: 8px; font-weight: 500;">${v ?? '—'}</td>
+          <td style="padding: 8px; color: #666; width: 40%; text-transform: capitalize;">${escapeHtml(k.replace(/_/g, ' '))}</td>
+          <td style="padding: 8px; font-weight: 500;">${escapeHtml(v)}</td>
         </tr>`
       ).join('')}
     </table>
@@ -135,9 +147,9 @@ export async function sendRegistrationStatusConfirmed(data: {
   </div>
   <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     <h2 style="color: #FF5733; margin-top: 0;">🎉 Your booking is confirmed!</h2>
-    <p>Hi <strong>${data.full_name}</strong>,</p>
-    <p>Great news — your booking for <strong>${data.trip_name}</strong> has been <strong style="color:#FF5733;">confirmed</strong>! We're thrilled to have you on board.</p>
-    ${data.trip_date ? `<p style="background:#FFF0EB;padding:12px 16px;border-radius:8px;"><strong>Trip Date:</strong> ${data.trip_date}</p>` : ''}
+    <p>Hi <strong>${escapeHtml(data.full_name)}</strong>,</p>
+    <p>Great news — your booking for <strong>${escapeHtml(data.trip_name)}</strong> has been <strong style="color:#FF5733;">confirmed</strong>! We're thrilled to have you on board.</p>
+    ${data.trip_date ? `<p style="background:#FFF0EB;padding:12px 16px;border-radius:8px;"><strong>Trip Date:</strong> ${escapeHtml(data.trip_date)}</p>` : ''}
     <div style="background:#FFF0EB;border-radius:8px;padding:20px;margin:20px 0;">
       <h3 style="color:#FF5733;margin-top:0;">What happens next:</h3>
       <ul style="color:#333;padding-left:20px;">
@@ -178,8 +190,8 @@ export async function sendRegistrationStatusRejected(data: {
   </div>
   <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     <h2 style="color: #333; margin-top: 0;">An update on your booking</h2>
-    <p>Hi <strong>${data.full_name}</strong>,</p>
-    <p>Thank you for your interest in <strong>${data.trip_name}</strong>. Unfortunately, we're unable to confirm your spot on this trip.</p>
+    <p>Hi <strong>${escapeHtml(data.full_name)}</strong>,</p>
+    <p>Thank you for your interest in <strong>${escapeHtml(data.trip_name)}</strong>. Unfortunately, we're unable to confirm your spot on this trip.</p>
     <p>This can happen due to the trip being fully booked, a payment verification issue, or other circumstances. We're sorry for the inconvenience.</p>
     <div style="background:#FEF3C7;border-radius:8px;padding:16px;margin:16px 0;">
       <p style="margin:0;color:#92400E;"><strong>What you can do:</strong> Browse our other upcoming trips or contact us on WhatsApp to discuss alternatives.</p>
@@ -210,11 +222,11 @@ export async function sendContactConfirmation(name: string, email: string, messa
     <h2 style="color: white; margin: 0;">Seek the Thrill 🏔️</h2>
   </div>
   <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #E5E5E0;">
-    <p>Hi <strong>${name}</strong>,</p>
+    <p>Hi <strong>${escapeHtml(name)}</strong>,</p>
     <p>Thank you for reaching out! We've received your message and will get back to you within <strong>24-48 hours</strong>.</p>
     <div style="background: #f9f9f7; border-radius: 8px; padding: 16px; margin: 16px 0;">
       <p style="color: #666; margin: 0 0 8px; font-size: 13px;">Your message:</p>
-      <p style="margin: 0; font-style: italic;">"${message}"</p>
+      <p style="margin: 0; font-style: italic;">"${escapeHtml(message)}"</p>
     </div>
     <p style="color: #666; font-size: 14px;">In the meantime: browse our <a href="https://seekthethrill.in/trips/" style="color: #E67E66;">upcoming trips</a> or follow us on Instagram <strong>@seekthethrill</strong>.</p>
     <p style="color: #666; font-size: 14px;">Adventure awaits! 🌄<br><strong>Team Seek the Thrill</strong></p>
@@ -234,14 +246,14 @@ export async function sendAdminContactNotification(data: Record<string, any>) {
     <h2 style="color: white; margin: 0;">New Contact Form Submission</h2>
   </div>
   <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #E5E5E0;">
-    <p><strong>Subject:</strong> ${data.subject}</p>
-    <p><strong>Name:</strong> ${data.full_name}</p>
-    <p><strong>Email:</strong> <a href="mailto:${data.email}">${data.email}</a></p>
-    <p><strong>Phone:</strong> ${data.phone || '—'}</p>
-    <p><strong>Source:</strong> ${data.source || '—'}</p>
+    <p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>
+    <p><strong>Name:</strong> ${escapeHtml(data.full_name)}</p>
+    <p><strong>Email:</strong> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
+    <p><strong>Phone:</strong> ${escapeHtml(data.phone || '—')}</p>
+    <p><strong>Source:</strong> ${escapeHtml(data.source || '—')}</p>
     <p><strong>Message:</strong></p>
     <div style="background: #f9f9f7; padding: 16px; border-radius: 8px;">
-      <p style="margin: 0; white-space: pre-wrap;">${data.message}</p>
+      <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(data.message)}</p>
     </div>
   </div>
 </body>

@@ -1,6 +1,3 @@
-// Serves uploaded images from public/images/ in production.
-// (The Astro standalone server only serves files from dist/client/ by default;
-//  runtime-uploaded files need this route to be accessible.)
 import type { APIRoute } from 'astro';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,13 +11,32 @@ const MIME: Record<string, string> = {
   svg: 'image/svg+xml',
 };
 
+// Admin-uploaded images live in CONTENT_DIR/images/ (volume-backed).
+// Seed/repo images live in public/images/. Check volume first.
+const CONTENT_IMAGES = path.join(
+  process.env.CONTENT_DIR ?? path.join(process.cwd(), 'src', 'content'),
+  'images'
+);
+const PUBLIC_IMAGES = path.join(process.cwd(), 'public', 'images');
+
 export const GET: APIRoute = async ({ params }) => {
   const rel = params.path ?? '';
-  const imagesDir = path.join(process.cwd(), 'public', 'images');
-  const filePath = path.resolve(imagesDir, rel);
 
   // Prevent path traversal
-  if (!filePath.startsWith(imagesDir + path.sep) && filePath !== imagesDir) {
+  if (rel.includes('..')) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  // Look in volume first, then repo
+  let filePath = path.join(CONTENT_IMAGES, rel);
+  if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    filePath = path.join(PUBLIC_IMAGES, rel);
+  }
+
+  // Final traversal guard after path.join resolves
+  const inContent = filePath.startsWith(CONTENT_IMAGES + path.sep) || filePath === CONTENT_IMAGES;
+  const inPublic = filePath.startsWith(PUBLIC_IMAGES + path.sep) || filePath === PUBLIC_IMAGES;
+  if (!inContent && !inPublic) {
     return new Response('Forbidden', { status: 403 });
   }
 

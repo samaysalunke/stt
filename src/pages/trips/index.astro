@@ -1,27 +1,24 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import FilterBar from '../../components/FilterBar';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { listTrips } from '../../lib/content';
 
-const reader = createReader(process.cwd(), keystaticConfig);
-const allTrips = await reader.collections.trips.all();
-
+const allTrips = listTrips();
 const trips = allTrips
-  .filter((t) => t.entry.status !== 'draft')
+  .filter((t) => t.status !== 'draft')
   .map((t) => ({
     slug: t.slug,
-    name: (t.entry.name as string) || t.slug,
-    status: t.entry.status ?? 'upcoming',
-    featuredImage: t.entry.featuredImage ?? null,
-    shortDescription: t.entry.shortDescription ?? '',
-    startDate: t.entry.startDate ?? null,
-    endDate: t.entry.endDate ?? null,
-    duration: t.entry.duration ?? null,
-    pricePerPerson: t.entry.pricePerPerson ?? null,
-    maxGroupSize: t.entry.maxGroupSize ?? null,
-    currentBookings: t.entry.currentBookings ?? null,
-    categories: (t.entry.categories as string[]) ?? [],
+    name: (t.name as string) || t.slug,
+    status: t.status ?? 'upcoming',
+    featuredImage: t.featuredImage ?? null,
+    shortDescription: t.shortDescription ?? '',
+    startDate: t.startDate ?? null,
+    endDate: t.endDate ?? null,
+    duration: t.duration ?? null,
+    pricePerPerson: t.pricePerPerson ?? null,
+    maxGroupSize: t.maxGroupSize ?? null,
+    currentBookings: t.currentBookings ?? null,
+    categories: (t.categories as string[]) ?? [],
   }));
 ---
 

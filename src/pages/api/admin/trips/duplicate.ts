@@ -2,12 +2,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, listTrips } from '../../../../lib/content';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
-  const token = cookies.get('admin_token')?.value;
-  if (!token) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
-
+export const POST: APIRoute = async ({ request }) => {
   try {
     const { slug } = await request.json();
     if (!slug) {

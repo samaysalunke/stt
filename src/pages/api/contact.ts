@@ -2,8 +2,16 @@ import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
 import { sendContactConfirmation, sendAdminContactNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail } from '../../lib/utils';
+import { rateLimit } from '../../lib/rateLimit';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
+  if (!rateLimit(clientAddress, 10, 60 * 60 * 1000)) {
+    return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
+    });
+  }
+
   try {
     const body = await request.json();
 

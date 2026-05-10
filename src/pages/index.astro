@@ -3,35 +3,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
 import StatsCounter from '../components/StatsCounter';
 import TestimonialCarousel from '../components/TestimonialCarousel';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { listTrips, listTestimonials, readSiteSettings } from '../lib/content';
 
-const reader = createReader(process.cwd(), keystaticConfig);
-
-// Load trips
-const allTrips = await reader.collections.trips.all();
+const allTrips = listTrips();
 const featuredTrips = allTrips
-  .filter((t) => t.entry.status === 'booking-open' || t.entry.status === 'upcoming')
+  .filter((t) => t.status === 'booking-open' || t.status === 'upcoming')
   .slice(0, 3);
 
-// Load testimonials
-const allTestimonials = await reader.collections.testimonials.all();
+const allTestimonials = listTestimonials();
 const featuredTestimonials = allTestimonials
-  .filter((t) => t.entry.featured)
+  .filter((t) => t.featured)
   .map((t) => ({
     slug: t.slug,
-    name: (t.entry.name as string) || t.slug,
-    location: t.entry.location ?? '',
-    rating: t.entry.rating ?? 5,
-    tripName: t.entry.tripName ?? '',
-    quote: t.entry.quote ?? '',
-    photo: t.entry.photo ?? null,
+    name: (t.name as string) || t.slug,
+    location: t.location ?? '',
+    rating: t.rating ?? 5,
+    tripName: t.tripName ?? '',
+    quote: t.quote ?? '',
+    photo: t.photo ?? null,
   }));
 
-// Load site settings
 let settings: any = {};
 try {
-  settings = await reader.singletons.siteSettings.read() ?? {};
+  settings = readSiteSettings();
 } catch (e) {}
 
 const stats = [
@@ -197,17 +191,17 @@ const valueCards = [
             <div class="reveal">
               <TripCard
                 slug={trip.slug}
-                name={(trip.entry.name as string) || trip.slug}
-                status={trip.entry.status ?? 'upcoming'}
-                featuredImage={trip.entry.featuredImage ?? null}
-                shortDescription={trip.entry.shortDescription ?? ''}
-                startDate={trip.entry.startDate ?? null}
-                endDate={trip.entry.endDate ?? null}
-                duration={trip.entry.duration ?? null}
-                pricePerPerson={trip.entry.pricePerPerson ?? null}
-                maxGroupSize={trip.entry.maxGroupSize ?? null}
-                currentBookings={trip.entry.currentBookings ?? null}
-                categories={(trip.entry.categories as string[]) ?? []}
+                name={(trip.name as string) || trip.slug}
+                status={trip.status ?? 'upcoming'}
+                featuredImage={trip.featuredImage ?? null}
+                shortDescription={trip.shortDescription ?? ''}
+                startDate={trip.startDate ?? null}
+                endDate={trip.endDate ?? null}
+                duration={trip.duration ?? null}
+                pricePerPerson={trip.pricePerPerson ?? null}
+                maxGroupSize={trip.maxGroupSize ?? null}
+                currentBookings={trip.currentBookings ?? null}
+                categories={(trip.categories as string[]) ?? []}
               />
             </div>
           ))}
