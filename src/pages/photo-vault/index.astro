@@ -26,7 +26,7 @@ const placeholderImgs = [
 >
   <!-- Hero -->
   <section
-    class="relative flex items-center justify-center overflow-hidden pt-20"
+    class="relative flex items-center justify-center overflow-hidden"
     style="height: 35vh; background-image: url('https://images.unsplash.com/photo-1533669955142-6a73332af4db?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
     <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
@@ -38,67 +38,126 @@ const placeholderImgs = [
     </div>
   </section>
 
-  <!-- Albums grid -->
-  <section class="py-16 lg:py-20" style="background-color: var(--color-surface);">
+  <!-- Filter Bar -->
+  <section class="py-8 bg-white border-b" style="border-color: var(--color-border);">
     <div class="container-app">
-      {albums.length > 0 ? (
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {albums.map((album, i) => (
-            <a
-              href={`/photo-vault/${album.slug}/`}
-              class="group block relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
-              style="aspect-ratio: 4/3;"
-            >
-              <img
-                src={album.coverImage ?? placeholderImgs[i % placeholderImgs.length]}
-                alt={`${(album.name as string) || album.slug} album`}
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
-              />
-              <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);"></div>
-              <div class="absolute bottom-0 left-0 right-0 p-5">
-                <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
-                  {(album.name as string) || album.slug}
-                </h3>
-                {album.location && (
-                  <p class="text-white/80 text-sm flex items-center gap-1">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    {album.location}
-                  </p>
-                )}
-                <div class="flex items-center justify-between mt-2">
-                  <span class="text-white/60 text-xs">{formatDate(album.date)}</span>
-                  <span class="text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                    View Album →
-                  </span>
-                </div>
-              </div>
-            </a>
-          ))}
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style="color: var(--color-text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            id="vault-search"
+            type="text"
+            placeholder="Search albums..."
+            class="w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm outline-none"
+            style="border-color: var(--color-border);"
+          />
         </div>
-      ) : (
-        <!-- Placeholder albums when none exist -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { title: 'Spiti Valley 2023', loc: 'Himachal Pradesh', img: placeholderImgs[0] },
-            { title: 'Gokarna Beach 2024', loc: 'Karnataka', img: placeholderImgs[1] },
-            { title: 'Rishikesh Weekend', loc: 'Uttarakhand', img: placeholderImgs[2] },
-            { title: 'Meghalaya Trek', loc: 'Northeast India', img: placeholderImgs[3] },
-          ].map((p) => (
-            <div class="relative overflow-hidden rounded-2xl shadow-md reveal" style="aspect-ratio: 4/3;">
-              <img src={p.img} alt={p.title} class="w-full h-full object-cover" loading="lazy" />
-              <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);"></div>
-              <div class="absolute bottom-0 left-0 right-0 p-5">
-                <h3 class="font-extrabold text-lg text-white" style="font-family: var(--font-display);">{p.title}</h3>
-                <p class="text-white/70 text-sm">{p.loc}</p>
-                <span class="text-xs text-white/50 mt-1 block">Coming soon</span>
+        <select id="vault-sort" class="px-4 py-2.5 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Albums grid -->
+  <section class="py-16 lg:py-20 bg-white">
+    <div class="container-app">
+      <div id="albums-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {(albums.length > 0 ? albums.map((album, i) => ({
+          href: `/photo-vault/${album.slug}/`,
+          img: album.coverImage ?? placeholderImgs[i % placeholderImgs.length],
+          title: (album.name as string) || album.slug,
+          location: album.location ?? '',
+          date: formatDate(album.date),
+          rawDate: album.date ?? '',
+          photoCount: Array.isArray((album as any).photos) ? (album as any).photos.length : 0,
+          isLink: true,
+        })) : [
+          { href: '#', img: placeholderImgs[0], title: 'Spiti Valley 2023', location: 'Himachal Pradesh, India', date: 'September 2023', rawDate: '2023-09-01', photoCount: 0, isLink: false },
+          { href: '#', img: placeholderImgs[1], title: 'Gokarna Beach 2024', location: 'Karnataka, India', date: 'January 2024', rawDate: '2024-01-01', photoCount: 0, isLink: false },
+          { href: '#', img: placeholderImgs[2], title: 'Rishikesh Weekend', location: 'Uttarakhand, India', date: 'March 2024', rawDate: '2024-03-01', photoCount: 0, isLink: false },
+          { href: '#', img: placeholderImgs[3], title: 'Meghalaya Trek', location: 'Northeast India', date: 'October 2024', rawDate: '2024-10-01', photoCount: 0, isLink: false },
+        ]).map((item) => (
+          <a
+            href={item.href}
+            class="album-card group block relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
+            style="aspect-ratio: 4/3;"
+            data-title={item.title.toLowerCase()}
+            data-date={item.rawDate}
+          >
+            <img
+              src={item.img}
+              alt={`${item.title} album`}
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+            <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);"></div>
+            {item.photoCount > 0 && (
+              <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold text-white backdrop-blur-sm" style="background: rgba(0,0,0,0.45);">
+                {item.photoCount} photos
+              </div>
+            )}
+            <div class="absolute bottom-0 left-0 right-0 p-5">
+              <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
+                {item.title}
+              </h3>
+              {item.location && (
+                <p class="text-white/80 text-sm flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  {item.location}
+                </p>
+              )}
+              <div class="flex items-center justify-between mt-2">
+                <span class="text-white/60 text-xs">{item.date}</span>
+                <span class="text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  View Album →
+                </span>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </a>
+        ))}
+      </div>
+      <p id="no-results" class="hidden text-center py-16" style="color: var(--color-text-secondary);">
+        No albums match your search.
+      </p>
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  const searchInput = document.getElementById('vault-search') as HTMLInputElement;
+  const sortSelect = document.getElementById('vault-sort') as HTMLSelectElement;
+  const grid = document.getElementById('albums-grid') as HTMLElement;
+  const noResults = document.getElementById('no-results') as HTMLElement;
+
+  function applyFilters() {
+    const q = searchInput.value.toLowerCase().trim();
+    const sortVal = sortSelect.value;
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>('.album-card'));
+
+    cards.forEach((card) => {
+      const title = card.dataset.title ?? '';
+      card.style.display = (!q || title.includes(q)) ? '' : 'none';
+    });
+
+    const visible = cards.filter((c) => c.style.display !== 'none');
+    noResults.classList.toggle('hidden', visible.length > 0);
+
+    visible.sort((a, b) => {
+      const da = a.dataset.date ?? '';
+      const db = b.dataset.date ?? '';
+      if (sortVal === 'newest') return db.localeCompare(da);
+      if (sortVal === 'oldest') return da.localeCompare(db);
+      return (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '');
+    }).forEach((card) => grid.appendChild(card));
+  }
+
+  searchInput?.addEventListener('input', applyFilters);
+  sortSelect?.addEventListener('change', applyFilters);
+</script>

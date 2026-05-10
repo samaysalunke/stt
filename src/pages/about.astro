@@ -80,7 +80,7 @@ const features = [
 >
   <!-- Hero -->
   <section
-    class="relative flex items-center justify-center overflow-hidden pt-20"
+    class="relative flex items-center justify-center overflow-hidden"
     style="height: 45vh; background-image: url('https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
     <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
@@ -102,7 +102,7 @@ const features = [
           <img
             src={founderImg}
             alt="Zahra Shakir - Founder of Seek the Thrill"
-            class="w-full rounded-2xl shadow-xl object-cover"
+            class="w-full rounded-2xl shadow-xl object-cover transform -rotate-2"
             style="aspect-ratio: 4/3;"
             loading="lazy"
           />
@@ -126,12 +126,11 @@ const features = [
           </div>
 
           <!-- Pull quote -->
-          <blockquote class="mt-8 pl-5 border-l-4 py-2" style="border-color: var(--color-accent);">
-            <p class="text-xl italic leading-relaxed" style="font-family: var(--font-accent); color: var(--color-primary);">
+          <div class="mt-8 p-6 rounded-xl border-l-4" style="background-color: rgba(232,117,42,0.1); border-color: var(--color-accent);">
+            <p class="text-xl italic leading-relaxed" style="font-family: var(--font-accent); color: var(--color-text-primary);">
               "We don't just take you to destinations; we create experiences that change you."
             </p>
-            <footer class="text-sm mt-2 font-medium" style="color: var(--color-text-secondary);">— Zahra Shakir, Founder</footer>
-          </blockquote>
+          </div>
         </div>
       </div>
     </div>
@@ -145,13 +144,13 @@ const features = [
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {values.map((v) => (
-          <div class="reveal text-center p-6 rounded-2xl border hover:shadow-md transition-shadow" style="border-color: var(--color-border);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style="background-color: var(--color-accent);">
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="reveal text-center p-6 bg-white rounded-2xl hover:shadow-xl transition-shadow border" style="border-color: var(--color-border);">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background-color: rgba(232,117,42,0.1);">
+              <svg class="w-8 h-8" style="color: var(--color-accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={v.icon} />
               </svg>
             </div>
-            <h3 class="font-bold text-base mb-2" style="font-family: var(--font-display); color: var(--color-primary);">{v.title}</h3>
+            <h3 class="font-bold text-base mb-3" style="font-family: var(--font-display);">{v.title}</h3>
             <p class="text-sm leading-relaxed" style="color: var(--color-text-secondary);">{v.desc}</p>
           </div>
         ))}
@@ -160,17 +159,17 @@ const features = [
   </section>
 
   <!-- Why Choose Us -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-primary-light);">
+  <section class="py-20 lg:py-24" style="background-color: #f0fdf4;">
     <div class="container-app">
       <div class="text-center mb-12 reveal">
         <h2 class="text-2xl lg:text-3xl font-extrabold" style="font-family: var(--font-display);">Why Travel With Us</h2>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {features.map((f) => (
-          <div class="reveal flex items-start gap-4 p-6 bg-white rounded-2xl shadow-sm">
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background-color: var(--color-primary-light);">
-              <svg class="w-6 h-6" style="color: var(--color-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={f.icon} />
+          <div class="reveal flex items-start gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background-color: var(--color-accent);">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div>
@@ -184,10 +183,49 @@ const features = [
   </section>
 
   <!-- Stats -->
-  <section class="py-16 lg:py-20 bg-white">
+  <section
+    class="py-16 lg:py-20 relative overflow-hidden"
+    style="background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background: rgba(26,61,40,0.90);"></div>
+    <div class="relative z-10 container-app">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center">
+        {stats.map((s) => (
+          <div class="reveal">
+            <div class="text-4xl lg:text-5xl font-extrabold mb-2" style="color: var(--color-accent); font-family: var(--font-display);">
+              {s.value}+
+            </div>
+            <div class="text-sm lg:text-base font-medium text-white/80">{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Meet the Team -->
+  <section class="py-20 lg:py-24 bg-white">
     <div class="container-app">
-      <div class="reveal">
-        <StatsCounter stats={stats} client:visible />
+      <div class="text-center mb-12 reveal">
+        <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--color-accent);">Our People</span>
+        <h2 class="text-2xl lg:text-3xl font-extrabold mt-2" style="font-family: var(--font-display);">The Faces Behind the Adventures</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
+        {[
+          { name: 'Zahra Shakir', role: 'Founder & Trip Leader', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80' },
+          { name: 'Arjun Mehta', role: 'Operations & Logistics', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80' },
+          { name: 'Priya Nair', role: 'Community & Marketing', img: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&auto=format&fit=crop&q=80' },
+        ].map((member) => (
+          <div class="reveal text-center">
+            <img
+              src={member.img}
+              alt={member.name}
+              class="w-28 h-28 rounded-full object-cover mx-auto mb-4 shadow-lg"
+              loading="lazy"
+            />
+            <h3 class="font-bold text-base" style="font-family: var(--font-display);">{member.name}</h3>
+            <p class="text-sm mt-1" style="color: var(--color-text-secondary);">{member.role}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
@@ -197,7 +235,7 @@ const features = [
     class="py-20 lg:py-24 relative overflow-hidden"
     style="background-image: url('https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
-    <div class="absolute inset-0" style="background: rgba(13,44,77,0.85);"></div>
+    <div class="absolute inset-0" style="background: rgba(0,0,0,0.6);"></div>
     <div class="relative z-10 text-center px-4">
       <h2 class="text-3xl lg:text-4xl font-extrabold text-white mb-4" style="font-family: var(--font-display);">
         Ready for Your Adventure?
@@ -205,7 +243,7 @@ const features = [
       <p class="text-white/80 mb-8 max-w-lg mx-auto">
         Join hundreds of travelers who've found their thrill with us. Your next adventure is just one click away.
       </p>
-      <a href="/trips/" class="inline-flex items-center font-bold text-white px-10 py-4 rounded-xl text-base transition-all hover:opacity-90" style="background-color: var(--color-accent);">
+      <a href="/trips/" class="inline-flex items-center font-bold text-white px-10 py-4 rounded-full text-base transition-all hover:opacity-90" style="background-color: var(--color-accent);">
         Explore Trips →
       </a>
     </div>

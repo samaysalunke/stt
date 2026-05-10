@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #FF5733;
-  --color-primary-dark: #0D2C4D;
-  --color-primary-light: #FFF0EB;
-  --color-secondary: #8CC6EC;
-  --color-secondary-light: #EAF5FB;
-  --color-accent: #E67E66;
-  --color-accent-hover: #D96A57;
-  --color-accent-light: #FDF0EE;
+  --color-primary: #2D5F3E;
+  --color-primary-dark: #1A3D28;
+  --color-primary-light: #E8F5EC;
+  --color-secondary: #D4A854;
+  --color-secondary-light: #FEF3DC;
+  --color-accent: #E8752A;
+  --color-accent-hover: #D4631E;
+  --color-accent-light: #FEF0E6;
   --color-gold: #D4A854;
   --color-surface: #FAFAF7;
   --color-text-primary: #1A1A1A;
@@ -17,7 +17,7 @@
   --color-danger: #D93025;
   --color-border: #E5E5E0;
 
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --font-accent: 'Caveat', cursive;
 
@@ -86,6 +86,15 @@
 }
 .animate-bounce-down {
   animation: bounce-down 1.5s ease-in-out infinite;
+}
+
+/* Hide scrollbar utility (for horizontal scroll carousels) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Spinning animation for 404 */
