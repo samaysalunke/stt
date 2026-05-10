@@ -4,8 +4,9 @@ import path from 'node:path';
 import { v4 as uuid } from 'uuid';
 
 const CWD = process.cwd();
-const TRIPS_DIR = path.join(CWD, 'src', 'content', 'trips');
-const ALBUMS_DIR = path.join(CWD, 'src', 'content', 'albums');
+const CONTENT_BASE = process.env.CONTENT_DIR ?? path.join(CWD, 'src', 'content');
+const TRIPS_DIR = path.join(CONTENT_BASE, 'trips');
+const ALBUMS_DIR = path.join(CONTENT_BASE, 'albums');
 
 // ── YAML helpers ─────────────────────────────────────────────────────────────
 
