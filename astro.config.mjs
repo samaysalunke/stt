@@ -9,6 +9,9 @@ import node from '@astrojs/node';
 export default defineConfig({
   site: 'https://seekthethrill.in',
   output: 'server',
+  security: {
+    checkOrigin: false,
+  },
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
