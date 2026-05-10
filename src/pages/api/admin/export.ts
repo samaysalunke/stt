@@ -23,8 +23,14 @@ export const GET: APIRoute = async ({ url }) => {
   let filename = '';
 
   if (type === 'registrations') {
-    rows = getDb().prepare('SELECT * FROM registrations ORDER BY id DESC').all() as Record<string, any>[];
-    filename = `registrations-${date}.csv`;
+    const tripName = url.searchParams.get('trip_name');
+    if (tripName) {
+      rows = getDb().prepare('SELECT * FROM registrations WHERE trip_name = ? ORDER BY id DESC').all(tripName) as Record<string, any>[];
+      filename = `registrations-${tripName.toLowerCase().replace(/\s+/g, '-')}-${date}.csv`;
+    } else {
+      rows = getDb().prepare('SELECT * FROM registrations ORDER BY id DESC').all() as Record<string, any>[];
+      filename = `registrations-${date}.csv`;
+    }
   } else if (type === 'contacts') {
     rows = getDb().prepare('SELECT * FROM contact_submissions ORDER BY id DESC').all() as Record<string, any>[];
     filename = `contacts-${date}.csv`;
