@@ -15,17 +15,22 @@ const SMTP_USER = import.meta.env.SMTP_USER || process.env.SMTP_USER;
 const SMTP_PASS = import.meta.env.SMTP_PASS || process.env.SMTP_PASS;
 const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'zahra@seekthethrill.in';
 
+let _transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
+
 function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.warn('[Email] SMTP not configured — emails will be logged to console only.');
     return null;
   }
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    });
+  }
+  return _transporter;
 }
 
 async function sendEmail(to: string, subject: string, html: string, from?: string) {
