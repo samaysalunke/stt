@@ -159,9 +159,9 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
       <a
         href={`/trips/${slug}/`}
         class="font-bold text-sm text-white px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
-        style={`background-color: ${status === 'sold-out' ? 'var(--color-text-secondary)' : 'var(--color-accent)'};`}
+        style={`background-color: ${status === 'booking-open' ? 'var(--color-accent)' : 'var(--color-text-secondary)'};`}
       >
-        {status === 'sold-out' ? 'View Details' : 'Book Now →'}
+        {status === 'booking-open' ? 'Book Now →' : 'View Details'}
       </a>
     </div>
   </div>
