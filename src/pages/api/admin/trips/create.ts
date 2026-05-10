@@ -41,7 +41,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     endDate: sanitizeInput(body.get('endDate')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
     pricePerPerson: body.get('pricePerPerson') ? Number(body.get('pricePerPerson')) : null,
-    difficulty: sanitizeInput(body.get('difficulty')) || null,
     categories,
     minGroupSize: body.get('minGroupSize') ? Number(body.get('minGroupSize')) : null,
     maxGroupSize: body.get('maxGroupSize') ? Number(body.get('maxGroupSize')) : null,

@@ -55,16 +55,6 @@ export default config({
         minGroupSize: fields.integer({ label: 'Minimum Group Size' }),
         maxGroupSize: fields.integer({ label: 'Maximum Group Size' }),
         currentBookings: fields.integer({ label: 'Current Bookings', defaultValue: 0 }),
-        difficulty: fields.select({
-          label: 'Difficulty',
-          options: [
-            { label: 'Easy', value: 'easy' },
-            { label: 'Moderate', value: 'moderate' },
-            { label: 'Challenging', value: 'challenging' },
-            { label: 'Moderate to Challenging', value: 'moderate-challenging' },
-          ],
-          defaultValue: 'moderate',
-        }),
         description: fields.document({
           label: 'Trip Description',
           formatting: true,
