@@ -106,13 +106,26 @@ function fmtCurrency(n: number) {
         <option value="confirmed">Confirmed</option>
         <option value="rejected">Rejected</option>
       </select>
+      <select id="tripFilter" style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);min-width:180px;">
+        <option value="">All trips</option>
+        {allTrips.sort((a, b) => {
+          const aIdx = STATUS_ORDER.indexOf((tripStatusMap.get(a.name as string) ?? ''));
+          const bIdx = STATUS_ORDER.indexOf((tripStatusMap.get(b.name as string) ?? ''));
+          return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+        }).map(t => (
+          <option value={t.name}>{t.name}</option>
+        ))}
+      </select>
     </div>
-    <a
-      href="/api/admin/export?type=registrations"
-      style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
-    >
-      ↓ Export CSV
-    </a>
+    <div style="display:flex;gap:0.5rem;">
+      <a
+        id="exportLink"
+        href="/api/admin/export?type=registrations"
+        style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
+      >
+        ↓ Export CSV
+      </a>
+    </div>
   </div>
 
   <!-- Grouped registrations -->
@@ -363,17 +376,21 @@ function fmtCurrency(n: number) {
   // Search + filter
   const searchEl = document.getElementById('search') as HTMLInputElement | null;
   const filterEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
+  const tripFilterEl = document.getElementById('tripFilter') as HTMLSelectElement | null;
+  const exportLink = document.getElementById('exportLink') as HTMLAnchorElement | null;
 
   function applyFilters() {
     const q = searchEl?.value.toLowerCase() ?? '';
     const s = filterEl?.value ?? '';
+    const t = tripFilterEl?.value ?? '';
     const rows = document.querySelectorAll<HTMLTableRowElement>('.reg-row');
     let totalVisible = 0;
 
     rows.forEach(row => {
       const matchQ = !q || row.dataset.name?.includes(q) || row.dataset.email?.includes(q) || row.dataset.trip?.includes(q);
       const matchS = !s || row.dataset.status === s;
-      const show = !!(matchQ && matchS);
+      const matchT = !t || row.dataset.trip === t.toLowerCase();
+      const show = !!(matchQ && matchS && matchT);
       row.style.display = show ? '' : 'none';
       // Hide open detail row when parent is hidden
       const id = row.querySelector('button[onclick*="toggleDetail"]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
@@ -386,7 +403,6 @@ function fmtCurrency(n: number) {
     document.querySelectorAll<HTMLElement>('.trip-group').forEach(group => {
       const groupTable = group.querySelector<HTMLElement>('.trip-group-table');
       if (groupTable && groupTable.style.display === 'none') {
-        // Group is collapsed — check if it has matching rows to decide visibility
         const anyMatch = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
           row => row.style.display !== 'none'
         );
@@ -394,7 +410,6 @@ function fmtCurrency(n: number) {
         return;
       }
       const visibleRows = group.querySelectorAll<HTMLElement>('.reg-row:not([style*="display: none"])');
-      // Also count rows that haven't been explicitly hidden (no style attr)
       const anyVisible = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
         row => row.style.display !== 'none'
       );
@@ -403,10 +418,20 @@ function fmtCurrency(n: number) {
 
     const noResults = document.getElementById('noResults');
     if (noResults) noResults.style.display = totalVisible === 0 ? 'block' : 'none';
+
+    // Update export link if trip filter is active
+    if (exportLink) {
+      if (t) {
+        exportLink.href = `/api/admin/export?type=registrations&trip_name=${encodeURIComponent(t)}`;
+      } else {
+        exportLink.href = '/api/admin/export?type=registrations';
+      }
+    }
   }
 
   searchEl?.addEventListener('input', applyFilters);
   filterEl?.addEventListener('change', applyFilters);
+  tripFilterEl?.addEventListener('change', applyFilters);
 
   // Expose to onclick handlers
   (window as any).toggleGroup = toggleGroup;
