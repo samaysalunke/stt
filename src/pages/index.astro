@@ -29,10 +29,10 @@ try {
 } catch (e) {}
 
 const stats = [
-  { value: settings.tripsCompleted ?? 25, label: 'Trips Completed' },
-  { value: settings.happyTravelers ?? 500, label: 'Travelers & Counting' },
-  { value: settings.destinationsCovered ?? 15, label: 'Destinations Covered' },
-  { value: settings.yearsOfAdventure ?? 4, label: 'Years of Adventure' },
+  { value: settings.tripsCompleted ?? 25, label: 'Trips Completed', iconPath: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7' },
+  { value: settings.happyTravelers ?? 500, label: 'Travelers & Counting', iconPath: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { value: settings.destinationsCovered ?? 15, label: 'Destinations Covered', iconPath: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
+  { value: settings.yearsOfAdventure ?? 4, label: 'Years of Adventure', iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
 ];
 
 const heroImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
@@ -42,12 +42,14 @@ const aboutImg = 'https://images.unsplash.com/photo-1533692328991-08159ff19fca?w
 // Name format: trip-name-01.jpg  (e.g. meghalaya-01.jpg)
 // Upload to public/vault/ and update the src paths below
 const vaultImages = [
-  { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', trip: 'Spiti Valley', span: 'row-span-2' },
-  { src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80', trip: 'Gokarna Beach', span: '' },
-  { src: 'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=600&auto=format&fit=crop&q=80', trip: 'Rishikesh', span: '' },
-  { src: 'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=600&auto=format&fit=crop&q=80', trip: 'Meghalaya', span: 'row-span-2' },
-  { src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&auto=format&fit=crop&q=80', trip: 'Riverside Camping', span: '' },
-  { src: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=600&auto=format&fit=crop&q=80', trip: 'Group Adventures', span: '' },
+  { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', trip: 'Spiti Valley' },
+  { src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80', trip: 'Gokarna Beach' },
+  { src: 'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=600&auto=format&fit=crop&q=80', trip: 'Rishikesh' },
+  { src: 'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=600&auto=format&fit=crop&q=80', trip: 'Meghalaya' },
+  { src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&auto=format&fit=crop&q=80', trip: 'Riverside Camping' },
+  { src: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=600&auto=format&fit=crop&q=80', trip: 'Group Adventures' },
+  { src: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80', trip: 'Rafting' },
+  { src: 'https://images.unsplash.com/photo-1432057322224-8916b9ed202a?w=600&auto=format&fit=crop&q=80', trip: 'Himalayan Trek' },
 ];
 
 const valueCards = [
@@ -86,7 +88,7 @@ const valueCards = [
   >
     <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.2) 100%);"></div>
 
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto pt-20">
+    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
       <div class="reveal">
         <span class="inline-block text-xs font-bold uppercase tracking-widest text-white/80 mb-6 border border-white/30 px-4 py-1.5 rounded-full" style="backdrop-filter: blur(4px);">
           Small Groups. Real India. Zero Tourist Traps.
@@ -99,10 +101,10 @@ const valueCards = [
           Handpicked treks, beaches, and offbeat escapes — designed for young Indian travelers who want to go deeper, spend smarter, and travel together.
         </p>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="/trips/" class="font-bold text-white px-8 py-4 rounded-xl text-base transition-all hover:opacity-90 shadow-lg" style="background-color: var(--color-accent);">
+          <a href="/trips/" class="font-bold text-white px-8 py-4 rounded-full text-base transition-all hover:opacity-90 shadow-lg" style="background-color: var(--color-accent);">
             Explore Upcoming Trips →
           </a>
-          <a href="/about/" class="font-bold text-white px-8 py-4 rounded-xl text-base transition-all border-2 border-white/40" style="backdrop-filter: blur(4px);">
+          <a href="/about/" class="font-bold text-white px-8 py-4 rounded-full text-base transition-all border-2 border-white/40" style="backdrop-filter: blur(4px);">
             Our Story
           </a>
         </div>
@@ -156,16 +158,14 @@ const valueCards = [
 
           <div class="grid grid-cols-2 gap-4">
             {valueCards.map((v) => (
-              <div class="flex items-start gap-3 p-4 rounded-xl" style="background-color: var(--color-primary-light);">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: var(--color-accent);">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="p-4 rounded-xl border bg-white hover:shadow-lg transition-shadow" style="border-color: var(--color-border);">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center mb-3" style="background-color: rgba(232,117,42,0.1);">
+                  <svg class="w-5 h-5" style="color: var(--color-accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={v.icon} />
                   </svg>
                 </div>
-                <div>
-                  <div class="font-bold text-sm" style="font-family: var(--font-display); color: var(--color-primary);">{v.title}</div>
-                  <div class="text-xs mt-0.5" style="color: var(--color-text-secondary);">{v.desc}</div>
-                </div>
+                <div class="font-bold text-sm mb-1" style="font-family: var(--font-display);">{v.title}</div>
+                <div class="text-xs leading-snug" style="color: var(--color-text-secondary);">{v.desc}</div>
               </div>
             ))}
           </div>
@@ -175,7 +175,7 @@ const valueCards = [
   </section>
 
   <!-- FEATURED TRIPS -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
+  <section class="py-20 lg:py-24" style="background-color: white;">
     <div class="container-app">
       <div class="text-center mb-12 reveal">
         <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
@@ -186,26 +186,56 @@ const valueCards = [
       </div>
 
       {featuredTrips.length > 0 ? (
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          {featuredTrips.map((trip) => (
-            <div class="reveal">
-              <TripCard
-                slug={trip.slug}
-                name={(trip.name as string) || trip.slug}
-                status={trip.status ?? 'upcoming'}
-                featuredImage={trip.featuredImage ?? null}
-                shortDescription={trip.shortDescription ?? ''}
-                startDate={trip.startDate ?? null}
-                endDate={trip.endDate ?? null}
-                duration={trip.duration ?? null}
-                pricePerPerson={trip.pricePerPerson ?? null}
-                maxGroupSize={trip.maxGroupSize ?? null}
-                currentBookings={trip.currentBookings ?? null}
-                categories={(trip.categories as string[]) ?? []}
-              />
+        <>
+          <!-- Mobile: horizontal scroll -->
+          <div class="md:hidden overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
+            <div class="flex gap-4 pb-2" style="width: max-content;">
+              {featuredTrips.map((trip) => (
+                <div class="w-72 flex-none">
+                  <TripCard
+                    slug={trip.slug}
+                    name={(trip.name as string) || trip.slug}
+                    status={trip.status ?? 'upcoming'}
+                    featuredImage={trip.featuredImage ?? null}
+                    shortDescription={trip.shortDescription ?? ''}
+                    location={(trip as any).location ?? null}
+                    startDate={trip.startDate ?? null}
+                    endDate={trip.endDate ?? null}
+                    duration={trip.duration ?? null}
+                    pricePerPerson={trip.pricePerPerson ?? null}
+                    maxGroupSize={trip.maxGroupSize ?? null}
+                    currentBookings={trip.currentBookings ?? null}
+                    difficulty={(trip as any).difficulty ?? null}
+                    categories={(trip.categories as string[]) ?? []}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+          <!-- Desktop: grid -->
+          <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            {featuredTrips.map((trip) => (
+              <div class="reveal">
+                <TripCard
+                  slug={trip.slug}
+                  name={(trip.name as string) || trip.slug}
+                  status={trip.status ?? 'upcoming'}
+                  featuredImage={trip.featuredImage ?? null}
+                  shortDescription={trip.shortDescription ?? ''}
+                  location={(trip as any).location ?? null}
+                  startDate={trip.startDate ?? null}
+                  endDate={trip.endDate ?? null}
+                  duration={trip.duration ?? null}
+                  pricePerPerson={trip.pricePerPerson ?? null}
+                  maxGroupSize={trip.maxGroupSize ?? null}
+                  currentBookings={trip.currentBookings ?? null}
+                  difficulty={(trip as any).difficulty ?? null}
+                  categories={(trip.categories as string[]) ?? []}
+                />
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <p class="text-center py-16 reveal" style="color: var(--color-text-secondary);">No upcoming trips right now — check back soon!</p>
       )}
@@ -214,7 +244,7 @@ const valueCards = [
         <a
           href="/trips/"
           id="view-all-trips-btn"
-          class="inline-flex items-center gap-2 font-bold text-base px-8 py-3 rounded-xl border-2 transition-all duration-200"
+          class="inline-flex items-center gap-2 font-bold text-base px-8 py-3 rounded-full border-2 transition-all duration-200"
           style="border-color: var(--color-primary); color: var(--color-primary);"
         >
           View All Trips →
@@ -243,7 +273,7 @@ const valueCards = [
   </section>
 
   <!-- PHOTO VAULT TEASER -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
+  <section class="py-20 lg:py-24" style="background-color: white;">
     <div class="container-app">
       <div class="text-center mb-12 reveal">
         <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
@@ -252,9 +282,9 @@ const valueCards = [
         <p class="mt-3" style="color: var(--color-text-secondary);">Relive the adventure through our photo vault</p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-3 lg:gap-4 mb-10" style="grid-auto-rows: 200px;">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-10">
         {vaultImages.map((img) => (
-          <a href="/photo-vault/" class={`relative overflow-hidden rounded-xl group ${img.span}`}>
+          <a href="/photo-vault/" class="relative overflow-hidden rounded-xl group aspect-square">
             <img
               src={img.src}
               alt={img.trip}
@@ -272,7 +302,7 @@ const valueCards = [
       </div>
 
       <div class="text-center reveal">
-        <a href="/photo-vault/" class="inline-flex items-center font-bold text-white px-8 py-3 rounded-xl transition-all hover:opacity-90" style="background-color: var(--color-accent);">
+        <a href="/photo-vault/" class="inline-flex items-center font-bold text-white px-8 py-3 rounded-full transition-all hover:opacity-90" style="background-color: var(--color-accent);">
           View More Memories →
         </a>
       </div>
@@ -280,10 +310,14 @@ const valueCards = [
   </section>
 
   <!-- STATS -->
-  <section class="py-20 lg:py-24 relative overflow-hidden" style="background-color: var(--color-primary-light);">
+  <section
+    class="py-20 lg:py-24 relative overflow-hidden"
+    style="background-image: url('https://images.unsplash.com/photo-1686074403725-78f2e110ae38?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background-color: rgba(26,61,40,0.92);"></div>
     <div class="container-app relative z-10">
       <div class="text-center mb-12 reveal">
-        <h2 class="text-2xl lg:text-3xl font-extrabold" style="font-family: var(--font-display); color: var(--color-primary);">
+        <h2 class="text-2xl lg:text-3xl font-extrabold text-white" style="font-family: var(--font-display);">
           Our Adventures in Numbers
         </h2>
       </div>
@@ -316,7 +350,7 @@ const valueCards = [
           />
           <button
             type="submit"
-            class="font-bold text-white px-6 py-3 rounded-xl transition-all hover:opacity-90 whitespace-nowrap"
+            class="font-bold text-white px-6 py-3 rounded-full transition-all hover:opacity-90 whitespace-nowrap"
             style="background-color: var(--color-accent);"
           >
             Subscribe

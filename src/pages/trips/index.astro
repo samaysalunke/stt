@@ -12,12 +12,14 @@ const trips = allTrips
     status: t.status ?? 'upcoming',
     featuredImage: t.featuredImage ?? null,
     shortDescription: t.shortDescription ?? '',
+    location: t.location ?? null,
     startDate: t.startDate ?? null,
     endDate: t.endDate ?? null,
     duration: t.duration ?? null,
     pricePerPerson: t.pricePerPerson ?? null,
     maxGroupSize: t.maxGroupSize ?? null,
     currentBookings: t.currentBookings ?? null,
+    difficulty: t.difficulty ?? null,
     categories: (t.categories as string[]) ?? [],
   }));
 ---
@@ -28,7 +30,7 @@ const trips = allTrips
 >
   <!-- Hero -->
   <section
-    class="relative flex items-center justify-center overflow-hidden pt-20"
+    class="relative flex items-center justify-center overflow-hidden"
     style="height: 40vh; background-image: url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center 40%;"
   >
     <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>

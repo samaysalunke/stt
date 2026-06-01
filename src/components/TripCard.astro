@@ -7,12 +7,14 @@ interface Props {
   status: string;
   featuredImage?: string | null;
   shortDescription: string;
+  location?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   duration?: string | null;
   pricePerPerson?: number | null;
   maxGroupSize?: number | null;
   currentBookings?: number | null;
+  difficulty?: string | null;
   categories?: readonly string[] | string[];
 }
 
@@ -22,14 +24,22 @@ const {
   status,
   featuredImage,
   shortDescription,
+  location,
   startDate,
   endDate,
   duration,
   pricePerPerson,
   maxGroupSize,
   currentBookings,
+  difficulty,
   categories = [],
 } = Astro.props;
+
+const DIFF_COLORS: Record<string, { border: string; color: string }> = {
+  'Easy': { border: '#22A654', color: '#166534' },
+  'Moderate': { border: '#E8752A', color: '#c2500e' },
+  'Challenging': { border: '#D93025', color: '#991b1b' },
+};
 
 const seatsLeft = maxGroupSize && currentBookings !== null && currentBookings !== undefined
   ? maxGroupSize - currentBookings
@@ -103,24 +113,43 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
     </p>
 
     <!-- Trip meta -->
-    <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs mb-4" style="color: var(--color-text-secondary);">
+    <div class="space-y-1.5 text-xs mb-3" style="color: var(--color-text-secondary);">
+      {location && (
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span>{location}</span>
+        </div>
+      )}
       {startDate && (
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          {formatDate(startDate)}
-        </span>
+          <span>{formatDate(startDate)}</span>
+        </div>
       )}
       {duration && (
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          {duration}
-        </span>
+          <span>{duration}</span>
+        </div>
       )}
     </div>
+
+    {difficulty && DIFF_COLORS[difficulty] && (
+      <div class="mb-3">
+        <span
+          class="text-xs font-medium px-2 py-0.5 rounded-full border"
+          style={`border-color: ${DIFF_COLORS[difficulty].border}; color: ${DIFF_COLORS[difficulty].color};`}
+        >
+          {difficulty}
+        </span>
+      </div>
+    )}
 
     <!-- Spots progress bar -->
     {maxGroupSize && currentBookings != null && (
@@ -147,7 +176,7 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
       <div>
         {formattedPrice ? (
           <div>
-            <span class="text-xl font-display font-extrabold" style="color: var(--color-primary);">
+            <span class="text-xl font-display font-extrabold" style="color: var(--color-accent);">
               {formattedPrice}
             </span>
             <span class="text-xs ml-1" style="color: var(--color-text-secondary);">/ person</span>

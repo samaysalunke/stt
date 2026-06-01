@@ -24,7 +24,7 @@ function formatDate(d: string | null | undefined) {
   description={album.description ?? `Photos from our ${name} adventure.`}
 >
   <!-- Back link + header -->
-  <div class="pt-24 pb-8" style="background-color: var(--color-primary-dark);">
+  <div class="pt-8 pb-8" style="background-color: var(--color-primary-dark);">
     <div class="container-app">
       <a href="/photo-vault/" class="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors mb-6">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,19 +52,19 @@ function formatDate(d: string | null | undefined) {
   <section class="py-10" style="background-color: var(--color-surface);">
     <div class="container-app">
       {photos.length > 0 ? (
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">
+        <div class="photo-masonry">
           {photos.map((p, i) => (
             <a
               href={p.image}
               data-glightbox="type: image"
               data-gallery="album"
               data-title={p.caption ?? `Photo ${i + 1} of ${name}`}
-              class="block relative overflow-hidden rounded-xl group aspect-square"
+              class="photo-masonry-item block relative overflow-hidden rounded-xl group"
             >
               <img
                 src={p.image}
                 alt={p.caption ?? `${name} photo ${i + 1}`}
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                class="w-full h-auto block group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
               />
               <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style="background: rgba(0,0,0,0.3);">
@@ -95,6 +95,26 @@ function formatDate(d: string | null | undefined) {
     </div>
   </section>
 </BaseLayout>
+
+<style>
+  .photo-masonry {
+    columns: 2;
+    column-gap: 0.5rem;
+  }
+  @media (min-width: 768px) {
+    .photo-masonry { columns: 3; column-gap: 0.75rem; }
+  }
+  @media (min-width: 1024px) {
+    .photo-masonry { columns: 4; column-gap: 0.75rem; }
+  }
+  .photo-masonry-item {
+    break-inside: avoid;
+    margin-bottom: 0.5rem;
+  }
+  @media (min-width: 768px) {
+    .photo-masonry-item { margin-bottom: 0.75rem; }
+  }
+</style>
 
 <script>
   // GLightbox initialization
