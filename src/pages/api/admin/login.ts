@@ -18,10 +18,10 @@ export const POST: APIRoute = async ({ request, redirect, cookies, clientAddress
   const token = crypto.createHash('sha256').update(expected).digest('hex');
   cookies.set('admin_token', token, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
+    secure: import.meta.env.PROD,
+    sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24,
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return redirect('/admin/registrations');
