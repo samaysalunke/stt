@@ -1,18 +1,12 @@
 name: Gokarna Beach Escape
-status: upcoming
+status: draft
 startDate: 2026-03-10
 endDate: 2026-03-13
 duration: 4 Days, 3 Nights
 pricePerPerson: 8999
-categories:
-  - india
-  - cultural
-  - beach
-  - weekend
 minGroupSize: 10
 maxGroupSize: 20
 currentBookings: 12
-registrationEnabled: true
 registrationDeadline: 2026-03-05
 shortDescription: Escape to the prist of Gokarna, Karnataka's hidden paradise.
   Beach hopping, bonfires, and sunsets await!
@@ -50,7 +44,7 @@ packingList:
   - Reusable water bottle
   - Beach towel
 itinerary:
-  - day: 1
+  - dayNumber: 1
     dayTitle: Arrival in Gokarna
     activities: Arrival by afternoon. Check-in to beach-side accommodation. Welcome
       session and group introductions. Evening visit to Gokarna Main Beach.
@@ -61,7 +55,7 @@ itinerary:
     lunch: false
     dinner: true
     specialNotes: ""
-  - day: 2
+  - dayNumber: 2
     dayTitle: Beach Hopping Trek
     activities: Breakfast at accommodation. Trek starting from Gokarna Beach. Visit
       Kudle Beach (relax and swim). Trek to Om Beach (lunch break). Continue to
@@ -73,7 +67,7 @@ itinerary:
     lunch: true
     dinner: true
     specialNotes: ""
-  - day: 3
+  - dayNumber: 3
     dayTitle: Water Sports & Leisure
     activities: Lazy beach morning. Optional water sports at Om Beach. Beach
       volleyball tournament. Sunset yoga session (optional). Group dinner at
@@ -84,7 +78,7 @@ itinerary:
     lunch: false
     dinner: true
     specialNotes: Water sports are optional and charged separately.
-  - day: 4
+  - dayNumber: 4
     dayTitle: Temple Visit & Departure
     activities: Visit Mahabaleshwar Temple. Explore Gokarna town market. Lunch at
       local restaurant. Departure post-lunch.

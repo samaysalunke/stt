@@ -153,7 +153,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
               </div>
             ))}
           </div>
-          <button type="button" class="add-btn" onclick="addItem('highlights-list','highlights[]','e.g. Sunrise trek to summit...')">+ Add Highlight</button>
+          <button type="button" class="add-btn" data-list="highlights-list" data-name="highlights[]" data-placeholder="e.g. Sunrise trek to summit...">+ Add Highlight</button>
         </div>
 
         <div class="field full">
@@ -166,7 +166,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
               </div>
             ))}
           </div>
-          <button type="button" class="add-btn" onclick="addItem('included-list','included[]','e.g. Accommodation...')">+ Add Inclusion</button>
+          <button type="button" class="add-btn" data-list="included-list" data-name="included[]" data-placeholder="e.g. Accommodation...">+ Add Inclusion</button>
         </div>
 
         <div class="field full">
@@ -179,7 +179,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
               </div>
             ))}
           </div>
-          <button type="button" class="add-btn" onclick="addItem('notIncluded-list','notIncluded[]','e.g. Flight tickets...')">+ Add Exclusion</button>
+          <button type="button" class="add-btn" data-list="notIncluded-list" data-name="notIncluded[]" data-placeholder="e.g. Flight tickets...">+ Add Exclusion</button>
         </div>
 
         <div class="field full">
@@ -192,7 +192,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
               </div>
             ))}
           </div>
-          <button type="button" class="add-btn" onclick="addItem('packingList-list','packingList[]','e.g. Warm jacket...')">+ Add Item</button>
+          <button type="button" class="add-btn" data-list="packingList-list" data-name="packingList[]" data-placeholder="e.g. Warm jacket...">+ Add Item</button>
         </div>
 
       </div>
@@ -203,12 +203,12 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
       <div class="itin-toolbar">
         <span class="itin-count" id="itin-count">0 days</span>
         <div style="display:flex;gap:0.5rem;">
-          <button type="button" class="itin-tool-btn" onclick="expandAll()">Expand all</button>
-          <button type="button" class="itin-tool-btn" onclick="collapseAll()">Collapse all</button>
+          <button type="button" class="itin-tool-btn" id="expand-all-btn">Expand all</button>
+          <button type="button" class="itin-tool-btn" id="collapse-all-btn">Collapse all</button>
         </div>
       </div>
       <div id="itinerary-container"></div>
-      <button type="button" id="add-day-btn" onclick="addDay()">
+      <button type="button" id="add-day-btn">
         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         Add Day
       </button>
@@ -267,7 +267,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
             <img src={trip.featuredImage} alt="Current" class="img-preview" />
           )}
           <input type="file" name="featuredImage" accept="image/*" class="finput file-input"
-            onchange="previewImage(this,'featured-preview')" />
+            data-preview="featured-preview" />
           <img id="featured-preview" src="" alt="" class="img-preview hidden" />
           <input type="hidden" name="existingFeaturedImage" value={trip.featuredImage ?? ''} />
           <span class="fhint">1200×675px · 16:9 · JPG/PNG · max 10 MB</span>
@@ -279,7 +279,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
             <img src={trip.paymentQrCode} alt="Current QR" class="img-preview qr" />
           )}
           <input type="file" name="paymentQrCode" accept="image/*" class="finput file-input"
-            onchange="previewImage(this,'qr-preview')" />
+            data-preview="qr-preview" />
           <img id="qr-preview" src="" alt="" class="img-preview hidden" />
           <input type="hidden" name="existingPaymentQrCode" value={trip.paymentQrCode ?? ''} />
           <span class="fhint">400×400px · square · PNG preferred · max 2 MB</span>
@@ -297,7 +297,7 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
   </form>
 </AdminLayout>
 
-<style>
+<style is:global>
 /* ── Layout ─────────────────────────────────── */
 .edit-header {
   display: flex;
@@ -824,10 +824,12 @@ function createDayCard(data, open = false) {
         </div>
       </div>
       <div class="day-footer">
-        <button type="button" class="rm-btn" onclick="this.closest('.day-card').remove(); renumberDays();">Remove Day</button>
+        <button type="button" class="rm-btn day-remove-btn">Remove Day</button>
       </div>
     </div>
   `;
+
+  div.querySelector('.day-remove-btn').addEventListener('click', () => { div.remove(); renumberDays(); });
 
   // Toggle open/close on header click
   div.querySelector('.day-header').addEventListener('click', (e) => {
@@ -892,5 +894,16 @@ renumberDays();
 
 document.getElementById('trip-form').addEventListener('submit', () => {
   document.getElementById('itinerary_json').value = JSON.stringify(serializeItinerary());
+});
+
+// Wire up buttons that couldn't use onclick (Astro define:vars wraps in IIFE)
+document.getElementById('add-day-btn').addEventListener('click', addDay);
+document.getElementById('expand-all-btn').addEventListener('click', expandAll);
+document.getElementById('collapse-all-btn').addEventListener('click', collapseAll);
+document.querySelectorAll('.add-btn[data-list]').forEach(btn => {
+  btn.addEventListener('click', () => addItem(btn.dataset.list, btn.dataset.name, btn.dataset.placeholder ?? ''));
+});
+document.querySelectorAll('.file-input[data-preview]').forEach(input => {
+  input.addEventListener('change', () => previewImage(input, input.dataset.preview));
 });
 </script>
