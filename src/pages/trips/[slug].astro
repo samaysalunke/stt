@@ -29,8 +29,8 @@ const paymentAmount = trip.paymentAmount ?? price;
 const fullPaymentAmount = (trip as any).fullPaymentAmount ?? price;
 
 const today = new Date().toISOString().split('T')[0];
-// Registration form is ONLY shown when admin has explicitly set the trip to "booking-open".
 const regOpen = trip.status === 'booking-open';
+const soldOut = trip.status === 'sold-out';
 
 const heroImg = trip.featuredImage ?? 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 
@@ -127,14 +127,6 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
               {trip.duration}
             </span>
           )}
-          {trip.difficulty && (
-            <span class="flex items-center gap-1.5 text-sm text-white bg-white/20 backdrop-blur px-3 py-1.5 rounded-full">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              {trip.difficulty}
-            </span>
-          )}
           {price && (
             <span class="flex items-center gap-1.5 text-sm text-white font-bold backdrop-blur px-3 py-1.5 rounded-full" style="background-color: rgba(232,117,42,0.85);">
               {formattedPrice} / person
@@ -161,6 +153,10 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
         <a href="#register" class="font-bold text-white px-6 py-2.5 rounded-full transition-all hover:opacity-90" style="background-color: var(--color-accent);">
           Register Now →
         </a>
+      ) : soldOut ? (
+        <span class="text-sm font-bold px-4 py-2 rounded-full" style="background-color: #fee2e2; color: #991b1b;">
+          Sold Out
+        </span>
       ) : (
         <span class="text-sm px-4 py-2 rounded-xl" style="background-color: #f3f4f6; color: var(--color-text-secondary);">
           Registration Closed
@@ -181,6 +177,19 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
           <h2 class="text-2xl font-extrabold mb-4" style="font-family: var(--font-display);">About This Trip</h2>
           {trip.shortDescription && (
             <p class="text-base leading-relaxed mb-4" style="color: var(--color-text-secondary);">{trip.shortDescription}</p>
+          )}
+
+          {trip.description && (
+            <div class="mt-4 mb-2 text-base leading-relaxed whitespace-pre-line" style="color: var(--color-text-secondary);">
+              {trip.description}
+            </div>
+          )}
+
+          {trip.whoShouldJoin && (
+            <div class="mt-6 p-4 rounded-xl" style="background-color: var(--color-primary-light);">
+              <h3 class="text-base font-bold mb-2" style="font-family: var(--font-display); color: var(--color-primary);">Who should join?</h3>
+              <p class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-primary);">{trip.whoShouldJoin}</p>
+            </div>
           )}
 
           {(trip.highlights ?? []).length > 0 && (
@@ -456,20 +465,15 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
 
             <!-- Share -->
             <div class="flex items-center justify-center gap-4 mt-4 pt-4 border-t" style="border-color: var(--color-border);">
-              <span class="text-xs" style="color: var(--color-text-secondary);">Share:</span>
               <button
-                id="share-wa"
-                class="text-xs flex items-center gap-1 font-medium px-3 py-1.5 rounded-lg transition-colors"
-                style="background-color: #dcfce7; color: #166534;"
-              >
-                WhatsApp
-              </button>
-              <button
-                id="copy-link"
-                class="text-xs flex items-center gap-1 font-medium px-3 py-1.5 rounded-lg transition-colors"
+                id="share-trip"
+                class="text-xs flex items-center gap-1.5 font-medium px-3 py-1.5 rounded-lg transition-colors"
                 style="background-color: var(--color-primary-light); color: var(--color-primary);"
               >
-                Copy Link
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                Share
               </button>
             </div>
           </div>
@@ -816,14 +820,18 @@ const itineraryData = (trip.itinerary ?? []).map((day: any) => ({
     }
   });
 
-  // Share buttons
-  document.getElementById('share-wa')?.addEventListener('click', () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(window.location.href)}`, '_blank');
-  });
-  document.getElementById('copy-link')?.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(window.location.href);
-    const btn = document.getElementById('copy-link') as HTMLButtonElement;
-    btn.textContent = 'Copied!';
-    setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000);
+  // Share button
+  document.getElementById('share-trip')?.addEventListener('click', async () => {
+    const url = window.location.href;
+    const title = document.title;
+    if (navigator.share) {
+      await navigator.share({ title, url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      const btn = document.getElementById('share-trip') as HTMLButtonElement;
+      const orig = btn.innerHTML;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }
   });
 </script>

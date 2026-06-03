@@ -7,7 +7,6 @@ const { slug } = Astro.params;
 const trip = slug ? readTrip(slug) : null;
 if (!trip) return Astro.redirect('/admin/trips');
 
-const categories = Array.isArray(trip.categories) ? trip.categories : [];
 const highlights = Array.isArray(trip.highlights) ? trip.highlights : [];
 const included = Array.isArray(trip.included) ? trip.included : [];
 const notIncluded = Array.isArray(trip.notIncluded) ? trip.notIncluded : [];
@@ -16,296 +15,569 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
 ---
 
 <AdminLayout title={`Edit: ${trip.name ?? slug}`} activeTab="trips">
-  <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
-    <a href="/admin/trips" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Trips</a>
-    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Edit: {trip.name ?? slug}</h1>
+
+  <!-- Header -->
+  <div class="edit-header">
+    <a href="/admin/trips" class="back-link">← Trips</a>
+    <h1 class="edit-title">{trip.name ?? slug}</h1>
+    <div class="header-actions">
+      <a href={`/trips/${slug}/`} target="_blank" class="preview-btn">Preview ↗</a>
+      <button type="submit" form="trip-form" class="save-btn">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    {[
+      { id: 'basics',    label: 'Basics'    },
+      { id: 'content',   label: 'Content'   },
+      { id: 'itinerary', label: 'Itinerary' },
+      { id: 'logistics', label: 'Logistics' },
+      { id: 'payment',   label: 'Payment & Media' },
+    ].map(({ id, label }) => (
+      <button type="button" class="tab-btn" data-tab={id}>{label}</button>
+    ))}
   </div>
 
   <form method="POST" action="/api/admin/trips/update" enctype="multipart/form-data" id="trip-form">
     <input type="hidden" name="slug" value={slug} />
 
-    <!-- Section 1: Basic Info -->
-    <div class="form-section">
-      <h2 class="section-title">Basic Info</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Trip Name *</label>
-          <input type="text" name="name" required class="form-input" value={trip.name ?? ''} />
+    <!-- ── TAB: BASICS ─────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-basics">
+      <div class="panel-grid">
+
+        <div class="field full">
+          <label class="flabel">Trip Name *</label>
+          <input type="text" name="name" required class="finput" value={trip.name ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">New Slug (leave blank to keep <code>{slug}</code>)</label>
-          <input type="text" name="newSlug" class="form-input" placeholder={slug} />
-          <span class="form-hint">Warning: changing the slug changes the public URL</span>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Status *</label>
-          <select name="status" required class="form-input">
-            {['draft','booking-open','upcoming','sold-out','completed'].map(s => (
-              <option value={s} selected={s === trip.status}>{s}</option>
+
+        <div class="field">
+          <label class="flabel">Status *</label>
+          <select name="status" required class="finput">
+            {['draft','booking-open','sold-out'].map(s => (
+              <option value={s} selected={s === trip.status}>
+                {s === 'draft' ? 'Draft' : s === 'booking-open' ? 'Booking Open' : 'Sold Out'}
+              </option>
             ))}
           </select>
+          <span class="fhint">Booking Open = live & accepting registrations</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">Start Date</label>
-          <input type="date" name="startDate" class="form-input" value={trip.startDate ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Slug</label>
+          <input type="text" name="newSlug" class="finput" placeholder={slug ?? ''} />
+          <span class="fhint">Leave blank to keep <code>{slug}</code>. Changing this changes the public URL.</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">End Date</label>
-          <input type="date" name="endDate" class="form-input" value={trip.endDate ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Start Date</label>
+          <input type="date" name="startDate" class="finput" value={trip.startDate ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Duration</label>
-          <input type="text" name="duration" class="form-input" value={trip.duration ?? ''} />
+
+        <div class="field">
+          <label class="flabel">End Date</label>
+          <input type="date" name="endDate" class="finput" value={trip.endDate ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Price Per Person (₹)</label>
-          <input type="number" name="pricePerPerson" class="form-input" value={trip.pricePerPerson ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Duration</label>
+          <input type="text" name="duration" class="finput" placeholder="e.g. 6N/7D" value={trip.duration ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Min Group Size</label>
-          <input type="number" name="minGroupSize" class="form-input" value={trip.minGroupSize ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Location</label>
+          <input type="text" name="location" class="finput" placeholder="e.g. Meghalaya" value={trip.location ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Max Group Size</label>
-          <input type="number" name="maxGroupSize" class="form-input" value={trip.maxGroupSize ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Price Per Person (₹)</label>
+          <input type="number" name="pricePerPerson" class="finput" value={trip.pricePerPerson ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Current Bookings</label>
-          <input type="number" name="currentBookings" class="form-input" value={trip.currentBookings ?? 0} />
+
+        <div class="field">
+          <label class="flabel">Max Group Size</label>
+          <input type="number" name="maxGroupSize" class="finput" value={trip.maxGroupSize ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Registration Deadline</label>
-          <input type="date" name="registrationDeadline" class="form-input" value={trip.registrationDeadline ?? ''} />
+
+        <div class="field">
+          <label class="flabel">Current Bookings</label>
+          <input type="number" name="currentBookings" class="finput" value={trip.currentBookings ?? 0} />
         </div>
-        <div class="form-group full">
-          <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" name="registrationEnabled" value="true" checked={trip.registrationEnabled !== false} style="width:1rem; height:1rem;" />
-            Registration Enabled
+
+        <div class="field">
+          <label class="flabel">Min Group Size</label>
+          <input type="number" name="minGroupSize" class="finput" value={trip.minGroupSize ?? ''} />
+        </div>
+
+        <div class="field">
+          <label class="flabel">Registration Deadline</label>
+          <input type="date" name="registrationDeadline" class="finput" value={trip.registrationDeadline ?? ''} />
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── TAB: CONTENT ────────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-content">
+      <div class="panel-grid">
+
+        <div class="field full">
+          <label class="flabel">
+            Short Description
+            <span id="shortDesc-count" class="char-count">{(trip.shortDescription ?? '').length}/200</span>
           </label>
+          <textarea name="shortDescription" class="finput" rows="3" maxlength="200"
+            oninput="document.getElementById('shortDesc-count').textContent=this.value.length+'/200'"
+          >{trip.shortDescription ?? ''}</textarea>
+          <span class="fhint">Shows on trip cards and meta description.</span>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Categories</label>
-          <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.25rem;">
-            {['india','international','adventure','cultural','beach','mountain','weekend','week-long','extended'].map(cat => (
-              <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.875rem; color:var(--color-text-secondary);">
-                <input type="checkbox" name="categories" value={cat} checked={categories.includes(cat)} style="width:0.9rem; height:0.9rem;" />
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Section 2: Content -->
-    <div class="form-section">
-      <h2 class="section-title">Content</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Short Description <span id="shortDesc-count" style="color:var(--color-text-muted); font-weight:400;">({(trip.shortDescription ?? '').length}/200)</span></label>
-          <textarea name="shortDescription" class="form-input" rows="3" maxlength="200" oninput="document.getElementById('shortDesc-count').textContent = '('+this.value.length+'/200)'">{trip.shortDescription ?? ''}</textarea>
+        <div class="field full">
+          <label class="flabel">Full Description</label>
+          <textarea name="description" class="finput" rows="8" placeholder="Detailed trip description shown on the trip page...">{trip.description ?? ''}</textarea>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Full Description</label>
-          <textarea name="description" class="form-input" rows="8">{trip.description ?? ''}</textarea>
+
+        <div class="field full">
+          <label class="flabel">Who Should Join?</label>
+          <textarea name="whoShouldJoin" class="finput" rows="4" placeholder="Describe the ideal traveler for this trip...">{trip.whoShouldJoin ?? ''}</textarea>
+          <span class="fhint">Shown as a highlighted box on the trip page.</span>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Who Should Join</label>
-          <textarea name="whoShouldJoin" class="form-input" rows="4">{trip.whoShouldJoin ?? ''}</textarea>
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Highlights</label>
-          <div id="highlights-list" class="dynamic-list">
+
+        <div class="field full">
+          <label class="flabel">Highlights</label>
+          <div id="highlights-list" class="dyn-list">
             {highlights.map((h: string) => (
-              <div class="dynamic-item">
-                <input type="text" name="highlights[]" value={h} class="form-input" />
-                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+              <div class="dyn-item">
+                <input type="text" name="highlights[]" value={h} class="finput" />
+                <button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>
               </div>
             ))}
           </div>
-          <button type="button" class="add-item-btn" onclick="addItem('highlights-list','highlights[]','Add a highlight...')">+ Add Highlight</button>
+          <button type="button" class="add-btn" onclick="addItem('highlights-list','highlights[]','e.g. Sunrise trek to summit...')">+ Add Highlight</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Included</label>
-          <div id="included-list" class="dynamic-list">
+
+        <div class="field full">
+          <label class="flabel">What's Included</label>
+          <div id="included-list" class="dyn-list">
             {included.map((item: string) => (
-              <div class="dynamic-item">
-                <input type="text" name="included[]" value={item} class="form-input" />
-                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+              <div class="dyn-item">
+                <input type="text" name="included[]" value={item} class="finput" />
+                <button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>
               </div>
             ))}
           </div>
-          <button type="button" class="add-item-btn" onclick="addItem('included-list','included[]','e.g. Accommodation...')">+ Add Inclusion</button>
+          <button type="button" class="add-btn" onclick="addItem('included-list','included[]','e.g. Accommodation...')">+ Add Inclusion</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Not Included</label>
-          <div id="notIncluded-list" class="dynamic-list">
+
+        <div class="field full">
+          <label class="flabel">What's Not Included</label>
+          <div id="notIncluded-list" class="dyn-list">
             {notIncluded.map((item: string) => (
-              <div class="dynamic-item">
-                <input type="text" name="notIncluded[]" value={item} class="form-input" />
-                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+              <div class="dyn-item">
+                <input type="text" name="notIncluded[]" value={item} class="finput" />
+                <button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>
               </div>
             ))}
           </div>
-          <button type="button" class="add-item-btn" onclick="addItem('notIncluded-list','notIncluded[]','e.g. Flight tickets...')">+ Add Exclusion</button>
+          <button type="button" class="add-btn" onclick="addItem('notIncluded-list','notIncluded[]','e.g. Flight tickets...')">+ Add Exclusion</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Packing List</label>
-          <div id="packingList-list" class="dynamic-list">
+
+        <div class="field full">
+          <label class="flabel">Packing List</label>
+          <div id="packingList-list" class="dyn-list">
             {packingList.map((item: string) => (
-              <div class="dynamic-item">
-                <input type="text" name="packingList[]" value={item} class="form-input" />
-                <button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+              <div class="dyn-item">
+                <input type="text" name="packingList[]" value={item} class="finput" />
+                <button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>
               </div>
             ))}
           </div>
-          <button type="button" class="add-item-btn" onclick="addItem('packingList-list','packingList[]','e.g. Warm jacket...')">+ Add Item</button>
+          <button type="button" class="add-btn" onclick="addItem('packingList-list','packingList[]','e.g. Warm jacket...')">+ Add Item</button>
         </div>
+
       </div>
     </div>
 
-    <!-- Section 3: Logistics -->
-    <div class="form-section">
-      <h2 class="section-title">Logistics</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Meeting Point</label>
-          <textarea name="meetingPoint" class="form-input" rows="3">{trip.meetingPoint ?? ''}</textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Meeting Time</label>
-          <input type="text" name="meetingTime" class="form-input" value={trip.meetingTime ?? ''} />
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Important Notes</label>
-          <textarea name="importantNotes" class="form-input" rows="4">{trip.importantNotes ?? ''}</textarea>
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Cancellation Policy</label>
-          <textarea name="cancellationPolicy" class="form-input" rows="4">{trip.cancellationPolicy ?? ''}</textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- Section 4: Itinerary -->
-    <div class="form-section">
-      <h2 class="section-title">Itinerary</h2>
+    <!-- ── TAB: ITINERARY ──────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-itinerary">
       <div id="itinerary-container"></div>
-      <button type="button" onclick="addDay()" style="margin-top:0.75rem; background:var(--color-surface-elevated); border:1px dashed var(--color-border); color:var(--color-text-secondary); padding:0.6rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; width:100%;">+ Add Day</button>
+      <button type="button" onclick="addDay()"
+        style="margin-top:0.75rem; background:white; border:1.5px dashed var(--color-border); color:var(--color-text-secondary); padding:0.65rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; width:100%; font-weight:500;">
+        + Add Day
+      </button>
       <input type="hidden" name="itinerary_json" id="itinerary_json" />
     </div>
 
-    <!-- Section 5: Media & Payment -->
-    <div class="form-section">
-      <h2 class="section-title">Media & Payment</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Featured Image</label>
-          {trip.featuredImage && (
-            <div style="margin-bottom:0.5rem;">
-              <img src={trip.featuredImage} alt="Current" style="max-height:120px; border-radius:0.5rem; object-fit:cover;" />
-              <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.25rem;">Current image</div>
-            </div>
-          )}
-          <input type="file" name="featuredImage" accept="image/*" class="form-input" onchange="previewImage(this,'featured-preview')" />
-          <img id="featured-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem; object-fit:cover;" />
-          <input type="hidden" name="existingFeaturedImage" value={trip.featuredImage ?? ''} />
-          <p class="img-hint"><strong>Recommended:</strong> 1200 × 675 px · 16:9 ratio · JPG or PNG · Max 10 MB. Used as trip hero banner and listing card thumbnail.</p>
+    <!-- ── TAB: LOGISTICS ─────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-logistics">
+      <div class="panel-grid">
+
+        <div class="field full">
+          <label class="flabel">Meeting Point</label>
+          <textarea name="meetingPoint" class="finput" rows="3" placeholder="Where travelers should gather...">{trip.meetingPoint ?? ''}</textarea>
         </div>
-        <div class="form-group">
-          <label class="form-label">Payment QR Code</label>
-          {trip.paymentQrCode && (
-            <div style="margin-bottom:0.5rem;">
-              <img src={trip.paymentQrCode} alt="Current QR" style="max-height:120px; border-radius:0.5rem; object-fit:contain;" />
-              <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.25rem;">Current QR</div>
-            </div>
-          )}
-          <input type="file" name="paymentQrCode" accept="image/*" class="form-input" onchange="previewImage(this,'qr-preview')" />
-          <img id="qr-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem;" />
-          <input type="hidden" name="existingPaymentQrCode" value={trip.paymentQrCode ?? ''} />
-          <p class="img-hint"><strong>Recommended:</strong> 400 × 400 px · 1:1 square · PNG preferred · Max 2 MB. Must be scannable at small sizes.</p>
+
+        <div class="field">
+          <label class="flabel">Meeting Time</label>
+          <input type="text" name="meetingTime" class="finput" placeholder="e.g. 6:00 AM" value={trip.meetingTime ?? ''} />
         </div>
-        <div class="form-group">
-          <label class="form-label">Advance / Booking Amount (₹)</label>
-          <input type="number" name="paymentAmount" class="form-input" value={trip.paymentAmount ?? ''} />
+
+        <div class="field full">
+          <label class="flabel">Important Notes</label>
+          <textarea name="importantNotes" class="finput" rows="4" placeholder="Things travelers must know...">{trip.importantNotes ?? ''}</textarea>
         </div>
-        <div class="form-group">
-          <label class="form-label">Full Trip Payment Amount (₹)</label>
-          <input type="number" name="fullPaymentAmount" class="form-input" value={(trip as any).fullPaymentAmount ?? ''} />
+
+        <div class="field full">
+          <label class="flabel">Cancellation Policy</label>
+          <textarea name="cancellationPolicy" class="finput" rows="4">{trip.cancellationPolicy ?? ''}</textarea>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Payment Instructions</label>
-          <textarea name="paymentInstructions" class="form-input" rows="3">{trip.paymentInstructions ?? ''}</textarea>
-        </div>
+
       </div>
     </div>
 
-    <div style="display:flex; gap:1rem; margin-top:1rem;">
-      <button type="submit" style="background:var(--color-primary); color:white; padding:0.65rem 2rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:600; font-size:0.95rem;">Save Changes</button>
-      <a href="/admin/trips" style="background:var(--color-surface-elevated); color:var(--color-text-secondary); padding:0.65rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:500; font-size:0.95rem; border:1px solid var(--color-border);">Cancel</a>
+    <!-- ── TAB: PAYMENT & MEDIA ───────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-payment">
+      <div class="panel-grid">
+
+        <div class="field">
+          <label class="flabel">Advance / Booking Amount (₹)</label>
+          <input type="number" name="paymentAmount" class="finput" value={trip.paymentAmount ?? ''} />
+        </div>
+
+        <div class="field">
+          <label class="flabel">Full Trip Amount (₹)</label>
+          <input type="number" name="fullPaymentAmount" class="finput" value={(trip as any).fullPaymentAmount ?? ''} />
+        </div>
+
+        <div class="field full">
+          <label class="flabel">Payment Instructions</label>
+          <textarea name="paymentInstructions" class="finput" rows="3">{trip.paymentInstructions ?? ''}</textarea>
+        </div>
+
+        <div class="field">
+          <label class="flabel">Featured Image</label>
+          {trip.featuredImage && (
+            <img src={trip.featuredImage} alt="Current" class="img-preview" />
+          )}
+          <input type="file" name="featuredImage" accept="image/*" class="finput file-input"
+            onchange="previewImage(this,'featured-preview')" />
+          <img id="featured-preview" src="" alt="" class="img-preview hidden" />
+          <input type="hidden" name="existingFeaturedImage" value={trip.featuredImage ?? ''} />
+          <span class="fhint">1200×675px · 16:9 · JPG/PNG · max 10 MB</span>
+        </div>
+
+        <div class="field">
+          <label class="flabel">Payment QR Code</label>
+          {trip.paymentQrCode && (
+            <img src={trip.paymentQrCode} alt="Current QR" class="img-preview qr" />
+          )}
+          <input type="file" name="paymentQrCode" accept="image/*" class="finput file-input"
+            onchange="previewImage(this,'qr-preview')" />
+          <img id="qr-preview" src="" alt="" class="img-preview hidden" />
+          <input type="hidden" name="existingPaymentQrCode" value={trip.paymentQrCode ?? ''} />
+          <span class="fhint">400×400px · square · PNG preferred · max 2 MB</span>
+        </div>
+
+      </div>
     </div>
+
+    <!-- Bottom save bar -->
+    <div class="save-bar">
+      <a href="/admin/trips" class="cancel-btn">Cancel</a>
+      <button type="submit" class="save-btn">Save Changes</button>
+    </div>
+
   </form>
 </AdminLayout>
 
 <style>
-.form-section { background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; margin-bottom:1.5rem; }
-.section-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin:0 0 1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border); }
-.form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
-.form-group { display:flex; flex-direction:column; gap:0.35rem; }
-.form-group.full { grid-column:1/-1; }
-.form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
-.form-hint { font-size:0.75rem; color:var(--color-text-muted); }
-.form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
-.form-input:focus { border-color:var(--color-primary); }
-.dynamic-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.5rem; }
-.dynamic-item { display:flex; gap:0.4rem; }
-.dynamic-item input { flex:1; }
-.remove-btn { background:none; border:1px solid #dc2626; color:#dc2626; border-radius:0.35rem; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem; white-space:nowrap; }
-.add-item-btn { background:none; border:1px dashed var(--color-border); color:var(--color-text-muted); border-radius:0.35rem; padding:0.35rem 0.75rem; cursor:pointer; font-size:0.8rem; }
-.day-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.5rem; padding:1rem; margin-bottom:0.75rem; }
-.day-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; }
-.day-title { font-weight:600; font-size:0.9rem; color:var(--color-text-primary); }
-.day-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:0.6rem; }
-.day-grid .full { grid-column:1/-1; }
-.day-label { font-size:0.8rem; color:var(--color-text-muted); margin-bottom:0.2rem; }
-.day-input { background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.35rem; padding:0.4rem 0.6rem; color:var(--color-text-primary); font-size:0.8rem; width:100%; box-sizing:border-box; outline:none; }
-.meal-row { display:flex; gap:1rem; }
-.meal-label { display:flex; align-items:center; gap:0.3rem; font-size:0.8rem; color:var(--color-text-secondary); cursor:pointer; }
-
-/* ===== RESPONSIVE FIXES ===== */
-@media (max-width: 768px) {
-  .form-grid { grid-template-columns: 1fr; }
-  .form-group.full { grid-column: 1; }
-  .day-grid { grid-template-columns: 1fr; }
-  .day-grid .full { grid-column: 1; }
-  .form-section { padding: 1rem; }
+/* ── Layout ─────────────────────────────────── */
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
-.img-hint {
-  margin: 0.35rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.45;
+.back-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.edit-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  flex: 1;
+}
+.header-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.preview-btn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  background: white;
+}
+.save-btn {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.55rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.save-btn:hover { opacity: 0.9; }
+
+/* ── Tabs ────────────────────────────────────── */
+.tabs-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 0.6rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--color-text-primary); }
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── Panels ──────────────────────────────────── */
+.tab-panel { }
+.tab-panel.hidden { display: none; }
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.1rem;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field.full { grid-column: 1 / -1; }
+
+.flabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.char-count {
+  font-weight: 400;
   color: #9CA3AF;
 }
-.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+.fhint {
+  font-size: 0.72rem;
+  color: #9CA3AF;
+  line-height: 1.4;
+}
+.fhint code {
+  background: var(--color-border);
+  padding: 0 0.2rem;
+  border-radius: 0.2rem;
+}
+.finput {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.finput:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(45,95,62,0.1); }
+select.finput { cursor: pointer; }
+
+/* ── Dynamic lists ───────────────────────────── */
+.dyn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+.dyn-item { display: flex; gap: 0.4rem; }
+.dyn-item input { flex: 1; }
+.rm-btn {
+  background: none;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.add-btn {
+  background: none;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  align-self: flex-start;
+}
+.add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ── Itinerary day cards ─────────────────────── */
+.day-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+.day-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-primary);
+  font-family: var(--font-display);
+}
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+.day-grid .full { grid-column: 1 / -1; }
+.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.2rem; }
+.day-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+.day-input:focus { border-color: var(--color-primary); }
+.meal-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+.meal-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; }
+
+/* ── Images ─────────────────────────────────── */
+.file-input { padding: 0.35rem 0.5rem; }
+.img-preview {
+  max-height: 120px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  margin-bottom: 0.35rem;
+}
+.img-preview.qr { object-fit: contain; }
+.img-preview.hidden { display: none; }
+
+/* ── Bottom save bar ─────────────────────────── */
+.save-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.cancel-btn {
+  padding: 0.55rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  background: white;
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 640px) {
+  .panel-grid { grid-template-columns: 1fr; }
+  .field.full { grid-column: 1; }
+  .day-grid { grid-template-columns: 1fr; }
+  .day-grid .full { grid-column: 1; }
+  .edit-title { font-size: 1.1rem; }
+}
 </style>
 
 <script define:vars={{ itinerary }}>
+// ── Tab switching ─────────────────────────────
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+
+function switchTab(id) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  panels.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
+  history.replaceState(null, '', '#' + id);
+}
+
+tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// Restore tab from URL hash
+const hash = location.hash.replace('#', '');
+const validTabs = ['basics','content','itinerary','logistics','payment'];
+switchTab(validTabs.includes(hash) ? hash : 'basics');
+
+// ── Dynamic list items ────────────────────────
+function addItem(listId, name, placeholder) {
+  const list = document.getElementById(listId);
+  const div = document.createElement('div');
+  div.className = 'dyn-item';
+  div.innerHTML = `<input type="text" name="${name}" placeholder="${placeholder}" class="finput" /><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+// ── Image preview ─────────────────────────────
 function previewImage(input, previewId) {
   const img = document.getElementById(previewId);
   if (input.files && input.files[0]) {
     img.src = URL.createObjectURL(input.files[0]);
-    img.style.display = 'block';
+    img.classList.remove('hidden');
   }
 }
-function addItem(listId, name, placeholder) {
-  const list = document.getElementById(listId);
-  const div = document.createElement('div');
-  div.className = 'dynamic-item';
-  div.innerHTML = `<input type="text" name="${name}" placeholder="${placeholder}" class="form-input" /><button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
-  list.appendChild(div);
-}
 
+// ── Itinerary ─────────────────────────────────
 let dayCount = 0;
+
 function createDayCard(data) {
   dayCount++;
   const div = document.createElement('div');
@@ -313,52 +585,67 @@ function createDayCard(data) {
   div.innerHTML = `
     <div class="day-header">
       <span class="day-title">Day ${dayCount}</span>
-      <button type="button" class="remove-btn" onclick="this.closest('.day-card').remove(); renumberDays();">✕ Remove</button>
+      <button type="button" class="rm-btn" onclick="this.closest('.day-card').remove(); renumberDays()">✕ Remove</button>
     </div>
     <div class="day-grid">
-      <div class="full"><div class="day-label">Day Title</div><input type="text" class="day-input day-dayTitle" value="${(data?.dayTitle??'').replace(/"/g,'&quot;')}" placeholder="e.g. Arrive in Manali" /></div>
-      <div class="full"><div class="day-label">Activities</div><textarea class="day-input day-activities" rows="3">${data?.activities??''}</textarea></div>
-      <div><div class="day-label">Accommodation</div><input type="text" class="day-input day-accommodation" value="${(data?.accommodation??'').replace(/"/g,'&quot;')}" /></div>
-      <div><div class="day-label">Transport</div><input type="text" class="day-input day-transport" value="${(data?.transport??'').replace(/"/g,'&quot;')}" /></div>
-      <div class="full"><div class="day-label">Meals Included</div>
+      <div class="full">
+        <div class="day-label">Day Title</div>
+        <input type="text" class="day-input day-dayTitle" value="${(data?.dayTitle ?? '').replace(/"/g, '&quot;')}" placeholder="e.g. Arrive in Manali" />
+      </div>
+      <div class="full">
+        <div class="day-label">Activities</div>
+        <textarea class="day-input day-activities" rows="3">${data?.activities ?? ''}</textarea>
+      </div>
+      <div>
+        <div class="day-label">Accommodation</div>
+        <input type="text" class="day-input day-accommodation" value="${(data?.accommodation ?? '').replace(/"/g, '&quot;')}" />
+      </div>
+      <div>
+        <div class="day-label">Transport</div>
+        <input type="text" class="day-input day-transport" value="${(data?.transport ?? '').replace(/"/g, '&quot;')}" />
+      </div>
+      <div class="full">
+        <div class="day-label">Meals Included</div>
         <div class="meal-row">
-          <label class="meal-label"><input type="checkbox" class="day-breakfast" ${data?.breakfast?'checked':''} /> Breakfast</label>
-          <label class="meal-label"><input type="checkbox" class="day-lunch" ${data?.lunch?'checked':''} /> Lunch</label>
-          <label class="meal-label"><input type="checkbox" class="day-dinner" ${data?.dinner?'checked':''} /> Dinner</label>
+          <label class="meal-label"><input type="checkbox" class="day-breakfast" ${data?.breakfast ? 'checked' : ''} /> Breakfast</label>
+          <label class="meal-label"><input type="checkbox" class="day-lunch" ${data?.lunch ? 'checked' : ''} /> Lunch</label>
+          <label class="meal-label"><input type="checkbox" class="day-dinner" ${data?.dinner ? 'checked' : ''} /> Dinner</label>
         </div>
       </div>
-      <div class="full"><div class="day-label">Special Notes</div><input type="text" class="day-input day-specialNotes" value="${(data?.specialNotes??'').replace(/"/g,'&quot;')}" /></div>
+      <div class="full">
+        <div class="day-label">Special Notes</div>
+        <input type="text" class="day-input day-specialNotes" value="${(data?.specialNotes ?? '').replace(/"/g, '&quot;')}" />
+      </div>
     </div>
   `;
   return div;
 }
+
 function addDay() {
   document.getElementById('itinerary-container').appendChild(createDayCard(null));
 }
+
 function renumberDays() {
-  document.querySelectorAll('.day-card').forEach((card, i) => {
-    card.querySelector('.day-title').textContent = `Day ${i + 1}`;
+  document.querySelectorAll('.day-card .day-title').forEach((el, i) => {
+    el.textContent = `Day ${i + 1}`;
   });
-}
-function serializeItinerary() {
-  const days = [];
-  document.querySelectorAll('.day-card').forEach((card, i) => {
-    days.push({
-      day: i + 1,
-      dayTitle: card.querySelector('.day-dayTitle')?.value ?? '',
-      activities: card.querySelector('.day-activities')?.value ?? '',
-      accommodation: card.querySelector('.day-accommodation')?.value ?? '',
-      transport: card.querySelector('.day-transport')?.value ?? '',
-      breakfast: card.querySelector('.day-breakfast')?.checked ?? false,
-      lunch: card.querySelector('.day-lunch')?.checked ?? false,
-      dinner: card.querySelector('.day-dinner')?.checked ?? false,
-      specialNotes: card.querySelector('.day-specialNotes')?.value ?? '',
-    });
-  });
-  return days;
+  dayCount = document.querySelectorAll('.day-card').length;
 }
 
-// Pre-populate itinerary from existing YAML data
+function serializeItinerary() {
+  return Array.from(document.querySelectorAll('.day-card')).map((card, i) => ({
+    dayNumber: i + 1,
+    dayTitle: card.querySelector('.day-dayTitle')?.value ?? '',
+    activities: card.querySelector('.day-activities')?.value ?? '',
+    accommodation: card.querySelector('.day-accommodation')?.value ?? '',
+    transport: card.querySelector('.day-transport')?.value ?? '',
+    breakfast: card.querySelector('.day-breakfast')?.checked ?? false,
+    lunch: card.querySelector('.day-lunch')?.checked ?? false,
+    dinner: card.querySelector('.day-dinner')?.checked ?? false,
+    specialNotes: card.querySelector('.day-specialNotes')?.value ?? '',
+  }));
+}
+
 const container = document.getElementById('itinerary-container');
 if (Array.isArray(itinerary)) {
   itinerary.forEach(day => container.appendChild(createDayCard(day)));

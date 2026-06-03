@@ -14,8 +14,6 @@ interface Props {
   pricePerPerson?: number | null;
   maxGroupSize?: number | null;
   currentBookings?: number | null;
-  difficulty?: string | null;
-  categories?: readonly string[] | string[];
 }
 
 const {
@@ -31,15 +29,7 @@ const {
   pricePerPerson,
   maxGroupSize,
   currentBookings,
-  difficulty,
-  categories = [],
 } = Astro.props;
-
-const DIFF_COLORS: Record<string, { border: string; color: string }> = {
-  'Easy': { border: '#22A654', color: '#166534' },
-  'Moderate': { border: '#E8752A', color: '#c2500e' },
-  'Challenging': { border: '#D93025', color: '#991b1b' },
-};
 
 const seatsLeft = maxGroupSize && currentBookings !== null && currentBookings !== undefined
   ? maxGroupSize - currentBookings
@@ -88,17 +78,6 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
 
   <!-- Content -->
   <div class="p-5 flex flex-col flex-1">
-    <!-- Category pills -->
-    {categories.length > 0 && (
-      <div class="flex flex-wrap gap-1.5 mb-2.5">
-        {categories.slice(0, 3).map((cat) => (
-          <span class="text-xs font-medium px-2 py-0.5 rounded-full capitalize" style="background-color: var(--color-primary-light); color: var(--color-primary);">
-            {cat}
-          </span>
-        ))}
-      </div>
-    )}
-
     {status === 'booking-open' && (
       <p class="italic mb-1" style="font-family: var(--font-accent); font-size: 0.9rem; color: var(--color-accent);">
         spots filling up!
@@ -140,17 +119,6 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
       )}
     </div>
 
-    {difficulty && DIFF_COLORS[difficulty] && (
-      <div class="mb-3">
-        <span
-          class="text-xs font-medium px-2 py-0.5 rounded-full border"
-          style={`border-color: ${DIFF_COLORS[difficulty].border}; color: ${DIFF_COLORS[difficulty].color};`}
-        >
-          {difficulty}
-        </span>
-      </div>
-    )}
-
     <!-- Spots progress bar -->
     {maxGroupSize && currentBookings != null && (
       <div class="mb-3">
@@ -185,13 +153,45 @@ const placeholderImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff
           <span class="text-sm font-medium" style="color: var(--color-text-secondary);">Price TBD</span>
         )}
       </div>
-      <a
-        href={`/trips/${slug}/`}
-        class="font-bold text-sm text-white px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
-        style={`background-color: ${status === 'booking-open' ? 'var(--color-accent)' : 'var(--color-text-secondary)'};`}
-      >
-        {status === 'booking-open' ? 'Book Now →' : 'View Details'}
-      </a>
+      <div class="flex items-center gap-2">
+        <button
+          data-share-url={`/trips/${slug}/`}
+          data-share-title={name}
+          class="share-btn p-2 rounded-lg border transition-all hover:bg-gray-50 active:scale-95"
+          style="border-color: var(--color-border);"
+          aria-label="Share trip"
+          title="Share"
+        >
+          <svg class="w-4 h-4" style="color: var(--color-text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+        </button>
+        <a
+          href={`/trips/${slug}/`}
+          class="font-bold text-sm text-white px-4 py-2 rounded-lg transition-all hover:opacity-90 active:scale-95"
+          style={`background-color: ${status === 'booking-open' ? 'var(--color-accent)' : status === 'sold-out' ? '#991b1b' : 'var(--color-text-secondary)'};`}
+        >
+          {status === 'booking-open' ? 'Book Now →' : status === 'sold-out' ? 'Sold Out' : 'View Details'}
+        </a>
+      </div>
     </div>
   </div>
 </article>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.share-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const path = btn.dataset.shareUrl ?? '';
+      const title = btn.dataset.shareTitle ?? 'Seek the Thrill';
+      const url = `${location.origin}${path}`;
+      if (navigator.share) {
+        await navigator.share({ title, url }).catch(() => {});
+      } else {
+        await navigator.clipboard.writeText(url).catch(() => {});
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-4 h-4" style="color:var(--color-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+        setTimeout(() => { btn.innerHTML = orig; }, 1500);
+      }
+    });
+  });
+</script>

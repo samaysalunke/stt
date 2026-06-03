@@ -1,21 +1,23 @@
 name: Gokarna Beach Escape
-location: Karnataka
-difficulty: Easy
 status: upcoming
-shortDescription: Escape to the pristine beaches of Gokarna, Karnataka's hidden
-  paradise. Beach hopping, bonfires, and sunsets await!
-categories:
-  - india
-  - beach
-  - cultural
-  - weekend
 startDate: 2026-03-10
 endDate: 2026-03-13
 duration: 4 Days, 3 Nights
 pricePerPerson: 8999
+categories:
+  - india
+  - cultural
+  - beach
+  - weekend
 minGroupSize: 10
 maxGroupSize: 20
 currentBookings: 12
+registrationEnabled: true
+registrationDeadline: 2026-03-05
+shortDescription: Escape to the prist of Gokarna, Karnataka's hidden paradise.
+  Beach hopping, bonfires, and sunsets await!
+description: someone
+whoShouldJoin: somewhere
 highlights:
   - Beach hopping to 4 beautiful beaches
   - Sunset at Om Beach
@@ -24,55 +26,6 @@ highlights:
   - Water sports (optional)
   - Fresh seafood dinners
   - Group beach games and activities
-itinerary:
-  - dayNumber: 1
-    dayTitle: Arrival in Gokarna
-    activities: Arrival by afternoon. Check-in to beach-side accommodation. Welcome
-      session and group introductions. Evening visit to Gokarna Main Beach.
-      Sunset viewing. Welcome dinner.
-    accommodation: Beach resort/hostel
-    breakfast: false
-    lunch: false
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 2
-    dayTitle: Beach Hopping Trek
-    activities: Breakfast at accommodation. Trek starting from Gokarna Beach. Visit
-      Kudle Beach (relax and swim). Trek to Om Beach (lunch break). Continue to
-      Half Moon Beach. Reach Paradise Beach. Return by boat to Om Beach. Beach
-      bonfire and music.
-    accommodation: Beach resort/hostel
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: Boat ride from Paradise Beach to Om Beach included
-    specialNotes: ""
-  - dayNumber: 3
-    dayTitle: Water Sports & Leisure
-    activities: Lazy beach morning. Optional water sports at Om Beach. Beach
-      volleyball tournament. Sunset yoga session (optional). Group dinner at
-      beach shack.
-    accommodation: Beach resort/hostel
-    breakfast: true
-    lunch: false
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: Water sports are optional and charged separately.
-  - dayNumber: 4
-    dayTitle: Temple Visit & Departure
-    activities: Visit Mahabaleshwar Temple. Explore Gokarna town market. Lunch at
-      local restaurant. Departure post-lunch.
-    accommodation: ""
-    breakfast: true
-    lunch: true
-    dinner: false
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
 included:
   - 3 nights beach-side accommodation
   - 3 Breakfasts, 2 Lunches, 3 Dinners
@@ -87,8 +40,6 @@ notIncluded:
   - Personal expenses
   - Any meals not mentioned
   - Travel insurance
-meetingPoint: Meet at Gokarna Bus Stand/Railway Station. Coordinator will receive you.
-meetingTime: 14:00
 packingList:
   - Swimwear
   - Beach clothes
@@ -98,5 +49,57 @@ packingList:
   - Light jacket for evenings
   - Reusable water bottle
   - Beach towel
-registrationEnabled: true
-registrationDeadline: 2026-03-05
+itinerary:
+  - day: 1
+    dayTitle: Arrival in Gokarna
+    activities: Arrival by afternoon. Check-in to beach-side accommodation. Welcome
+      session and group introductions. Evening visit to Gokarna Main Beach.
+      Sunset viewing. Welcome dinner.
+    accommodation: Beach resort/hostel
+    transport: ""
+    breakfast: false
+    lunch: false
+    dinner: true
+    specialNotes: ""
+  - day: 2
+    dayTitle: Beach Hopping Trek
+    activities: Breakfast at accommodation. Trek starting from Gokarna Beach. Visit
+      Kudle Beach (relax and swim). Trek to Om Beach (lunch break). Continue to
+      Half Moon Beach. Reach Paradise Beach. Return by boat to Om Beach. Beach
+      bonfire and music.
+    accommodation: Beach resort/hostel
+    transport: Boat ride from Paradise Beach to Om Beach included
+    breakfast: true
+    lunch: true
+    dinner: true
+    specialNotes: ""
+  - day: 3
+    dayTitle: Water Sports & Leisure
+    activities: Lazy beach morning. Optional water sports at Om Beach. Beach
+      volleyball tournament. Sunset yoga session (optional). Group dinner at
+      beach shack.
+    accommodation: Beach resort/hostel
+    transport: ""
+    breakfast: true
+    lunch: false
+    dinner: true
+    specialNotes: Water sports are optional and charged separately.
+  - day: 4
+    dayTitle: Temple Visit & Departure
+    activities: Visit Mahabaleshwar Temple. Explore Gokarna town market. Lunch at
+      local restaurant. Departure post-lunch.
+    accommodation: ""
+    transport: ""
+    breakfast: true
+    lunch: true
+    dinner: false
+    specialNotes: ""
+meetingPoint: Meet at Gokarna Bus Stand/Railway Station. Coordinator will receive you.
+meetingTime: 14:00
+importantNotes: null
+cancellationPolicy: null
+featuredImage: null
+paymentQrCode: null
+paymentAmount: 3000
+fullPaymentAmount: null
+paymentInstructions: null

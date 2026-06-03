@@ -36,7 +36,7 @@ export function listTrips(): Array<Record<string, any>> {
       return { slug, ...data };
     })
     .sort((a, b) => {
-      const order = ['booking-open', 'upcoming', 'draft', 'sold-out', 'completed'];
+      const order = ['booking-open', 'sold-out', 'draft'];
       const ai = order.indexOf(a.status); const bi = order.indexOf(b.status);
       return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });

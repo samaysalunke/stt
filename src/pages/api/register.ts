@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
+import { readTrip } from '../../lib/content';
 import { sendRegistrationConfirmation, sendAdminRegistrationNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
@@ -14,6 +15,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   try {
     const body = await request.json();
+
+    // Block booking for sold-out trips
+    const tripSlug = sanitizeInput(body.tripSlug);
+    if (tripSlug) {
+      const trip = readTrip(tripSlug);
+      if (trip?.status === 'sold-out') {
+        return new Response(JSON.stringify({ success: false, error: 'This trip is sold out.' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Honeypot check
     if (body._honey) {

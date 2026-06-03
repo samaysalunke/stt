@@ -1,6 +1,5 @@
 ---
 import SEO from '../components/SEO.astro';
-import InstallPrompt from '../components/InstallPrompt';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
@@ -130,7 +129,5 @@ const gaId = settings.googleAnalyticsId ?? '';
       }
     </script>
 
-    <!-- Install prompt banner -->
-    <InstallPrompt client:load />
   </body>
 </html>

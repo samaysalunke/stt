@@ -41,11 +41,11 @@ export const GET: APIRoute = async ({ url }) => {
     return new Response('Invalid type', { status: 400 });
   }
 
-  const csv = toCSV(rows);
+  const csv = '﻿' + toCSV(rows); // BOM for Excel compatibility
   return new Response(csv, {
     status: 200,
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Type': 'application/octet-stream',
       'Content-Disposition': `attachment; filename="${filename}"`,
     },
   });

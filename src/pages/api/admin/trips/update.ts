@@ -14,7 +14,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const rawNewSlug = sanitizeInput(body.get('newSlug'));
   const newSlug = rawNewSlug ? slugify(rawNewSlug) : oldSlug;
 
-  const categories = body.getAll('categories').map(c => String(c));
   const highlights = body.getAll('highlights[]').map(h => sanitizeInput(h)).filter(Boolean);
   const included = body.getAll('included[]').map(h => sanitizeInput(h)).filter(Boolean);
   const notIncluded = body.getAll('notIncluded[]').map(h => sanitizeInput(h)).filter(Boolean);
@@ -46,11 +45,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     endDate: sanitizeInput(body.get('endDate')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
     pricePerPerson: body.get('pricePerPerson') ? Number(body.get('pricePerPerson')) : null,
-    categories,
     minGroupSize: body.get('minGroupSize') ? Number(body.get('minGroupSize')) : null,
     maxGroupSize: body.get('maxGroupSize') ? Number(body.get('maxGroupSize')) : null,
     currentBookings: Number(body.get('currentBookings') ?? 0),
-    registrationEnabled: body.get('registrationEnabled') === 'true',
     registrationDeadline: sanitizeInput(body.get('registrationDeadline')) || null,
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
     description: sanitizeInput(body.get('description')) || null,
