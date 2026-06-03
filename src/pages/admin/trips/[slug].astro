@@ -200,10 +200,17 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
 
     <!-- ── TAB: ITINERARY ──────────────────────────────────── -->
     <div class="tab-panel hidden" id="tab-itinerary">
+      <div class="itin-toolbar">
+        <span class="itin-count" id="itin-count">0 days</span>
+        <div style="display:flex;gap:0.5rem;">
+          <button type="button" class="itin-tool-btn" onclick="expandAll()">Expand all</button>
+          <button type="button" class="itin-tool-btn" onclick="collapseAll()">Collapse all</button>
+        </div>
+      </div>
       <div id="itinerary-container"></div>
-      <button type="button" onclick="addDay()"
-        style="margin-top:0.75rem; background:white; border:1.5px dashed var(--color-border); color:var(--color-text-secondary); padding:0.65rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; width:100%; font-weight:500;">
-        + Add Day
+      <button type="button" id="add-day-btn" onclick="addDay()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Day
       </button>
       <input type="hidden" name="itinerary_json" id="itinerary_json" />
     </div>
@@ -454,48 +461,193 @@ select.finput { cursor: pointer; }
 }
 .add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
-/* ── Itinerary day cards ─────────────────────── */
-.day-card {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 0.6rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-}
-.day-header {
+/* ── Itinerary toolbar ───────────────────────── */
+.itin-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
 }
-.day-title {
+.itin-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.itin-tool-btn {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.itin-tool-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+#add-day-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  background: white;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+#add-day-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ── Accordion day cards ─────────────────────── */
+.day-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.day-card:focus-within { box-shadow: 0 0 0 2px rgba(45,95,62,0.15); border-color: var(--color-primary); }
+
+.day-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+.day-header:hover { background: var(--color-surface); }
+
+.day-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.75rem;
   font-weight: 700;
-  font-size: 0.9rem;
-  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   font-family: var(--font-display);
 }
+.day-card.open .day-num { background: var(--color-accent); }
+
+.day-header-text { flex: 1; min-width: 0; }
+.day-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+}
+.day-summary {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+.day-move-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 0.3rem;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  padding: 0;
+}
+.day-move-btn:hover { background: var(--color-surface); border-color: var(--color-primary); color: var(--color-primary); }
+.day-move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.day-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.day-card.open .day-chevron { transform: rotate(180deg); }
+
+.day-body {
+  display: none;
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--color-border);
+}
+.day-card.open .day-body { display: block; }
+
 .day-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.65rem;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
 }
 .day-grid .full { grid-column: 1 / -1; }
-.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.2rem; }
+.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.25rem; }
 .day-input {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 0.35rem;
-  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.65rem;
   color: var(--color-text-primary);
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   width: 100%;
   box-sizing: border-box;
   outline: none;
   font-family: inherit;
+  transition: border-color 0.15s;
 }
 .day-input:focus { border-color: var(--color-primary); }
-.meal-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-.meal-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; }
+
+.meal-row { display: flex; gap: 1.25rem; flex-wrap: wrap; padding: 0.5rem 0; }
+.meal-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.meal-label:has(input:checked) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.day-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
 
 /* ── Images ─────────────────────────────────── */
 .file-input { padding: 0.35rem 0.5rem; }
@@ -534,6 +686,7 @@ select.finput { cursor: pointer; }
   .field.full { grid-column: 1; }
   .day-grid { grid-template-columns: 1fr; }
   .day-grid .full { grid-column: 1; }
+  .day-actions .day-move-btn { display: none; }
   .edit-title { font-size: 1.1rem; }
 }
 </style>
@@ -575,81 +728,167 @@ function previewImage(input, previewId) {
   }
 }
 
-// ── Itinerary ─────────────────────────────────
-let dayCount = 0;
+// ── Itinerary accordion ───────────────────────
+const container = document.getElementById('itinerary-container');
 
-function createDayCard(data) {
-  dayCount++;
+function updateCount() {
+  const n = container.querySelectorAll('.day-card').length;
+  document.getElementById('itin-count').textContent = `${n} day${n === 1 ? '' : 's'}`;
+}
+
+function updateSummary(card) {
+  const title = card.querySelector('.day-dayTitle').value.trim();
+  const accom = card.querySelector('.day-accommodation').value.trim();
+  const b = card.querySelector('.day-breakfast').checked;
+  const l = card.querySelector('.day-lunch').checked;
+  const d = card.querySelector('.day-dinner').checked;
+  const meals = [b && 'B', l && 'L', d && 'D'].filter(Boolean).join(' · ');
+  const parts = [accom, meals].filter(Boolean).join('  •  ');
+  card.querySelector('.day-title').textContent = title || `(untitled)`;
+  card.querySelector('.day-summary').textContent = parts || '—';
+}
+
+function updateMoveButtons() {
+  const cards = container.querySelectorAll('.day-card');
+  cards.forEach((card, i) => {
+    card.querySelector('.btn-up').disabled = i === 0;
+    card.querySelector('.btn-down').disabled = i === cards.length - 1;
+  });
+}
+
+function renumberDays() {
+  container.querySelectorAll('.day-card').forEach((card, i) => {
+    card.querySelector('.day-num').textContent = i + 1;
+  });
+  updateMoveButtons();
+  updateCount();
+}
+
+function createDayCard(data, open = false) {
   const div = document.createElement('div');
-  div.className = 'day-card';
+  div.className = 'day-card' + (open ? ' open' : '');
+
+  const title = (data?.dayTitle ?? '').replace(/"/g, '&quot;');
+  const accom = (data?.accom ?? data?.accommodation ?? '').replace(/"/g, '&quot;');
+  const transport = (data?.transport ?? '').replace(/"/g, '&quot;');
+  const notes = (data?.specialNotes ?? '').replace(/"/g, '&quot;');
+  const activities = (data?.activities ?? '').replace(/</g, '&lt;');
+  const b = data?.breakfast ? 'checked' : '';
+  const l = data?.lunch ? 'checked' : '';
+  const d = data?.dinner ? 'checked' : '';
+
   div.innerHTML = `
     <div class="day-header">
-      <span class="day-title">Day ${dayCount}</span>
-      <button type="button" class="rm-btn" onclick="this.closest('.day-card').remove(); renumberDays()">✕ Remove</button>
+      <div class="day-num">?</div>
+      <div class="day-header-text">
+        <div class="day-title">${title || '(untitled)'}</div>
+        <div class="day-summary">—</div>
+      </div>
+      <div class="day-actions">
+        <button type="button" class="day-move-btn btn-up" title="Move up">▲</button>
+        <button type="button" class="day-move-btn btn-down" title="Move down">▼</button>
+      </div>
+      <svg class="day-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
     </div>
-    <div class="day-grid">
-      <div class="full">
-        <div class="day-label">Day Title</div>
-        <input type="text" class="day-input day-dayTitle" value="${(data?.dayTitle ?? '').replace(/"/g, '&quot;')}" placeholder="e.g. Arrive in Manali" />
-      </div>
-      <div class="full">
-        <div class="day-label">Activities</div>
-        <textarea class="day-input day-activities" rows="3">${data?.activities ?? ''}</textarea>
-      </div>
-      <div>
-        <div class="day-label">Accommodation</div>
-        <input type="text" class="day-input day-accommodation" value="${(data?.accommodation ?? '').replace(/"/g, '&quot;')}" />
-      </div>
-      <div>
-        <div class="day-label">Transport</div>
-        <input type="text" class="day-input day-transport" value="${(data?.transport ?? '').replace(/"/g, '&quot;')}" />
-      </div>
-      <div class="full">
-        <div class="day-label">Meals Included</div>
-        <div class="meal-row">
-          <label class="meal-label"><input type="checkbox" class="day-breakfast" ${data?.breakfast ? 'checked' : ''} /> Breakfast</label>
-          <label class="meal-label"><input type="checkbox" class="day-lunch" ${data?.lunch ? 'checked' : ''} /> Lunch</label>
-          <label class="meal-label"><input type="checkbox" class="day-dinner" ${data?.dinner ? 'checked' : ''} /> Dinner</label>
+    <div class="day-body">
+      <div class="day-grid">
+        <div class="full">
+          <div class="day-label">Day Title</div>
+          <input type="text" class="day-input day-dayTitle" value="${title}" placeholder="e.g. Arrive in Manali" />
+        </div>
+        <div class="full">
+          <div class="day-label">Activities</div>
+          <textarea class="day-input day-activities" rows="4" placeholder="What happens this day...">${activities}</textarea>
+        </div>
+        <div>
+          <div class="day-label">Accommodation</div>
+          <input type="text" class="day-input day-accommodation" value="${accom}" placeholder="e.g. Guesthouse in Tabo" />
+        </div>
+        <div>
+          <div class="day-label">Transport</div>
+          <input type="text" class="day-input day-transport" value="${transport}" placeholder="e.g. Bus to Kaza" />
+        </div>
+        <div class="full">
+          <div class="day-label">Meals Included</div>
+          <div class="meal-row">
+            <label class="meal-label"><input type="checkbox" class="day-breakfast" ${b} /> Breakfast</label>
+            <label class="meal-label"><input type="checkbox" class="day-lunch" ${l} /> Lunch</label>
+            <label class="meal-label"><input type="checkbox" class="day-dinner" ${d} /> Dinner</label>
+          </div>
+        </div>
+        <div class="full">
+          <div class="day-label">Special Notes</div>
+          <input type="text" class="day-input day-specialNotes" value="${notes}" placeholder="Anything travellers should know..." />
         </div>
       </div>
-      <div class="full">
-        <div class="day-label">Special Notes</div>
-        <input type="text" class="day-input day-specialNotes" value="${(data?.specialNotes ?? '').replace(/"/g, '&quot;')}" />
+      <div class="day-footer">
+        <button type="button" class="rm-btn" onclick="this.closest('.day-card').remove(); renumberDays();">Remove Day</button>
       </div>
     </div>
   `;
+
+  // Toggle open/close on header click
+  div.querySelector('.day-header').addEventListener('click', (e) => {
+    if (e.target.closest('.day-actions')) return;
+    div.classList.toggle('open');
+  });
+
+  // Move up/down
+  div.querySelector('.btn-up').addEventListener('click', () => {
+    const prev = div.previousElementSibling;
+    if (prev) { container.insertBefore(div, prev); renumberDays(); }
+  });
+  div.querySelector('.btn-down').addEventListener('click', () => {
+    const next = div.nextElementSibling;
+    if (next) { container.insertBefore(next, div); renumberDays(); }
+  });
+
+  // Live summary update
+  const updateThis = () => updateSummary(div);
+  div.querySelector('.day-dayTitle').addEventListener('input', updateThis);
+  div.querySelector('.day-accommodation').addEventListener('input', updateThis);
+  div.querySelectorAll('.day-breakfast,.day-lunch,.day-dinner').forEach(cb => cb.addEventListener('change', updateThis));
+
   return div;
 }
 
 function addDay() {
-  document.getElementById('itinerary-container').appendChild(createDayCard(null));
+  const card = createDayCard(null, true);
+  container.appendChild(card);
+  renumberDays();
+  updateSummary(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.querySelector('.day-dayTitle').focus();
 }
 
-function renumberDays() {
-  document.querySelectorAll('.day-card .day-title').forEach((el, i) => {
-    el.textContent = `Day ${i + 1}`;
-  });
-  dayCount = document.querySelectorAll('.day-card').length;
-}
+function expandAll()  { container.querySelectorAll('.day-card').forEach(c => c.classList.add('open')); }
+function collapseAll(){ container.querySelectorAll('.day-card').forEach(c => c.classList.remove('open')); }
 
 function serializeItinerary() {
-  return Array.from(document.querySelectorAll('.day-card')).map((card, i) => ({
+  return Array.from(container.querySelectorAll('.day-card')).map((card, i) => ({
     dayNumber: i + 1,
-    dayTitle: card.querySelector('.day-dayTitle')?.value ?? '',
-    activities: card.querySelector('.day-activities')?.value ?? '',
-    accommodation: card.querySelector('.day-accommodation')?.value ?? '',
-    transport: card.querySelector('.day-transport')?.value ?? '',
-    breakfast: card.querySelector('.day-breakfast')?.checked ?? false,
-    lunch: card.querySelector('.day-lunch')?.checked ?? false,
-    dinner: card.querySelector('.day-dinner')?.checked ?? false,
-    specialNotes: card.querySelector('.day-specialNotes')?.value ?? '',
+    dayTitle:       card.querySelector('.day-dayTitle')?.value ?? '',
+    activities:     card.querySelector('.day-activities')?.value ?? '',
+    accommodation:  card.querySelector('.day-accommodation')?.value ?? '',
+    transport:      card.querySelector('.day-transport')?.value ?? '',
+    breakfast:      card.querySelector('.day-breakfast')?.checked ?? false,
+    lunch:          card.querySelector('.day-lunch')?.checked ?? false,
+    dinner:         card.querySelector('.day-dinner')?.checked ?? false,
+    specialNotes:   card.querySelector('.day-specialNotes')?.value ?? '',
   }));
 }
 
-const container = document.getElementById('itinerary-container');
+// Populate from saved data
 if (Array.isArray(itinerary)) {
-  itinerary.forEach(day => container.appendChild(createDayCard(day)));
+  itinerary.forEach(day => {
+    const card = createDayCard(day, false);
+    container.appendChild(card);
+    updateSummary(card);
+  });
 }
+renumberDays();
 
 document.getElementById('trip-form').addEventListener('submit', () => {
   document.getElementById('itinerary_json').value = JSON.stringify(serializeItinerary());
