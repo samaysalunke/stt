@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "seek-the-thrill",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/Users/samay@shurutech.com/.local/bin/npm",
       "runtimeArgs": ["run", "dev"],
       "port": 4321
     }
