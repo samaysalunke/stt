@@ -59,9 +59,9 @@ function tripStatusBadgeStyle(status: string) {
 }
 
 function tripGroupHeaderStyle(status: string) {
-  if (status === 'booking-open') return 'border-left:4px solid #22A654;background:#f0fdf4;';
-  if (status === 'upcoming')     return 'border-left:4px solid #D4A854;background:#fffdf0;';
-  return 'border-left:4px solid #E5E5E0;background:white;';
+  if (status === 'booking-open') return 'border-left:4px solid var(--color-coral);background:var(--color-blush);';
+  if (status === 'upcoming')     return 'border-left:4px solid var(--color-peach);background:#FBF6F4;';
+  return 'border-left:4px solid var(--color-border);background:white;';
 }
 
 function fmt(date: string) {
@@ -213,7 +213,7 @@ function fmtCurrency(n: number) {
                           <!-- Expandable detail row -->
                           <tr id={`detail-${r.id}`} style="display:none;" class="detail-row">
                             <td colspan="8" style="padding:0;border-bottom:2px solid var(--color-border);">
-                              <div style="padding:1.25rem 1.5rem;background:#F0FDF4;">
+                              <div style="padding:1.25rem 1.5rem;background:var(--color-gray-soft);">
 
                                 <!-- Two columns: info + actions -->
                                 <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
