@@ -111,8 +111,8 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
     <div class="container-app">
       <div class="flex items-end justify-between mb-10">
         <div>
-          <h2 class="text-3xl lg:text-4xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">
-            Where we're going next
+          <h2 class="font-bold leading-none" style="font-family: var(--font-display); color: var(--color-navy); font-size: clamp(1.9rem, 8vw, 4rem);">
+            Where to, <span style="font-style: italic; color: var(--color-coral);">wanderer?</span>
           </h2>
         </div>
         <a href="/trips/" class="text-sm font-semibold hidden sm:block" style="color: var(--color-coral);">
@@ -156,7 +156,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
   <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
   <section class="py-16 lg:py-20" style="background-color: var(--color-navy);">
     <div class="container-app">
-      <h2 class="text-3xl lg:text-4xl font-bold text-white text-center mb-14" style="font-family: var(--font-display);">
+      <h2 class="text-3xl lg:text-4xl font-bold text-white mb-14" style="font-family: var(--font-display);">
         How it works
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -165,10 +165,10 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
           { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
           { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
         ].map((step) => (
-          <div class="reveal text-center">
-            <div class="text-5xl font-bold mb-4 opacity-20 text-white" style="font-family: var(--font-display);">{step.num}</div>
+          <div class="reveal pt-6" style="border-top: 1px solid rgba(255,255,255,0.15);">
+            <div class="text-6xl font-bold mb-4 opacity-20 text-white" style="font-family: var(--font-display);">{step.num}</div>
             <h3 class="text-xl font-bold text-white mb-3" style="font-family: var(--font-display);">{step.title}</h3>
-            <p class="text-white/65 text-sm leading-relaxed max-w-xs mx-auto">{step.desc}</p>
+            <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
           </div>
         ))}
       </div>
@@ -188,9 +188,9 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </div>
 
       {allTestimonials.length > 0 ? (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div class="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
           {allTestimonials.map((t) => (
-            <div class="reveal bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+            <div class="reveal flex-shrink-0 basis-[84%] snap-start sm:basis-[55%] lg:basis-[28%] bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
               <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{t.quote}"</p>
               <div class="flex items-center gap-3">
                 {t.photo ? (
@@ -210,13 +210,13 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
         </div>
       ) : (
         <!-- Placeholder quotes if no testimonials -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
           {[
             { name: 'Priya S.', trip: 'Spiti Valley', quote: 'I came alone and left with people I talk to every week. The mountains were just the backdrop.' },
             { name: 'Rahul M.', trip: 'Gokarna', quote: 'Did not expect to unplug so completely. No agenda, no plans — exactly what I needed.' },
             { name: 'Ananya K.', trip: 'Meghalaya', quote: 'Solo travel always felt intimidating. This was the nudge I needed. Would do it again tomorrow.' },
           ].map((q) => (
-            <div class="reveal bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+            <div class="reveal flex-shrink-0 basis-[84%] snap-start sm:basis-[55%] lg:basis-[28%] bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
               <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{q.quote}"</p>
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background-color: var(--color-coral);">
@@ -287,13 +287,17 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
   </section>
 
   <!-- ── NEWSLETTER ─────────────────────────────────────────── -->
-  <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
-    <div class="container-app">
+  <section
+    class="py-16 lg:py-20 relative"
+    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80'); background-size: cover; background-position: center;"
+  >
+    <div class="absolute inset-0" style="background: rgba(27,43,58,0.78);"></div>
+    <div class="container-app relative">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl lg:text-4xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+        <h2 class="text-3xl lg:text-4xl font-bold mb-3 text-white" style="font-family: var(--font-display);">
           Be first to know
         </h2>
-        <p class="text-base mb-8 leading-relaxed" style="color: var(--color-gray-text);">
+        <p class="text-base mb-8 leading-relaxed text-white/75">
           New trips, new batches, things worth knowing. No spam.
         </p>
         <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -302,8 +306,8 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
             name="email"
             placeholder="Your email address"
             required
-            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 outline-none"
-            style="border-color: var(--color-peach); color: var(--color-navy); background: white;"
+            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 outline-none text-white placeholder:text-white/50"
+            style="border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08);"
           />
           <button
             type="submit"
@@ -313,7 +317,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
             Keep me posted
           </button>
         </form>
-        <p id="home-nl-success" class="hidden text-base mt-6 font-medium" style="color: var(--color-navy);">
+        <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
           You're in. We'll be in touch when something good is coming.
         </p>
       </div>
