@@ -1,0 +1,50 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listFaqs } from '../../../lib/content';
+export const prerender = false;
+
+const faqs = listFaqs();
+const categoryOrder: string[] = [];
+const grouped: Record<string, Array<Record<string, any>>> = {};
+for (const f of faqs) {
+  const cat = (f.category as string) || 'General';
+  if (!grouped[cat]) { grouped[cat] = []; categoryOrder.push(cat); }
+  grouped[cat].push(f);
+}
+---
+
+<AdminLayout title="FAQ" page="faqs">
+  <div class="flex items-center justify-between mb-6">
+    <p class="text-sm" style="color: rgba(27,43,58,0.55);">{faqs.length} question{faqs.length === 1 ? '' : 's'} · shown on the public FAQ page</p>
+    <a href="/admin/faqs/new/" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New</a>
+  </div>
+
+  {faqs.length === 0 ? (
+    <div class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);">
+      <p class="text-sm" style="color: rgba(27,43,58,0.5);">No FAQs yet. Add the first one.</p>
+    </div>
+  ) : (
+    categoryOrder.map(cat => (
+      <div class="mb-8">
+        <h2 class="font-display text-lg font-semibold mb-3" style="color: var(--color-navy);">{cat}</h2>
+        <div class="flex flex-col gap-2.5">
+          {grouped[cat].map(f => (
+            <div class="bg-white rounded-2xl p-4 flex items-start justify-between gap-4" style="border: 1px solid rgba(245,221,215,0.6);">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold" style="color: var(--color-navy);">{f.question}</p>
+                <p class="text-xs mt-1 line-clamp-2" style="color: rgba(27,43,58,0.55);">{f.answer}</p>
+              </div>
+              <div class="flex items-center gap-3 flex-none">
+                <a href={`/admin/faqs/${f.slug}/`} class="text-sm font-medium" style="color: var(--color-coral);">Edit</a>
+                <form method="POST" action="/api/admin/faqs/delete" onsubmit="return confirm('Delete this FAQ?');">
+                  <input type="hidden" name="slug" value={f.slug} />
+                  <button type="submit" class="text-sm font-medium" style="color: var(--color-danger);">Delete</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))
+  )}
+</AdminLayout>

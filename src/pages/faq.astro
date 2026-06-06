@@ -1,92 +1,17 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { listFaqs } from '../lib/content';
 
-const categories = [
-  {
-    name: 'Booking',
-    questions: [
-      {
-        q: 'How do I reserve a spot?',
-        a: "Find a trip you like, click Save my spot, fill in the form, pay the advance via UPI, upload your payment screenshot, and submit. We confirm within 24 hours.",
-      },
-      {
-        q: 'Can I book for a group of friends?',
-        a: "Yes — fill out one form per person. If you're all traveling together, mention it in the form and we'll try to keep you in the same batch.",
-      },
-      {
-        q: 'What happens after I register?',
-        a: "You'll get a confirmation email within 24 hours once we've verified your payment. If a trip fills up before we process yours, we'll reach out directly on WhatsApp.",
-      },
-      {
-        q: 'Can I transfer my spot to someone else?',
-        a: "Yes, up to 7 days before departure. Email us with the new traveler's details — name, phone, and any relevant health info.",
-      },
-    ],
-  },
-  {
-    name: 'Payment',
-    questions: [
-      {
-        q: "What's the booking advance amount?",
-        a: "₹3,000 to confirm your spot. This is non-refundable unless we cancel the trip.",
-      },
-      {
-        q: 'When is the full payment due?',
-        a: "15 days before the trip departure date. We'll send a reminder — but it's your responsibility to pay on time or your spot may be released.",
-      },
-      {
-        q: 'What payment methods do you accept?',
-        a: "UPI only right now — GPay, PhonePe, Paytm, BHIM. Scan the QR code on the trip page, pay, screenshot it, upload it. Simple.",
-      },
-      {
-        q: 'What if I need to cancel?',
-        a: "30+ days before: full refund minus ₹500 processing fee. 15–29 days: 50% refund. 7–14 days: 25% refund. Under 7 days: no refund. All cancellations must be in writing to zahra@seekthethrill.in.",
-      },
-    ],
-  },
-  {
-    name: 'What to expect',
-    questions: [
-      {
-        q: 'Who else comes on these trips?',
-        a: "Usually solo travelers between 22–35, mostly from major cities, all looking for something a bit more real than a resort. Friend groups too. The mix is always interesting.",
-      },
-      {
-        q: "What's the group size?",
-        a: "Typically 8–20 people depending on the trip. Small enough that everyone actually knows each other by the end.",
-      },
-      {
-        q: 'Is solo travel experience required?',
-        a: "Not at all. Many people on STT trips are doing their first solo or first group trip. You're not expected to know anything — just show up.",
-      },
-      {
-        q: 'What level of fitness do I need?',
-        a: "Depends on the trip. Beach escapes need very little. Mountain treks need more. Each trip page has specifics. If you're unsure, WhatsApp us — we'll tell you straight.",
-      },
-    ],
-  },
-  {
-    name: 'Safety & logistics',
-    questions: [
-      {
-        q: 'Are these trips safe for solo women?',
-        a: "Yes. Many of our travelers are solo women. We keep groups mixed, brief everyone on conduct, and Zahra personally vets every route. Message us if you have specific concerns — we'll answer honestly.",
-      },
-      {
-        q: 'What if I have dietary restrictions?',
-        a: "Mention it when you register. We do our best to accommodate vegetarian and vegan options everywhere. Remote areas have limited choices — we'll always tell you in advance.",
-      },
-      {
-        q: 'Do you arrange flights or trains?',
-        a: "For most trips, no — you get to the meeting point, we handle everything from there. Some trips include coordinated group travel from Delhi or Mumbai. Check the trip page.",
-      },
-      {
-        q: 'What should I pack?',
-        a: "Each trip page has a packing list. The one universal rule: pack light. You'll thank yourself on day two when everyone else is dragging a suitcase uphill.",
-      },
-    ],
-  },
-];
+// Build category groups from the FAQ collection, preserving order.
+const faqs = listFaqs();
+const categoryOrder: string[] = [];
+const grouped: Record<string, Array<{ q: string; a: string }>> = {};
+for (const f of faqs) {
+  const cat = (f.category as string) || 'General';
+  if (!grouped[cat]) { grouped[cat] = []; categoryOrder.push(cat); }
+  grouped[cat].push({ q: f.question, a: f.answer });
+}
+const categories = categoryOrder.map((name) => ({ name, questions: grouped[name] }));
 ---
 
 <BaseLayout

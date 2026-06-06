@@ -1,0 +1,43 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listFaqs } from '../../../lib/content';
+export const prerender = false;
+
+// Suggest existing categories for consistency
+const categories = Array.from(new Set(listFaqs().map(f => f.category).filter(Boolean)));
+
+const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
+const inputStyle = 'border: 1px solid rgba(245,221,215,0.8); background: var(--color-white);';
+const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
+const labelStyle = 'color: var(--color-navy);';
+---
+
+<AdminLayout title="New FAQ" page="faqs">
+  <form method="POST" action="/api/admin/faqs/create" class="bg-white rounded-[2rem] p-6 max-w-2xl" style="border: 1px solid rgba(245,221,215,0.6);">
+    <div class="grid gap-4">
+      <div>
+        <label class={labelCls} style={labelStyle}>Question</label>
+        <input type="text" name="question" required class={inputCls} style={inputStyle} />
+      </div>
+      <div>
+        <label class={labelCls} style={labelStyle}>Answer</label>
+        <textarea name="answer" rows="4" required class={inputCls} style={inputStyle}></textarea>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class={labelCls} style={labelStyle}>Category</label>
+          <input type="text" name="category" list="faq-cats" placeholder="e.g. Booking" class={inputCls} style={inputStyle} />
+          <datalist id="faq-cats">{categories.map(c => <option value={c}></option>)}</datalist>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Order</label>
+          <input type="number" name="order" placeholder="Lower = higher up" class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 mt-6">
+      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);">Create</button>
+      <a href="/admin/faqs/" class="text-sm font-medium" style="color: rgba(27,43,58,0.55);">Cancel</a>
+    </div>
+  </form>
+</AdminLayout>

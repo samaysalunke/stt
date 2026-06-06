@@ -8,6 +8,7 @@ const CONTENT_BASE = process.env.CONTENT_DIR ?? path.join(CWD, 'src', 'content')
 const TRIPS_DIR = path.join(CONTENT_BASE, 'trips');
 const ALBUMS_DIR = path.join(CONTENT_BASE, 'albums');
 const TESTIMONIALS_DIR = path.join(CONTENT_BASE, 'testimonials');
+const FAQS_DIR = path.join(CONTENT_BASE, 'faqs');
 const SITE_SETTINGS_FILE = path.join(CONTENT_BASE, 'site-settings.yaml');
 
 // ── YAML helpers ─────────────────────────────────────────────────────────────
@@ -145,6 +146,43 @@ export function writeTestimonial(slug: string, data: Record<string, any>): void 
 export function deleteTestimonial(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
+// ── FAQs ───────────────────────────────────────────────────────────────────
+
+export function listFaqs(): Array<Record<string, any>> {
+  ensureDir(FAQS_DIR);
+  return fs
+    .readdirSync(FAQS_DIR)
+    .filter(f => f.endsWith('.yaml'))
+    .map(f => {
+      const slug = f.replace('.yaml', '');
+      const raw = fs.readFileSync(path.join(FAQS_DIR, f), 'utf-8');
+      const data = YAML.parse(raw) ?? {};
+      return { slug, ...data };
+    })
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+export function readFaq(slug: string): Record<string, any> | null {
+  assertSafeSlug(slug);
+  const filePath = path.join(FAQS_DIR, `${slug}.yaml`);
+  if (!fs.existsSync(filePath)) return null;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return YAML.parse(raw) ?? null;
+}
+
+export function writeFaq(slug: string, data: Record<string, any>): void {
+  assertSafeSlug(slug);
+  ensureDir(FAQS_DIR);
+  const filePath = path.join(FAQS_DIR, `${slug}.yaml`);
+  fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+}
+
+export function deleteFaq(slug: string): void {
+  assertSafeSlug(slug);
+  const filePath = path.join(FAQS_DIR, `${slug}.yaml`);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 

@@ -1,0 +1,5 @@
+question: What payment methods do you accept?
+answer: UPI only right now — GPay, PhonePe, Paytm, BHIM. Scan the QR code on the
+  trip page, pay, screenshot it, upload it. Simple.
+category: Payment
+order: 7
