@@ -1,0 +1,146 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { readSiteSettings } from '../../lib/content';
+export const prerender = false;
+
+const s = readSiteSettings();
+const saved = Astro.url.searchParams.get('saved') === '1';
+
+const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
+const inputStyle = 'border: 1px solid rgba(245,221,215,0.8); background: var(--color-white);';
+const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
+const labelStyle = 'color: var(--color-navy);';
+const cardCls = 'bg-white rounded-[2rem] p-6 mb-6';
+const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
+---
+
+<AdminLayout title="Settings" page="settings">
+  {saved && (
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2"
+         style="background: rgba(34,166,84,0.10); color: var(--color-success);">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+      Settings saved.
+    </div>
+  )}
+
+  <form method="POST" action="/api/admin/settings/update">
+    <!-- Contact & Social -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Contact &amp; Social</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Shown in the footer, contact page and trip pages.</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class={labelCls} style={labelStyle}>Email</label>
+          <input type="email" name="email" value={s.email ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Phone</label>
+          <input type="text" name="phone" value={s.phone ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>WhatsApp link</label>
+          <input type="text" name="whatsappLink" value={s.whatsappLink ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Instagram URL</label>
+          <input type="text" name="instagram" value={s.instagram ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Address</label>
+          <input type="text" name="address" value={s.address ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </section>
+
+    <!-- Homepage stats -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Homepage Stats</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">The counters shown on the homepage and about page.</p>
+      <div class="grid gap-4 grid-cols-2 sm:grid-cols-4">
+        <div>
+          <label class={labelCls} style={labelStyle}>Trips completed</label>
+          <input type="number" name="tripsCompleted" value={s.tripsCompleted ?? 0} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Happy travelers</label>
+          <input type="number" name="happyTravelers" value={s.happyTravelers ?? 0} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Destinations</label>
+          <input type="number" name="destinationsCovered" value={s.destinationsCovered ?? 0} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Years</label>
+          <input type="number" name="yearsOfAdventure" value={s.yearsOfAdventure ?? 0} class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </section>
+
+    <!-- Policies & Payment -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Policies &amp; Payment</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Default copy used across registration and trip pages.</p>
+      <div class="grid gap-4">
+        <div>
+          <label class={labelCls} style={labelStyle}>Default payment instructions</label>
+          <textarea name="defaultPaymentInstructions" rows="5" class={inputCls} style={inputStyle}>{s.defaultPaymentInstructions ?? ''}</textarea>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Bank details</label>
+          <textarea name="bankDetails" rows="4" class={inputCls} style={inputStyle}>{s.bankDetails ?? ''}</textarea>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Cancellation policy</label>
+          <textarea name="cancellationPolicy" rows="5" class={inputCls} style={inputStyle}>{s.cancellationPolicy ?? ''}</textarea>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Terms &amp; conditions</label>
+          <textarea name="termsAndConditions" rows="5" class={inputCls} style={inputStyle}>{s.termsAndConditions ?? ''}</textarea>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Privacy policy</label>
+          <textarea name="privacyPolicy" rows="4" class={inputCls} style={inputStyle}>{s.privacyPolicy ?? ''}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Site -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Site</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Analytics and footer.</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class={labelCls} style={labelStyle}>Google Analytics ID</label>
+          <input type="text" name="googleAnalyticsId" value={s.googleAnalyticsId ?? ''} placeholder="G-XXXXXXXXXX" class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Copyright text</label>
+          <input type="text" name="copyrightText" value={s.copyrightText ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </section>
+
+    <div class="flex justify-end mb-10">
+      <button type="submit"
+              class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style="background-color: var(--color-cta);">
+        Save changes
+      </button>
+    </div>
+  </form>
+
+  <!-- Account -->
+  <section class={cardCls} style={cardStyle}>
+    <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Account</h2>
+    <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Signed in as Zahra · Super Admin.</p>
+    <form method="POST" action="/api/admin/logout">
+      <button type="submit"
+              class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors"
+              style="color: var(--color-danger); border: 1px solid var(--color-danger);">
+        Sign out
+      </button>
+    </form>
+  </section>
+</AdminLayout>

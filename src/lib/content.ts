@@ -107,6 +107,11 @@ export function readSiteSettings(): Record<string, any> {
   return YAML.parse(raw) ?? {};
 }
 
+export function writeSettings(data: Record<string, any>): void {
+  ensureDir(CONTENT_BASE);
+  fs.writeFileSync(SITE_SETTINGS_FILE, YAML.stringify(data), 'utf-8');
+}
+
 // ── Testimonials ─────────────────────────────────────────────────────────────
 
 export function listTestimonials(): Array<Record<string, any>> {
