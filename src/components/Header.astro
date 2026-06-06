@@ -17,7 +17,7 @@ const pathname = Astro.url.pathname;
 <header
   id="site-header"
   class:list={[hidden ? ['fixed', 'is-hideable'] : 'sticky', 'top-0', 'left-0', 'right-0', 'z-50']}
-  style="background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.12); transition: transform 0.35s ease;"
+  style="background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform 0.35s ease;"
 >
   <div class="container-app">
     <div class="flex items-center justify-between" style="height: 64px;">
@@ -27,32 +27,10 @@ const pathname = Astro.url.pathname;
         <span class="hidden sm:block font-semibold text-sm text-white">Seek the Thrill</span>
       </a>
 
-      <!-- Desktop Nav -->
-      <nav class="hidden lg:flex items-center gap-8">
-        {navLinks.map((link) => (
-          <a
-            href={link.href}
-            class="font-medium text-sm transition-all duration-200"
-            style={pathname.startsWith(link.href)
-              ? 'color: var(--color-coral);'
-              : 'color: rgba(255,255,255,0.8);'}
-          >
-            {link.label}
-          </a>
-        ))}
-        <a
-          href="/trips/"
-          class="font-semibold text-sm text-white px-5 py-2.5 rounded-full transition-all duration-200 hover:opacity-90 hover:shadow-md"
-          style="background-color: var(--color-cta);"
-        >
-          Join a trip
-        </a>
-      </nav>
-
-      <!-- Mobile Menu Button -->
+      <!-- Menu Button (hamburger-only on all sizes; drawer holds all nav) -->
       <button
         id="mobile-menu-btn"
-        class="lg:hidden p-2 rounded-lg"
+        class="p-2 rounded-lg"
         style="color: white;"
         aria-label="Toggle menu"
         aria-expanded="false"
@@ -68,8 +46,8 @@ const pathname = Astro.url.pathname;
   </div>
 </header>
 
-<!-- Mobile Menu Drawer -->
-<div id="mobile-menu" class="lg:hidden fixed inset-0 z-40 pointer-events-none">
+<!-- Menu Drawer (all sizes) -->
+<div id="mobile-menu" class="fixed inset-0 z-40 pointer-events-none">
   <div
     id="mobile-backdrop"
     class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300"
