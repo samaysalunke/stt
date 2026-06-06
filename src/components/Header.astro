@@ -1,4 +1,10 @@
 ---
+interface Props {
+  hidden?: boolean;
+}
+
+const { hidden = false } = Astro.props;
+
 const navLinks = [
   { href: '/trips/', label: 'Trips' },
   { href: '/about/', label: 'Our Story' },
@@ -10,8 +16,8 @@ const pathname = Astro.url.pathname;
 
 <header
   id="site-header"
-  class="sticky top-0 z-50 transition-all duration-300"
-  style="background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(232,221,217,0.5);"
+  class="sticky top-0 z-50"
+  style={`background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(232,221,217,0.5); transition: transform 0.35s ease;${hidden ? ' transform: translateY(-100%);' : ''}`}
 >
   <div class="container-app">
     <div class="flex items-center justify-between" style="height: 64px;">

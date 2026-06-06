@@ -10,9 +10,10 @@ interface Props {
   description: string;
   image?: string;
   canonical?: string;
+  hideHeader?: boolean;
 }
 
-const { title, description, image, canonical } = Astro.props;
+const { title, description, image, canonical, hideHeader = false } = Astro.props;
 
 let settings: any = {};
 try {
@@ -77,7 +78,7 @@ const orgSchema = {
     </script>
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
-    <Header />
+    <Header hidden={hideHeader} />
     <main class="flex-1">
       <slot />
     </main>

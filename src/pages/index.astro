@@ -20,6 +20,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 <BaseLayout
   title="Seek the Thrill — Offbeat Group Trips Across India"
   description="Offbeat group trips for people who want to feel alive again. Small groups. Curated routes. Come for the adventure, stay for the people."
+  hideHeader={true}
 >
 
   <!-- ── HERO ──────────────────────────────────────────────── -->
@@ -343,16 +344,6 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
   </section>
 
 </BaseLayout>
-
-<style is:global>
-  #site-header {
-    transform: translateY(-100%);
-    transition: transform 0.35s ease;
-  }
-  #site-header.header-visible {
-    transform: translateY(0);
-  }
-</style>
 
 <script>
   const hero = document.querySelector('section');
