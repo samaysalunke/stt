@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BatchPicker from '../../components/BatchPicker';
-import { readTrip, readSiteSettings } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials } from '../../lib/content';
 
 export const prerender = false;
 
@@ -17,6 +17,31 @@ try { settings = readSiteSettings(); } catch (e) {}
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
+
+// ── Photos strip ──────────────────────────────────────────────────────────
+// Photos come from the album linked in the admin trip editor (linkedAlbumSlug).
+// Album photo objects use the `image` field. Falls back to stock when unlinked.
+const FALLBACK_PHOTOS = [
+  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
+  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80',
+  'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80',
+];
+const linkedAlbum = trip.linkedAlbumSlug
+  ? listAlbums().find((a: any) => a.slug === trip.linkedAlbumSlug && a.published)
+  : null;
+const tripPhotos: string[] = linkedAlbum?.photos?.length
+  ? linkedAlbum.photos.slice(0, 5).map((p: any) => p.image).filter(Boolean)
+  : FALLBACK_PHOTOS.slice(0, 5);
+
+// ── Per-trip testimonials ─────────────────────────────────────────────────
+// Testimonial YAMLs carry a `tripName` matching the trip title. Fall back to
+// a few general testimonials when none match this trip.
+const allTestimonials = listTestimonials();
+const tripTestimonials = (() => {
+  const matched = allTestimonials.filter((t: any) => t.tripName === tripName).slice(0, 4);
+  return matched.length > 0 ? matched : allTestimonials.slice(0, 3);
+})();
 
 // Determine batches — new schema or legacy single-batch
 const batches: Array<{ id: string; startDate: string; endDate: string; price: number; totalSpots: number; bookedSpots: number }> =
@@ -211,6 +236,46 @@ const slugJson = JSON.stringify(slug);
                   </ul>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        <!-- Photos strip -->
+        {tripPhotos.length > 0 && (
+          <section>
+            <h2 class="text-2xl font-bold mb-1" style="font-family: var(--font-display); color: var(--color-navy);">A taste of it</h2>
+            <p class="text-sm mb-4" style="color: var(--color-gray-text);">{linkedAlbum ? 'Real moments from this trip.' : 'The kind of scenery you can expect.'}</p>
+            <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {tripPhotos.map((src) => (
+                <img
+                  src={src}
+                  loading="lazy"
+                  class="h-64 w-[78%] flex-none snap-start rounded-2xl object-cover sm:h-72 sm:w-[55%] md:w-[40%]"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <!-- Per-trip testimonials -->
+        {tripTestimonials.length > 0 && (
+          <section>
+            <h2 class="text-2xl font-bold mb-1" style="font-family: var(--font-display); color: var(--color-navy);">What they said</h2>
+            <p class="text-sm mb-4" style="color: var(--color-gray-text);">Real words. Zero editing.</p>
+            <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {tripTestimonials.map((t: any) => (
+                <figure class="relative flex-none basis-[85%] snap-start rounded-2xl p-5 sm:basis-[60%] md:basis-[45%]" style="background-color: var(--color-blush);">
+                  <span class="absolute right-4 top-3 font-display text-3xl opacity-20" style="color: var(--color-navy);">"</span>
+                  <blockquote class="text-sm leading-relaxed" style="color: var(--color-navy);">{t.quote}</blockquote>
+                  <figcaption class="mt-5 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full grid place-items-center font-display font-bold text-white" style="background-color: var(--color-coral);">{(t.name ?? '?')[0]}</div>
+                    <div>
+                      <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
+                      <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName ?? t.location ?? ''}</p>
+                    </div>
+                  </figcaption>
+                </figure>
+              ))}
             </div>
           </section>
         )}
