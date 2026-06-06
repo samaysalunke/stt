@@ -72,40 +72,48 @@ const formattedPrice = price
   ? `₹${price.toLocaleString('en-IN')}`
   : null;
 
-// Status badge config
-const statusMap: Record<string, { label: string; bg: string; color: string }> = {
-  upcoming:     { label: 'UPCOMING',     bg: '#E8725A',  color: '#fff' },
-  filling_fast: { label: 'FILLING FAST', bg: '#F59E0B',  color: '#fff' },
-  sold_out:     { label: 'SOLD OUT',     bg: '#9CA3AF',  color: '#fff' },
-  'booking-open': { label: 'UPCOMING',   bg: '#E8725A',  color: '#fff' },
-  'sold-out':   { label: 'SOLD OUT',     bg: '#9CA3AF',  color: '#fff' },
-};
-
-const badge = statusMap[status] ?? statusMap['upcoming'];
+// Status pill — only shown when notable (filling fast / sold out). A plain
+// "upcoming" trip shows no status pill for a cleaner card; the duration pill
+// carries the top-left slot instead.
 const isSoldOut = status === 'sold_out' || status === 'sold-out';
+const isFillingFast = status === 'filling_fast';
+const statusPill = isSoldOut
+  ? { label: 'SOLD OUT', bg: 'rgba(156,163,175,0.95)', color: '#fff' }
+  : isFillingFast
+    ? { label: 'FILLING FAST', bg: 'rgba(245,158,11,0.95)', color: '#fff' }
+    : null;
 const hasMultipleBatches = batches.length > 1;
 ---
 
 <article
-  class={`bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl group ${isSoldOut ? 'opacity-60 grayscale' : ''}`}
+  class={`bg-white rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl group ${isSoldOut ? 'opacity-60 grayscale' : ''}`}
   style="box-shadow: 0 1px 4px rgba(0,0,0,0.08);"
 >
   <!-- Cover image -->
-  <a href={`/trips/${slug}/`} class="block relative overflow-hidden" style="aspect-ratio: 16/9;">
+  <a href={`/trips/${slug}/`} class="block relative overflow-hidden" style="aspect-ratio: 4/3;">
     <img
       src={img}
       alt={tripName}
       class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
       loading="lazy"
     />
-    <!-- Status badge -->
-    <span
-      class="absolute top-3 left-3 text-xs font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-      style={`background-color: ${badge.bg}; color: ${badge.color};`}
-    >
-      {badge.label}
-    </span>
-    {moreDates > 0 && (
+    {duration && (
+      <span
+        class="absolute top-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-full"
+        style="background: rgba(255,255,255,0.92); color: var(--color-navy); backdrop-filter: blur(6px);"
+      >
+        {duration}
+      </span>
+    )}
+    {statusPill && (
+      <span
+        class="absolute top-3 right-3 text-[11px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+        style={`background-color: ${statusPill.bg}; color: ${statusPill.color};`}
+      >
+        {statusPill.label}
+      </span>
+    )}
+    {moreDates > 0 && !statusPill && (
       <span
         class="absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full"
         style="background: rgba(0,0,0,0.55); color: white; backdrop-filter: blur(4px);"
@@ -117,16 +125,12 @@ const hasMultipleBatches = batches.length > 1;
 
   <!-- Card body -->
   <div class="flex flex-col flex-1 p-5">
-    <h3 class="text-lg font-bold leading-snug mb-1" style="font-family: var(--font-display); color: var(--color-navy);">
+    <h3 class="text-lg font-bold leading-snug mb-2" style="font-family: var(--font-display); color: var(--color-navy);">
       <a href={`/trips/${slug}/`} class="hover:opacity-80 transition-opacity">{tripName}</a>
     </h3>
 
-    {desc && (
-      <p class="text-sm leading-relaxed mb-3 line-clamp-2" style="color: var(--color-gray-text);">{desc}</p>
-    )}
-
-    <!-- Meta row -->
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-xs" style="color: var(--color-gray-text);">
+    <!-- Meta row: location + dates -->
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-4" style="color: var(--color-gray-text);">
       {location && (
         <span class="flex items-center gap-1">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,19 +139,15 @@ const hasMultipleBatches = batches.length > 1;
           {location}
         </span>
       )}
-      {duration && (
+      {displayDate && (
         <span class="flex items-center gap-1">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          {duration}
+          {displayDate}
         </span>
       )}
     </div>
-
-    {displayDate && (
-      <p class="text-xs font-medium mb-3" style="color: var(--color-navy);">{displayDate}</p>
-    )}
 
     <!-- Spots progress bar -->
     {totalSpots && spotsLeft !== null && !isSoldOut && (
@@ -165,22 +165,22 @@ const hasMultipleBatches = batches.length > 1;
       </div>
     )}
 
-    <!-- Bottom row -->
-    <div class="mt-auto flex items-center justify-between pt-4 border-t" style="border-color: var(--color-peach);">
+    <!-- Bottom: price + full-width CTA -->
+    <div class="mt-auto pt-4 border-t" style="border-color: var(--color-peach);">
       {formattedPrice && (
-        <div>
+        <div class="mb-3">
           <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedPrice}</span>
           <span class="text-xs ml-1" style="color: var(--color-gray-text);">/ person</span>
         </div>
       )}
       <a
         href={`/trips/${slug}/`}
-        class="font-semibold text-sm px-4 py-2 rounded-full transition-all hover:opacity-90"
+        class="block w-full text-center font-semibold text-sm px-4 py-2.5 rounded-full transition-all hover:opacity-90"
         style={isSoldOut
           ? 'background-color: #f3f4f6; color: var(--color-gray-text);'
           : 'background-color: var(--color-cta); color: white;'}
       >
-        {isSoldOut ? 'Sold out' : hasMultipleBatches ? 'View dates →' : 'View trip →'}
+        {isSoldOut ? 'Sold out' : hasMultipleBatches ? 'View dates' : 'View trip'}
       </a>
     </div>
   </div>

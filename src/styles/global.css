@@ -38,6 +38,13 @@
   --shadow-lifted: 0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06);
 }
 
+/* Root-level keyframes (must NOT live inside @layer — keyframes in a layer
+   can be dropped/ordered unexpectedly, leaving animated elements invisible). */
+@keyframes stt-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
@@ -90,5 +97,20 @@
   .reveal.visible {
     opacity: 1;
     transform: none;
+  }
+
+  /* Entrance animation. Default = fully visible so that users with reduced
+     motion (and any no-JS/no-CSS edge) never see permanently hidden content. */
+  .anim-fade-up { opacity: 1; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .anim-fade-up {
+      opacity: 0;
+      animation: stt-fade-up 0.7s ease forwards;
+    }
+    .anim-delay-1 { animation-delay: 0.08s; }
+    .anim-delay-2 { animation-delay: 0.16s; }
+    .anim-delay-3 { animation-delay: 0.24s; }
+    .anim-delay-4 { animation-delay: 0.32s; }
   }
 }
