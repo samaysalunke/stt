@@ -19,6 +19,9 @@ try {
   settings = readSiteSettings();
 } catch (e) {}
 
+const gaId = import.meta.env.PUBLIC_GA_ID ?? '';
+const clarityId = import.meta.env.PUBLIC_CLARITY_ID ?? '';
+
 const orgSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
@@ -30,15 +33,8 @@ const orgSchema = {
     telephone: settings.phone ?? '+91-7975027491',
     contactType: 'customer service',
   },
-  sameAs: [
-    settings.instagram,
-    settings.facebook,
-    settings.youtube,
-    settings.linkedin,
-  ].filter(Boolean),
+  sameAs: [settings.instagram].filter(Boolean),
 };
-
-const gaId = settings.googleAnalyticsId ?? '';
 ---
 
 <!doctype html>
@@ -48,27 +44,24 @@ const gaId = settings.googleAnalyticsId ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
 
-    <!-- Preload fonts -->
+    <!-- Fonts: Fraunces (display) + DM Sans (body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <SEO {title} {description} {image} {canonical} />
 
-    <!-- Organization structured data -->
     <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} />
 
-    <!-- Per-page structured data slot -->
     <slot name="head" />
 
-    <!-- Google Analytics -->
+    <!-- Google Analytics 4 -->
     {gaId && (
       <>
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
@@ -80,8 +73,19 @@ const gaId = settings.googleAnalyticsId ?? '';
         </script>
       </>
     )}
+
+    <!-- Microsoft Clarity -->
+    {clarityId && (
+      <script define:vars={{ clarityId }}>
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", clarityId);
+      </script>
+    )}
   </head>
-  <body class="min-h-screen flex flex-col" style="background-color: var(--color-surface); color: var(--color-text-primary);">
+  <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
     <Header />
     <main class="flex-1">
       <slot />
@@ -90,7 +94,7 @@ const gaId = settings.googleAnalyticsId ?? '';
 
     <!-- WhatsApp Floating Button -->
     <a
-      href="https://wa.me/917975027491?text=Hi%2C%20I%27m%20interested%20in%20a%20trip%20with%20Seek%20the%20Thrill!"
+      href={`https://wa.me/${(settings.phone ?? '+917975027491').replace(/[^0-9]/g, '')}?text=Hi%2C%20I%27m%20interested%20in%20a%20trip%20with%20Seek%20the%20Thrill!`}
       target="_blank"
       rel="noopener noreferrer"
       class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
@@ -103,7 +107,6 @@ const gaId = settings.googleAnalyticsId ?? '';
       </svg>
     </a>
 
-    <!-- Scroll reveal script -->
     <script>
       const reveals = document.querySelectorAll('.reveal');
       const observer = new IntersectionObserver(
@@ -119,15 +122,5 @@ const gaId = settings.googleAnalyticsId ?? '';
       );
       reveals.forEach((el) => observer.observe(el));
     </script>
-
-    <!-- Service Worker registration -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
-      }
-    </script>
-
   </body>
 </html>

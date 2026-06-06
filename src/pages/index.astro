@@ -1,403 +1,266 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import StatsCounter from '../components/StatsCounter';
-import TestimonialCarousel from '../components/TestimonialCarousel';
 import { listTrips, listTestimonials, readSiteSettings } from '../lib/content';
 
 const allTrips = listTrips();
 const featuredTrips = allTrips
-  .filter((t) => t.status === 'booking-open' || t.status === 'upcoming')
+  .filter((t) => t.status !== 'draft' && t.status !== 'sold_out' && t.status !== 'sold-out')
   .slice(0, 3);
 
-const allTestimonials = listTestimonials();
-const featuredTestimonials = allTestimonials
-  .filter((t) => t.featured)
-  .map((t) => ({
-    slug: t.slug,
-    name: (t.name as string) || t.slug,
-    location: t.location ?? '',
-    rating: t.rating ?? 5,
-    tripName: t.tripName ?? '',
-    quote: t.quote ?? '',
-    photo: t.photo ?? null,
-  }));
+const allTestimonials = listTestimonials().slice(0, 4);
 
 let settings: any = {};
-try {
-  settings = readSiteSettings();
-} catch (e) {}
+try { settings = readSiteSettings(); } catch (e) {}
 
-const stats = [
-  { value: settings.tripsCompleted ?? 25, label: 'Trips Completed', iconPath: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7' },
-  { value: settings.happyTravelers ?? 500, label: 'Travelers & Counting', iconPath: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-  { value: settings.destinationsCovered ?? 15, label: 'Destinations Covered', iconPath: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
-  { value: settings.yearsOfAdventure ?? 4, label: 'Years of Adventure', iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-];
-
-const heroImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
-const aboutImg = 'https://images.unsplash.com/photo-1533692328991-08159ff19fca?w=800&auto=format&fit=crop&q=80';
-// TODO: Replace Unsplash stock photos with real trip photos from public/vault/
-// Recommended: 6 photos (portrait or landscape), min 800px wide
-// Name format: trip-name-01.jpg  (e.g. meghalaya-01.jpg)
-// Upload to public/vault/ and update the src paths below
-const vaultImages = [
-  { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80', trip: 'Spiti Valley' },
-  { src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80', trip: 'Gokarna Beach' },
-  { src: 'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=600&auto=format&fit=crop&q=80', trip: 'Rishikesh' },
-  { src: 'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=600&auto=format&fit=crop&q=80', trip: 'Meghalaya' },
-  { src: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&auto=format&fit=crop&q=80', trip: 'Riverside Camping' },
-  { src: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=600&auto=format&fit=crop&q=80', trip: 'Group Adventures' },
-  { src: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop&q=80', trip: 'Rafting' },
-  { src: 'https://images.unsplash.com/photo-1432057322224-8916b9ed202a?w=600&auto=format&fit=crop&q=80', trip: 'Himalayan Trek' },
-];
-
-const valueCards = [
-  {
-    icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
-    title: 'Adventure First',
-    desc: 'Every trip is a carefully curated experience',
-  },
-  {
-    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    title: 'Community Driven',
-    desc: 'Travel with like-minded adventurers',
-  },
-  {
-    icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
-    title: 'Authentic Experiences',
-    desc: 'Real local encounters, not tourist traps',
-  },
-  {
-    icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
-    title: 'Budget Conscious',
-    desc: 'Premium experiences without the premium price',
-  },
-];
+const instagram = settings.instagram ?? 'https://www.instagram.com/seekthethrill_/';
+const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 ---
 
 <BaseLayout
-  title="Seek the Thrill — Adventure Group Travel in India"
-  description="Join unforgettable group trips across India. Budget-friendly adventure travel curated for young Indian travelers. Trekking, rafting, beaches, and more."
+  title="Seek the Thrill — Offbeat Group Trips Across India"
+  description="Offbeat group trips for people who want to feel alive again. Small groups. Curated routes. Come for the adventure, stay for the people."
 >
 
-  <!-- HERO -->
+  <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
     class="relative min-h-screen flex items-center justify-center overflow-hidden"
-    style={`background-image: url('${heroImg}'); background-size: cover; background-position: center;`}
+    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
-    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.2) 100%);"></div>
+    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0.1) 100%);"></div>
 
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
-      <div class="reveal">
-        <span class="inline-block text-xs font-bold uppercase tracking-widest text-white/80 mb-6 border border-white/30 px-4 py-1.5 rounded-full" style="backdrop-filter: blur(4px);">
-          Small Groups. Real India. Zero Tourist Traps.
+    <div class="relative z-10 text-center px-5 max-w-3xl mx-auto">
+      <!-- Eyebrow pill -->
+      <span class="inline-block text-xs font-semibold uppercase tracking-widest text-white border border-white/30 px-4 py-1.5 rounded-full mb-6" style="backdrop-filter: blur(4px);">
+        Offbeat by design
+      </span>
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-5" style="font-family: var(--font-display);">
+        Offbeat group trips for people who want to feel alive again.
+      </h1>
+      <p class="text-lg md:text-xl text-white/85 max-w-xl mx-auto mb-8 leading-relaxed">
+        Come for the adventure. Stay for the people you didn't expect to find.
+      </p>
+      <a
+        href="/trips/"
+        class="inline-block font-semibold text-white px-8 py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-xl"
+        style="background-color: var(--color-coral);"
+      >
+        Find your next trip →
+      </a>
+    </div>
+  </section>
+
+  <!-- ── TRUST BAR ─────────────────────────────────────────── -->
+  <section style="background-color: var(--color-blush);">
+    <div class="container-app py-5">
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 text-sm font-medium" style="color: var(--color-navy);">
+        <span class="flex items-center gap-2">
+          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Small groups
         </span>
-        <h1 class="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-tight mb-6" style="font-family: var(--font-display);">
-          India's Most Adventurous<br class="hidden sm:block" />
-          <span style="color: var(--color-accent);">Group Trips</span>
-        </h1>
-        <p class="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Handpicked treks, beaches, and offbeat escapes — designed for young Indian travelers who want to go deeper, spend smarter, and travel together.
-        </p>
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="/trips/" class="font-bold text-white px-8 py-4 rounded-full text-base transition-all hover:opacity-90 shadow-lg" style="background-color: var(--color-accent);">
-            Explore Upcoming Trips →
-          </a>
-          <a href="/about/" class="font-bold text-white px-8 py-4 rounded-full text-base transition-all border-2 border-white/40" style="backdrop-filter: blur(4px);">
-            Our Story
-          </a>
-        </div>
+        <span class="hidden sm:block text-white/40" style="color: var(--color-peach);">·</span>
+        <span class="flex items-center gap-2">
+          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Curated offbeat routes
+        </span>
+        <span class="hidden sm:block" style="color: var(--color-peach);">·</span>
+        <span class="flex items-center gap-2">
+          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          For travellers
+        </span>
       </div>
-    </div>
-
-    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce-down">
-      <svg class="w-8 h-8 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-      </svg>
     </div>
   </section>
 
-  <!-- ABOUT PREVIEW -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
+  <!-- ── UPCOMING TRIPS ────────────────────────────────────── -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
     <div class="container-app">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-        <div class="reveal order-2 lg:order-1">
-          <div class="relative">
-            <img
-              src={aboutImg}
-              alt="Seek the Thrill team on an adventure"
-              class="w-full rounded-2xl shadow-xl object-cover"
-              style="aspect-ratio: 4/3;"
-              loading="lazy"
-            />
-            <div class="absolute -bottom-4 -right-4 w-24 h-24 rounded-2xl flex items-center justify-center text-white text-center p-3 shadow-lg" style="background-color: var(--color-accent);">
-              <div>
-                <div class="font-extrabold text-2xl leading-none" style="font-family: var(--font-display);">4+</div>
-                <div class="text-xs font-medium mt-0.5">Years of<br />Adventure</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="reveal order-1 lg:order-2">
-          <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--color-accent);">Our Story</span>
-          <h2 class="text-3xl lg:text-4xl font-extrabold mt-2 mb-4 leading-tight" style="font-family: var(--font-display);">
-            Born from a Love of Adventure
+      <div class="flex items-end justify-between mb-10">
+        <div>
+          <h2 class="text-3xl lg:text-4xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">
+            Where we're going next
           </h2>
-          <p class="leading-relaxed mb-3" style="color: var(--color-text-secondary);">
-            Seek the Thrill was born from a simple belief: adventure shouldn't be expensive, and exploring India should be accessible to every young traveler.
-          </p>
-          <p class="leading-relaxed mb-5" style="color: var(--color-text-secondary);">
-            What started as organizing weekend trips for friends soon turned into a passion project. Today, we've created unforgettable memories for hundreds of travelers across India and beyond.
-          </p>
-
-          <p class="text-center italic mb-6" style="font-family: var(--font-accent); font-size: 1.4rem; color: var(--color-primary);">
-            "Adventure shouldn't be expensive."
-          </p>
-
-          <div class="grid grid-cols-2 gap-4">
-            {valueCards.map((v) => (
-              <div class="p-4 rounded-xl border bg-white hover:shadow-lg transition-shadow" style="border-color: var(--color-border);">
-                <div class="w-10 h-10 rounded-full flex items-center justify-center mb-3" style="background-color: rgba(232,117,42,0.1);">
-                  <svg class="w-5 h-5" style="color: var(--color-accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={v.icon} />
-                  </svg>
-                </div>
-                <div class="font-bold text-sm mb-1" style="font-family: var(--font-display);">{v.title}</div>
-                <div class="text-xs leading-snug" style="color: var(--color-text-secondary);">{v.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- FEATURED TRIPS -->
-  <section class="py-20 lg:py-24" style="background-color: white;">
-    <div class="container-app">
-      <div class="text-center mb-12 reveal">
-        <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
-          Upcoming Adventures
-        </h2>
-        <span class="block w-16 h-1 rounded-full mx-auto mt-3" style="background-color: var(--color-accent);"></span>
-        <p class="text-base mt-4" style="color: var(--color-text-secondary);">Handpicked trips for your next escape</p>
+        <a href="/trips/" class="text-sm font-semibold hidden sm:block" style="color: var(--color-coral);">
+          See all trips →
+        </a>
       </div>
 
       {featuredTrips.length > 0 ? (
-        <>
-          <!-- Mobile: horizontal scroll -->
-          <div class="md:hidden overflow-x-auto scrollbar-hide -mx-4 px-4 mb-6">
-            <div class="flex gap-4 pb-2" style="width: max-content;">
-              {featuredTrips.map((trip) => (
-                <div class="w-72 flex-none">
-                  <TripCard
-                    slug={trip.slug}
-                    name={(trip.name as string) || trip.slug}
-                    status={trip.status ?? 'upcoming'}
-                    featuredImage={trip.featuredImage ?? null}
-                    shortDescription={trip.shortDescription ?? ''}
-                    location={(trip as any).location ?? null}
-                    startDate={trip.startDate ?? null}
-                    endDate={trip.endDate ?? null}
-                    duration={trip.duration ?? null}
-                    pricePerPerson={trip.pricePerPerson ?? null}
-                    maxGroupSize={trip.maxGroupSize ?? null}
-                    currentBookings={trip.currentBookings ?? null}
-                    difficulty={(trip as any).difficulty ?? null}
-                    categories={(trip.categories as string[]) ?? []}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          <!-- Desktop: grid -->
-          <div class="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            {featuredTrips.map((trip) => (
-              <div class="reveal">
-                <TripCard
-                  slug={trip.slug}
-                  name={(trip.name as string) || trip.slug}
-                  status={trip.status ?? 'upcoming'}
-                  featuredImage={trip.featuredImage ?? null}
-                  shortDescription={trip.shortDescription ?? ''}
-                  location={(trip as any).location ?? null}
-                  startDate={trip.startDate ?? null}
-                  endDate={trip.endDate ?? null}
-                  duration={trip.duration ?? null}
-                  pricePerPerson={trip.pricePerPerson ?? null}
-                  maxGroupSize={trip.maxGroupSize ?? null}
-                  currentBookings={trip.currentBookings ?? null}
-                  difficulty={(trip as any).difficulty ?? null}
-                  categories={(trip.categories as string[]) ?? []}
-                />
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <p class="text-center py-16 reveal" style="color: var(--color-text-secondary);">No upcoming trips right now — check back soon!</p>
-      )}
-
-      <div class="text-center reveal">
-        <a
-          href="/trips/"
-          id="view-all-trips-btn"
-          class="inline-flex items-center gap-2 font-bold text-base px-8 py-3 rounded-full border-2 transition-all duration-200"
-          style="border-color: var(--color-primary); color: var(--color-primary);"
-        >
-          View All Trips →
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- TESTIMONIALS -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-primary-dark);">
-    <div class="container-app">
-      <div class="text-center mb-12 reveal">
-        <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color: var(--color-accent);">Real Stories</span>
-        <h2 class="text-3xl lg:text-4xl font-extrabold text-white" style="font-family: var(--font-display);">
-          What Our Travelers Say
-        </h2>
-      </div>
-      {featuredTestimonials.length > 0 ? (
-        <div class="reveal">
-          <TestimonialCarousel testimonials={featuredTestimonials} client:visible />
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredTrips.map((trip) => (
+            <TripCard
+              slug={trip.slug}
+              title={trip.title}
+              name={trip.name}
+              status={trip.status}
+              coverImage={trip.coverImage}
+              featuredImage={trip.featuredImage}
+              description={trip.description}
+              shortDescription={trip.shortDescription}
+              location={trip.location}
+              duration={trip.duration}
+              batches={trip.batches ?? []}
+              startDate={trip.startDate}
+              endDate={trip.endDate}
+              pricePerPerson={trip.pricePerPerson}
+              maxGroupSize={trip.maxGroupSize}
+              currentBookings={trip.currentBookings}
+            />
+          ))}
         </div>
       ) : (
-        <p class="text-center text-white/60">Testimonials coming soon!</p>
+        <p class="text-center py-12" style="color: var(--color-gray-text);">More trips coming soon. Stay tuned.</p>
+      )}
+
+      <div class="text-center mt-10 sm:hidden">
+        <a href="/trips/" class="font-semibold text-sm" style="color: var(--color-coral);">See all trips →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-navy);">
+    <div class="container-app">
+      <h2 class="text-3xl lg:text-4xl font-bold text-white text-center mb-14" style="font-family: var(--font-display);">
+        How it works
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+        {[
+          { num: '01', title: 'Pick a trip', desc: 'Browse upcoming destinations, find one that pulls you.' },
+          { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
+          { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
+        ].map((step) => (
+          <div class="reveal text-center">
+            <div class="text-5xl font-bold mb-4 opacity-20 text-white" style="font-family: var(--font-display);">{step.num}</div>
+            <h3 class="text-xl font-bold text-white mb-3" style="font-family: var(--font-display);">{step.title}</h3>
+            <p class="text-white/65 text-sm leading-relaxed max-w-xs mx-auto">{step.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COMMUNITY ─────────────────────────────────────────── -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
+    <div class="container-app">
+      <div class="max-w-2xl mx-auto text-center mb-12">
+        <h2 class="text-3xl lg:text-4xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
+          Who comes on these trips
+        </h2>
+        <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">
+          Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out.
+        </p>
+      </div>
+
+      {allTestimonials.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {allTestimonials.map((t) => (
+            <div class="reveal bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+              <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{t.quote}"</p>
+              <div class="flex items-center gap-3">
+                {t.photo ? (
+                  <img src={t.photo} alt={t.name} class="w-9 h-9 rounded-full object-cover" loading="lazy" />
+                ) : (
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background-color: var(--color-coral);">
+                    {(t.name as string)?.[0] ?? '?'}
+                  </div>
+                )}
+                <div>
+                  <div class="text-sm font-semibold" style="color: var(--color-navy);">{t.name}</div>
+                  {t.tripName && <div class="text-xs" style="color: var(--color-gray-text);">{t.tripName}</div>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <!-- Placeholder quotes if no testimonials -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[
+            { name: 'Priya S.', trip: 'Spiti Valley', quote: 'I came alone and left with people I talk to every week. The mountains were just the backdrop.' },
+            { name: 'Rahul M.', trip: 'Gokarna', quote: 'Did not expect to unplug so completely. No agenda, no plans — exactly what I needed.' },
+            { name: 'Ananya K.', trip: 'Meghalaya', quote: 'Solo travel always felt intimidating. This was the nudge I needed. Would do it again tomorrow.' },
+          ].map((q) => (
+            <div class="reveal bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+              <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{q.quote}"</p>
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background-color: var(--color-coral);">
+                  {q.name[0]}
+                </div>
+                <div>
+                  <div class="text-sm font-semibold" style="color: var(--color-navy);">{q.name}</div>
+                  <div class="text-xs" style="color: var(--color-gray-text);">{q.trip}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   </section>
 
-  <!-- PHOTO VAULT TEASER -->
-  <section class="py-20 lg:py-24" style="background-color: white;">
+  <!-- ── INSTAGRAM ─────────────────────────────────────────── -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
     <div class="container-app">
-      <div class="text-center mb-12 reveal">
-        <h2 class="text-3xl lg:text-4xl font-extrabold" style="font-family: var(--font-display);">
-          Memories from the Trail
+      <div class="text-center mb-10">
+        <h2 class="text-3xl lg:text-4xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+          Straight from the trips
         </h2>
-        <p class="mt-3" style="color: var(--color-text-secondary);">Relive the adventure through our photo vault</p>
+        <p class="text-sm" style="color: var(--color-gray-text);">@seekthethrill_</p>
       </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-10">
-        {vaultImages.map((img) => (
-          <a href="/photo-vault/" class="relative overflow-hidden rounded-xl group aspect-square">
+      <!-- Instagram grid placeholder — Zahra will swap these embed URLs via admin -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+        {[
+          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=400&auto=format&fit=crop&q=80',
+          'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=400&auto=format&fit=crop&q=80',
+        ].map((src, i) => (
+          <a
+            href={instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block relative overflow-hidden rounded-xl group"
+            style="aspect-ratio: 1;"
+          >
             <img
-              src={img.src}
-              alt={img.trip}
+              src={src}
+              alt={`Instagram photo ${i + 1}`}
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
             />
-            <div class="absolute inset-0 flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style="background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);">
-              <div class="text-white">
-                <div class="font-bold text-sm">{img.trip}</div>
-                <div class="text-xs opacity-75">View Album →</div>
-              </div>
+            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style="background: rgba(0,0,0,0.35);">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+              </svg>
             </div>
           </a>
         ))}
       </div>
 
-      <div class="text-center reveal">
-        <a href="/photo-vault/" class="inline-flex items-center font-bold text-white px-8 py-3 rounded-full transition-all hover:opacity-90" style="background-color: var(--color-accent);">
-          View More Memories →
+      <div class="text-center">
+        <a
+          href={instagram}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 font-semibold text-sm border-2 px-6 py-3 rounded-full transition-all hover:opacity-80"
+          style="border-color: var(--color-coral); color: var(--color-coral);"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+          </svg>
+          Follow the journey →
         </a>
       </div>
     </div>
   </section>
 
-  <!-- STATS -->
-  <section
-    class="py-20 lg:py-24 relative overflow-hidden"
-    style="background-image: url('https://images.unsplash.com/photo-1686074403725-78f2e110ae38?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
-  >
-    <div class="absolute inset-0" style="background-color: rgba(26,61,40,0.92);"></div>
-    <div class="container-app relative z-10">
-      <div class="text-center mb-12 reveal">
-        <h2 class="text-2xl lg:text-3xl font-extrabold text-white" style="font-family: var(--font-display);">
-          Our Adventures in Numbers
-        </h2>
-      </div>
-      <div class="reveal">
-        <StatsCounter stats={stats} client:visible />
-      </div>
-    </div>
-  </section>
-
-  <!-- NEWSLETTER -->
-  <section class="py-20 lg:py-24" style="background-color: var(--color-surface);">
-    <div class="container-app">
-      <div class="max-w-xl mx-auto text-center reveal">
-        <span class="text-xs font-bold uppercase tracking-widest mb-3 block" style="color: var(--color-accent);">Stay Updated</span>
-        <h2 class="text-3xl lg:text-4xl font-extrabold mb-3" style="font-family: var(--font-display);">
-          Join the Adventure Community
-        </h2>
-        <p class="mb-8" style="color: var(--color-text-secondary);">
-          Get trip updates, travel tips, and exclusive offers delivered to your inbox.
-        </p>
-
-        <form id="newsletter-form" class="flex flex-col sm:flex-row gap-3">
-          <input
-            type="email"
-            name="email"
-            placeholder="your@email.com"
-            required
-            class="flex-1 px-4 py-3 rounded-xl border-2 outline-none text-sm"
-            style="border-color: var(--color-border);"
-          />
-          <button
-            type="submit"
-            class="font-bold text-white px-6 py-3 rounded-full transition-all hover:opacity-90 whitespace-nowrap"
-            style="background-color: var(--color-accent);"
-          >
-            Subscribe
-          </button>
-        </form>
-        <p class="text-xs mt-3" style="color: var(--color-text-secondary);">
-          We respect your privacy. Unsubscribe anytime.
-        </p>
-        <div id="newsletter-msg" class="hidden mt-3 text-sm font-medium"></div>
-      </div>
-    </div>
-  </section>
-
 </BaseLayout>
-
-<style>
-  /* View All Trips button — CSS hover (replaces inline JS) */
-  #view-all-trips-btn:hover {
-    background-color: var(--color-primary);
-    color: white !important;
-  }
-</style>
-
-<script>
-  const form = document.getElementById('newsletter-form') as HTMLFormElement;
-  const msg = document.getElementById('newsletter-msg') as HTMLElement;
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-    try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      msg.textContent = data.success
-        ? "🎉 You're subscribed! Adventure updates incoming."
-        : (data.error ?? 'Something went wrong.');
-      msg.style.color = data.success ? 'var(--color-success)' : 'var(--color-danger)';
-      msg.classList.remove('hidden');
-      if (data.success) form.reset();
-    } catch {
-      msg.textContent = 'Network error. Please try again.';
-      msg.style.color = 'var(--color-danger)';
-      msg.classList.remove('hidden');
-    }
-  });
-</script>

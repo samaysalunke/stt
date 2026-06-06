@@ -3,62 +3,55 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
 import { listTrips } from '../../lib/content';
 
-const trips = listTrips()
-  .filter((t) => t.status !== 'draft')
-  .map((t) => ({
-    slug: t.slug,
-    name: (t.name as string) || t.slug,
-    status: t.status ?? 'booking-open',
-    featuredImage: t.featuredImage ?? null,
-    shortDescription: t.shortDescription ?? '',
-    location: t.location ?? null,
-    startDate: t.startDate ?? null,
-    endDate: t.endDate ?? null,
-    duration: t.duration ?? null,
-    pricePerPerson: t.pricePerPerson ?? null,
-    maxGroupSize: t.maxGroupSize ?? null,
-    currentBookings: t.currentBookings ?? null,
-  }));
+const allTrips = listTrips().filter((t) => t.status !== 'draft');
+
+// Separate available from sold out — sold out goes last
+const available = allTrips.filter((t) => t.status !== 'sold_out' && t.status !== 'sold-out');
+const soldOut = allTrips.filter((t) => t.status === 'sold_out' || t.status === 'sold-out');
+const trips = [...available, ...soldOut];
 ---
 
 <BaseLayout
-  title="Upcoming Adventure Trips — Seek the Thrill"
-  description="Browse all upcoming group adventure trips in India. Trekking, rafting, beach getaways, and more. Budget-friendly trips for young Indian travelers."
+  title="Upcoming Trips — Seek the Thrill"
+  description="Small groups. Handpicked routes. A few spots left on each. Browse STT's upcoming adventures across India."
 >
-  <!-- Hero -->
-  <section
-    class="relative flex items-center justify-center overflow-hidden"
-    style="height: 40vh; background-image: url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center 40%;"
-  >
-    <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
-    <div class="relative z-10 text-center px-4">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">
-        Our Adventures
+
+  <!-- Page header -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
+    <div class="container-app text-center">
+      <h1 class="text-4xl lg:text-5xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
+        Upcoming trips
       </h1>
-      <p class="text-base md:text-lg text-white/80 max-w-xl mx-auto">
-        Find your next escape — from weekend getaways to week-long expeditions
+      <p class="text-base max-w-md mx-auto leading-relaxed" style="color: var(--color-gray-text);">
+        Small groups. Handpicked routes. A few spots left on each.
       </p>
     </div>
   </section>
 
-  <!-- Trip Grid -->
-  <section class="py-16" style="background-color: var(--color-surface);">
+  <!-- Trip grid -->
+  <section class="py-14 lg:py-18" style="background-color: var(--color-gray-soft);">
     <div class="container-app">
       {trips.length === 0 ? (
-        <p class="text-center py-20" style="color: var(--color-text-secondary);">No trips available right now — check back soon!</p>
+        <div class="text-center py-20">
+          <p class="text-base" style="color: var(--color-gray-text);">Nothing open right now. The next trip will show up here when it's ready.</p>
+        </div>
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
           {trips.map((trip) => (
             <TripCard
               slug={trip.slug}
+              title={trip.title}
               name={trip.name}
               status={trip.status}
+              coverImage={trip.coverImage}
               featuredImage={trip.featuredImage}
+              description={trip.description}
               shortDescription={trip.shortDescription}
               location={trip.location}
+              duration={trip.duration}
+              batches={trip.batches ?? []}
               startDate={trip.startDate}
               endDate={trip.endDate}
-              duration={trip.duration}
               pricePerPerson={trip.pricePerPerson}
               maxGroupSize={trip.maxGroupSize}
               currentBookings={trip.currentBookings}
@@ -68,4 +61,5 @@ const trips = listTrips()
       )}
     </div>
   </section>
+
 </BaseLayout>

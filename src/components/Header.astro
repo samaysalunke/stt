@@ -1,11 +1,8 @@
 ---
 const navLinks = [
-  { href: '/', label: 'Home' },
   { href: '/trips/', label: 'Trips' },
-  { href: '/photo-vault/', label: 'Photo Vault' },
-  { href: '/about/', label: 'About' },
+  { href: '/about/', label: 'Our Story' },
   { href: '/faq/', label: 'FAQ' },
-  { href: '/contact/', label: 'Contact' },
 ];
 
 const pathname = Astro.url.pathname;
@@ -14,17 +11,14 @@ const pathname = Astro.url.pathname;
 <header
   id="site-header"
   class="sticky top-0 z-50 transition-all duration-300"
-  style="background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.08);"
+  style="background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(232,221,217,0.5);"
 >
   <div class="container-app">
-    <div class="flex items-center justify-between h-16 lg:h-20">
+    <div class="flex items-center justify-between" style="height: 64px;">
       <!-- Logo -->
-      <a href="/" class="flex items-center hover:opacity-90 transition-opacity">
-        <img
-          src="/logo.jpg"
-          alt="Seek the Thrill"
-          class="h-10 lg:h-12 w-auto rounded-xl"
-        />
+      <a href="/" class="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+        <img src="/logo.jpg" alt="Seek the Thrill" class="h-9 w-auto rounded-lg" />
+        <span class="hidden sm:block font-semibold text-sm" style="color: var(--color-navy);">Seek the Thrill</span>
       </a>
 
       <!-- Desktop Nav -->
@@ -32,32 +26,28 @@ const pathname = Astro.url.pathname;
         {navLinks.map((link) => (
           <a
             href={link.href}
-            class={`font-medium text-sm transition-all duration-200 ${
-              pathname === link.href
-                ? 'pb-0.5 border-b-2'
-                : 'hover:opacity-70'
-            }`}
-            style={pathname === link.href
-              ? 'color: var(--color-accent); border-color: var(--color-accent);'
-              : 'color: var(--color-text-primary);'}
+            class="font-medium text-sm transition-all duration-200"
+            style={pathname.startsWith(link.href)
+              ? 'color: var(--color-coral);'
+              : 'color: var(--color-navy); opacity: 0.75;'}
           >
             {link.label}
           </a>
         ))}
         <a
           href="/trips/"
-          class="font-bold text-sm text-white px-5 py-2.5 rounded-full transition-all duration-200 hover:opacity-90"
-          style="background-color: var(--color-accent);"
+          class="font-semibold text-sm text-white px-5 py-2.5 rounded-full transition-all duration-200 hover:opacity-90 hover:shadow-md"
+          style="background-color: var(--color-coral);"
         >
-          Book a Trip
+          Join a trip
         </a>
       </nav>
 
       <!-- Mobile Menu Button -->
       <button
         id="mobile-menu-btn"
-        class="lg:hidden p-2 rounded-lg transition-colors"
-        style="color: var(--color-primary-dark);"
+        class="lg:hidden p-2 rounded-lg"
+        style="color: var(--color-navy);"
         aria-label="Toggle menu"
         aria-expanded="false"
       >
@@ -72,100 +62,74 @@ const pathname = Astro.url.pathname;
   </div>
 </header>
 
-<!-- Mobile Backdrop -->
-<div
-  id="mobile-backdrop"
-  class="lg:hidden fixed inset-0 bg-black/50 z-40 opacity-0 pointer-events-none transition-opacity duration-300"
-></div>
-
-<!-- Mobile Drawer -->
-<div
-  id="mobile-drawer"
-  class="lg:hidden fixed top-0 right-0 h-full w-72 bg-white z-50 shadow-2xl transform translate-x-full transition-transform duration-300 ease-out flex flex-col"
->
-  <div class="flex items-center justify-between p-4 border-b" style="border-color: var(--color-border);">
-    <span class="font-bold" style="color: var(--color-primary-dark);">Menu</span>
-    <button id="drawer-close" class="p-2 -mr-2 rounded-lg transition-colors" aria-label="Close menu" style="color: var(--color-primary-dark);">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-  </div>
-
-  <nav class="flex flex-col p-6 gap-1 flex-1">
-    {navLinks.map((link) => (
+<!-- Mobile Menu Drawer -->
+<div id="mobile-menu" class="lg:hidden fixed inset-0 z-40 pointer-events-none">
+  <div
+    id="mobile-backdrop"
+    class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300"
+  ></div>
+  <nav
+    id="mobile-nav"
+    class="absolute right-0 top-0 h-full w-72 flex flex-col pt-20 pb-8 px-6 translate-x-full transition-transform duration-300 shadow-2xl"
+    style="background: white;"
+  >
+    <div class="flex flex-col gap-1">
+      {navLinks.map((link) => (
+        <a
+          href={link.href}
+          class="font-medium text-base py-3 px-4 rounded-xl transition-colors"
+          style={pathname.startsWith(link.href)
+            ? 'color: var(--color-coral); background: var(--color-blush);'
+            : 'color: var(--color-navy);'}
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
+    <div class="mt-auto pt-6 border-t" style="border-color: var(--color-border);">
       <a
-        href={link.href}
-        class="py-3 px-4 rounded-lg font-medium text-sm transition-colors"
-        style={pathname === link.href
-          ? 'background-color: rgba(232,117,42,0.1); color: var(--color-accent);'
-          : 'color: var(--color-text-primary);'}
+        href="/trips/"
+        class="block w-full text-center font-semibold text-white py-3.5 rounded-full"
+        style="background-color: var(--color-coral);"
       >
-        {link.label}
+        Join a trip
       </a>
-    ))}
+    </div>
   </nav>
-
-  <div class="p-6 border-t" style="border-color: var(--color-border); background-color: var(--color-surface);">
-    <a
-      href="/trips/"
-      class="font-bold text-white text-center py-3 px-4 rounded-full w-full block transition-opacity hover:opacity-90"
-      style="background-color: var(--color-accent);"
-    >
-      Book a Trip
-    </a>
-  </div>
 </div>
 
 <script>
-  const header = document.getElementById('site-header') as HTMLElement;
-  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-  const drawer = document.getElementById('mobile-drawer');
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
   const backdrop = document.getElementById('mobile-backdrop');
-  const drawerClose = document.getElementById('drawer-close');
+  const nav = document.getElementById('mobile-nav');
   const menuIcon = document.getElementById('menu-icon');
   const closeIcon = document.getElementById('close-icon');
 
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 20) {
-      header.style.backgroundColor = 'rgba(255,255,255,0.95)';
-      header.style.backdropFilter = 'blur(8px)';
-      header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-    } else {
-      header.style.backgroundColor = 'white';
-      header.style.backdropFilter = 'none';
-      header.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
-    }
-  });
-  window.dispatchEvent(new Event('scroll'));
+  let isOpen = false;
 
-  function openDrawer() {
-    drawer?.classList.remove('translate-x-full');
-    backdrop?.classList.remove('opacity-0', 'pointer-events-none');
+  function openMenu() {
+    isOpen = true;
+    menu!.classList.remove('pointer-events-none');
+    backdrop!.classList.remove('opacity-0');
+    nav!.classList.remove('translate-x-full');
+    menuIcon!.classList.add('hidden');
+    closeIcon!.classList.remove('hidden');
+    btn!.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
-    mobileMenuBtn?.setAttribute('aria-expanded', 'true');
-    menuIcon?.classList.add('hidden');
-    closeIcon?.classList.remove('hidden');
   }
 
-  function closeDrawer() {
-    drawer?.classList.add('translate-x-full');
-    backdrop?.classList.add('opacity-0', 'pointer-events-none');
+  function closeMenu() {
+    isOpen = false;
+    backdrop!.classList.add('opacity-0');
+    nav!.classList.add('translate-x-full');
+    menuIcon!.classList.remove('hidden');
+    closeIcon!.classList.add('hidden');
+    btn!.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
-    mobileMenuBtn?.setAttribute('aria-expanded', 'false');
-    menuIcon?.classList.remove('hidden');
-    closeIcon?.classList.add('hidden');
+    setTimeout(() => { if (!isOpen) menu!.classList.add('pointer-events-none'); }, 300);
   }
 
-  mobileMenuBtn?.addEventListener('click', () => {
-    const isOpen = !drawer?.classList.contains('translate-x-full');
-    isOpen ? closeDrawer() : openDrawer();
-  });
-
-  backdrop?.addEventListener('click', closeDrawer);
-  drawerClose?.addEventListener('click', closeDrawer);
-
-  document.querySelectorAll('#mobile-drawer a').forEach(link => {
-    link.addEventListener('click', closeDrawer);
-  });
+  btn?.addEventListener('click', () => isOpen ? closeMenu() : openMenu());
+  backdrop?.addEventListener('click', closeMenu);
 </script>

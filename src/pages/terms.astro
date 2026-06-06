@@ -1,130 +1,71 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-const lastUpdated = 'March 2025';
 const email = 'zahra@seekthethrill.in';
-const phone = '+91-7975027491';
 ---
 
 <BaseLayout
   title="Terms & Conditions — Seek the Thrill"
-  description="Read the Terms and Conditions for booking trips with Seek the Thrill. Understand your rights, our policies, and how we keep your adventure safe and fair."
+  description="Terms and conditions for booking and traveling with Seek the Thrill."
 >
-  <!-- Hero -->
-  <section class="relative flex items-center justify-center overflow-hidden" style="height: 28vh; min-height: 180px; background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);">
-    <div class="relative z-10 text-center px-4">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">Terms & Conditions</h1>
-      <p class="text-white/70 text-sm">Last updated: {lastUpdated}</p>
-    </div>
-  </section>
+  <div class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
+    <div class="container-app max-w-2xl">
+      <h1 class="text-4xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Terms &amp; Conditions</h1>
+      <p class="text-sm mb-10" style="color: var(--color-gray-text);">Last updated June 2025</p>
 
-  <!-- Content -->
-  <section class="py-16">
-    <div class="container-app max-w-3xl">
-      <div class="prose-style">
+      <div class="space-y-10 text-sm leading-relaxed" style="color: var(--color-navy);">
 
-        <p class="text-base leading-relaxed mb-8" style="color: var(--color-text-secondary);">
-          By registering for a trip with Seek the Thrill, you agree to the following terms. Please read them carefully before booking.
-        </p>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Booking &amp; Registration</h2>
+          <p>By submitting a registration form and paying the advance amount, you are requesting a spot on an STT trip. Confirmation of your booking is subject to payment verification and seat availability. A confirmed spot requires a verified advance payment.</p>
+          <p class="mt-3">Registrations are accepted on a first-come-first-served basis. Submitting the form without uploading a payment screenshot does not hold your spot.</p>
+        </section>
 
-        <h2>1. Booking & Registration</h2>
-        <p>A trip booking is confirmed only after:</p>
-        <ul>
-          <li>You submit the registration form with accurate personal details.</li>
-          <li>Payment of the advance amount (or full amount) is received and verified by our team.</li>
-          <li>You receive a confirmation email from us.</li>
-        </ul>
-        <p>Seats are limited. Submitting the form does not guarantee a confirmed seat — confirmation depends on payment verification and availability.</p>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Payment Terms</h2>
+          <p>The advance amount (currently ₹3,000) is required to confirm your booking. The remaining balance is due 15 days before the trip departure date.</p>
+          <p class="mt-3">Failure to pay the balance by the due date may result in your spot being released without a refund of the advance.</p>
+          <p class="mt-3">All payments are currently accepted via UPI only. No credit or debit card payments are accepted at this time.</p>
+        </section>
 
-        <h2>2. Payments</h2>
-        <ul>
-          <li>We accept payment via UPI (QR code on the trip page) and bank transfer.</li>
-          <li>Payment receipts / screenshots must be uploaded during registration or shared on WhatsApp.</li>
-          <li>Prices listed on trip pages are per person and inclusive of the items mentioned in the "What's Included" section.</li>
-          <li>Full trip amount must be settled before the trip departure date (typically 7 days prior).</li>
-        </ul>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Cancellation &amp; Refunds</h2>
+          <p>Please refer to our <a href="/cancellation/" class="underline" style="color: var(--color-coral);">Cancellation Policy</a> for full details. In summary:</p>
+          <ul class="mt-3 space-y-1.5 list-disc list-inside">
+            <li>30+ days before departure: full refund minus ₹500 processing fee</li>
+            <li>15–29 days before: 50% refund</li>
+            <li>7–14 days before: 25% refund</li>
+            <li>Under 7 days: no refund</li>
+          </ul>
+          <p class="mt-3">All cancellation requests must be submitted in writing to <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a>.</p>
+        </section>
 
-        <h2>3. Cancellation & Refund Policy</h2>
-        <ul>
-          <li><strong>30+ days before departure:</strong> Full refund minus ₹500 processing fee.</li>
-          <li><strong>15–29 days before departure:</strong> 50% refund.</li>
-          <li><strong>7–14 days before departure:</strong> 25% refund.</li>
-          <li><strong>Less than 7 days before departure:</strong> No refund.</li>
-          <li>All cancellation requests must be submitted in writing via email to <a href={`mailto:${email}`}>{email}</a>.</li>
-          <li>In case Seek the Thrill cancels a trip due to unforeseen circumstances (weather, safety, political unrest), a full refund or trip credit will be offered.</li>
-        </ul>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Liability</h2>
+          <p>Adventure travel involves inherent risks. By participating in an STT trip, you acknowledge these risks and agree that Seek the Thrill, its founders, and trip leaders are not liable for injury, illness, loss of property, or other damages arising from participation.</p>
+          <p class="mt-3">We strongly recommend purchasing comprehensive travel insurance before your trip.</p>
+        </section>
 
-        <h2>4. Health & Safety</h2>
-        <ul>
-          <li>You are responsible for ensuring you are medically fit to participate in the trip activities.</li>
-          <li>Any pre-existing medical conditions must be disclosed at the time of registration.</li>
-          <li>Seek the Thrill reserves the right to refuse participation if it deems a traveler unfit for the trip's physical demands.</li>
-          <li>We carry a basic first-aid kit on all trips. However, we strongly recommend purchasing travel insurance before your trip.</li>
-        </ul>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Code of Conduct</h2>
+          <p>STT trips are inclusive spaces. We expect all travelers to treat fellow travelers, guides, local communities, and natural environments with respect. Seek the Thrill reserves the right to remove any participant from a trip — without refund — for conduct that violates this principle or endangers others.</p>
+        </section>
 
-        <h2>5. Conduct & Responsibility</h2>
-        <ul>
-          <li>All travelers are expected to respect fellow travelers, local communities, and the environment.</li>
-          <li>Seek the Thrill reserves the right to remove any traveler from a trip for disruptive, unsafe, or disrespectful behavior — without a refund.</li>
-          <li>Travelers are responsible for their own belongings. Seek the Thrill is not liable for loss or damage to personal property.</li>
-          <li>You must follow the instructions of trip leaders at all times, especially regarding safety.</li>
-        </ul>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Photography &amp; Content</h2>
+          <p>By joining an STT trip, you grant Seek the Thrill a non-exclusive license to use photographs or videos featuring you for marketing purposes. If you'd prefer not to be photographed or featured, let us know before the trip and we'll respect that.</p>
+        </section>
 
-        <h2>6. Itinerary Changes</h2>
-        <p>
-          While we strive to deliver the advertised itinerary, circumstances beyond our control (weather, road conditions, local factors) may require changes. Seek the Thrill reserves the right to modify the itinerary while maintaining the overall trip experience. No refunds are issued for minor itinerary adjustments.
-        </p>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Changes to Trips</h2>
+          <p>STT reserves the right to modify itineraries, dates, or locations due to safety concerns, weather, natural events, or circumstances outside our control. In such cases, we will offer a full refund or trip credit at your discretion. We do not cover any incidental costs (flights, hotels booked independently) incurred due to trip changes.</p>
+        </section>
 
-        <h2>7. Photography & Media</h2>
-        <p>
-          By participating in a Seek the Thrill trip, you consent to being photographed or filmed for promotional purposes (social media, website, marketing materials). If you prefer not to appear in any media, please inform the trip leader at the start of the trip. We will do our best to accommodate your preference.
-        </p>
-
-        <h2>8. Liability Disclaimer</h2>
-        <p>
-          Adventure travel involves inherent risks. By booking with Seek the Thrill, you acknowledge and accept these risks. Seek the Thrill, its founder, employees, and trip leaders shall not be held liable for injury, illness, death, loss, damage, or expense arising from participation in our trips, except where caused by our own gross negligence.
-        </p>
-
-        <h2>9. Contact Us</h2>
-        <p>
-          For any questions about these Terms & Conditions, contact us at:<br />
-          📧 <a href={`mailto:${email}`}>{email}</a><br />
-          📞 <a href={`tel:${phone}`}>{phone}</a>
-        </p>
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Questions</h2>
+          <p>Reach us at <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a> or on WhatsApp.</p>
+        </section>
 
       </div>
     </div>
-  </section>
+  </div>
 </BaseLayout>
-
-<style>
-  .prose-style h2 {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin: 2rem 0 0.75rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid var(--color-border);
-  }
-  .prose-style p,
-  .prose-style li {
-    font-size: 0.925rem;
-    line-height: 1.75;
-    color: var(--color-text-secondary);
-    margin-bottom: 0.6rem;
-  }
-  .prose-style ul {
-    padding-left: 1.25rem;
-    margin-bottom: 1rem;
-    list-style: disc;
-  }
-  .prose-style a {
-    color: var(--color-primary);
-    text-decoration: underline;
-  }
-  .prose-style strong {
-    color: var(--color-text-primary);
-    font-weight: 600;
-  }
-</style>

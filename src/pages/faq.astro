@@ -1,101 +1,88 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const faqs = [
+const categories = [
   {
-    category: 'Booking',
-    items: [
+    name: 'Booking',
+    questions: [
       {
-        q: 'How do I book a trip?',
-        a: 'Browse our upcoming trips and click "Register Now" on any trip page. Fill in the registration form with your personal details, pay the advance amount via UPI (QR code on the trip page), upload your payment screenshot, and submit. Our team will confirm your booking within 24 hours.',
+        q: 'How do I reserve a spot?',
+        a: "Find a trip you like, click Save my spot, fill in the form, pay the advance via UPI, upload your payment screenshot, and submit. We confirm within 24 hours.",
       },
       {
-        q: 'Is my seat confirmed once I submit the form?',
-        a: 'Submitting the form does not guarantee a confirmed seat. Confirmation depends on payment verification and seat availability. You will receive a confirmation email once your payment is verified.',
+        q: 'Can I book for a group of friends?',
+        a: "Yes — fill out one form per person. If you're all traveling together, mention it in the form and we'll try to keep you in the same batch.",
       },
       {
-        q: 'Do you offer group discounts?',
-        a: 'Yes! If you bring 5+ friends on the same trip, contact us for a group discount. Reach out via WhatsApp or email to discuss pricing.',
+        q: 'What happens after I register?',
+        a: "You'll get a confirmation email within 24 hours once we've verified your payment. If a trip fills up before we process yours, we'll reach out directly on WhatsApp.",
       },
       {
-        q: 'Can I book for someone else?',
-        a: 'Yes, but the registration form must be filled with the actual traveler\'s details (name, health info, emergency contact), not the person making the payment.',
+        q: 'Can I transfer my spot to someone else?',
+        a: "Yes, up to 7 days before departure. Email us with the new traveler's details — name, phone, and any relevant health info.",
       },
     ],
   },
   {
-    category: 'Payments',
-    items: [
+    name: 'Payment',
+    questions: [
       {
-        q: "What payment methods do you accept?",
-        a: 'We accept UPI payments (Google Pay, PhonePe, Paytm, BHIM) via the QR code on the trip page, and bank transfers. We do not accept credit/debit cards at this time.',
+        q: "What's the booking advance amount?",
+        a: "₹3,000 to confirm your spot. This is non-refundable unless we cancel the trip.",
       },
       {
-        q: 'When do I need to pay the full amount?',
-        a: 'The advance amount secures your seat. The remaining balance must be paid at least 7 days before the trip departure date. The exact advance and full amounts are shown on each trip page.',
+        q: 'When is the full payment due?',
+        a: "15 days before the trip departure date. We'll send a reminder — but it's your responsibility to pay on time or your spot may be released.",
       },
       {
-        q: 'Is the advance refundable?',
-        a: 'Advance amounts are refundable based on our cancellation policy (see below). The earlier you cancel, the higher the refund.',
-      },
-    ],
-  },
-  {
-    category: 'Cancellations & Refunds',
-    items: [
-      {
-        q: 'What is your cancellation policy?',
-        a: '30+ days before departure: full refund minus ₹500 processing fee. 15–29 days: 50% refund. 7–14 days: 25% refund. Less than 7 days: no refund. All cancellations must be in writing via email.',
+        q: 'What payment methods do you accept?',
+        a: "UPI only right now — GPay, PhonePe, Paytm, BHIM. Scan the QR code on the trip page, pay, screenshot it, upload it. Simple.",
       },
       {
-        q: 'What if Seek the Thrill cancels the trip?',
-        a: 'In case we cancel a trip due to unforeseen circumstances (weather, safety concerns, natural events), we will offer a full refund or a trip credit for a future trip of equal value.',
-      },
-      {
-        q: 'Can I transfer my booking to someone else?',
-        a: 'Yes, booking transfers are allowed up to 7 days before departure at no extra charge. Contact us via email with the new traveler\'s details.',
+        q: 'What if I need to cancel?',
+        a: "30+ days before: full refund minus ₹500 processing fee. 15–29 days: 50% refund. 7–14 days: 25% refund. Under 7 days: no refund. All cancellations must be in writing to zahra@seekthethrill.in.",
       },
     ],
   },
   {
-    category: 'Trip Experience',
-    items: [
+    name: 'What to expect',
+    questions: [
       {
-        q: 'Are trips suitable for solo travelers?',
-        a: 'Absolutely! Most of our travelers are solo adventurers. Our group trips are the perfect way to meet new people and make lasting friendships. You\'ll never feel alone on a Seek the Thrill trip!',
+        q: 'Who else comes on these trips?',
+        a: "Usually solo travelers between 22–35, mostly from major cities, all looking for something a bit more real than a resort. Friend groups too. The mix is always interesting.",
       },
       {
-        q: "What's included in the trip price?",
-        a: 'Each trip page has a detailed "What\'s Included" and "What\'s Not Included" section. Generally we include transportation, accommodation, meals as mentioned, a trip leader, activity entry fees, and basic first aid.',
+        q: "What's the group size?",
+        a: "Typically 8–20 people depending on the trip. Small enough that everyone actually knows each other by the end.",
       },
       {
-        q: 'What should I bring?',
-        a: 'Each trip page has a detailed packing list. Generally: comfortable trekking/casual clothes, sturdy footwear, sunscreen, a reusable water bottle, personal medications, and a camera. Specific gear requirements vary per trip.',
+        q: 'Is solo travel experience required?',
+        a: "Not at all. Many people on STT trips are doing their first solo or first group trip. You're not expected to know anything — just show up.",
       },
       {
-        q: 'Is there an age limit for trips?',
-        a: 'Most trips are designed for travelers aged 18–45. Some physically demanding treks may have a higher minimum fitness requirement. Age limits if any are mentioned on each trip page.',
+        q: 'What level of fitness do I need?',
+        a: "Depends on the trip. Beach escapes need very little. Mountain treks need more. Each trip page has specifics. If you're unsure, WhatsApp us — we'll tell you straight.",
+      },
+    ],
+  },
+  {
+    name: 'Safety & logistics',
+    questions: [
+      {
+        q: 'Are these trips safe for solo women?',
+        a: "Yes. Many of our travelers are solo women. We keep groups mixed, brief everyone on conduct, and Zahra personally vets every route. Message us if you have specific concerns — we'll answer honestly.",
       },
       {
         q: 'What if I have dietary restrictions?',
-        a: 'We accommodate common dietary requirements (vegetarian, vegan, gluten-free). Please mention your dietary needs in the registration form. We cannot guarantee accommodation for very specific allergies in remote locations.',
-      },
-    ],
-  },
-  {
-    category: 'Safety & Health',
-    items: [
-      {
-        q: 'How do you ensure safety on trips?',
-        a: 'All our trips have an experienced trip leader. We carry a basic first-aid kit on all trips. We conduct a safety briefing at the start of each trip. We monitor weather and local conditions closely and will modify itineraries if needed.',
+        a: "Mention it when you register. We do our best to accommodate vegetarian and vegan options everywhere. Remote areas have limited choices — we'll always tell you in advance.",
       },
       {
-        q: 'Should I get travel insurance?',
-        a: 'We strongly recommend purchasing travel insurance before your trip. Seek the Thrill carries basic first aid but is not liable for medical emergencies, hospitalisation, or evacuation costs.',
+        q: 'Do you arrange flights or trains?',
+        a: "For most trips, no — you get to the meeting point, we handle everything from there. Some trips include coordinated group travel from Delhi or Mumbai. Check the trip page.",
       },
       {
-        q: 'What happens in a medical emergency?',
-        a: 'Our trip leaders are trained in basic first aid. In a serious emergency, we will coordinate with local hospitals and contact your emergency contact. We always have an emergency action plan for each destination.',
+        q: 'What should I pack?',
+        a: "Each trip page has a packing list. The one universal rule: pack light. You'll thank yourself on day two when everyone else is dragging a suitcase uphill.",
       },
     ],
   },
@@ -104,53 +91,52 @@ const faqs = [
 
 <BaseLayout
   title="FAQ — Seek the Thrill"
-  description="Answers to your most common questions about booking trips, payments, cancellations, and what to expect on a Seek the Thrill adventure."
+  description="Everything you need to know about booking, payment, and what to expect on a Seek the Thrill trip."
 >
-  <!-- Hero -->
-  <section class="relative flex items-center justify-center overflow-hidden" style="height: 32vh; min-height: 200px; background-image: url('https://images.unsplash.com/photo-1533130061792-64b345e4a833?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;">
-    <div class="absolute inset-0" style="background: rgba(0,0,0,0.6);"></div>
-    <div class="relative z-10 text-center px-4">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">Frequently Asked Questions</h1>
-      <p class="text-white/80 text-base md:text-lg">Everything you need to know before your adventure</p>
+
+  <!-- Header -->
+  <section class="py-16" style="background-color: var(--color-blush);">
+    <div class="container-app text-center">
+      <h1 class="text-4xl lg:text-5xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+        Questions
+      </h1>
+      <p class="text-base" style="color: var(--color-gray-text);">
+        Answers to things people actually ask.
+      </p>
     </div>
   </section>
 
-  <!-- FAQ Content -->
-  <section class="py-16">
+  <!-- FAQ Sections -->
+  <section class="py-14 lg:py-20" style="background-color: var(--color-gray-soft);">
     <div class="container-app max-w-3xl">
-
-      <!-- Quick Nav -->
-      <div class="flex flex-wrap gap-2 mb-12 pb-6 border-b" style="border-color: var(--color-border);">
-        {faqs.map(cat => (
-          <a
-            href={`#${cat.category.toLowerCase().replace(/\s+/g, '-')}`}
-            class="text-sm font-semibold px-4 py-1.5 rounded-full border transition-colors hover:text-white"
-            style="border-color: var(--color-primary); color: var(--color-primary);"
-            onmouseover="this.style.background='var(--color-primary)'; this.style.color='white';"
-            onmouseout="this.style.background=''; this.style.color='var(--color-primary)';"
-          >
-            {cat.category}
-          </a>
-        ))}
-      </div>
-
-      {faqs.map(cat => (
-        <div id={cat.category.toLowerCase().replace(/\s+/g, '-')} class="mb-12 scroll-mt-24">
-          <h2 class="text-xl font-bold mb-5 flex items-center gap-2" style="font-family: var(--font-display); color: var(--color-text-primary);">
-            <span class="w-1 h-6 rounded-full inline-block flex-shrink-0" style="background: var(--color-accent);"></span>
-            {cat.category}
+      {categories.map((category) => (
+        <div class="mb-12">
+          <h2 class="text-xl font-bold mb-5" style="font-family: var(--font-display); color: var(--color-navy);">
+            {category.name}
           </h2>
-          <div class="space-y-3">
-            {cat.items.map(faq => (
-              <details class="border rounded-xl overflow-hidden group" style="border-color: var(--color-border);">
-                <summary class="px-6 py-4 font-semibold cursor-pointer select-none flex items-center justify-between list-none gap-4" style="font-family: var(--font-display); color: var(--color-text-primary);">
-                  <span>{faq.q}</span>
-                  <svg class="w-5 h-5 flex-shrink-0 transition-transform group-open:rotate-180" style="color: var(--color-accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="space-y-2">
+            {category.questions.map((item) => (
+              <details
+                class="bg-white rounded-xl overflow-hidden border group"
+                style="border-color: var(--color-border);"
+              >
+                <summary
+                  class="px-5 py-4 font-medium text-sm cursor-pointer select-none flex items-center justify-between list-none"
+                  style="color: var(--color-navy);"
+                >
+                  {item.q}
+                  <svg
+                    class="w-4 h-4 flex-shrink-0 ml-3 transition-transform duration-200 group-open:rotate-180"
+                    style="color: var(--color-gray-text);"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </summary>
-                <div class="px-6 pb-5 text-sm leading-relaxed" style="color: var(--color-text-secondary);">
-                  {faq.a}
+                <div class="px-5 pb-5 pt-1 text-sm leading-relaxed" style="color: var(--color-gray-text);">
+                  {item.a}
                 </div>
               </details>
             ))}
@@ -159,28 +145,24 @@ const faqs = [
       ))}
 
       <!-- Still have questions -->
-      <div class="mt-12 rounded-2xl p-8 text-center" style="background: var(--color-surface-elevated); border: 1px solid var(--color-border);">
-        <h3 class="text-xl font-bold mb-2" style="font-family: var(--font-display);">Still have questions?</h3>
-        <p class="text-sm mb-5" style="color: var(--color-text-secondary);">Can't find what you're looking for? We're happy to help!</p>
-        <div class="flex flex-wrap justify-center gap-3">
-          <a
-            href="/contact/"
-            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm text-white transition-all hover:opacity-90"
-            style="background: var(--color-primary);"
-          >
-            Contact Us
-          </a>
-          <a
-            href="https://wa.me/917975027491?text=Hi%2C%20I%20have%20a%20question%20about%20a%20trip!"
-            target="_blank" rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm text-white transition-all hover:opacity-90"
-            style="background: #25D366;"
-          >
-            WhatsApp Us
-          </a>
-        </div>
+      <div class="mt-10 text-center p-8 rounded-2xl" style="background-color: var(--color-blush);">
+        <h3 class="font-bold text-lg mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Still have a question?</h3>
+        <p class="text-sm mb-5" style="color: var(--color-gray-text);">WhatsApp is the fastest way to reach us.</p>
+        <a
+          href="https://wa.me/917975027491?text=Hi%2C%20I%20have%20a%20question%20about%20a%20Seek%20the%20Thrill%20trip."
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 font-semibold text-white text-sm px-6 py-3 rounded-full"
+          style="background-color: var(--color-coral);"
+        >
+          Ask on WhatsApp →
+        </a>
       </div>
-
     </div>
   </section>
+
 </BaseLayout>
+
+<style>
+  details > summary::-webkit-details-marker { display: none; }
+</style>

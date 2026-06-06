@@ -1,137 +1,81 @@
-name: Meghalaya - Living Root Bridges Trek
+title: Meghalaya — Living Root Bridges
+slug: meghalaya-living-root-bridges
 location: Meghalaya
-difficulty: Moderate
 status: upcoming
-shortDescription: Trek through Meghalaya's living root bridges, explore
-  limestone caves, and discover the magic of India's Northeast. An adventure
-  like no other.
-categories:
-  - india
-  - adventure
-  - mountain
-  - cultural
-  - week-long
-startDate: 2026-10-20
-endDate: 2026-10-25
+description: >
+  Meghalaya is the wettest place on earth, and somehow that's exactly the point. The living root bridges in Nongriat are built by growing fig tree roots across rivers — some of them are 500 years old. You'll walk through clouds, wade through streams, and spend nights in villages where electricity arrived within living memory.
+coverImage: https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=1200&auto=format&fit=crop&q=80
+batches:
+  - id: meghalaya-jun-2026
+    startDate: "2026-06-20"
+    endDate: "2026-06-25"
+    price: 14500
+    totalSpots: 12
+    bookedSpots: 0
+  - id: meghalaya-oct-2026
+    startDate: "2026-10-10"
+    endDate: "2026-10-15"
+    price: 14500
+    totalSpots: 12
+    bookedSpots: 0
 duration: 6 Days, 5 Nights
-pricePerPerson: 22000
-minGroupSize: 8
-maxGroupSize: 12
-currentBookings: 4
 highlights:
-  - Double-decker living root bridge trek
-  - Rainbow Falls waterfall
-  - Dawki river (crystal clear waters)
-  - Mawlynnong - Asia's cleanest village
-  - Limestone caves exploration
-  - Local Khasi culture experience
-  - Homestays in remote villages
+  - Trek to the Double Decker Living Root Bridge
+  - Swim in naturally blue Umngot River at Dawki
+  - Drive through the cloud-kissed roads of Cherrapunji
+  - Village stays in Nongriat
+  - Nohkalikai Falls — India's tallest plunge waterfall
+  - Mawsmai Caves exploration
 itinerary:
-  - dayNumber: 1
-    dayTitle: Guwahati to Cherrapunji
-    activities: Arrival in Guwahati (morning flight/train). Drive to Cherrapunji
-      (5-6 hours). En route Umiam Lake stop. Check-in to homestay. Evening
-      Nohkalikai Falls viewpoint. Group orientation and trek briefing. Dinner
-      with local family.
-    accommodation: Homestay in Cherrapunji
-    breakfast: false
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: Private cab from Guwahati
-    specialNotes: Carry raincoat from Day 1 — Cherrapunji is the wettest place on earth!
-  - dayNumber: 2
-    dayTitle: Double-Decker Root Bridge Trek
-    activities: Early breakfast (6 AM). Begin trek to Nongriat village (3,500 steps
-      down). Visit single-decker root bridge. Continue to famous double-decker
-      root bridge. Swim in natural pool. Lunch at local village home. Optional
-      trek to Rainbow Falls. Evening stay in village homestay.
-    accommodation: Homestay in Nongriat
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: Lunch will be a local meal at the village
-    transport: ""
-    specialNotes: This is a demanding trek. 3,500 steps down and same back up. Good
-      trekking shoes essential!
-  - dayNumber: 3
-    dayTitle: Trek Back & Mawlynnong
-    activities: Breakfast in village. Begin uphill trek back (3,500 steps up). Lunch
-      in Cherrapunji. Drive to Mawlynnong (Asia's cleanest village). Explore
-      village and sky-view platform. Walk through living root bridge in village.
-      Evening relax in homestay.
-    accommodation: Homestay in Mawlynnong
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 4
-    dayTitle: Dawki & Shnongpdeng
-    activities: Breakfast. Visit Dawki river (crystal clear waters). Boat ride on
-      Dawki (Indo-Bangladesh border). Drive to Shnongpdeng. Riverside camping
-      setup. Optional activities cliff jumping, kayaking, snorkeling. Bonfire
-      and local music night.
-    accommodation: Riverside camps at Shnongpdeng
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: Optional adventure activities charged separately.
-  - dayNumber: 5
-    dayTitle: Caves & Shillong
-    activities: Morning kayaking session. Drive to Mawsmai Caves (limestone caves).
-      Cave exploration. Continue to Shillong. Evening Police Bazaar market
-      visit. Overnight in Shillong.
-    accommodation: Hotel in Shillong
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 6
-    dayTitle: Shillong to Guwahati Departure
-    activities: Breakfast. Visit Elephant Falls. Drive to Guwahati (3 hours).
-      Airport/railway station drop. Trip concludes.
-    accommodation: ""
-    breakfast: true
-    lunch: false
-    dinner: false
-    mealsNotes: ""
-    transport: Private cab to Guwahati
-    specialNotes: ""
+  - day: 1
+    title: Fly to Shillong — Arrival
+    description: Flights into Guwahati or Shillong. Group pickup and drive to Shillong. Evening walk through Police Bazar. Welcome dinner.
+    stay: Guesthouse, Shillong
+    meals: [D]
+    transport: Flight + private cab
+  - day: 2
+    title: Shillong to Cherrapunji
+    description: Drive to Cherrapunji — one of the rainiest places on earth. Visit Nohkalikai Falls, Mawsmai Caves, and Seven Sisters Falls. Afternoon free to soak in the mist.
+    stay: Guesthouse, Cherrapunji
+    meals: [B, L, D]
+    transport: Private cab
+  - day: 3
+    title: Trek to Living Root Bridges
+    description: 3,500 steps down to Nongriat village. Trek to the Double Decker Living Root Bridge. Swim in clear mountain streams. Overnight in the village.
+    stay: Homestay, Nongriat village
+    meals: [B, L, D]
+    transport: On foot
+    note: This is a demanding day — 3,500 steps down and back up. Worth every one of them.
+  - day: 4
+    title: Back to Cherrapunji + Dawki
+    description: Morning at leisure in Nongriat. Trek back up. Drive to Dawki on the Bangladesh border — the river here is so clear you can see the bottom from a boat.
+    stay: Guesthouse, Dawki
+    meals: [B, L, D]
+    transport: On foot + private cab
+  - day: 5
+    title: Dawki to Shillong — Mawlynnong
+    description: Morning boat ride on Umngot River. Drive through Mawlynnong — the cleanest village in Asia. Back to Shillong by evening.
+    stay: Guesthouse, Shillong
+    meals: [B, L, D]
+    transport: Private cab
+  - day: 6
+    title: Shillong — Departure
+    description: Morning free to explore. Checkout. Transfers to airport for return flights.
+    stay: ""
+    meals: [B]
+    transport: Private cab to airport
 included:
-  - All transportation (Guwahati to Guwahati)
-  - 5 nights accommodation (mix of homestays, camps, hotel)
-  - All meals (5 Breakfasts, 6 Lunches, 5 Dinners)
-  - Experienced local trek leader
-  - All entry fees and permits
-  - Dawki boat ride
-  - Mawsmai caves entry
-  - Camping equipment
-  - First aid kit and emergency support
-notIncluded:
-  - Flights/trains to Guwahati
+  - Return flights from Delhi (group booking assistance)
+  - 5 nights accommodation
+  - All meals as per itinerary
+  - All sightseeing and entry fees
+  - Boat ride at Dawki
+  - Experienced trip leader
+  - Porter support for Root Bridge trek
+excluded:
+  - Flights (we coordinate group booking, you pay your own)
+  - Personal expenses
   - Travel insurance
-  - Optional adventure activities at Shnongpdeng
-  - Personal expenses and tips
-  - Any meals not mentioned
-meetingPoint: Guwahati Airport/Railway Station pickup. Coordinator will receive you.
-meetingTime: 09:00
-packingList:
-  - Trekking shoes (must have good grip)
-  - Quick-dry trek clothes
-  - Raincoat/poncho (essential!)
-  - Swimwear
-  - Towel
-  - Trekking poles (recommended)
-  - Personal medications
-  - Torch/headlamp
-  - Waterproof bag for essentials
-  - Power bank
-  - Sunscreen and insect repellent
+  - Tips
+paymentAmount: 3000
 registrationEnabled: true
-registrationDeadline: 2026-10-10

@@ -1,141 +1,85 @@
-name: Spiti Valley Adventure
+title: Spiti Valley Adventure
+slug: spiti-valley-adventure
 location: Himachal Pradesh
-difficulty: Moderate
 status: upcoming
-shortDescription: Journey through the mystical landscapes of Spiti Valley, often
-  called 'Little Tibet'. High-altitude passes, ancient monasteries, and
-  stargazing await.
-categories:
-  - india
-  - adventure
-  - mountain
-  - week-long
-startDate: 2026-05-15
-endDate: 2026-05-21
+description: >
+  Spiti sits at 12,500 feet and doesn't apologize for it. You'll drive through passes that close six months a year, sleep near monasteries older than most countries, and stare at a sky full of stars with zero light pollution. This is one of those trips people mean when they say it changed something in them.
+coverImage: https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&auto=format&fit=crop&q=80
+batches:
+  - id: spiti-may-2026
+    startDate: "2026-05-15"
+    endDate: "2026-05-21"
+    price: 18500
+    totalSpots: 15
+    bookedSpots: 6
 duration: 7 Days, 6 Nights
-pricePerPerson: 18500
-minGroupSize: 8
-maxGroupSize: 15
-currentBookings: 6
 highlights:
   - Visit Key Monastery, perched at 13,668 ft
-  - Explore the highest village in Asia - Komic
-  - Witness the stunning Chandratal Lake
-  - Experience local Tibetan culture and cuisine
-  - Drive through Kunzum Pass (15,059 ft)
-  - Visit the ancient Tabo Monastery
-  - Stargazing in the clear Himalayan skies
+  - Explore Komic — the highest motorable village in Asia
+  - Witness Chandratal Lake at sunrise
+  - Drive through Kunzum Pass at 15,059 ft
+  - Sleep under a sky full of Himalayan stars
+  - Visit the ancient Tabo Monastery (996 AD)
 itinerary:
-  - dayNumber: 1
-    dayTitle: Delhi to Shimla
-    activities: Early morning departure from Delhi. Scenic drive through Himachal.
-      Arrive Shimla by evening. Group introductions and dinner.
-    accommodation: Hotel in Shimla
-    breakfast: false
-    lunch: false
-    dinner: true
-    mealsNotes: ""
+  - day: 1
+    title: Delhi to Shimla
+    description: Early morning departure from Delhi. Scenic drive through Himachal Pradesh. Arrive Shimla by evening. Group dinner and introductions — this is where the trip actually starts.
+    stay: Hotel in Shimla
+    meals: [D]
     transport: Volvo bus Delhi to Shimla
-    specialNotes: ""
-  - dayNumber: 2
-    dayTitle: Shimla to Kalpa
-    activities: Drive to Kalpa via Rampur. Visit Narkanda for apple orchards. Reach
-      Kalpa with views of Kinner Kailash. Evening walk in local market.
-    accommodation: Homestay in Kalpa
-    breakfast: true
-    lunch: false
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 3
-    dayTitle: Kalpa to Tabo
-    activities: Cross Khab Bridge and enter Spiti. Visit ancient Tabo Monastery (996
-      AD). Explore the mud-brick village. Witness sunset over Spiti Valley.
-    accommodation: Guesthouse in Tabo
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 4
-    dayTitle: Tabo to Kaza
-    activities: Drive to Kaza (Spiti headquarters). Visit Dhankar Monastery and
-      Lake. Stop at Pin Valley viewpoint. Evening free to explore Kaza market.
-    accommodation: Hotel in Kaza
-    breakfast: true
-    lunch: false
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 5
-    dayTitle: Kaza Exploration - Komic, Key, Kibber
-    activities: Visit highest motorable village - Komic. Explore iconic Key
-      Monastery. Drive to Kibber village. Optional short hike to viewpoints.
-      Return to Kaza.
-    accommodation: Hotel in Kaza
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: ""
-  - dayNumber: 6
-    dayTitle: Kaza to Chandratal via Kunzum Pass
-    activities: Early departure. Cross Kunzum Pass at 15,059 ft. Reach Chandratal
-      (Moon Lake). Camping by the lake. Bonfire and stargazing.
-    accommodation: Camps at Chandratal
-    breakfast: true
-    lunch: true
-    dinner: true
-    mealsNotes: ""
-    transport: ""
-    specialNotes: Carry warm clothes! Temperature can drop significantly at night.
-  - dayNumber: 7
-    dayTitle: Chandratal to Manali and Return
-    activities: Sunrise at Chandratal. Drive to Manali via Rohtang Pass. Trip
-      concludes in Manali. Evening bus/flight to Delhi.
-    accommodation: ""
-    breakfast: true
-    lunch: false
-    dinner: false
-    mealsNotes: ""
+  - day: 2
+    title: Shimla to Kalpa
+    description: Drive to Kalpa via Rampur. Stop at Narkanda's apple orchards. Arrive Kalpa with sweeping views of Kinner Kailash. Evening walk through the local market.
+    stay: Homestay in Kalpa
+    meals: [B, D]
+    transport: Private cab
+  - day: 3
+    title: Kalpa to Tabo
+    description: Cross Khab Bridge and enter Spiti Valley. Visit the ancient Tabo Monastery (996 AD). Explore the mud-brick village. Watch sunset over the valley.
+    stay: Guesthouse in Tabo
+    meals: [B, L, D]
+    transport: Private cab
+  - day: 4
+    title: Tabo to Kaza
+    description: Drive to Kaza, the de facto headquarters of Spiti. Visit Dhankar Monastery and Lake. Stop at Pin Valley viewpoint. Evening free to explore Kaza market.
+    stay: Hotel in Kaza
+    meals: [B, D]
+    transport: Private cab
+  - day: 5
+    title: Kaza Exploration — Komic, Key, Kibber
+    description: Visit Komic, the highest motorable village in Asia. Explore the iconic Key Monastery. Drive to Kibber village. Optional short hike to viewpoints.
+    stay: Hotel in Kaza
+    meals: [B, L, D]
+    transport: Private cab
+  - day: 6
+    title: Kaza to Chandratal via Kunzum Pass
+    description: Early departure to beat the traffic at Kunzum Pass (15,059 ft). Reach Chandratal — Moon Lake. Camp by the water. Bonfire and stargazing at night.
+    stay: Camps at Chandratal
+    meals: [B, L, D]
+    transport: Private cab
+    note: Carry warm clothes. Temperature drops significantly at night.
+  - day: 7
+    title: Chandratal to Manali and Home
+    description: Sunrise over Chandratal. Drive to Manali via Rohtang Pass. Trip ends in Manali — evening bus or flight back to Delhi.
+    stay: ""
+    meals: [B]
     transport: Tempo Traveller to Manali
-    specialNotes: ""
 included:
-  - Transportation from Delhi to Delhi (Volvo/Tempo Traveller)
+  - Transportation from Delhi to Manali (Volvo + Tempo Traveller)
   - 6 nights accommodation
-  - 6 Breakfasts, 3 Lunches, 6 Dinners
-  - Experienced trip leader
+  - Meals as per itinerary
+  - Experienced trip leader throughout
   - All monastery entry fees
   - Inner line permits
   - First aid kit
   - Camping equipment at Chandratal
-notIncluded:
+excluded:
   - Personal expenses
-  - Any meals not mentioned
+  - Meals not mentioned in itinerary
   - Travel insurance
   - Emergency evacuation charges
   - Tips and gratuities
-  - Additional activities not in itinerary
-meetingPoint: Assembly at ISBT Kashmiri Gate, Delhi at 6:00 PM on Day 0 (14th
-  May). Look for the Seek the Thrill banner near Gate 3.
-meetingTime: 18:00
-packingList:
-  - Warm clothing (temperatures can drop below 0°C)
-  - Trekking shoes
-  - Sunglasses and sunscreen
-  - Personal medications
-  - Power bank
-  - Reusable water bottle
-  - Torch/headlamp
-  - Personal toiletries
-  - Camera
-  - Altitude sickness medication (Diamox — consult doctor)
-importantNotes: This is a high-altitude trip. Please consult your doctor before
-  booking if you have any heart or respiratory conditions. Acclimatization is
-  built into the itinerary.
+paymentAmount: 3000
+meetingPoint: ISBT Kashmiri Gate, Delhi at 6:00 PM on Day 0 (14th May). Look for the Seek the Thrill banner near Gate 3.
+importantNotes: This is a high-altitude trip. Please consult your doctor before booking if you have any heart or respiratory conditions. Acclimatization is built into the itinerary.
 registrationEnabled: true
-registrationDeadline: 2026-05-10

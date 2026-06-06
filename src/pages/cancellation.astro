@@ -1,0 +1,69 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+const email = 'zahra@seekthethrill.in';
+---
+
+<BaseLayout
+  title="Cancellation Policy — Seek the Thrill"
+  description="Seek the Thrill's cancellation and refund policy."
+>
+  <div class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
+    <div class="container-app max-w-2xl">
+      <h1 class="text-4xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Cancellation Policy</h1>
+      <p class="text-sm mb-10" style="color: var(--color-gray-text);">Last updated June 2025</p>
+
+      <div class="space-y-8 text-sm leading-relaxed" style="color: var(--color-navy);">
+
+        <p>We know plans change. Here's how refunds work:</p>
+
+        <!-- Refund table -->
+        <div class="rounded-xl overflow-hidden border" style="border-color: var(--color-border);">
+          <div class="grid grid-cols-2 text-xs font-semibold uppercase tracking-widest px-5 py-3" style="background-color: var(--color-blush); color: var(--color-gray-text); border-bottom: 1px solid var(--color-border);">
+            <span>Notice period</span>
+            <span>Refund</span>
+          </div>
+          {[
+            { period: '30+ days before departure', refund: 'Full refund minus ₹500 processing fee' },
+            { period: '15–29 days before departure', refund: '50% of total amount paid' },
+            { period: '7–14 days before departure', refund: '25% of total amount paid' },
+            { period: 'Under 7 days', refund: 'No refund' },
+          ].map((row, i) => (
+            <div
+              class="grid grid-cols-2 px-5 py-4"
+              style={`border-bottom: ${i < 3 ? '1px solid var(--color-border)' : 'none'}; background: white;`}
+            >
+              <span style="color: var(--color-navy);">{row.period}</span>
+              <span style={row.refund === 'No refund' ? 'color: var(--color-danger);' : 'color: #22A654;'}>{row.refund}</span>
+            </div>
+          ))}
+        </div>
+
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">How to cancel</h2>
+          <p>Email us at <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a> with your name, trip name, and the reason for cancellation. Cancellations are processed once we receive your written request. The date of your email is considered the cancellation date.</p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">If STT cancels the trip</h2>
+          <p>If we cancel a trip for any reason — weather, safety, force majeure, insufficient registrations — you'll receive a full refund of everything you've paid, or a full trip credit for a future trip of equal value. Your choice.</p>
+          <p class="mt-3">We don't cover flights, hotels, or any travel arrangements you've made independently. Please factor that into your travel insurance decisions.</p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Advance amount</h2>
+          <p>The ₹3,000 advance is non-refundable in all cancellations initiated by the traveler. It is refundable only if STT cancels the trip.</p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Refund timeline</h2>
+          <p>Refunds are processed within 7–10 business days of your cancellation request being confirmed. They are issued to the original payment method where possible.</p>
+        </section>
+
+        <div class="rounded-xl p-5" style="background-color: var(--color-blush);">
+          <p>Questions about a specific booking? Reach us at <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a> or on WhatsApp — we'll sort it out.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</BaseLayout>
