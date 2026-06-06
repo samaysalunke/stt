@@ -14,6 +14,32 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const rawNewSlug = sanitizeInput(body.get('newSlug'));
   const newSlug = rawNewSlug ? slugify(rawNewSlug) : oldSlug;
 
+  // Departure dates (batches): parallel arrays -> objects. Filter out blank rows.
+  const bStart = body.getAll('batchStart[]').map(s => sanitizeInput(s));
+  const bEnd = body.getAll('batchEnd[]').map(s => sanitizeInput(s));
+  const bPrice = body.getAll('batchPrice[]').map(s => Number(s));
+  const bTotal = body.getAll('batchTotal[]').map(s => Number(s));
+  const bBooked = body.getAll('batchBooked[]').map(s => Number(s));
+  const bId = body.getAll('batchId[]').map(s => sanitizeInput(s));
+  const batches = bStart
+    .map((startDate, i) => ({
+      id: bId[i] || (startDate ? `${newSlug}-${startDate}` : ''),
+      startDate,
+      endDate: bEnd[i] || '',
+      price: Number.isFinite(bPrice[i]) ? Math.round(bPrice[i]) : null,
+      totalSpots: Number.isFinite(bTotal[i]) ? bTotal[i] : null,
+      bookedSpots: Number.isFinite(bBooked[i]) ? bBooked[i] : 0,
+    }))
+    .filter(b => b.startDate);
+
+  // Occupancy / room-sharing options: parallel label[] + price[] arrays -> objects
+  const sharingLabels = body.getAll('sharingLabel[]').map(s => sanitizeInput(s));
+  const sharingPrices = body.getAll('sharingPrice[]').map(s => Number(s));
+  const sharingOptions = sharingLabels
+    .map((label, i) => ({ label, price: sharingPrices[i] }))
+    .filter(o => o.label && Number.isFinite(o.price) && o.price > 0)
+    .map(o => ({ id: slugify(o.label), label: o.label, price: Math.round(o.price) }));
+
   const highlights = body.getAll('highlights[]').map(h => sanitizeInput(h)).filter(Boolean);
   const included = body.getAll('included[]').map(h => sanitizeInput(h)).filter(Boolean);
   const notIncluded = body.getAll('notIncluded[]').map(h => sanitizeInput(h)).filter(Boolean);
@@ -67,6 +93,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     fullPaymentAmount: body.get('fullPaymentAmount') ? Number(body.get('fullPaymentAmount')) : null,
     paymentInstructions: sanitizeInput(body.get('paymentInstructions')) || null,
     linkedAlbumSlug: sanitizeInput(body.get('linkedAlbumSlug')) || null,
+    sharingOptions,
+    batches,
   };
 
   if (newSlug !== oldSlug) {
