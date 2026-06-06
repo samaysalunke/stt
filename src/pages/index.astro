@@ -110,15 +110,12 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
   <!-- ── UPCOMING TRIPS ────────────────────────────────────── -->
   <section class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
     <div class="container-app">
-      <div class="flex items-end justify-between mb-10">
-        <div>
-          <h2 class="font-bold leading-none" style="font-family: var(--font-display); color: var(--color-navy); font-size: clamp(1.9rem, 8vw, 4rem);">
-            Where to, <span style="font-style: italic; color: var(--color-coral);">wanderer?</span>
-          </h2>
-        </div>
-        <a href="/trips/" class="text-sm font-semibold hidden sm:block" style="color: var(--color-coral);">
-          See all trips →
-        </a>
+      <h2 class="whitespace-nowrap font-bold leading-[1.05] tracking-tight" style="font-family: var(--font-display); color: var(--color-navy); font-size: clamp(1.9rem, 8vw, 4rem);">
+        Where to, <span style="font-style: italic; color: var(--color-coral);">wanderer?</span>
+      </h2>
+      <div class="mt-10 mb-8 flex items-end justify-between gap-6">
+        <h3 class="font-display text-2xl" style="color: var(--color-navy);">Featured Trips</h3>
+        <a href="/trips/" class="text-sm font-medium hover:underline" style="color: var(--color-coral);">See All →</a>
       </div>
 
       {featuredTrips.length > 0 ? (
@@ -147,10 +144,6 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       ) : (
         <p class="text-center py-12" style="color: var(--color-gray-text);">More trips coming soon. Stay tuned.</p>
       )}
-
-      <div class="text-center mt-10 sm:hidden">
-        <a href="/trips/" class="font-semibold text-sm" style="color: var(--color-coral);">See all trips →</a>
-      </div>
     </div>
   </section>
 
@@ -191,22 +184,16 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       {allTestimonials.length > 0 ? (
         <div class="flex gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
           {allTestimonials.map((t) => (
-            <div class="reveal flex-shrink-0 basis-[84%] snap-start sm:basis-[55%] lg:basis-[28%] bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
-              <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{t.quote}"</p>
-              <div class="flex items-center gap-3">
-                {t.photo ? (
-                  <img src={t.photo} alt={t.name} class="w-9 h-9 rounded-full object-cover" loading="lazy" />
-                ) : (
-                  <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background-color: var(--color-coral);">
-                    {(t.name as string)?.[0] ?? '?'}
-                  </div>
-                )}
+            <figure class="reveal flex shrink-0 basis-[84%] snap-start flex-col gap-6 rounded-2xl bg-white p-7 sm:basis-[55%] lg:basis-[28%]" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+              <blockquote class="font-display text-lg leading-snug" style="color: var(--color-navy);">"{t.quote}"</blockquote>
+              <figcaption class="mt-auto flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{(t.name as string)?.[0] ?? '?'}</span>
                 <div>
-                  <div class="text-sm font-semibold" style="color: var(--color-navy);">{t.name}</div>
-                  {t.tripName && <div class="text-xs" style="color: var(--color-gray-text);">{t.tripName}</div>}
+                  <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
+                  {t.tripName && <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName}</p>}
                 </div>
-              </div>
-            </div>
+              </figcaption>
+            </figure>
           ))}
         </div>
       ) : (
@@ -217,18 +204,16 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
             { name: 'Rahul M.', trip: 'Gokarna', quote: 'Did not expect to unplug so completely. No agenda, no plans — exactly what I needed.' },
             { name: 'Ananya K.', trip: 'Meghalaya', quote: 'Solo travel always felt intimidating. This was the nudge I needed. Would do it again tomorrow.' },
           ].map((q) => (
-            <div class="reveal flex-shrink-0 basis-[84%] snap-start sm:basis-[55%] lg:basis-[28%] bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
-              <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{q.quote}"</p>
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white" style="background-color: var(--color-coral);">
-                  {q.name[0]}
-                </div>
+            <figure class="reveal flex shrink-0 basis-[84%] snap-start flex-col gap-6 rounded-2xl bg-white p-7 sm:basis-[55%] lg:basis-[28%]" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
+              <blockquote class="font-display text-lg leading-snug" style="color: var(--color-navy);">"{q.quote}"</blockquote>
+              <figcaption class="mt-auto flex items-center gap-3">
+                <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{q.name[0]}</span>
                 <div>
-                  <div class="text-sm font-semibold" style="color: var(--color-navy);">{q.name}</div>
-                  <div class="text-xs" style="color: var(--color-gray-text);">{q.trip}</div>
+                  <p class="text-sm font-medium" style="color: var(--color-navy);">{q.name}</p>
+                  <p class="text-xs" style="color: var(--color-gray-text);">{q.trip}</p>
                 </div>
-              </div>
-            </div>
+              </figcaption>
+            </figure>
           ))}
         </div>
       )}

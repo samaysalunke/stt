@@ -72,116 +72,70 @@ const formattedPrice = price
   ? `₹${price.toLocaleString('en-IN')}`
   : null;
 
-// Status pill — only shown when notable (filling fast / sold out). A plain
-// "upcoming" trip shows no status pill for a cleaner card; the duration pill
-// carries the top-left slot instead.
 const isSoldOut = status === 'sold_out' || status === 'sold-out';
-const isFillingFast = status === 'filling_fast';
-const statusPill = isSoldOut
-  ? { label: 'SOLD OUT', bg: 'rgba(156,163,175,0.95)', color: '#fff' }
-  : isFillingFast
-    ? { label: 'FILLING FAST', bg: 'rgba(245,158,11,0.95)', color: '#fff' }
-    : null;
-const hasMultipleBatches = batches.length > 1;
 ---
 
 <article
-  class={`bg-white rounded-3xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl group ${isSoldOut ? 'opacity-60 grayscale' : ''}`}
-  style="box-shadow: 0 1px 4px rgba(0,0,0,0.08);"
+  class="group flex flex-col overflow-hidden rounded-3xl bg-white transition-all hover:-translate-y-0.5"
+  style="box-shadow: 0 4px 30px -12px rgba(27,43,58,0.18);"
 >
   <!-- Cover image -->
-  <a href={`/trips/${slug}/`} class="block relative overflow-hidden" style="aspect-ratio: 4/3;">
+  <a href={`/trips/${slug}/`} class="relative block overflow-hidden" style="aspect-ratio: 4/3;">
     <img
       src={img}
       alt={tripName}
-      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+      class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
       loading="lazy"
     />
     {duration && (
       <span
-        class="absolute top-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-full"
-        style="background: rgba(255,255,255,0.92); color: var(--color-navy); backdrop-filter: blur(6px);"
+        class="absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white"
+        style="background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);"
       >
         {duration}
-      </span>
-    )}
-    {statusPill && (
-      <span
-        class="absolute top-3 right-3 text-[11px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-        style={`background-color: ${statusPill.bg}; color: ${statusPill.color};`}
-      >
-        {statusPill.label}
-      </span>
-    )}
-    {moreDates > 0 && !statusPill && (
-      <span
-        class="absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full"
-        style="background: rgba(0,0,0,0.55); color: white; backdrop-filter: blur(4px);"
-      >
-        +{moreDates} more {moreDates === 1 ? 'date' : 'dates'}
       </span>
     )}
   </a>
 
   <!-- Card body -->
-  <div class="flex flex-col flex-1 p-5">
-    <h3 class="text-lg font-bold leading-snug mb-2" style="font-family: var(--font-display); color: var(--color-navy);">
-      <a href={`/trips/${slug}/`} class="hover:opacity-80 transition-opacity">{tripName}</a>
-    </h3>
-
-    <!-- Meta row: location + dates -->
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-4" style="color: var(--color-gray-text);">
-      {location && (
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          </svg>
-          {location}
-        </span>
-      )}
-      {displayDate && (
-        <span class="flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          {displayDate}
-        </span>
-      )}
+  <div class="flex flex-1 flex-col gap-5 p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <a href={`/trips/${slug}/`}>
+          <h3 class="font-display text-2xl leading-tight transition-colors group-hover:text-[color:var(--color-coral)]" style="color: var(--color-navy);">{tripName}</h3>
+        </a>
+        {location && (
+          <p class="mt-2 inline-flex items-center gap-1.5 text-sm" style="color: var(--color-gray-text);">
+            <svg class="h-4 w-4" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+            {location}
+          </p>
+        )}
+      </div>
+      <div class="shrink-0 text-right">
+        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{formattedPrice ?? '—'}</p>
+        <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
+      </div>
     </div>
 
-    <!-- Spots progress bar -->
-    {totalSpots && spotsLeft !== null && !isSoldOut && (
-      <div class="mb-4">
-        <div class="flex justify-between text-xs mb-1.5" style="color: var(--color-gray-text);">
-          <span>{bookedSpots}/{totalSpots} booked</span>
-          <span style={spotsLeft <= 4 ? 'color: var(--color-coral); font-weight: 600;' : ''}>{spotsLeft} spots left</span>
-        </div>
-        <div class="w-full h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-peach);">
-          <div
-            class="h-full rounded-full transition-all duration-300"
-            style={`width: ${Math.min(100, (bookedSpots / totalSpots) * 100)}%; background-color: ${spotsLeft <= 4 ? 'var(--color-coral)' : 'var(--color-navy)'};`}
-          ></div>
-        </div>
+    {isSoldOut ? (
+      <span class="mt-auto inline-flex cursor-not-allowed items-center justify-center rounded-full px-6 py-4 text-base font-medium" style="background-color: #e5e7eb; color: #9ca3af;">
+        Sold out
+      </span>
+    ) : (
+      <div class="mt-auto flex flex-col gap-2">
+        <a
+          href={`/trips/${slug}/`}
+          class="inline-flex items-center justify-center rounded-full px-6 py-4 font-display text-base font-medium text-white transition-transform hover:-translate-y-0.5"
+          style="background-color: var(--color-coral);"
+        >
+          View Details
+        </a>
+        {spotsLeft !== null && (
+          <p class="text-center text-xs" style="color: var(--color-gray-text);">{spotsLeft} slots left</p>
+        )}
       </div>
     )}
-
-    <!-- Bottom: price + full-width CTA -->
-    <div class="mt-auto pt-4 border-t" style="border-color: var(--color-peach);">
-      {formattedPrice && (
-        <div class="mb-3">
-          <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedPrice}</span>
-          <span class="text-xs ml-1" style="color: var(--color-gray-text);">/ person</span>
-        </div>
-      )}
-      <a
-        href={`/trips/${slug}/`}
-        class="block w-full text-center font-semibold text-sm px-4 py-2.5 rounded-full transition-all hover:opacity-90"
-        style={isSoldOut
-          ? 'background-color: #f3f4f6; color: var(--color-gray-text);'
-          : 'background-color: var(--color-cta); color: white;'}
-      >
-        {isSoldOut ? 'Sold out' : hasMultipleBatches ? 'View dates' : 'View trip'}
-      </a>
-    </div>
   </div>
 </article>
