@@ -16,8 +16,8 @@ const pathname = Astro.url.pathname;
 
 <header
   id="site-header"
-  class="sticky top-0 z-50"
-  style={`background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.12); transition: transform 0.35s ease;${hidden ? ' transform: translateY(-100%);' : ''}`}
+  class:list={[hidden ? ['fixed', 'is-hideable'] : 'sticky', 'top-0', 'left-0', 'right-0', 'z-50']}
+  style="background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.12); transition: transform 0.35s ease;"
 >
   <div class="container-app">
     <div class="flex items-center justify-between" style="height: 64px;">
@@ -139,3 +139,10 @@ const pathname = Astro.url.pathname;
   btn?.addEventListener('click', () => isOpen ? closeMenu() : openMenu());
   backdrop?.addEventListener('click', closeMenu);
 </script>
+
+<style is:global>
+  /* Homepage hero mode: fixed (reserves no layout space, so no band above
+     the hero), hidden until the page is scrolled past the hero. */
+  #site-header.is-hideable { transform: translateY(-100%); }
+  #site-header.is-hideable.header-visible { transform: translateY(0); }
+</style>
