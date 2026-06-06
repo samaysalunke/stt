@@ -17,14 +17,14 @@ const pathname = Astro.url.pathname;
 <header
   id="site-header"
   class="sticky top-0 z-50"
-  style={`background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(232,221,217,0.5); transition: transform 0.35s ease;${hidden ? ' transform: translateY(-100%);' : ''}`}
+  style={`background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.12); transition: transform 0.35s ease;${hidden ? ' transform: translateY(-100%);' : ''}`}
 >
   <div class="container-app">
     <div class="flex items-center justify-between" style="height: 64px;">
       <!-- Logo -->
       <a href="/" class="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
         <img src="/logo.jpg" alt="Seek the Thrill" class="h-9 w-auto rounded-lg" />
-        <span class="hidden sm:block font-semibold text-sm" style="color: var(--color-navy);">Seek the Thrill</span>
+        <span class="hidden sm:block font-semibold text-sm text-white">Seek the Thrill</span>
       </a>
 
       <!-- Desktop Nav -->
@@ -35,7 +35,7 @@ const pathname = Astro.url.pathname;
             class="font-medium text-sm transition-all duration-200"
             style={pathname.startsWith(link.href)
               ? 'color: var(--color-coral);'
-              : 'color: var(--color-navy); opacity: 0.75;'}
+              : 'color: rgba(255,255,255,0.8);'}
           >
             {link.label}
           </a>
@@ -53,7 +53,7 @@ const pathname = Astro.url.pathname;
       <button
         id="mobile-menu-btn"
         class="lg:hidden p-2 rounded-lg"
-        style="color: var(--color-navy);"
+        style="color: white;"
         aria-label="Toggle menu"
         aria-expanded="false"
       >
