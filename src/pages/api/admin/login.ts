@@ -24,5 +24,5 @@ export const POST: APIRoute = async ({ request, redirect, cookies, clientAddress
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  return redirect('/admin/registrations');
+  return redirect('/admin/');
 };
