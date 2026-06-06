@@ -188,7 +188,7 @@ const slugJson = JSON.stringify(slug);
           <section>
             <h2 class="font-display text-3xl lg:text-4xl mb-2" style="color: var(--color-navy);">Photos</h2>
             <p class="text-sm mb-4" style="color: var(--color-gray-text);">From the trail. No filters, no staging.</p>
-            <div class="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {tripPhotos.map((src) => (
                 <img
                   src={src}
@@ -205,7 +205,7 @@ const slugJson = JSON.stringify(slug);
           <section>
             <h2 class="font-display text-3xl lg:text-4xl mb-2" style="color: var(--color-navy);">What they said</h2>
             <p class="text-sm mb-4" style="color: var(--color-gray-text);">Real words. Zero editing.</p>
-            <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {tripTestimonials.map((t: any) => (
                 <figure class="relative flex-none basis-[85%] snap-start rounded-2xl p-5 sm:basis-[60%] md:basis-[45%]" style="background-color: var(--color-blush);">
                   <span class="absolute right-4 top-3 font-display text-3xl opacity-20" style="color: var(--color-navy);">"</span>
@@ -467,20 +467,28 @@ const slugJson = JSON.stringify(slug);
                 <h3 class="font-bold text-base mb-4" style="font-family: var(--font-display); color: var(--color-navy);">Payment Details</h3>
 
                 <div class="rounded-xl overflow-hidden border mb-5" style="border-color: var(--color-peach);">
-                  <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--color-peach); background-color: var(--color-blush);">
+                  <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush);">
                     <div>
-                      <div class="text-sm font-medium" style="color: var(--color-navy);">Advance / Booking Amount</div>
+                      <div class="text-sm font-medium" style="color: var(--color-navy);">Advance amount (now)</div>
                       <div class="text-xs" style="color: var(--color-gray-text);">Pay now to confirm spot</div>
                     </div>
                     <strong style="color: var(--color-coral); font-family: var(--font-display);">₹{paymentAmount.toLocaleString('en-IN')}</strong>
                   </div>
-                  <div class="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <div class="text-sm font-medium" style="color: var(--color-navy);">Full Trip Amount</div>
-                      <div class="text-xs" style="color: var(--color-gray-text);">Due 15 days before trip</div>
-                    </div>
-                    <strong style="color: var(--color-coral); font-family: var(--font-display);">{formattedPrice}</strong>
-                  </div>
+                  {price && (
+                    <>
+                      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach);">
+                        <div>
+                          <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
+                          <div class="text-xs" style="color: var(--color-gray-text);">Due 15 days before trip</div>
+                        </div>
+                        <strong style="font-family: var(--font-display); color: var(--color-navy);">₹{(price - paymentAmount).toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
+                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total</div>
+                        <strong style="font-family: var(--font-display); color: var(--color-navy);">{formattedPrice}</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <!-- UPI instructions -->

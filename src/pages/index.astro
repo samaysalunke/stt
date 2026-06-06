@@ -42,9 +42,10 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
 
     <div class="relative z-10 w-full max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto px-6 flex flex-col items-center text-center">
 
-      <!-- Logo -->
-      <img src="/logo.jpg" alt="Seek the Thrill" class="anim-fade-up w-20 h-20 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl mb-3" />
-      <p class="anim-fade-up text-sm text-white/50 mb-10 tracking-wide">India's adventure community</p>
+      <!-- Brand mark -->
+      <img src="/logo.jpg" alt="Seek the Thrill" class="anim-fade-up w-20 h-20 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl mb-4" />
+      <h1 class="anim-fade-up font-display text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</h1>
+      <p class="anim-fade-up font-display italic text-sm text-white/70 mb-10">by Zahra Shakir</p>
 
       <!-- Badge pill -->
       <span class="anim-fade-up anim-delay-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-white px-4 py-1.5 rounded-full mb-5 self-start" style="background: rgba(217,95,59,0.85); backdrop-filter: blur(4px);">
@@ -52,10 +53,10 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </span>
 
       <!-- Headline -->
-      <h1 class="anim-fade-up anim-delay-1 text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
+      <h2 class="anim-fade-up anim-delay-1 text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
         Go where the<br />
         <span style="color: var(--color-coral); font-style: italic;">crowds don't.</span>
-      </h1>
+      </h2>
 
       <!-- Subtext -->
       <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-7 leading-relaxed">
@@ -188,7 +189,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </div>
 
       {allTestimonials.length > 0 ? (
-        <div class="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
           {allTestimonials.map((t) => (
             <div class="reveal flex-shrink-0 basis-[84%] snap-start sm:basis-[55%] lg:basis-[28%] bg-white rounded-2xl p-5" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
               <p class="text-sm leading-relaxed mb-4" style="color: var(--color-navy);">"{t.quote}"</p>
@@ -210,7 +211,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
         </div>
       ) : (
         <!-- Placeholder quotes if no testimonials -->
-        <div class="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
+        <div class="flex gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
           {[
             { name: 'Priya S.', trip: 'Spiti Valley', quote: 'I came alone and left with people I talk to every week. The mountains were just the backdrop.' },
             { name: 'Rahul M.', trip: 'Gokarna', quote: 'Did not expect to unplug so completely. No agenda, no plans — exactly what I needed.' },
