@@ -24,7 +24,10 @@ const statusLabels: Record<string, string> = {
 <AdminLayout title="Trips" page="trips">
   <div class="flex items-center justify-between mb-6">
     <p class="text-sm" style="color: rgba(27,43,58,0.55);">{trips.length} trip{trips.length === 1 ? '' : 's'}</p>
-    <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New Trip</a>
+    <div class="flex items-center gap-2">
+      <a href="/admin/trips/import/" class="rounded-xl px-4 py-2.5 text-sm font-semibold" style="color: var(--color-navy); border: 1px solid var(--color-peach);">Import</a>
+      <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New Trip</a>
+    </div>
   </div>
 
   {trips.length === 0 ? (

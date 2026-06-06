@@ -1,0 +1,151 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+export const prerender = false;
+
+const sample = `# Paste one trip, a list of trips, or { trips: [...] }
+- title: Ladakh Road Trip
+  location: Ladakh
+  status: draft
+  duration: 7 Days, 6 Nights
+  description: High passes, cold desert, zero crowds.
+  coverImage: https://example.com/ladakh.jpg
+  batches:
+    - id: ladakh-jun-2026
+      startDate: "2026-06-12"
+      endDate: "2026-06-18"
+      price: 28999
+      totalSpots: 16
+      bookedSpots: 0
+  highlights:
+    - Khardung La
+    - Pangong Lake
+  paymentAmount: 5000`;
+---
+
+<AdminLayout title="Import Trips" page="trips">
+  <div class="mb-6 flex items-center justify-between">
+    <p class="text-sm" style="color: rgba(27,43,58,0.55);">Paste or upload YAML / JSON — one trip or many. Preview before importing.</p>
+    <a href="/admin/trips/" class="text-sm font-medium" style="color: var(--color-coral);">← Back to trips</a>
+  </div>
+
+  <div class="bg-white rounded-[2rem] p-6 max-w-3xl" style="border: 1px solid rgba(245,221,215,0.6);">
+    <div class="flex items-center justify-between mb-3">
+      <label class="block text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Trips (YAML or JSON)</label>
+      <label class="text-sm font-medium cursor-pointer" style="color: var(--color-coral);">
+        Upload file
+        <input id="import-file" type="file" accept=".yaml,.yml,.json,.txt" class="hidden" />
+      </label>
+    </div>
+    <textarea id="import-content" rows="14" placeholder={sample}
+      class="w-full rounded-2xl px-4 py-3 text-sm outline-none font-mono"
+      style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white); line-height: 1.5;"></textarea>
+
+    <div class="flex items-center gap-3 mt-4">
+      <button id="preview-btn" class="rounded-full px-6 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">Preview</button>
+      <span id="import-msg" class="text-sm" style="color: var(--color-gray-text);"></span>
+    </div>
+
+    <!-- Preview / errors -->
+    <div id="preview-box" class="hidden mt-6">
+      <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm" style="background: #FEF2F2; color: #991B1B;"></div>
+      <div id="preview-list" class="flex flex-col gap-2"></div>
+      <div id="confirm-row" class="hidden items-center gap-3 mt-5">
+        <button id="confirm-btn" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);"></button>
+        <span class="text-xs" style="color: var(--color-gray-text);">Existing slugs will be overwritten.</span>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div id="result-box" class="hidden mt-6 rounded-2xl p-5 text-sm" style="background: rgba(34,166,84,0.10); color: var(--color-success);"></div>
+  </div>
+</AdminLayout>
+
+<script>
+  const fileInput = document.getElementById('import-file') as HTMLInputElement;
+  const textarea = document.getElementById('import-content') as HTMLTextAreaElement;
+  const previewBtn = document.getElementById('preview-btn') as HTMLButtonElement;
+  const msg = document.getElementById('import-msg') as HTMLElement;
+  const previewBox = document.getElementById('preview-box') as HTMLElement;
+  const errorsBox = document.getElementById('errors-box') as HTMLElement;
+  const previewList = document.getElementById('preview-list') as HTMLElement;
+  const confirmRow = document.getElementById('confirm-row') as HTMLElement;
+  const confirmBtn = document.getElementById('confirm-btn') as HTMLButtonElement;
+  const resultBox = document.getElementById('result-box') as HTMLElement;
+
+  fileInput?.addEventListener('change', async () => {
+    const f = fileInput.files?.[0];
+    if (f) { textarea.value = await f.text(); msg.textContent = `Loaded ${f.name}`; }
+  });
+
+  async function send(dryRun: boolean) {
+    const content = textarea.value.trim();
+    if (!content) { msg.textContent = 'Paste or upload some content first.'; return null; }
+    const res = await fetch('/api/admin/trips/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, dryRun }),
+    });
+    return res.json();
+  }
+
+  previewBtn?.addEventListener('click', async () => {
+    msg.textContent = 'Parsing…';
+    resultBox.classList.add('hidden');
+    const data = await send(true);
+    if (!data) { msg.textContent = ''; return; }
+    msg.textContent = '';
+
+    if (!data.success) {
+      previewBox.classList.remove('hidden');
+      previewList.innerHTML = '';
+      confirmRow.classList.add('hidden');
+      errorsBox.classList.remove('hidden');
+      errorsBox.textContent = data.error ?? 'Could not parse.';
+      return;
+    }
+
+    previewBox.classList.remove('hidden');
+    // Errors (skipped items)
+    if (data.errors?.length) {
+      errorsBox.classList.remove('hidden');
+      errorsBox.innerHTML = '<strong>Skipped:</strong><br>' + data.errors.map((e: string) => '• ' + e).join('<br>');
+    } else {
+      errorsBox.classList.add('hidden');
+    }
+    // Preview rows
+    previewList.innerHTML = data.preview.map((p: any) => `
+      <div class="flex items-center justify-between rounded-2xl px-4 py-3" style="background: var(--color-gray-soft);">
+        <div>
+          <p class="text-sm font-semibold" style="color: var(--color-navy);">${p.title}</p>
+          <p class="text-[11px]" style="color: rgba(27,43,58,0.5);">${p.slug} · ${p.status}</p>
+        </div>
+        <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full" style="${
+          p.action === 'overwrite' ? 'background:#FEF3C7;color:#92400E;' : 'background:#D1FAE5;color:#065F46;'
+        }">${p.action}</span>
+      </div>`).join('');
+
+    if (data.preview.length > 0) {
+      confirmRow.classList.remove('hidden');
+      confirmRow.classList.add('flex');
+      confirmBtn.textContent = `Import ${data.preview.length} trip${data.preview.length === 1 ? '' : 's'}`;
+    } else {
+      confirmRow.classList.add('hidden');
+    }
+  });
+
+  confirmBtn?.addEventListener('click', async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Importing…';
+    const data = await send(false);
+    if (data?.success) {
+      previewBox.classList.add('hidden');
+      resultBox.classList.remove('hidden');
+      resultBox.textContent = `✓ Imported — ${data.created} created, ${data.overwritten} overwritten. Redirecting…`;
+      setTimeout(() => { window.location.href = '/admin/trips/'; }, 1200);
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Try again';
+      msg.textContent = data?.error ?? 'Import failed.';
+    }
+  });
+</script>
