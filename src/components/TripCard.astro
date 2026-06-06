@@ -25,6 +25,7 @@ interface Props {
   pricePerPerson?: number | null;
   maxGroupSize?: number | null;
   currentBookings?: number | null;
+  sharingOptions?: Array<{ id?: string; label?: string; price?: number }> | null;
 }
 
 const {
@@ -44,6 +45,7 @@ const {
   pricePerPerson,
   maxGroupSize,
   currentBookings,
+  sharingOptions = [],
 } = Astro.props;
 
 const tripName = title || name || slug;
@@ -68,8 +70,15 @@ const displayDate = firstBatch
   ? `${formatDate(firstBatch.startDate)} – ${formatDate(firstBatch.endDate)}`
   : (startDate ? `${formatDate(startDate)} – ${formatDate(endDate ?? '')}` : '');
 
-const formattedPrice = price
-  ? `₹${price.toLocaleString('en-IN')}`
+// Occupancy options (if any) drive the displayed price as "from <lowest>".
+const sharingPrices = (sharingOptions ?? [])
+  .map((o) => Number(o?.price))
+  .filter((p) => Number.isFinite(p) && p > 0);
+const hasSharing = sharingPrices.length > 0;
+const displayPrice = hasSharing ? Math.min(...sharingPrices) : price;
+
+const formattedPrice = displayPrice
+  ? `₹${displayPrice.toLocaleString('en-IN')}`
   : null;
 
 const isSoldOut = status === 'sold_out' || status === 'sold-out';
@@ -114,7 +123,7 @@ const isSoldOut = status === 'sold_out' || status === 'sold-out';
         )}
       </div>
       <div class="shrink-0 text-right">
-        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{formattedPrice ?? '—'}</p>
+        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{hasSharing && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
         <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
       </div>
     </div>

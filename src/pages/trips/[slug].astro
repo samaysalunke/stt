@@ -62,6 +62,15 @@ const firstBatch = batches[0];
 const price = firstBatch?.price ?? trip.pricePerPerson;
 const formattedPrice = price ? `₹${price.toLocaleString('en-IN')}` : 'TBD';
 
+// Occupancy / room-sharing options (trip-level, absolute per-person prices).
+// When present they drive pricing; the lead (lowest) price is shown as "from".
+const sharingOptions = (Array.isArray(trip.sharingOptions) ? trip.sharingOptions : [])
+  .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)));
+const hasSharing = sharingOptions.length > 0;
+const sharingPrices = sharingOptions.map((o: any) => Number(o.price));
+const leadPrice = hasSharing ? Math.min(...sharingPrices) : price;
+const formattedLead = leadPrice ? `₹${leadPrice.toLocaleString('en-IN')}` : 'TBD';
+
 const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out';
 const isOpen = trip.registrationEnabled && !isSoldOut;
 const hasMultipleBatches = batches.length > 1;
@@ -315,9 +324,10 @@ const slugJson = JSON.stringify(slug);
         <div class="bg-white rounded-2xl overflow-hidden" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
           <div class="p-6">
 
-            {price && (
+            {(price || hasSharing) && (
               <div class="mb-5">
-                <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedPrice}</span>
+                {hasSharing && <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>}
+                <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{hasSharing ? formattedLead : formattedPrice}</span>
                 <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
               </div>
             )}
@@ -352,7 +362,25 @@ const slugJson = JSON.stringify(slug);
               </div>
             ) : null}
 
-            <!-- Advance -->
+            <!-- Occupancy / room-sharing selector -->
+            {isOpen && hasSharing && (
+              <div class="mb-5" id="occupancy-selector" data-advance={paymentAmount}>
+                <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: var(--color-gray-text);">Choose occupancy</p>
+                <div class="flex flex-col gap-2">
+                  {sharingOptions.map((o: any, i: number) => (
+                    <label class="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 cursor-pointer occ-option" style="border-color: var(--color-peach);">
+                      <span class="flex items-center gap-2.5">
+                        <input type="radio" name="__occupancy" value={o.label} data-price={o.price} checked={i === 0} class="accent-current" style="accent-color: var(--color-coral);" />
+                        <span class="text-sm font-medium" style="color: var(--color-navy);">{o.label}</span>
+                      </span>
+                      <span class="text-sm font-semibold" style="font-family: var(--font-display); color: var(--color-coral);">₹{Number(o.price).toLocaleString('en-IN')}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- Advance + (when occupancy set) total/balance -->
             {isOpen && paymentAmount && (
               <div class="mb-5 rounded-xl overflow-hidden border" style="border-color: var(--color-peach);">
                 <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush);">
@@ -362,6 +390,18 @@ const slugJson = JSON.stringify(slug);
                   </div>
                   <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">₹{paymentAmount.toLocaleString('en-IN')}</span>
                 </div>
+                {hasSharing && (
+                  <div class="px-4 py-3 text-sm" style="border-top: 1px solid var(--color-peach);">
+                    <div class="flex items-center justify-between">
+                      <span style="color: var(--color-gray-text);">Total (selected)</span>
+                      <span class="font-semibold" id="sb-total" style="color: var(--color-navy);">—</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                      <span style="color: var(--color-gray-text);">Balance before trip</span>
+                      <span class="font-semibold" id="sb-balance" style="color: var(--color-navy);">—</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -420,6 +460,8 @@ const slugJson = JSON.stringify(slug);
             <form id="reg-form" class="space-y-6">
               <input type="hidden" name="tripSlug" value={slug} />
               <input type="hidden" name="tripName" value={tripName} />
+              {hasSharing && <input type="hidden" name="sharingOption" id="reg-sharing-option" value={sharingOptions[0].label} />}
+              {hasSharing && <input type="hidden" name="totalAmount" id="reg-total-amount" value={sharingOptions[0].price} />}
               <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
 
               <!-- Personal Info -->
@@ -482,18 +524,18 @@ const slugJson = JSON.stringify(slug);
                     </div>
                     <strong style="color: var(--color-coral); font-family: var(--font-display);">₹{paymentAmount.toLocaleString('en-IN')}</strong>
                   </div>
-                  {price && (
+                  {(price || hasSharing) && (
                     <>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach);">
                         <div>
                           <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
                           <div class="text-xs" style="color: var(--color-gray-text);">Due 15 days before trip</div>
                         </div>
-                        <strong style="font-family: var(--font-display); color: var(--color-navy);">₹{(price - paymentAmount).toLocaleString('en-IN')}</strong>
+                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{(((hasSharing ? leadPrice : price) ?? 0) - paymentAmount).toLocaleString('en-IN')}</strong>
                       </div>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
-                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total</div>
-                        <strong style="font-family: var(--font-display); color: var(--color-navy);">{formattedPrice}</strong>
+                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total{hasSharing && <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span>}</div>
+                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{((hasSharing ? leadPrice : price) ?? 0).toLocaleString('en-IN')}</strong>
                       </div>
                     </>
                   )}
@@ -700,4 +742,42 @@ const slugJson = JSON.stringify(slug);
       }
     }, { threshold: 0.5 }).observe(regSection);
   }
+
+  // ── Occupancy / room-sharing selection ──────────────────────────────────
+  (function () {
+    const selector = document.getElementById('occupancy-selector');
+    if (!selector) return; // trip has no sharing options
+    const advance = Number(selector.dataset.advance) || 0;
+    const radios = Array.from(selector.querySelectorAll<HTMLInputElement>('input[name="__occupancy"]'));
+    const inr = (n: number) => '₹' + (n || 0).toLocaleString('en-IN');
+
+    const sbTotal = document.getElementById('sb-total');
+    const sbBalance = document.getElementById('sb-balance');
+    const rfTotal = document.getElementById('rf-total');
+    const rfBalance = document.getElementById('rf-balance');
+    const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
+    const fTotal = document.getElementById('reg-total-amount') as HTMLInputElement | null;
+
+    function apply(radio: HTMLInputElement) {
+      const price = Number(radio.dataset.price) || 0;
+      const balance = Math.max(0, price - advance);
+      if (sbTotal) sbTotal.textContent = inr(price);
+      if (sbBalance) sbBalance.textContent = inr(balance);
+      if (rfTotal) rfTotal.textContent = inr(price);
+      if (rfBalance) rfBalance.textContent = inr(balance);
+      if (fOption) fOption.value = radio.value;
+      if (fTotal) fTotal.value = String(price);
+      // Highlight the selected option card
+      selector.querySelectorAll('.occ-option').forEach((el) => {
+        (el as HTMLElement).style.borderColor = 'var(--color-peach)';
+        (el as HTMLElement).style.background = '';
+      });
+      const card = radio.closest('.occ-option') as HTMLElement | null;
+      if (card) { card.style.borderColor = 'var(--color-coral)'; card.style.background = 'var(--color-blush)'; }
+    }
+
+    radios.forEach((r) => r.addEventListener('change', () => apply(r)));
+    const initial = radios.find((r) => r.checked) ?? radios[0];
+    if (initial) { initial.checked = true; apply(initial); }
+  })();
 </script>

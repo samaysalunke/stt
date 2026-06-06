@@ -232,6 +232,8 @@ function fmtCurrency(n: number) {
                                         ['Special Requests', r.special_requests ?? '—'],
                                         ['Why Joining', r.why_join ?? '—'],
                                         ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
+                                        ['Occupancy', r.sharing_option ?? '—'],
+                                        ['Total (selected)', r.total_amount ? fmtCurrency(r.total_amount) : '—'],
                                         ['Amount Paid', fmtCurrency(r.amount_paid)],
                                       ].map(([label, val]) => (
                                         <div>
