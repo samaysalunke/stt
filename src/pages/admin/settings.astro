@@ -80,28 +80,20 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
 
     <!-- Policies & Payment -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Policies &amp; Payment</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Default copy used across registration and trip pages.</p>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Legal Page Overrides</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Enter text to replace a page entirely.</p>
       <div class="grid gap-4">
         <div>
-          <label class={labelCls} style={labelStyle}>Default payment instructions</label>
-          <textarea name="defaultPaymentInstructions" rows="5" class={inputCls} style={inputStyle}>{s.defaultPaymentInstructions ?? ''}</textarea>
+          <label class={labelCls} style={labelStyle}>Cancellation policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
+          <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls} style={inputStyle}>{s.cancellationPolicy ?? ''}</textarea>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Bank details</label>
-          <textarea name="bankDetails" rows="4" class={inputCls} style={inputStyle}>{s.bankDetails ?? ''}</textarea>
+          <label class={labelCls} style={labelStyle}>Terms &amp; conditions <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
+          <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls} style={inputStyle}>{s.termsAndConditions ?? ''}</textarea>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Cancellation policy</label>
-          <textarea name="cancellationPolicy" rows="5" class={inputCls} style={inputStyle}>{s.cancellationPolicy ?? ''}</textarea>
-        </div>
-        <div>
-          <label class={labelCls} style={labelStyle}>Terms &amp; conditions</label>
-          <textarea name="termsAndConditions" rows="5" class={inputCls} style={inputStyle}>{s.termsAndConditions ?? ''}</textarea>
-        </div>
-        <div>
-          <label class={labelCls} style={labelStyle}>Privacy policy</label>
-          <textarea name="privacyPolicy" rows="4" class={inputCls} style={inputStyle}>{s.privacyPolicy ?? ''}</textarea>
+          <label class={labelCls} style={labelStyle}>Privacy policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
+          <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls} style={inputStyle}>{s.privacyPolicy ?? ''}</textarea>
         </div>
       </div>
     </section>

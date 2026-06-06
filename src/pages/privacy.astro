@@ -1,9 +1,14 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { readSiteSettings } from '../lib/content';
+let settings: any = {};
+try { settings = readSiteSettings(); } catch (e) {}
 
 const lastUpdated = 'March 2025';
-const email = 'zahra@seekthethrill.in';
-const phone = '+91-7975027491';
+const email = settings.email ?? 'zahra@seekthethrill.in';
+const phone = settings.phone ?? '+91-7975027491';
+// Admin override: if set in Settings, it replaces the default page below.
+const override = (settings.privacyPolicy ?? '').trim();
 ---
 
 <BaseLayout
@@ -21,6 +26,9 @@ const phone = '+91-7975027491';
   <!-- Content -->
   <section class="py-16">
     <div class="container-app max-w-3xl">
+      {override ? (
+      <div class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-navy);">{override}</div>
+      ) : (
       <div class="prose-style">
 
         <p class="text-base leading-relaxed mb-8" style="color: var(--color-text-secondary);">
@@ -110,6 +118,7 @@ const phone = '+91-7975027491';
         </p>
 
       </div>
+      )}
     </div>
   </section>
 </BaseLayout>

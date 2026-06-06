@@ -1,6 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-const email = 'zahra@seekthethrill.in';
+import { readSiteSettings } from '../lib/content';
+let settings: any = {};
+try { settings = readSiteSettings(); } catch (e) {}
+const email = settings.email ?? 'zahra@seekthethrill.in';
+// Admin override: if set in Settings, it replaces the default page below.
+const override = (settings.cancellationPolicy ?? '').trim();
 ---
 
 <BaseLayout
@@ -12,6 +17,9 @@ const email = 'zahra@seekthethrill.in';
       <h1 class="text-4xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Cancellation Policy</h1>
       <p class="text-sm mb-10" style="color: var(--color-gray-text);">Last updated June 2025</p>
 
+      {override ? (
+      <div class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-navy);">{override}</div>
+      ) : (
       <div class="space-y-8 text-sm leading-relaxed" style="color: var(--color-navy);">
 
         <p>We know plans change. Here's how refunds work:</p>
@@ -64,6 +72,7 @@ const email = 'zahra@seekthethrill.in';
         </div>
 
       </div>
+      )}
     </div>
   </div>
 </BaseLayout>
