@@ -21,6 +21,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const bTotal = body.getAll('batchTotal[]').map(s => Number(s));
   const bBooked = body.getAll('batchBooked[]').map(s => Number(s));
   const bId = body.getAll('batchId[]').map(s => sanitizeInput(s));
+  const bStatus = body.getAll('batchStatus[]').map(s => sanitizeInput(s));
   const batches = bStart
     .map((startDate, i) => ({
       id: bId[i] || (startDate ? `${newSlug}-${startDate}` : ''),
@@ -29,6 +30,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
       price: Number.isFinite(bPrice[i]) ? Math.round(bPrice[i]) : null,
       totalSpots: Number.isFinite(bTotal[i]) ? bTotal[i] : null,
       bookedSpots: Number.isFinite(bBooked[i]) ? bBooked[i] : 0,
+      status: bStatus[i] || 'booking-open',
     }))
     .filter(b => b.startDate);
 

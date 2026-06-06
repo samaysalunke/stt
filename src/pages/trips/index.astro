@@ -1,9 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
-import { listTrips } from '../../lib/content';
+import { listTrips, upcomingBatches, tripHasUpcomingDates } from '../../lib/content';
 
-const allTrips = listTrips().filter((t) => t.status !== 'draft');
+// Hide drafts, and hide trips whose dates have all passed (no upcoming batches).
+const allTrips = listTrips()
+  .filter((t) => t.status !== 'draft')
+  .filter((t) => tripHasUpcomingDates(t));
 
 // Separate available from sold out — sold out goes last
 const available = allTrips.filter((t) => t.status !== 'sold_out' && t.status !== 'sold-out');
@@ -49,7 +52,7 @@ const trips = [...available, ...soldOut];
               shortDescription={trip.shortDescription}
               location={trip.location}
               duration={trip.duration}
-              batches={trip.batches ?? []}
+              batches={upcomingBatches(trip)}
               startDate={trip.startDate}
               endDate={trip.endDate}
               pricePerPerson={trip.pricePerPerson}

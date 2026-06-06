@@ -110,6 +110,14 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
                   <span class="fhint">Booked</span>
                   <input type="number" name="batchBooked[]" value={b.bookedSpots ?? 0} class="finput" />
                 </div>
+                <div style="flex:1; min-width:120px;">
+                  <span class="fhint">Status</span>
+                  <select name="batchStatus[]" class="finput">
+                    {['booking-open','filling_fast','sold-out','draft','completed'].map(s => (
+                      <option value={s} selected={(b.status ?? 'booking-open') === s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
                 <button type="button" class="rm-btn" onclick="this.closest('.batch-row').remove()">✕</button>
               </div>
             ))}
@@ -979,6 +987,7 @@ document.getElementById('add-batch-btn')?.addEventListener('click', () => {
     '<div style="flex:1; min-width:90px;"><span class="fhint">Price ₹</span><input type="number" name="batchPrice[]" class="finput" /></div>' +
     '<div style="flex:1; min-width:70px;"><span class="fhint">Total spots</span><input type="number" name="batchTotal[]" class="finput" /></div>' +
     '<div style="flex:1; min-width:70px;"><span class="fhint">Booked</span><input type="number" name="batchBooked[]" value="0" class="finput" /></div>' +
+    '<div style="flex:1; min-width:120px;"><span class="fhint">Status</span><select name="batchStatus[]" class="finput"><option value="booking-open">booking-open</option><option value="filling_fast">filling_fast</option><option value="sold-out">sold-out</option><option value="draft">draft</option><option value="completed">completed</option></select></div>' +
     '<button type="button" class="rm-btn" onclick="this.closest(\'.batch-row\').remove()">✕</button>';
   list.appendChild(div);
   div.querySelector('input[name="batchStart[]"]').focus();

@@ -7,6 +7,7 @@ interface Batch {
   price: number;
   totalSpots: number;
   bookedSpots: number;
+  status?: string;
 }
 
 interface Props {
@@ -35,7 +36,7 @@ export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
       {batches.map((batch) => {
         const spotsLeft = batch.totalSpots - batch.bookedSpots;
         const isSelected = selected === batch.id;
-        const isSoldOut = spotsLeft <= 0;
+        const isSoldOut = spotsLeft <= 0 || batch.status === 'sold-out' || batch.status === 'sold_out';
 
         return (
           <button

@@ -64,6 +64,36 @@ export function deleteTrip(slug: string): void {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
+// Batches (departure dates) that should be visible on the public site:
+//  - not departed (startDate is today or later), and
+//  - not hidden by per-batch status (draft / completed).
+// Sorted soonest-first. Evaluated at request time (pages are SSR).
+export function upcomingBatches(trip: Record<string, any>): Array<Record<string, any>> {
+  const batches = Array.isArray(trip?.batches) ? trip.batches : [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return batches
+    .filter((b: any) => {
+      if (!b?.startDate) return false;
+      const start = new Date(b.startDate);
+      if (isNaN(start.getTime())) return false;
+      start.setHours(0, 0, 0, 0);
+      if (start < today) return false;            // departed / commenced
+      if (b.status === 'draft' || b.status === 'completed') return false;
+      return true;
+    })
+    .sort((a: any, b: any) => String(a.startDate).localeCompare(String(b.startDate)));
+}
+
+// A trip that defines batches is "live" only if it has at least one upcoming
+// batch. Trips without a batches array (legacy single-date) are always live
+// and fall back to trip-level status.
+export function tripHasUpcomingDates(trip: Record<string, any>): boolean {
+  const hasBatchArray = Array.isArray(trip?.batches) && trip.batches.length > 0;
+  if (!hasBatchArray) return true;
+  return upcomingBatches(trip).length > 0;
+}
+
 // ── Albums ────────────────────────────────────────────────────────────────────
 
 export function listAlbums(): Array<Record<string, any>> {

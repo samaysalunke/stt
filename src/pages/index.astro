@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { listTrips, listTestimonials, readSiteSettings } from '../lib/content';
+import { listTrips, listTestimonials, readSiteSettings, upcomingBatches, tripHasUpcomingDates } from '../lib/content';
 
 const allTrips = listTrips();
 const featuredTrips = allTrips
   .filter((t) => t.status !== 'draft' && t.status !== 'sold_out' && t.status !== 'sold-out')
+  .filter((t) => tripHasUpcomingDates(t))
   .slice(0, 3);
 
 const allTestimonials = listTestimonials().slice(0, 4);
@@ -132,7 +133,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
               shortDescription={trip.shortDescription}
               location={trip.location}
               duration={trip.duration}
-              batches={trip.batches ?? []}
+              batches={upcomingBatches(trip)}
               startDate={trip.startDate}
               endDate={trip.endDate}
               pricePerPerson={trip.pricePerPerson}

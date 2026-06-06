@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BatchPicker from '../../components/BatchPicker';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, upcomingBatches } from '../../lib/content';
 
 export const prerender = false;
 
@@ -43,10 +43,13 @@ const tripTestimonials = (() => {
   return matched.length > 0 ? matched : allTestimonials.slice(0, 3);
 })();
 
-// Determine batches — new schema or legacy single-batch
-const batches: Array<{ id: string; startDate: string; endDate: string; price: number; totalSpots: number; bookedSpots: number }> =
-  (trip.batches ?? []).length > 0
-    ? trip.batches
+// Determine bookable batches. Trips with a batches array show only their
+// upcoming, non-hidden departures (past/draft/completed are filtered out).
+// Legacy trips (no batches) fall back to a single batch from the flat fields.
+const hasBatchArray = Array.isArray(trip.batches) && trip.batches.length > 0;
+const batches: Array<{ id: string; startDate: string; endDate: string; price: number; totalSpots: number; bookedSpots: number; status?: string }> =
+  hasBatchArray
+    ? upcomingBatches(trip) as any
     : trip.startDate
     ? [{
         id: 'default',
@@ -57,6 +60,8 @@ const batches: Array<{ id: string; startDate: string; endDate: string; price: nu
         bookedSpots: trip.currentBookings ?? 0,
       }]
     : [];
+// A batches-trip whose dates have all passed has nothing to book.
+const noUpcomingDates = hasBatchArray && batches.length === 0;
 
 const firstBatch = batches[0];
 const price = firstBatch?.price ?? trip.pricePerPerson;
@@ -72,7 +77,7 @@ const leadPrice = hasSharing ? Math.min(...sharingPrices) : price;
 const formattedLead = leadPrice ? `₹${leadPrice.toLocaleString('en-IN')}` : 'TBD';
 
 const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out';
-const isOpen = trip.registrationEnabled && !isSoldOut;
+const isOpen = trip.registrationEnabled && !isSoldOut && batches.length > 0;
 const hasMultipleBatches = batches.length > 1;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
@@ -615,7 +620,7 @@ const slugJson = JSON.stringify(slug);
       ) : (
         <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl" style="box-shadow: var(--shadow-card);">
           <p class="text-base font-medium mb-4" style="color: var(--color-navy);">
-            {isSoldOut ? 'All spots on this trip are filled.' : 'Registration for this trip is currently closed.'}
+            {isSoldOut ? 'All spots on this trip are filled.' : noUpcomingDates ? 'New dates for this trip are coming soon.' : 'Registration for this trip is currently closed.'}
           </p>
           <a href="/trips/" class="inline-block font-semibold text-white px-6 py-3 rounded-full" style="background-color: var(--color-coral);">
             See other trips →

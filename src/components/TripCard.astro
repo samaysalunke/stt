@@ -81,7 +81,9 @@ const formattedPrice = displayPrice
   ? `₹${displayPrice.toLocaleString('en-IN')}`
   : null;
 
-const isSoldOut = status === 'sold_out' || status === 'sold-out';
+const firstBatchStatus = firstBatch?.status;
+const isSoldOut = status === 'sold_out' || status === 'sold-out'
+  || firstBatchStatus === 'sold-out' || firstBatchStatus === 'sold_out';
 ---
 
 <article
