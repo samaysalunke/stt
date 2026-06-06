@@ -1,11 +1,13 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { readTrip } from '../../../lib/content';
+import { readTrip, listAlbums } from '../../../lib/content';
 
 const { slug } = Astro.params;
 const trip = slug ? readTrip(slug) : null;
 if (!trip) return Astro.redirect('/admin/trips');
+
+const publishedAlbums = listAlbums().filter(a => a.published);
 
 const highlights = Array.isArray(trip.highlights) ? trip.highlights : [];
 const included = Array.isArray(trip.included) ? trip.included : [];
@@ -259,6 +261,17 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
         <div class="field full">
           <label class="flabel">Payment Instructions</label>
           <textarea name="paymentInstructions" class="finput" rows="3">{trip.paymentInstructions ?? ''}</textarea>
+        </div>
+
+        <div class="field full">
+          <label class="flabel">Link Photo Album</label>
+          <select name="linkedAlbumSlug" class="finput">
+            <option value="">— None (trip page uses fallback photos) —</option>
+            {publishedAlbums.map(a => (
+              <option value={a.slug} selected={trip.linkedAlbumSlug === a.slug}>{a.name}</option>
+            ))}
+          </select>
+          <span class="fhint">Photos from this album appear in the trip page's inline photo strip.</span>
         </div>
 
         <div class="field">

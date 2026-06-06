@@ -66,6 +66,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,
     fullPaymentAmount: body.get('fullPaymentAmount') ? Number(body.get('fullPaymentAmount')) : null,
     paymentInstructions: sanitizeInput(body.get('paymentInstructions')) || null,
+    linkedAlbumSlug: sanitizeInput(body.get('linkedAlbumSlug')) || null,
   };
 
   if (newSlug !== oldSlug) {
