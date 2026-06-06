@@ -114,6 +114,14 @@ const slugJson = JSON.stringify(slug);
 
     <div class="absolute bottom-0 left-0 right-0 pb-8 pt-4">
       <div class="container-app">
+        <!-- Breadcrumb -->
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-1 text-xs sm:text-sm text-white/80">
+          <a href="/" class="transition-colors hover:text-white">Home</a>
+          <svg class="h-3.5 w-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+          <a href="/trips/" class="transition-colors hover:text-white">Trips</a>
+          <svg class="h-3.5 w-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+          <span class="font-medium text-white">{tripName}</span>
+        </nav>
         <!-- Status badge -->
         {trip.status && (
           <span class="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3" style={`background-color: ${isSoldOut ? '#9CA3AF' : trip.status === 'filling_fast' ? '#F59E0B' : '#E8725A'}; color: white;`}>
