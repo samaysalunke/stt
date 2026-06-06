@@ -14,7 +14,7 @@ const packingList = Array.isArray(trip.packingList) ? trip.packingList : [];
 const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
 ---
 
-<AdminLayout title={`Edit: ${trip.name ?? slug}`} activeTab="trips">
+<AdminLayout title={`Edit: ${trip.name ?? slug}`} page="trips">
 
   <!-- Header -->
   <div class="edit-header">

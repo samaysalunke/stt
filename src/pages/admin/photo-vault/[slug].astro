@@ -10,7 +10,7 @@ if (!album) return Astro.redirect('/admin/photo-vault');
 const photos: Array<{ image: string; caption?: string }> = Array.isArray(album.photos) ? album.photos : [];
 ---
 
-<AdminLayout title={`Edit: ${album.name ?? slug}`} activeTab="photo-vault">
+<AdminLayout title={`Edit: ${album.name ?? slug}`} page="photo-vault">
   <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
     <a href="/admin/photo-vault" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Photo Vault</a>
     <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Edit: {album.name ?? slug}</h1>
