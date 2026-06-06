@@ -54,30 +54,6 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
       </div>
     </section>
 
-    <!-- Homepage stats -->
-    <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Homepage Stats</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">The counters shown on the homepage and about page.</p>
-      <div class="grid gap-4 grid-cols-2 sm:grid-cols-4">
-        <div>
-          <label class={labelCls} style={labelStyle}>Trips completed</label>
-          <input type="number" name="tripsCompleted" value={s.tripsCompleted ?? 0} class={inputCls} style={inputStyle} />
-        </div>
-        <div>
-          <label class={labelCls} style={labelStyle}>Happy travelers</label>
-          <input type="number" name="happyTravelers" value={s.happyTravelers ?? 0} class={inputCls} style={inputStyle} />
-        </div>
-        <div>
-          <label class={labelCls} style={labelStyle}>Destinations</label>
-          <input type="number" name="destinationsCovered" value={s.destinationsCovered ?? 0} class={inputCls} style={inputStyle} />
-        </div>
-        <div>
-          <label class={labelCls} style={labelStyle}>Years</label>
-          <input type="number" name="yearsOfAdventure" value={s.yearsOfAdventure ?? 0} class={inputCls} style={inputStyle} />
-        </div>
-      </div>
-    </section>
-
     <!-- Policies & Payment -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Legal Page Overrides</h2>

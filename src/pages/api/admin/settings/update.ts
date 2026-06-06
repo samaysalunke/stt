@@ -8,10 +8,6 @@ const TEXT_FIELDS = [
   'email', 'phone', 'whatsappLink', 'instagram', 'address',
   'googleAnalyticsId', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',
-  'defaultPaymentInstructions', 'bankDetails',
-];
-const NUMBER_FIELDS = [
-  'tripsCompleted', 'happyTravelers', 'destinationsCovered', 'yearsOfAdventure',
 ];
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -23,10 +19,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   for (const field of TEXT_FIELDS) {
     const v = body.get(field);
     if (v !== null) updated[field] = sanitizeInput(v);
-  }
-  for (const field of NUMBER_FIELDS) {
-    const v = body.get(field);
-    if (v !== null && v.toString().trim() !== '') updated[field] = Number(v);
   }
 
   // List field: one URL per line in a textarea -> array

@@ -9,6 +9,9 @@ const navLinks = [
   { href: '/trips/', label: 'Trips' },
   { href: '/about/', label: 'Our Story' },
   { href: '/faq/', label: 'FAQ' },
+  { href: '/contact/', label: 'Contact' },
+  { href: '/cancellation/', label: 'Cancellation Policy' },
+  { href: '/terms/', label: 'Terms' },
 ];
 
 const pathname = Astro.url.pathname;
@@ -29,17 +32,14 @@ const pathname = Astro.url.pathname;
 
       <!-- Menu Button (hamburger-only on all sizes; drawer holds all nav) -->
       <button
-        id="mobile-menu-btn"
+        id="menu-btn"
         class="p-2 rounded-lg"
         style="color: white;"
-        aria-label="Toggle menu"
+        aria-label="Open menu"
         aria-expanded="false"
       >
-        <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -47,30 +47,39 @@ const pathname = Astro.url.pathname;
 </header>
 
 <!-- Menu Drawer (all sizes) -->
-<div id="mobile-menu" class="fixed inset-0 z-40 pointer-events-none">
+<div id="menu-overlay" class="fixed inset-0 z-[60] pointer-events-none">
+  <div id="menu-backdrop" class="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-300"></div>
   <div
-    id="mobile-backdrop"
-    class="absolute inset-0 bg-black/40 opacity-0 transition-opacity duration-300"
-  ></div>
-  <nav
-    id="mobile-nav"
-    class="absolute right-0 top-0 h-full w-72 flex flex-col pt-20 pb-8 px-6 translate-x-full transition-transform duration-300 shadow-2xl"
-    style="background: white;"
+    id="menu-panel"
+    class="absolute right-0 top-0 flex h-full w-[78%] max-w-sm flex-col bg-white p-6 translate-x-full transition-transform duration-300 shadow-2xl"
   >
-    <div class="flex flex-col gap-1">
+    <!-- Drawer header -->
+    <div class="mb-8 flex items-center justify-between">
+      <span class="font-display text-lg" style="color: var(--color-navy);">Seek the Thrill</span>
+      <button id="menu-close" aria-label="Close menu" class="p-2" style="color: var(--color-navy);">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Links -->
+    <nav class="flex flex-col gap-1">
       {navLinks.map((link) => (
         <a
           href={link.href}
-          class="font-medium text-base py-3 px-4 rounded-xl transition-colors"
+          class="rounded-lg px-3 py-3 text-base font-medium transition-colors"
           style={pathname.startsWith(link.href)
             ? 'color: var(--color-coral); background: var(--color-blush);'
-            : 'color: var(--color-navy);'}
+            : 'color: rgba(27,43,58,0.8);'}
         >
           {link.label}
         </a>
       ))}
-    </div>
-    <div class="mt-auto pt-6 border-t" style="border-color: var(--color-border);">
+    </nav>
+
+    <!-- Bottom CTA -->
+    <div class="mt-auto">
       <a
         href="/trips/"
         class="block w-full text-center font-semibold text-white py-3.5 rounded-full"
@@ -79,26 +88,23 @@ const pathname = Astro.url.pathname;
         Join a trip
       </a>
     </div>
-  </nav>
+  </div>
 </div>
 
 <script>
-  const btn = document.getElementById('mobile-menu-btn');
-  const menu = document.getElementById('mobile-menu');
-  const backdrop = document.getElementById('mobile-backdrop');
-  const nav = document.getElementById('mobile-nav');
-  const menuIcon = document.getElementById('menu-icon');
-  const closeIcon = document.getElementById('close-icon');
+  const btn = document.getElementById('menu-btn');
+  const overlay = document.getElementById('menu-overlay');
+  const backdrop = document.getElementById('menu-backdrop');
+  const panel = document.getElementById('menu-panel');
+  const closeBtn = document.getElementById('menu-close');
 
   let isOpen = false;
 
   function openMenu() {
     isOpen = true;
-    menu!.classList.remove('pointer-events-none');
+    overlay!.classList.remove('pointer-events-none');
     backdrop!.classList.remove('opacity-0');
-    nav!.classList.remove('translate-x-full');
-    menuIcon!.classList.add('hidden');
-    closeIcon!.classList.remove('hidden');
+    panel!.classList.remove('translate-x-full');
     btn!.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
   }
@@ -106,16 +112,16 @@ const pathname = Astro.url.pathname;
   function closeMenu() {
     isOpen = false;
     backdrop!.classList.add('opacity-0');
-    nav!.classList.add('translate-x-full');
-    menuIcon!.classList.remove('hidden');
-    closeIcon!.classList.add('hidden');
+    panel!.classList.add('translate-x-full');
     btn!.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
-    setTimeout(() => { if (!isOpen) menu!.classList.add('pointer-events-none'); }, 300);
+    setTimeout(() => { if (!isOpen) overlay!.classList.add('pointer-events-none'); }, 300);
   }
 
-  btn?.addEventListener('click', () => isOpen ? closeMenu() : openMenu());
+  btn?.addEventListener('click', openMenu);
+  closeBtn?.addEventListener('click', closeMenu);
   backdrop?.addEventListener('click', closeMenu);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen) closeMenu(); });
 </script>
 
 <style is:global>
