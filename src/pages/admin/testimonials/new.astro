@@ -1,0 +1,48 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+export const prerender = false;
+
+const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
+const inputStyle = 'border: 1px solid rgba(245,221,215,0.8); background: var(--color-white);';
+const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
+const labelStyle = 'color: var(--color-navy);';
+---
+
+<AdminLayout title="New Testimonial" page="testimonials">
+  <form method="POST" action="/api/admin/testimonials/create" class="bg-white rounded-[2rem] p-6 max-w-2xl" style="border: 1px solid rgba(245,221,215,0.6);">
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class={labelCls} style={labelStyle}>Name</label>
+        <input type="text" name="name" required class={inputCls} style={inputStyle} />
+      </div>
+      <div>
+        <label class={labelCls} style={labelStyle}>Location</label>
+        <input type="text" name="location" placeholder="e.g. Delhi, India" class={inputCls} style={inputStyle} />
+      </div>
+      <div>
+        <label class={labelCls} style={labelStyle}>Trip name</label>
+        <input type="text" name="tripName" placeholder="Match a trip title to show on that trip page" class={inputCls} style={inputStyle} />
+      </div>
+      <div>
+        <label class={labelCls} style={labelStyle}>Rating</label>
+        <select name="rating" class={inputCls} style={inputStyle}>
+          {[5, 4, 3, 2, 1].map(n => <option value={n} selected={n === 5}>{n} star{n === 1 ? '' : 's'}</option>)}
+        </select>
+      </div>
+      <div class="sm:col-span-2">
+        <label class={labelCls} style={labelStyle}>Quote</label>
+        <textarea name="quote" rows="4" required class={inputCls} style={inputStyle}></textarea>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="flex items-center gap-2 text-sm" style="color: var(--color-navy);">
+          <input type="checkbox" name="featured" value="true" />
+          Featured (highlighted on homepage)
+        </label>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 mt-6">
+      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);">Create</button>
+      <a href="/admin/testimonials/" class="text-sm font-medium" style="color: rgba(27,43,58,0.55);">Cancel</a>
+    </div>
+  </form>
+</AdminLayout>

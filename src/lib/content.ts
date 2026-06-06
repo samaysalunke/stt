@@ -127,6 +127,27 @@ export function listTestimonials(): Array<Record<string, any>> {
     });
 }
 
+export function readTestimonial(slug: string): Record<string, any> | null {
+  assertSafeSlug(slug);
+  const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
+  if (!fs.existsSync(filePath)) return null;
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return YAML.parse(raw) ?? null;
+}
+
+export function writeTestimonial(slug: string, data: Record<string, any>): void {
+  assertSafeSlug(slug);
+  ensureDir(TESTIMONIALS_DIR);
+  const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
+  fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+}
+
+export function deleteTestimonial(slug: string): void {
+  assertSafeSlug(slug);
+  const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+}
+
 // ── Image upload ──────────────────────────────────────────────────────────────
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
