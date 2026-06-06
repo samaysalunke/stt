@@ -1,151 +1,119 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { readSiteSettings } from '../lib/content';
-
-let settings: any = {};
-try {
-  settings = readSiteSettings();
-} catch (e) {}
-
-const stats = [
-  { value: settings.tripsCompleted ?? 25, label: 'Trips run' },
-  { value: settings.happyTravelers ?? 500, label: 'Travellers' },
-  { value: settings.destinationsCovered ?? 15, label: 'Destinations' },
-  { value: settings.yearsOfAdventure ?? 4, label: 'Years in' },
-];
 
 const founderImg = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=900&auto=format&fit=crop&q=80';
 
 const principles = [
-  { title: 'Small groups, always', desc: 'Twelve to sixteen people. Big enough for a crowd, small enough that nobody disappears.' },
-  { title: 'Offbeat over obvious', desc: 'We go where the buses don\'t. The places you can\'t google your way through.' },
-  { title: 'Safety, quietly handled', desc: 'Experienced leads, real plans, backups for the backups. You shouldn\'t have to think about it.' },
-  { title: 'Real moments, no fluff', desc: 'No forced fun, no rigid schedules. Just good routes and the room to actually be there.' },
+  { n: '01', t: 'Real People', d: 'No professional guides. Just local legends who know the land better than any map.' },
+  { n: '02', t: 'Hidden Spots', d: "We go where the big buses can't fit. Private trails and secret stays are our specialty." },
+  { n: '03', t: 'Zero Fluff', d: 'No forced stopping spots. No generic itineraries. Just raw, unfiltered adventure.' },
 ];
 ---
 
 <BaseLayout
   title="Our Story — Seek the Thrill"
-  description="Why Seek the Thrill exists — a note from founder Zahra on small groups, offbeat routes, and the kind of trips worth talking about for years."
+  description="I'm Zahra. I built Seek the Thrill from one scary yes."
   hideHeader={true}
 >
-  <!-- Minimal top: back arrow only (no site nav — this is a focused editorial page) -->
-  <div class="container-app pt-6">
-    <a href="/" class="inline-flex items-center gap-2 text-sm font-medium" style="color: var(--color-navy);">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-      </svg>
-      Back to home
-    </a>
-  </div>
-
-  <!-- Intro -->
-  <section class="container-app pt-10 lg:pt-16">
-    <div class="max-w-3xl">
-      <span class="reveal text-xs font-bold uppercase tracking-widest" style="color: var(--color-coral);">Our story</span>
-      <h1 class="reveal text-4xl md:text-5xl lg:text-6xl font-bold mt-3 leading-tight" style="font-family: var(--font-display); color: var(--color-navy);">
-        I started this because the trips I wanted <span style="color: var(--color-coral); font-style: italic;">didn't exist.</span>
-      </h1>
-    </div>
-  </section>
-
-  <!-- Portrait + body -->
-  <section class="container-app py-12 lg:py-16">
-    <div class="grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-10 lg:gap-16 items-start">
-      <!-- Portrait with floating card -->
-      <div class="reveal relative lg:sticky lg:top-24">
-        <img
-          src={founderImg}
-          alt="Zahra, founder of Seek the Thrill"
-          class="w-full rounded-3xl object-cover shadow-xl"
-          style="aspect-ratio: 4/5;"
-          loading="lazy"
-        />
-        <div class="absolute -bottom-5 -right-3 sm:right-6 lg:-right-5 bg-white rounded-2xl px-5 py-4 shadow-lg" style="border: 1px solid var(--color-peach);">
-          <div class="font-display text-2xl font-bold" style="color: var(--color-coral);">Since 2020</div>
-          <div class="text-xs" style="color: var(--color-gray-text);">One trip at a time</div>
-        </div>
-      </div>
-
-      <!-- Body text -->
-      <div class="reveal pt-6 lg:pt-0">
-        <div class="space-y-5 text-base lg:text-lg leading-relaxed" style="color: var(--color-navy);">
-          <p>
-            In 2020, stuck inside like everyone else, I kept making the same list — the places I'd go the second we could leave. Not the postcard spots. The quiet valleys, the long drives, the towns nobody had turned into a checklist yet.
-          </p>
-          <p>
-            The problem was, the trips on offer were either luxury packages I couldn't justify, or going completely alone. There was nothing in between for someone who wanted the real thing without the price tag or the solitude.
-          </p>
-          <p>
-            So I organised one myself. Eight of us, a rough plan, Rishikesh. It worked better than it had any right to — and the people I met on it I still talk to every week. That trip became the whole idea: small groups, offbeat routes, and enough room to actually be somewhere instead of rushing through it.
-          </p>
-          <p>
-            We've run a lot of them since. The format hasn't changed much, because it didn't need to.
-          </p>
-        </div>
-
-        <!-- Pull quote -->
-        <blockquote class="reveal mt-9 pl-5 border-l-4" style="border-color: var(--color-coral);">
-          <p class="text-2xl lg:text-3xl leading-snug" style="font-family: var(--font-display); font-style: italic; color: var(--color-navy);">
-            We don't sell destinations. We make the kind of trips you talk about for years.
-          </p>
-        </blockquote>
-
-        <!-- Signature -->
-        <div class="reveal mt-8">
-          <p class="font-display text-xl" style="color: var(--color-navy);">— Zahra</p>
-          <p class="text-sm" style="color: var(--color-gray-text);">Founder &amp; trip lead, Seek the Thrill</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Principles (navy block) -->
-  <section class="py-16 lg:py-24" style="background-color: var(--color-navy);">
-    <div class="container-app">
-      <h2 class="reveal text-3xl lg:text-4xl font-bold text-white mb-10 lg:mb-14" style="font-family: var(--font-display);">
-        What we hold to
-      </h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-10">
-        {principles.map((p, i) => (
-          <div class="reveal">
-            <div class="font-display text-2xl font-bold mb-2" style="color: var(--color-coral);">{String(i + 1).padStart(2, '0')}</div>
-            <h3 class="text-lg font-bold text-white mb-2" style="font-family: var(--font-display);">{p.title}</h3>
-            <p class="text-sm lg:text-base leading-relaxed text-white/70">{p.desc}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- Stats -->
-  <section class="py-14 lg:py-20" style="background-color: var(--color-blush);">
-    <div class="container-app">
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center">
-        {stats.map((s) => (
-          <div class="reveal">
-            <div class="text-4xl lg:text-5xl font-bold mb-2" style="color: var(--color-coral); font-family: var(--font-display);">
-              {s.value}+
-            </div>
-            <div class="text-sm lg:text-base font-medium" style="color: var(--color-navy);">{s.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="py-16 lg:py-24" style="background-color: var(--color-gray-soft);">
-    <div class="container-app text-center max-w-xl mx-auto">
-      <h2 class="reveal text-3xl lg:text-4xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
-        Come find your people.
-      </h2>
-      <p class="reveal text-base mb-8 leading-relaxed" style="color: var(--color-gray-text);">
-        The next batch is probably already filling. Take a look at where we're headed.
-      </p>
-      <a href="/trips/" class="reveal inline-flex items-center gap-2 font-semibold text-white px-9 py-4 rounded-full text-base transition-all hover:opacity-90" style="background-color: var(--color-cta);">
-        Explore trips →
+  <main style="background-color: var(--color-blush);">
+    <!-- Top bar -->
+    <header class="mx-auto flex max-w-2xl items-center justify-between px-5 pt-5">
+      <a href="/" id="about-back" aria-label="Back" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        </svg>
       </a>
-    </div>
-  </section>
+      <span class="text-[11px] uppercase tracking-[0.25em]" style="color: rgba(27,43,58,0.55);">
+        by <span class="font-display italic normal-case tracking-normal" style="color: var(--color-coral);">Zahra</span>
+      </span>
+      <button id="about-share" aria-label="Share" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- Portrait + caption card -->
+    <section class="mx-auto mt-6 max-w-2xl px-5">
+      <div class="relative">
+        <img src={founderImg} alt="Zahra" class="aspect-[4/5] w-full rounded-sm object-cover" loading="lazy" />
+        <div class="absolute -bottom-6 left-1/2 w-[88%] -translate-x-1/2 rounded-md bg-white px-5 py-4 text-center" style="box-shadow: 0 10px 30px -12px rgba(15,23,42,0.25);">
+          <p class="font-display text-xl leading-snug" style="color: var(--color-navy);">The Tour Industry is Broken.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pull quote -->
+    <section class="mx-auto max-w-2xl px-8 pt-16 pb-6">
+      <blockquote class="font-display italic leading-snug" style="font-size: 1.35rem; color: var(--color-navy);">
+        "I spent years watching people travel thousands of miles just to see the same gift shops and eat at the same 'tourist-friendly' buffets."
+      </blockquote>
+    </section>
+
+    <!-- Body paragraphs -->
+    <section class="mx-auto max-w-2xl space-y-5 px-8 pb-12 text-[15px] leading-relaxed" style="color: rgba(27,43,58,0.85);">
+      <p>
+        I started <span class="font-medium" style="color: var(--color-coral);">Seek the Thrill</span> because I was tired of the fluff. I wanted the dust of the mountain roads, the taste of a home-cooked meal in a village that isn't on Google Maps, and the silence of a valley at dawn.
+      </p>
+      <p>
+        Travel should change you. It shouldn't just be a checklist of monuments. It should be about the people you meet and the stories that don't make it to the brochure.
+      </p>
+    </section>
+
+    <!-- Dark principles block -->
+    <section style="background-color: var(--color-navy);">
+      <div class="mx-auto max-w-2xl px-8 py-14 text-white">
+        <h2 class="text-center font-display text-3xl leading-tight">How we do it<br />differently</h2>
+        <div class="mt-10 space-y-9 text-center">
+          {principles.map((p) => (
+            <div>
+              <p class="font-display text-3xl italic" style="color: var(--color-coral);">{p.n}.</p>
+              <p class="mt-2 font-display text-lg text-white">{p.t}</p>
+              <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/65">{p.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Signature -->
+    <section class="mx-auto max-w-2xl px-8 py-14 text-center">
+      <p class="text-[15px] leading-relaxed" style="color: rgba(27,43,58,0.8);">
+        If you're looking for a holiday, there are plenty of apps for that. If you're looking for a journey that sticks to your soul, come with us.
+      </p>
+      <p class="mt-10 text-[10px] uppercase tracking-[0.3em]" style="color: rgba(27,43,58,0.55);">With love &amp; grit,</p>
+      <p class="mt-3 font-display text-5xl italic" style="color: var(--color-coral);">Zahra</p>
+    </section>
+
+    <!-- CTA -->
+    <section class="mx-auto max-w-2xl px-5 pb-12">
+      <a href="/trips/" class="flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-base font-medium text-white" style="background-color: var(--color-coral);">
+        Explore Zahra's Trips
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </svg>
+      </a>
+    </section>
+  </main>
 </BaseLayout>
+
+<script>
+  // Back: use history when possible, else fall back to the home link's href.
+  const back = document.getElementById('about-back');
+  back?.addEventListener('click', (e) => {
+    if (window.history.length > 1) {
+      e.preventDefault();
+      window.history.back();
+    }
+  });
+  // Share: Web Share API where available, else copy the URL.
+  const share = document.getElementById('about-share');
+  share?.addEventListener('click', async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Seek the Thrill — Our Story', url }); } catch {}
+    } else {
+      try { await navigator.clipboard.writeText(url); } catch {}
+    }
+  });
+</script>
