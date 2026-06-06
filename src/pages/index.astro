@@ -30,40 +30,40 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
   >
     <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(8,12,24,0.6) 0%, rgba(8,12,24,0.4) 40%, rgba(8,12,24,0.75) 100%);"></div>
 
-    <div class="relative z-10 w-full max-w-sm mx-auto px-6 flex flex-col items-center text-center">
+    <div class="relative z-10 w-full max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto px-6 flex flex-col items-center text-center">
 
       <!-- Logo -->
-      <img src="/logo.jpg" alt="Seek the Thrill" class="w-20 h-20 rounded-2xl object-cover shadow-xl mb-3" />
-      <p class="text-sm text-white/50 mb-10 tracking-wide">India's adventure community</p>
+      <img src="/logo.jpg" alt="Seek the Thrill" class="anim-fade-up w-20 h-20 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl mb-3" />
+      <p class="anim-fade-up text-sm text-white/50 mb-10 tracking-wide">India's adventure community</p>
 
       <!-- Badge pill -->
-      <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-white px-4 py-1.5 rounded-full mb-5 self-start" style="background: rgba(217,95,59,0.85); backdrop-filter: blur(4px);">
+      <span class="anim-fade-up anim-delay-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-white px-4 py-1.5 rounded-full mb-5 self-start" style="background: rgba(217,95,59,0.85); backdrop-filter: blur(4px);">
         📍 India's Offbeat Routes
       </span>
 
       <!-- Headline -->
-      <h1 class="text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
+      <h1 class="anim-fade-up anim-delay-1 text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
         Go where the<br />
         <span style="color: var(--color-coral); font-style: italic;">crowds don't.</span>
       </h1>
 
       <!-- Subtext -->
-      <p class="text-base text-white/75 text-left w-full mb-7 leading-relaxed">
+      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-7 leading-relaxed">
         Group trips for travellers. Offbeat spots, zero fluff.
       </p>
 
       <!-- Stats card -->
-      <div class="w-full rounded-2xl p-4 mb-5 grid grid-cols-3" style="background: rgba(15,20,35,0.65); backdrop-filter: blur(10px);">
+      <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-4 mb-5 grid grid-cols-3" style="background: rgba(15,20,35,0.65); backdrop-filter: blur(10px);">
         <div class="text-center py-1">
-          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">12–16</div>
+          <div class="text-xl lg:text-2xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">12–16</div>
           <div class="text-xs uppercase tracking-wider text-white/45">Group Size</div>
         </div>
         <div class="text-center py-1 border-x border-white/10">
-          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">10+</div>
+          <div class="text-xl lg:text-2xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">10+</div>
           <div class="text-xs uppercase tracking-wider text-white/45">Destinations</div>
         </div>
         <div class="text-center py-1">
-          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">4.9★</div>
+          <div class="text-xl lg:text-2xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">4.9★</div>
           <div class="text-xs uppercase tracking-wider text-white/45">Avg Rating</div>
         </div>
       </div>
@@ -71,7 +71,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       <!-- CTA -->
       <a
         href="/trips/"
-        class="w-full flex items-center justify-center gap-2 font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-2xl mb-6"
+        class="anim-fade-up anim-delay-3 w-full sm:w-auto sm:px-10 flex items-center justify-center gap-2 font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-2xl mb-6"
         style="background-color: var(--color-cta);"
       >
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg>
@@ -79,7 +79,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       </a>
 
       <!-- Social proof -->
-      <div class="flex items-center gap-3">
+      <div class="anim-fade-up anim-delay-4 flex items-center gap-3">
         <div class="flex -space-x-2">
           {[
             'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face&q=80',
@@ -93,34 +93,6 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
         <p class="text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
       </div>
 
-    </div>
-  </section>
-
-  <!-- ── TRUST BAR ─────────────────────────────────────────── -->
-  <section style="background-color: var(--color-blush);">
-    <div class="container-app py-5">
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 text-sm font-medium" style="color: var(--color-navy);">
-        <span class="flex items-center gap-2">
-          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Small groups
-        </span>
-        <span class="hidden sm:block text-white/40" style="color: var(--color-peach);">·</span>
-        <span class="flex items-center gap-2">
-          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Curated offbeat routes
-        </span>
-        <span class="hidden sm:block" style="color: var(--color-peach);">·</span>
-        <span class="flex items-center gap-2">
-          <svg class="w-4 h-4" style="color: var(--color-coral);" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          For travellers
-        </span>
-      </div>
     </div>
   </section>
 
