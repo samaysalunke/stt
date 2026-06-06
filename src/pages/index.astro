@@ -24,29 +24,74 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 
   <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
-    class="relative min-h-screen flex items-center justify-center overflow-hidden"
+    class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
     style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
-    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.25) 60%, rgba(0,0,0,0.1) 100%);"></div>
+    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(8,12,24,0.6) 0%, rgba(8,12,24,0.4) 40%, rgba(8,12,24,0.75) 100%);"></div>
 
-    <div class="relative z-10 text-center px-5 max-w-3xl mx-auto">
-      <!-- Eyebrow pill -->
-      <span class="inline-block text-xs font-semibold uppercase tracking-widest text-white border border-white/30 px-4 py-1.5 rounded-full mb-6" style="backdrop-filter: blur(4px);">
-        Offbeat by design
+    <div class="relative z-10 w-full max-w-sm mx-auto px-6 flex flex-col items-center text-center">
+
+      <!-- Logo -->
+      <img src="/logo.jpg" alt="Seek the Thrill" class="w-20 h-20 rounded-2xl object-cover shadow-xl mb-3" />
+      <p class="text-sm text-white/50 mb-10 tracking-wide">India's adventure community</p>
+
+      <!-- Badge pill -->
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-white px-4 py-1.5 rounded-full mb-5 self-start" style="background: rgba(217,95,59,0.85); backdrop-filter: blur(4px);">
+        📍 India's Offbeat Routes
       </span>
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-5" style="font-family: var(--font-display);">
-        Offbeat group trips for people who want to feel alive again.
+
+      <!-- Headline -->
+      <h1 class="text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
+        Go where the<br />
+        <span style="color: var(--color-coral); font-style: italic;">crowds don't.</span>
       </h1>
-      <p class="text-lg md:text-xl text-white/85 max-w-xl mx-auto mb-8 leading-relaxed">
-        Come for the adventure. Stay for the people you didn't expect to find.
+
+      <!-- Subtext -->
+      <p class="text-base text-white/75 text-left w-full mb-7 leading-relaxed">
+        Group trips for travellers. Offbeat spots, zero fluff.
       </p>
+
+      <!-- Stats card -->
+      <div class="w-full rounded-2xl p-4 mb-5 grid grid-cols-3" style="background: rgba(15,20,35,0.65); backdrop-filter: blur(10px);">
+        <div class="text-center py-1">
+          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">12–16</div>
+          <div class="text-xs uppercase tracking-wider text-white/45">Group Size</div>
+        </div>
+        <div class="text-center py-1 border-x border-white/10">
+          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">10+</div>
+          <div class="text-xs uppercase tracking-wider text-white/45">Destinations</div>
+        </div>
+        <div class="text-center py-1">
+          <div class="text-xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">4.9★</div>
+          <div class="text-xs uppercase tracking-wider text-white/45">Avg Rating</div>
+        </div>
+      </div>
+
+      <!-- CTA -->
       <a
         href="/trips/"
-        class="inline-block font-semibold text-white px-8 py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-xl"
+        class="w-full flex items-center justify-center gap-2 font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-2xl mb-6"
         style="background-color: var(--color-cta);"
       >
-        Find your next trip →
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg>
+        Join a Trip
       </a>
+
+      <!-- Social proof -->
+      <div class="flex items-center gap-3">
+        <div class="flex -space-x-2">
+          {[
+            'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face&q=80',
+            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face&q=80',
+            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face&q=80',
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&q=80',
+          ].map((src, i) => (
+            <img src={src} alt="Traveller" class="w-8 h-8 rounded-full object-cover border-2 border-white/80" style={`z-index: ${4 - i};`} loading="eager" />
+          ))}
+        </div>
+        <p class="text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
+      </div>
+
     </div>
   </section>
 
