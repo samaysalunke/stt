@@ -22,84 +22,66 @@ const statusLabels: Record<string, string> = {
 ---
 
 <AdminLayout title="Trips" page="trips">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Trips</h1>
-    <a href="/admin/trips/new" style="background:var(--color-primary); color:white; padding:0.5rem 1.25rem; border-radius:0.5rem; text-decoration:none; font-weight:600; font-size:0.875rem;">+ New Trip</a>
+  <div class="flex items-center justify-between mb-6">
+    <p class="text-sm" style="color: rgba(27,43,58,0.55);">{trips.length} trip{trips.length === 1 ? '' : 's'}</p>
+    <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New Trip</a>
   </div>
 
   {trips.length === 0 ? (
-    <div style="text-align:center; padding:4rem 2rem; color:var(--color-text-secondary);">
-      <p style="font-size:1.1rem; margin-bottom:1rem;">No trips yet.</p>
-      <a href="/admin/trips/new" style="background:var(--color-primary); color:white; padding:0.6rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">Create your first trip</a>
+    <div class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);">
+      <p class="text-sm mb-4" style="color: rgba(27,43,58,0.5);">No trips yet.</p>
+      <a href="/admin/trips/new" class="rounded-full px-6 py-3 text-sm font-semibold text-white inline-block" style="background-color: var(--color-cta);">Create your first trip</a>
     </div>
   ) : (
-    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
-    <div style="background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; overflow:hidden; min-width:600px;">
-      <table style="width:100%; border-collapse:collapse; font-size:0.875rem;">
-        <thead>
-          <tr style="background:rgba(255,255,255,0.04); border-bottom:1px solid var(--color-border);">
-            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Name</th>
-            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Status</th>
-            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Dates</th>
-            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Price</th>
-            <th style="text-align:left; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Bookings</th>
-            <th style="text-align:right; padding:0.75rem 1rem; font-weight:600; color:var(--color-text-secondary);">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {trips.map((trip, i) => (
-            <tr style={`border-bottom:1px solid var(--color-border); ${i % 2 === 0 ? '' : 'background:rgba(255,255,255,0.02);'}`}>
-              <td style="padding:0.75rem 1rem;">
-                <div style="font-weight:600; color:var(--color-text-primary);">{trip.name || trip.slug}</div>
-                <div style="color:var(--color-text-muted); font-size:0.75rem; margin-top:0.1rem;">{trip.slug}</div>
-              </td>
-              <td style="padding:0.75rem 1rem;">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                  <span style={`display:inline-block; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.75rem; font-weight:600; background:${statusColors[trip.status] ?? '#6b7280'}22; color:${statusColors[trip.status] ?? '#6b7280'};`}>
-                    {statusLabels[trip.status] ?? trip.status}
-                  </span>
-                  <select
-                    class="status-select"
-                    data-slug={trip.slug}
-                    style="font-size:0.75rem; border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text-secondary); border-radius:0.3rem; padding:0.15rem 0.4rem; cursor:pointer;"
-                  >
-                    {['booking-open','upcoming','draft','sold-out','completed'].map(s => (
-                      <option value={s} selected={s === trip.status}>{statusLabels[s]}</option>
-                    ))}
-                  </select>
-                </div>
-              </td>
-              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
-                {trip.startDate ? `${trip.startDate}${trip.endDate ? ' → ' + trip.endDate : ''}` : '—'}
-              </td>
-              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
-                {trip.pricePerPerson ? `₹${Number(trip.pricePerPerson).toLocaleString('en-IN')}` : '—'}
-              </td>
-              <td style="padding:0.75rem 1rem; color:var(--color-text-secondary);">
-                {trip.currentBookings ?? 0} / {trip.maxGroupSize ?? '?'}
-              </td>
-              <td style="padding:0.75rem 1rem; text-align:right;">
-                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
-                  <a href={`/admin/trips/${trip.slug}`} style="font-size:0.8rem; color:var(--color-primary); text-decoration:none; border:1px solid var(--color-primary); border-radius:0.35rem; padding:0.2rem 0.65rem; font-weight:500;">Edit</a>
-                  <button
-                    class="duplicate-trip-btn"
-                    data-slug={trip.slug}
-                    style="font-size:0.8rem; color:#6b7280; background:none; border:1px solid #d1d5db; border-radius:0.35rem; padding:0.2rem 0.65rem; cursor:pointer; font-weight:500;"
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {trips.map((trip) => (
+        <div class="bg-white rounded-[2rem] p-5 flex flex-col" style="border: 1px solid rgba(245,221,215,0.6);">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="min-w-0">
+              <h3 class="font-display text-base font-semibold truncate" style="color: var(--color-navy);">{trip.name || trip.slug}</h3>
+              <p class="text-[11px] truncate" style="color: rgba(27,43,58,0.45);">{trip.slug}</p>
+            </div>
+            <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                  style={`background:${statusColors[trip.status] ?? '#6b7280'}22; color:${statusColors[trip.status] ?? '#6b7280'};`}>
+              {statusLabels[trip.status] ?? trip.status}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Price</div>
+              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip.pricePerPerson ? `₹${Number(trip.pricePerPerson).toLocaleString('en-IN')}` : '—'}</div>
+            </div>
+            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Booked</div>
+              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip.currentBookings ?? 0}/{trip.maxGroupSize ?? '?'}</div>
+            </div>
+            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Starts</div>
+              <div class="text-xs font-semibold" style="color: var(--color-navy);">{trip.startDate ?? '—'}</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="text-[10px] font-semibold uppercase tracking-widest" style="color: rgba(27,43,58,0.45);">Quick status</label>
+            <select class="status-select w-full mt-1 rounded-xl px-3 py-2 text-sm" data-slug={trip.slug}
+                    style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white); color: var(--color-navy);">
+              {['booking-open','upcoming','draft','sold-out','completed'].map(s => (
+                <option value={s} selected={s === trip.status}>{statusLabels[s]}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="mt-auto flex items-center gap-2 pt-1">
+            <a href={`/admin/trips/${trip.slug}`} class="flex-1 text-center text-sm font-semibold rounded-full py-2 text-white" style="background-color: var(--color-cta);">Edit</a>
+            <button class="duplicate-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug}
                     title="Duplicate this trip as a draft"
-                  >Copy</button>
-                  <button
-                    class="delete-trip-btn"
-                    data-slug={trip.slug}
-                    data-name={trip.name || trip.slug}
-                    style="font-size:0.8rem; color:#dc2626; background:none; border:1px solid #dc2626; border-radius:0.35rem; padding:0.2rem 0.65rem; cursor:pointer; font-weight:500;"
-                  >Delete</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                    style="color: var(--color-navy); border: 1px solid var(--color-peach);">Copy</button>
+            <button class="delete-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug} data-name={trip.name || trip.slug}
+                    style="color: var(--color-danger); border: 1px solid var(--color-danger);">Delete</button>
+          </div>
+        </div>
+      ))}
     </div>
   )}
 </AdminLayout>
