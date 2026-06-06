@@ -24,7 +24,7 @@ const year = album.date ? new Date(album.date).getFullYear() : new Date().getFul
 <BaseLayout
   title={`${name} — The Vault | Seek the Thrill`}
   description={album.description ?? `Photos from our ${name} adventure.`}
-  hideHeader={true}
+  nav="none"
 >
   <main style="background-color: var(--color-blush);">
     <!-- Top bar -->
