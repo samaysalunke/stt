@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Batch {
   id: string;
@@ -20,12 +20,30 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function dispatchSelected(batch: Batch) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('stt:batch-selected', {
+    detail: { id: batch.id, startDate: batch.startDate, endDate: batch.endDate, price: batch.price },
+  }));
+}
+
 export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
-  const [selected, setSelected] = useState<string>(batches[0]?.id ?? '');
+  // Default to the first non-sold-out batch.
+  const firstBookable = batches.find(
+    (b) => b.totalSpots - b.bookedSpots > 0 && b.status !== 'sold-out' && b.status !== 'sold_out'
+  ) ?? batches[0];
+  const [selected, setSelected] = useState<string>(firstBookable?.id ?? '');
+
+  // Announce the initial selection so the booking form/total stays in sync.
+  useEffect(() => {
+    if (firstBookable) dispatchSelected(firstBookable);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelect = (batch: Batch) => {
     setSelected(batch.id);
     onSelect?.(batch);
+    dispatchSelected(batch);
     if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
       (window as any).gtag('event', 'select_batch', { batch_id: batch.id });
     }

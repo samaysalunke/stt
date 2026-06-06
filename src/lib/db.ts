@@ -102,4 +102,9 @@ function initializeSchema(db: Database.Database) {
   try { db.exec("ALTER TABLE newsletter_subscribers ADD COLUMN status TEXT DEFAULT 'active'"); } catch {}
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN source TEXT'); } catch {}
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN unsubscribe_token TEXT'); } catch {}
+  // Migration: occupancy / room-sharing selection
+  try { db.exec('ALTER TABLE registrations ADD COLUMN sharing_option TEXT'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN total_amount INTEGER'); } catch {}
+  // Migration: which departure (batch/date) the booking is for
+  try { db.exec('ALTER TABLE registrations ADD COLUMN batch_id TEXT'); } catch {}
 }

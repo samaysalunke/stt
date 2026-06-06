@@ -68,14 +68,25 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
+    // Occupancy / room-sharing selection (optional — only trips with sharingOptions)
+    const sharingOption = sanitizeInput(body.sharingOption) || null;
+    const totalAmountNum = Number(body.totalAmount);
+    const totalAmount = Number.isFinite(totalAmountNum) && totalAmountNum > 0 ? Math.round(totalAmountNum) : null;
+
+    // Which departure (batch/date) the booking is for
+    const batchId = sanitizeInput(body.batchId) || null;
+    const selectedBatch = batchId ? (trip?.batches ?? []).find((b: any) => b.id === batchId) : null;
+
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO registrations (
         trip_name, trip_date, full_name, email, phone, gender,
         city, emergency_name, emergency_phone,
-        payment_screenshot_url, transaction_id, why_join, status
+        payment_screenshot_url, transaction_id, why_join,
+        sharing_option, total_amount, batch_id, status
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
+        ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, 'pending'
       )
@@ -94,16 +105,20 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       sanitizeInput(body.paymentScreenshotUrl) || null,
       sanitizeInput(body.transactionId) || null,
       required.whyJoin,
+      sharingOption,
+      totalAmount,
+      batchId,
     );
 
     const registrationId = insertResult.lastInsertRowid;
 
     // Resolve trip/batch data for email
     const tripName = sanitizeInput(body.tripName);
-    const firstBatch = (trip?.batches ?? [])[0];
+    // Prefer the booked departure; fall back to the first batch.
+    const emailBatch = selectedBatch ?? (trip?.batches ?? [])[0];
     const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const startDate = firstBatch?.startDate ? fmt(firstBatch.startDate) : (sanitizeInput(body.tripDate) || 'TBD');
-    const endDate   = firstBatch?.endDate   ? fmt(firstBatch.endDate)   : startDate;
+    const startDate = emailBatch?.startDate ? fmt(emailBatch.startDate) : (sanitizeInput(body.tripDate) || 'TBD');
+    const endDate   = emailBatch?.endDate   ? fmt(emailBatch.endDate)   : startDate;
     const advanceAmount = (trip as any)?.paymentAmount ?? 3000;
 
     let whatsappLink = 'https://wa.me/917975027491';

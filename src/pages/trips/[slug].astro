@@ -63,6 +63,9 @@ const batches: Array<{ id: string; startDate: string; endDate: string; price: nu
 // A batches-trip whose dates have all passed has nothing to book.
 const noUpcomingDates = hasBatchArray && batches.length === 0;
 
+const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const batchDateStr = (b: any) => b ? `${fmtD(b.startDate)} – ${fmtD(b.endDate)}` : '';
+
 const firstBatch = batches[0];
 const price = firstBatch?.price ?? trip.pricePerPerson;
 const formattedPrice = price ? `₹${price.toLocaleString('en-IN')}` : 'TBD';
@@ -332,7 +335,7 @@ const slugJson = JSON.stringify(slug);
             {(price || hasSharing) && (
               <div class="mb-5">
                 {hasSharing && <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>}
-                <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{hasSharing ? formattedLead : formattedPrice}</span>
+                <span id="sb-lead-price" class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{hasSharing ? formattedLead : formattedPrice}</span>
                 <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
               </div>
             )}
@@ -465,8 +468,11 @@ const slugJson = JSON.stringify(slug);
             <form id="reg-form" class="space-y-6">
               <input type="hidden" name="tripSlug" value={slug} />
               <input type="hidden" name="tripName" value={tripName} />
+              <input type="hidden" name="batchId" id="reg-batch-id" value={firstBatch?.id ?? ''} />
+              <input type="hidden" name="tripDate" id="reg-trip-date" value={batchDateStr(firstBatch)} />
+              <input type="hidden" name="totalAmount" id="reg-total-amount" value={hasSharing ? sharingOptions[0].price : (firstBatch?.price ?? '')} />
               {hasSharing && <input type="hidden" name="sharingOption" id="reg-sharing-option" value={sharingOptions[0].label} />}
-              {hasSharing && <input type="hidden" name="totalAmount" id="reg-total-amount" value={sharingOptions[0].price} />}
+              <script type="application/json" id="batches-data" is:inline data-advance={paymentAmount} set:html={JSON.stringify(batches.map((b: any) => ({ id: b.id, startDate: b.startDate, endDate: b.endDate, price: b.price })))}></script>
               <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
 
               <!-- Personal Info -->
@@ -748,41 +754,80 @@ const slugJson = JSON.stringify(slug);
     }, { threshold: 0.5 }).observe(regSection);
   }
 
-  // ── Occupancy / room-sharing selection ──────────────────────────────────
+  // ── Booking coordinator: selected date (batch) + occupancy → total ───────
   (function () {
-    const selector = document.getElementById('occupancy-selector');
-    if (!selector) return; // trip has no sharing options
-    const advance = Number(selector.dataset.advance) || 0;
-    const radios = Array.from(selector.querySelectorAll<HTMLInputElement>('input[name="__occupancy"]'));
-    const inr = (n: number) => '₹' + (n || 0).toLocaleString('en-IN');
+    const dataEl = document.getElementById('batches-data');
+    let batchData: Array<{ id: string; startDate: string; endDate: string; price: number }> = [];
+    try { batchData = JSON.parse(dataEl?.textContent || '[]'); } catch {}
+    const advance = Number(dataEl?.dataset.advance) || 0;
 
+    const selector = document.getElementById('occupancy-selector');
+    const hasSharing = !!selector;
+    const radios = selector
+      ? Array.from(selector.querySelectorAll<HTMLInputElement>('input[name="__occupancy"]'))
+      : [];
+
+    const inr = (n: number) => '₹' + (n || 0).toLocaleString('en-IN');
+    const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+    const sbLead = document.getElementById('sb-lead-price');
     const sbTotal = document.getElementById('sb-total');
     const sbBalance = document.getElementById('sb-balance');
     const rfTotal = document.getElementById('rf-total');
     const rfBalance = document.getElementById('rf-balance');
     const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
     const fTotal = document.getElementById('reg-total-amount') as HTMLInputElement | null;
+    const fBatch = document.getElementById('reg-batch-id') as HTMLInputElement | null;
+    const fDate = document.getElementById('reg-trip-date') as HTMLInputElement | null;
 
-    function apply(radio: HTMLInputElement) {
-      const price = Number(radio.dataset.price) || 0;
-      const balance = Math.max(0, price - advance);
-      if (sbTotal) sbTotal.textContent = inr(price);
+    // Initial selection: ?batch= from the URL (set by BatchPicker CTA) or first.
+    const params = new URLSearchParams(window.location.search);
+    const wantId = params.get('batch');
+    let currentBatch = batchData.find((b) => b.id === wantId) || batchData[0] || null;
+    let occPrice = radios.length ? (Number((radios.find((r) => r.checked) ?? radios[0])?.dataset.price) || 0) : null;
+
+    function recompute() {
+      const total = hasSharing ? (occPrice || 0) : (currentBatch?.price || 0);
+      const balance = Math.max(0, total - advance);
+      if (sbTotal) sbTotal.textContent = inr(total);
       if (sbBalance) sbBalance.textContent = inr(balance);
-      if (rfTotal) rfTotal.textContent = inr(price);
+      if (rfTotal) rfTotal.textContent = inr(total);
       if (rfBalance) rfBalance.textContent = inr(balance);
-      if (fOption) fOption.value = radio.value;
-      if (fTotal) fTotal.value = String(price);
-      // Highlight the selected option card
-      selector.querySelectorAll('.occ-option').forEach((el) => {
+      if (fTotal) fTotal.value = String(total);
+      if (currentBatch) {
+        if (fBatch) fBatch.value = currentBatch.id;
+        if (fDate) fDate.value = `${fmtD(currentBatch.startDate)} – ${fmtD(currentBatch.endDate)}`;
+        // Non-occupancy trips: the sidebar lead price tracks the chosen date.
+        if (!hasSharing && sbLead) sbLead.textContent = inr(currentBatch.price);
+      }
+    }
+
+    // Date selection comes from the BatchPicker island via a custom event.
+    window.addEventListener('stt:batch-selected', (e: any) => {
+      const d = e.detail;
+      if (d?.id) { currentBatch = d; recompute(); }
+    });
+
+    // Occupancy selection
+    radios.forEach((r) => r.addEventListener('change', () => {
+      occPrice = Number(r.dataset.price) || 0;
+      if (fOption) fOption.value = r.value;
+      selector!.querySelectorAll('.occ-option').forEach((el) => {
         (el as HTMLElement).style.borderColor = 'var(--color-peach)';
         (el as HTMLElement).style.background = '';
       });
-      const card = radio.closest('.occ-option') as HTMLElement | null;
+      const card = r.closest('.occ-option') as HTMLElement | null;
       if (card) { card.style.borderColor = 'var(--color-coral)'; card.style.background = 'var(--color-blush)'; }
+      recompute();
+    }));
+    if (radios.length) {
+      const init = radios.find((r) => r.checked) ?? radios[0];
+      init.checked = true;
+      const card = init.closest('.occ-option') as HTMLElement | null;
+      if (card) { card.style.borderColor = 'var(--color-coral)'; card.style.background = 'var(--color-blush)'; }
+      if (fOption) fOption.value = init.value;
     }
 
-    radios.forEach((r) => r.addEventListener('change', () => apply(r)));
-    const initial = radios.find((r) => r.checked) ?? radios[0];
-    if (initial) { initial.checked = true; apply(initial); }
+    recompute();
   })();
 </script>
