@@ -15,6 +15,16 @@ try { settings = readSiteSettings(); } catch (e) {}
 
 const instagram = settings.instagram ?? 'https://www.instagram.com/seekthethrill_/';
 const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
+
+const DEFAULT_IG_IMAGES = [
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=400&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=400&auto=format&fit=crop&q=80',
+];
+const igImages = Array.isArray(settings.instagramImages) && settings.instagramImages.length
+  ? settings.instagramImages
+  : DEFAULT_IG_IMAGES;
 ---
 
 <BaseLayout
@@ -234,14 +244,9 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
         <p class="text-sm" style="color: var(--color-gray-text);">@seekthethrill_</p>
       </div>
 
-      <!-- Instagram grid placeholder — Zahra will swap these embed URLs via admin -->
+      <!-- Instagram grid — image URLs managed in admin Settings (falls back to defaults) -->
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
-        {[
-          'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=400&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=400&auto=format&fit=crop&q=80',
-        ].map((src, i) => (
+        {igImages.map((src: string, i: number) => (
           <a
             href={instagram}
             target="_blank"

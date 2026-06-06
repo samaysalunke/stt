@@ -29,6 +29,12 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     if (v !== null && v.toString().trim() !== '') updated[field] = Number(v);
   }
 
+  // List field: one URL per line in a textarea -> array
+  const igRaw = body.get('instagramImages');
+  if (igRaw !== null) {
+    updated.instagramImages = igRaw.toString().split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
   writeSettings(updated);
   return redirect('/admin/settings?saved=1');
 };
