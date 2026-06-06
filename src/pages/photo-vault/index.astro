@@ -24,49 +24,20 @@ const placeholderImgs = [
   title="Photo Vault — Seek the Thrill"
   description="Browse photos from all our past adventures. Relive the memories from our group trips across India."
 >
-  <!-- Hero -->
-  <section
-    class="relative flex items-center justify-center overflow-hidden"
-    style="height: 35vh; background-image: url('https://images.unsplash.com/photo-1533669955142-6a73332af4db?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
-  >
-    <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
-    <div class="relative z-10 text-center px-4">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">
-        Our Adventures in Pictures
-      </h1>
-      <p class="text-base md:text-lg text-white/80">Relive the memories from our past trips</p>
-    </div>
-  </section>
-
-  <!-- Filter Bar -->
-  <section class="py-8 bg-white border-b" style="border-color: var(--color-border);">
-    <div class="container-app">
-      <div class="flex flex-col sm:flex-row gap-3">
-        <div class="relative flex-1">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style="color: var(--color-text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            id="vault-search"
-            type="text"
-            placeholder="Search albums..."
-            class="w-full pl-9 pr-4 py-2.5 border rounded-xl text-sm outline-none"
-            style="border-color: var(--color-border);"
-          />
-        </div>
-        <select id="vault-sort" class="px-4 py-2.5 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="name">Name A–Z</option>
-        </select>
-      </div>
-    </div>
+  <!-- Hero — simple text header -->
+  <section class="max-w-2xl mx-auto px-5 pt-10 pb-6">
+    <h1 class="font-display text-[2.75rem] leading-[1.05]" style="color: var(--color-navy);">
+      The Vault
+    </h1>
+    <p class="mt-2 font-display text-base italic" style="color: rgba(27,43,58,0.55);">
+      Every memory, raw and unedited.
+    </p>
   </section>
 
   <!-- Albums grid -->
-  <section class="py-16 lg:py-20 bg-white">
-    <div class="container-app">
-      <div id="albums-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <section class="pb-16 lg:pb-20">
+    <div class="max-w-2xl lg:max-w-4xl mx-auto px-5">
+      <div id="albums-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {(albums.length > 0 ? albums.map((album, i) => ({
           href: `/photo-vault/${album.slug}/`,
           img: album.coverImage ?? placeholderImgs[i % placeholderImgs.length],
@@ -84,8 +55,8 @@ const placeholderImgs = [
         ]).map((item) => (
           <a
             href={item.href}
-            class="album-card group block relative overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
-            style="aspect-ratio: 4/3;"
+            class="album-card group block relative overflow-hidden rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
+            style="aspect-ratio: 5/6;"
             data-title={item.title.toLowerCase()}
             data-date={item.rawDate}
           >
@@ -123,41 +94,6 @@ const placeholderImgs = [
           </a>
         ))}
       </div>
-      <p id="no-results" class="hidden text-center py-16" style="color: var(--color-text-secondary);">
-        No albums match your search.
-      </p>
     </div>
   </section>
 </BaseLayout>
-
-<script>
-  const searchInput = document.getElementById('vault-search') as HTMLInputElement;
-  const sortSelect = document.getElementById('vault-sort') as HTMLSelectElement;
-  const grid = document.getElementById('albums-grid') as HTMLElement;
-  const noResults = document.getElementById('no-results') as HTMLElement;
-
-  function applyFilters() {
-    const q = searchInput.value.toLowerCase().trim();
-    const sortVal = sortSelect.value;
-    const cards = Array.from(grid.querySelectorAll<HTMLElement>('.album-card'));
-
-    cards.forEach((card) => {
-      const title = card.dataset.title ?? '';
-      card.style.display = (!q || title.includes(q)) ? '' : 'none';
-    });
-
-    const visible = cards.filter((c) => c.style.display !== 'none');
-    noResults.classList.toggle('hidden', visible.length > 0);
-
-    visible.sort((a, b) => {
-      const da = a.dataset.date ?? '';
-      const db = b.dataset.date ?? '';
-      if (sortVal === 'newest') return db.localeCompare(da);
-      if (sortVal === 'oldest') return da.localeCompare(db);
-      return (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '');
-    }).forEach((card) => grid.appendChild(card));
-  }
-
-  searchInput?.addEventListener('input', applyFilters);
-  sortSelect?.addEventListener('change', applyFilters);
-</script>
