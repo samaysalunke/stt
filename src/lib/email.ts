@@ -237,6 +237,143 @@ export async function sendContactConfirmation(name: string, email: string, messa
   await sendEmail(email, 'We received your message | Seek the Thrill', html);
 }
 
+export async function sendRegistrationPaymentReceived(data: {
+  firstName: string;
+  email: string;
+  tripName: string;
+  startDate: string;
+  endDate: string;
+  whatsappLink: string;
+}) {
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>You're in!</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #FDF0EC;">
+  <div style="background: #E8725A; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Seek the Thrill</h1>
+  </div>
+  <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <p style="margin: 0 0 16px;">Hi ${escapeHtml(data.firstName)},</p>
+    <p style="margin: 0 0 24px;">Your spot on <strong>${escapeHtml(data.tripName)}</strong> is saved.</p>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <tr style="border-bottom: 1px solid #F5DDD7;">
+        <td style="padding: 10px 8px; color: #6B7280; font-size: 14px;">Trip</td>
+        <td style="padding: 10px 8px; font-weight: 600; color: #1B2B3A; font-size: 14px;">${escapeHtml(data.tripName)}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F5DDD7;">
+        <td style="padding: 10px 8px; color: #6B7280; font-size: 14px;">Dates</td>
+        <td style="padding: 10px 8px; font-weight: 600; color: #1B2B3A; font-size: 14px;">${escapeHtml(data.startDate)} – ${escapeHtml(data.endDate)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 8px; color: #6B7280; font-size: 14px;">Meeting point</td>
+        <td style="padding: 10px 8px; color: #1B2B3A; font-size: 14px;">We'll send details closer to the date.</td>
+      </tr>
+    </table>
+    <p style="margin: 0 0 16px; font-size: 14px; color: #1B2B3A;">We've received your payment screenshot and will verify within 24 hours. Once confirmed, you'll get a final email with everything you need to know.</p>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #1B2B3A;">Questions? <a href="${escapeHtml(data.whatsappLink)}" style="color: #E8725A; font-weight: 600;">WhatsApp us.</a></p>
+    <p style="margin: 0; font-size: 14px; color: #6B7280;">See you on the trail,<br><strong style="color: #1B2B3A;">Zahra &amp; the Seek the Thrill team</strong><br>seekthethrill.in</p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(data.email, `You're in! 🎉 ${data.tripName} is confirmed`, html);
+}
+
+export async function sendRegistrationPaymentPending(data: {
+  firstName: string;
+  email: string;
+  tripName: string;
+  startDate: string;
+  endDate: string;
+  advanceAmount: number;
+  whatsappLink: string;
+}) {
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Complete your payment</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #FDF0EC;">
+  <div style="background: #E8725A; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Seek the Thrill</h1>
+  </div>
+  <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <p style="margin: 0 0 16px;">Hi ${escapeHtml(data.firstName)},</p>
+    <p style="margin: 0 0 24px;">We've got your registration for <strong>${escapeHtml(data.tripName)}</strong>.</p>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <tr style="border-bottom: 1px solid #F5DDD7;">
+        <td style="padding: 10px 8px; color: #6B7280; font-size: 14px;">Trip</td>
+        <td style="padding: 10px 8px; font-weight: 600; color: #1B2B3A; font-size: 14px;">${escapeHtml(data.tripName)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px 8px; color: #6B7280; font-size: 14px;">Dates</td>
+        <td style="padding: 10px 8px; font-weight: 600; color: #1B2B3A; font-size: 14px;">${escapeHtml(data.startDate)} – ${escapeHtml(data.endDate)}</td>
+      </tr>
+    </table>
+    <p style="margin: 0 0 16px; font-size: 14px; color: #1B2B3A; font-weight: 600;">Your spot isn't confirmed yet — we're waiting on your payment.</p>
+    <p style="margin: 0 0 8px; font-size: 14px; color: #1B2B3A;">To lock it in:</p>
+    <ol style="margin: 0 0 24px; padding-left: 20px; font-size: 14px; color: #1B2B3A; line-height: 1.8;">
+      <li>Pay ₹${data.advanceAmount.toLocaleString('en-IN')} via UPI</li>
+      <li>Screenshot the payment confirmation</li>
+      <li>Reply to this email with the screenshot + transaction ID</li>
+    </ol>
+    <p style="margin: 0 0 16px; font-size: 13px; color: #6B7280;">Spots fill up fast. If you've already paid, ignore this.</p>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #1B2B3A;">Questions? <a href="${escapeHtml(data.whatsappLink)}" style="color: #E8725A; font-weight: 600;">WhatsApp us.</a></p>
+    <p style="margin: 0; font-size: 14px; color: #6B7280;"><strong style="color: #1B2B3A;">Zahra &amp; the Seek the Thrill team</strong><br>seekthethrill.in</p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(data.email, `Almost there — complete your payment for ${data.tripName}`, html);
+}
+
+export async function sendNewsletterWelcome(email: string) {
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>You're on the list</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #FDF0EC;">
+  <div style="background: #E8725A; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Seek the Thrill</h1>
+  </div>
+  <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <p style="margin: 0 0 16px; color: #1B2B3A;">Hi there,</p>
+    <p style="margin: 0 0 16px; color: #1B2B3A;">You're now on the Seek the Thrill list.</p>
+    <p style="margin: 0 0 24px; color: #1B2B3A;">We won't spam you. You'll hear from us when there's a new trip, a new batch, or something worth knowing.</p>
+    <p style="margin: 0 0 24px; color: #1B2B3A;">That's it.</p>
+    <p style="margin: 0; font-size: 14px; color: #6B7280;"><strong style="color: #1B2B3A;">Zahra &amp; the STT team</strong><br>seekthethrill.in | @seekthethrill_</p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(email, "You're on the list 🏔️", html);
+}
+
+export async function sendBroadcastToSubscriber(params: {
+  email: string;
+  firstName: string;
+  subject: string;
+  bodyHtml: string;
+  postUrl: string;
+  unsubscribeToken: string;
+}) {
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${escapeHtml(params.subject)}</title></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #FDF0EC;">
+  <div style="background: #E8725A; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+    <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Seek the Thrill</h1>
+  </div>
+  <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+    <p style="margin: 0 0 16px; color: #1B2B3A;">Hi ${escapeHtml(params.firstName)},</p>
+    <div style="color: #1B2B3A; line-height: 1.7; margin-bottom: 24px;">${params.bodyHtml}</div>
+    ${params.postUrl ? `<p style="margin: 0 0 32px;"><a href="${escapeHtml(params.postUrl)}" style="display: inline-block; background: #E8725A; color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">Read more →</a></p>` : ''}
+    <hr style="border: none; border-top: 1px solid #F5DDD7; margin: 24px 0;" />
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">You're getting this because you signed up at seekthethrill.in.<br><a href="https://seekthethrill.in/unsubscribe?token=${encodeURIComponent(params.unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail(params.email, params.subject, html);
+}
+
 export async function sendAdminContactNotification(data: Record<string, any>) {
   const html = `
 <!DOCTYPE html>

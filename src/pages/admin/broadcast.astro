@@ -1,0 +1,149 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+export const prerender = false;
+
+const logs = getDb()
+  .prepare('SELECT * FROM broadcast_log ORDER BY sent_at DESC LIMIT 20')
+  .all() as Array<{ id: string; subject: string; sent_at: string; recipient_count: number; status: string }>;
+
+function fmt(d: string) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+---
+
+<AdminLayout title="Broadcast" activeTab="broadcast">
+  <div style="max-width: 720px;">
+    <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--color-primary-dark); margin: 0 0 0.25rem;">
+      Send Broadcast
+    </h1>
+    <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0 0 2rem;">
+      Email all active newsletter subscribers.
+    </p>
+
+    <form id="broadcast-form" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 2rem;">
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">Subject</label>
+        <input
+          type="text"
+          name="subject"
+          required
+          placeholder="e.g. New Batch: Spiti Valley — June 2025"
+          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; outline: none;"
+        />
+      </div>
+
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">
+          Body
+          <span style="font-weight: 400; color: var(--color-text-secondary); margin-left: 4px;">(HTML supported)</span>
+        </label>
+        <textarea
+          name="body_html"
+          required
+          rows="8"
+          placeholder="<p>We just opened a new batch for ...</p>"
+          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; resize: vertical; outline: none; font-family: monospace;"
+        ></textarea>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">Post URL <span style="font-weight: 400; color: var(--color-text-secondary);">(optional)</span></label>
+        <input
+          type="url"
+          name="post_url"
+          placeholder="https://seekthethrill.in/trips/spiti-valley"
+          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; outline: none;"
+        />
+      </div>
+
+      <div id="broadcast-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem;"></div>
+
+      <button
+        type="submit"
+        id="broadcast-btn"
+        style="padding: 0.65rem 1.5rem; background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer;"
+      >
+        Send to all active subscribers
+      </button>
+    </form>
+
+    {logs.length > 0 && (
+      <div>
+        <h2 style="font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 1rem;">Recent broadcasts</h2>
+        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+            <thead>
+              <tr style="background: #F9FAFB; border-bottom: 1px solid #F0F0F0;">
+                <th style="padding: 0.75rem 1rem; text-align: left; color: var(--color-text-secondary); font-weight: 600;">Subject</th>
+                <th style="padding: 0.75rem 1rem; text-align: left; color: var(--color-text-secondary); font-weight: 600;">Sent</th>
+                <th style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-secondary); font-weight: 600;">Recipients</th>
+                <th style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-secondary); font-weight: 600;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr style="border-bottom: 1px solid #F9FAFB;">
+                  <td style="padding: 0.75rem 1rem; color: var(--color-text-primary);">{log.subject}</td>
+                  <td style="padding: 0.75rem 1rem; color: var(--color-text-secondary);">{fmt(log.sent_at)}</td>
+                  <td style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-primary);">{log.recipient_count}</td>
+                  <td style="padding: 0.75rem 1rem; text-align: right;">
+                    <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? '#D1FAE5' : '#FEE2E2'}; color: ${log.status === 'sent' ? '#065F46' : '#991B1B'};`}>
+                      {log.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</AdminLayout>
+
+<script>
+  const form = document.getElementById('broadcast-form') as HTMLFormElement | null;
+  const btn  = document.getElementById('broadcast-btn') as HTMLButtonElement | null;
+  const status = document.getElementById('broadcast-status') as HTMLElement | null;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!btn || !status) return;
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    status.style.display = 'none';
+
+    const fd = new FormData(form!);
+    try {
+      const res = await fetch('/api/admin/send-broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject:   fd.get('subject'),
+          body_html: fd.get('body_html'),
+          post_url:  fd.get('post_url') || '',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        status.style.background = '#D1FAE5';
+        status.style.color = '#065F46';
+        status.textContent = `Sent to ${data.sent} subscriber${data.sent !== 1 ? 's' : ''}${data.failed ? ` (${data.failed} failed)` : ''}.`;
+        form!.reset();
+      } else {
+        status.style.background = '#FEE2E2';
+        status.style.color = '#991B1B';
+        status.textContent = data.error ?? 'Something went wrong.';
+      }
+    } catch {
+      status.style.background = '#FEE2E2';
+      status.style.color = '#991B1B';
+      status.textContent = 'Network error. Please try again.';
+    }
+    status.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send to all active subscribers';
+  });
+</script>

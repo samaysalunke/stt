@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
+import crypto from 'node:crypto';
 import { getDb } from '../../lib/db';
 import { isValidEmail } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
+import { sendNewsletterWelcome } from '../../lib/email';
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!rateLimit(clientAddress, 5, 60 * 60 * 1000)) {
@@ -14,6 +16,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const body = await request.json();
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const name  = typeof body.name === 'string'  ? body.name.trim() : null;
+    const source = typeof body.source === 'string' ? body.source.trim() : null;
 
     if (!email || !isValidEmail(email)) {
       return new Response(JSON.stringify({ success: false, error: 'Please enter a valid email address.' }), {
@@ -23,14 +27,23 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     }
 
     const db = getDb();
-    try {
-      db.prepare(`
-        INSERT INTO newsletter_subscribers (email) VALUES (?)
-        ON CONFLICT(email) DO UPDATE SET active = 1
-      `).run(email);
-    } catch {
-      // Already subscribed
+
+    // Silently succeed for existing subscribers
+    const existing = db.prepare('SELECT id FROM newsletter_subscribers WHERE email = ?').get(email);
+    if (existing) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
+
+    const token = crypto.randomUUID();
+    db.prepare(`
+      INSERT INTO newsletter_subscribers (email, name, status, source, unsubscribe_token, active)
+      VALUES (?, ?, 'active', ?, ?, 1)
+    `).run(email, name, source, token);
+
+    sendNewsletterWelcome(email).catch(err => console.error('[Newsletter welcome email]', err));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

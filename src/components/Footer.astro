@@ -66,9 +66,58 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 
     </div>
 
-    <div class="mt-12 pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style="border-color: rgba(255,255,255,0.1);">
+    <!-- Newsletter signup -->
+    <div class="mt-10 pt-8 border-t" style="border-color: rgba(255,255,255,0.1);">
+      <p class="text-white/50 text-xs uppercase tracking-widest font-semibold mb-3">Stay in the loop</p>
+      <form id="footer-newsletter" class="flex gap-2 max-w-sm">
+        <input
+          type="email"
+          name="email"
+          placeholder="Your email"
+          required
+          class="flex-1 px-4 py-2.5 rounded-full text-sm outline-none"
+          style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white;"
+        />
+        <button
+          type="submit"
+          class="px-5 py-2.5 rounded-full text-sm font-semibold text-white flex-shrink-0"
+          style="background-color: var(--color-cta);"
+        >
+          Keep me posted
+        </button>
+      </form>
+      <p id="footer-nl-success" class="hidden text-white/60 text-sm mt-2">
+        You're in. We'll be in touch when something good is coming.
+      </p>
+    </div>
+
+    <div class="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style="border-color: rgba(255,255,255,0.1);">
       <p class="text-white/40 text-xs">© 2025 Seek the Thrill. All rights reserved.</p>
       <p class="text-white/30 text-xs">This site uses analytics cookies. <a href="/privacy/" class="underline hover:text-white/60">Learn more.</a></p>
     </div>
   </div>
 </footer>
+
+<script is:inline>
+  (function() {
+    var form = document.getElementById('footer-newsletter');
+    if (!form) return;
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      var email = form.querySelector('input[name="email"]').value;
+      try {
+        var res = await fetch('/api/newsletter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, source: 'footer' }),
+        });
+        var data = await res.json();
+        if (data.success) {
+          form.style.display = 'none';
+          var msg = document.getElementById('footer-nl-success');
+          if (msg) msg.classList.remove('hidden');
+        }
+      } catch (err) {}
+    });
+  })();
+</script>

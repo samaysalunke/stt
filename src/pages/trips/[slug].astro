@@ -296,7 +296,7 @@ const slugJson = JSON.stringify(slug);
               <a
                 href="#register"
                 class="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all hover:opacity-90 hover:shadow-md"
-                style="background-color: var(--color-coral);"
+                style="background-color: var(--color-cta);"
               >
                 Save my spot →
               </a>
@@ -481,7 +481,7 @@ const slugJson = JSON.stringify(slug);
                 type="submit"
                 id="submit-btn"
                 class="w-full font-semibold text-white py-4 rounded-full transition-all hover:opacity-90 text-base"
-                style="background-color: var(--color-coral);"
+                style="background-color: var(--color-cta);"
               >
                 Save my spot →
               </button>
@@ -509,7 +509,7 @@ const slugJson = JSON.stringify(slug);
         {price && <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedPrice}</span>}
         <span class="text-xs block" style="color: var(--color-gray-text);">per person</span>
       </div>
-      <a href="#register" class="font-semibold text-white px-7 py-3 rounded-full text-sm" style="background-color: var(--color-coral);">
+      <a href="#register" class="font-semibold text-white px-7 py-3 rounded-full text-sm" style="background-color: var(--color-cta);">
         Save my spot →
       </a>
     </div>
@@ -595,6 +595,9 @@ const slugJson = JSON.stringify(slug);
       });
       const data = await res.json();
       if (data.success) {
+        if (typeof (window as any).gtag === 'function') {
+          (window as any).gtag('event', 'submit_registration', { trip_slug: body.tripSlug ?? '' });
+        }
         window.location.href = `/thank-you/?trip=${encodeURIComponent(String(body.tripName ?? ''))}`;
       } else {
         if (errorDiv) { errorDiv.textContent = data.error ?? 'Something went wrong. Try again.'; errorDiv.classList.remove('hidden'); }

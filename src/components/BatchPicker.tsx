@@ -25,6 +25,9 @@ export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
   const handleSelect = (batch: Batch) => {
     setSelected(batch.id);
     onSelect?.(batch);
+    if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
+      (window as any).gtag('event', 'select_batch', { batch_id: batch.id });
+    }
   };
 
   return (
@@ -87,7 +90,7 @@ export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
                 <a
                   href={`/trips/${tripSlug}/?batch=${batch.id}#register`}
                   className="text-xs font-semibold text-white px-3 py-1.5 rounded-full"
-                  style={{ background: '#E8725A' }}
+                  style={{ background: '#D95F3B' }}
                   onClick={(e) => e.stopPropagation()}
                 >
                   Save my spot →

@@ -3,7 +3,7 @@ import '../styles/global.css';
 
 interface Props {
   title: string;
-  activeTab?: 'trips' | 'photo-vault' | 'registrations' | 'contacts' | 'newsletter';
+  activeTab?: 'trips' | 'photo-vault' | 'registrations' | 'contacts' | 'newsletter' | 'broadcast';
 }
 
 const { title, activeTab } = Astro.props;
@@ -14,6 +14,7 @@ const tabs = [
   { href: '/admin/registrations', label: 'Registrations', icon: '📋',  key: 'registrations' },
   { href: '/admin/contacts',      label: 'Contacts',      icon: '💬',  key: 'contacts' },
   { href: '/admin/newsletter',    label: 'Newsletter',    icon: '📧',  key: 'newsletter' },
+  { href: '/admin/broadcast',     label: 'Broadcast',     icon: '📣',  key: 'broadcast' },
 ];
 ---
 

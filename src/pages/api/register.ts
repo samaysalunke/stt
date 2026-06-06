@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
-import { readTrip } from '../../lib/content';
-import { sendRegistrationConfirmation, sendAdminRegistrationNotification } from '../../lib/email';
+import { readTrip, readSiteSettings } from '../../lib/content';
+import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 
@@ -18,14 +18,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     // Block booking for sold-out trips
     const tripSlug = sanitizeInput(body.tripSlug);
-    if (tripSlug) {
-      const trip = readTrip(tripSlug);
-      if (trip?.status === 'sold-out') {
-        return new Response(JSON.stringify({ success: false, error: 'This trip is sold out.' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
+    const trip = tripSlug ? readTrip(tripSlug) : null;
+    if (trip?.status === 'sold-out') {
+      return new Response(JSON.stringify({ success: false, error: 'This trip is sold out.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Honeypot check
@@ -75,15 +73,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       INSERT INTO registrations (
         trip_name, trip_date, full_name, email, phone, gender,
         city, emergency_name, emergency_phone,
-        payment_screenshot_url, why_join, status
+        payment_screenshot_url, transaction_id, why_join, status
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?, 'pending'
+        ?, ?, ?, 'pending'
       )
     `);
 
-    stmt.run(
+    const insertResult = stmt.run(
       sanitizeInput(body.tripName),
       sanitizeInput(body.tripDate),
       required.fullName,
@@ -94,20 +92,46 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       required.emergencyName,
       required.emergencyPhone,
       sanitizeInput(body.paymentScreenshotUrl) || null,
+      sanitizeInput(body.transactionId) || null,
       required.whyJoin,
     );
 
-    // Send emails (fire and forget)
-    sendRegistrationConfirmation({
-      name:     required.fullName,
-      email:    required.email,
-      tripName: sanitizeInput(body.tripName),
-      tripDate: sanitizeInput(body.tripDate),
-      duration: sanitizeInput(body.tripDuration) || 'N/A',
-    }).catch(console.error);
+    const registrationId = insertResult.lastInsertRowid;
+
+    // Resolve trip/batch data for email
+    const tripName = sanitizeInput(body.tripName);
+    const firstBatch = (trip?.batches ?? [])[0];
+    const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const startDate = firstBatch?.startDate ? fmt(firstBatch.startDate) : (sanitizeInput(body.tripDate) || 'TBD');
+    const endDate   = firstBatch?.endDate   ? fmt(firstBatch.endDate)   : startDate;
+    const advanceAmount = (trip as any)?.paymentAmount ?? 3000;
+
+    let whatsappLink = 'https://wa.me/917975027491';
+    try {
+      const s = readSiteSettings();
+      if (s.whatsappLink) whatsappLink = s.whatsappLink;
+    } catch {}
+
+    const hasPayment = !!(sanitizeInput(body.paymentScreenshotUrl)) && !!(sanitizeInput(body.transactionId));
+    const firstName = required.fullName.split(' ')[0];
+
+    // Send confirmation email — wrapped so failure never blocks success response
+    let emailSent = 0;
+    try {
+      if (hasPayment) {
+        await sendRegistrationPaymentReceived({ firstName, email: required.email, tripName, startDate, endDate, whatsappLink });
+      } else {
+        await sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink });
+      }
+      emailSent = 1;
+    } catch (emailErr) {
+      console.error('[Register email error]', emailErr);
+    }
+
+    try { db.prepare('UPDATE registrations SET email_sent = ? WHERE id = ?').run(emailSent, registrationId); } catch {}
 
     sendAdminRegistrationNotification({
-      trip_name:       sanitizeInput(body.tripName),
+      trip_name:       tripName,
       full_name:       required.fullName,
       email:           required.email,
       phone:           required.phone,

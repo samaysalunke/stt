@@ -82,8 +82,24 @@ function initializeSchema(db: Database.Database) {
       subscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       active INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS broadcast_log (
+      id TEXT PRIMARY KEY,
+      subject TEXT,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      recipient_count INTEGER,
+      status TEXT
+    );
   `);
 
   // Migration: add why_join column to existing databases
   try { db.exec('ALTER TABLE registrations ADD COLUMN why_join TEXT'); } catch {}
+  // Migration: Task 3 — email tracking
+  try { db.exec('ALTER TABLE registrations ADD COLUMN email_sent INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN transaction_id TEXT'); } catch {}
+  // Migration: Task 4A — newsletter columns
+  try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN name TEXT'); } catch {}
+  try { db.exec("ALTER TABLE newsletter_subscribers ADD COLUMN status TEXT DEFAULT 'active'"); } catch {}
+  try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN source TEXT'); } catch {}
+  try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN unsubscribe_token TEXT'); } catch {}
 }

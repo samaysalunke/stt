@@ -43,7 +43,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       <a
         href="/trips/"
         class="inline-block font-semibold text-white px-8 py-4 rounded-full text-base transition-all hover:opacity-90 hover:shadow-xl"
-        style="background-color: var(--color-coral);"
+        style="background-color: var(--color-cta);"
       >
         Find your next trip →
       </a>
@@ -263,4 +263,58 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
     </div>
   </section>
 
+  <!-- ── NEWSLETTER ─────────────────────────────────────────── -->
+  <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
+    <div class="container-app">
+      <div class="max-w-xl mx-auto text-center">
+        <h2 class="text-3xl lg:text-4xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+          Be first to know
+        </h2>
+        <p class="text-base mb-8 leading-relaxed" style="color: var(--color-gray-text);">
+          New trips, new batches, things worth knowing. No spam.
+        </p>
+        <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+          <input
+            type="email"
+            name="email"
+            placeholder="Your email address"
+            required
+            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 outline-none"
+            style="border-color: var(--color-peach); color: var(--color-navy); background: white;"
+          />
+          <button
+            type="submit"
+            class="px-7 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90 flex-shrink-0"
+            style="background-color: var(--color-cta);"
+          >
+            Keep me posted
+          </button>
+        </form>
+        <p id="home-nl-success" class="hidden text-base mt-6 font-medium" style="color: var(--color-navy);">
+          You're in. We'll be in touch when something good is coming.
+        </p>
+      </div>
+    </div>
+  </section>
+
 </BaseLayout>
+
+<script>
+  document.getElementById('home-newsletter')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const email = form.querySelector<HTMLInputElement>('input[name="email"]')?.value ?? '';
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'homepage' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        form.style.display = 'none';
+        document.getElementById('home-nl-success')?.classList.remove('hidden');
+      }
+    } catch {}
+  });
+</script>
