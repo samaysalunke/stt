@@ -43,7 +43,7 @@ Severity legend:
 **Impact:** Every money figure is dead and always shows ₹0 — dashboard "Payments collected", registrations "Revenue" stat, the per-registration "Amount Paid", and "Recent activity" amounts. The new `total_amount` (what's owed) IS captured, but `amount_paid` (what's actually been paid) never is.
 **Fix options:** (a) on admin **confirm**, set `amount_paid = trip.paymentAmount` (the advance) — simplest, makes revenue = confirmed advances; or (b) add an editable "amount received" field in the registration detail drawer; or (c) set `amount_paid = advance` at registration when a screenshot + transaction ID are provided.
 
-### 2. Videos cannot be added or shown (explicitly requested) — **decision: upload to albums** — ▶ PARKED (2026-06-07; design notes saved, not yet built)
+### 2. Videos cannot be added or shown — ❌ REMOVED / WON'T DO (2026-06-07, user decision — feature dropped, not building it)
 **Where:** `saveImageFile` and `/api/admin/albums/add-photo.ts` accept images only (`ALLOWED_IMAGE_TYPES` = jpg/png/webp); album photo schema is `{ image, caption }`; the public gallery, album detail, and trip photo strip all render `<img>` only. The reference prototype's album detail had video tiles (play overlay) — that capability was never built.
 **Impact:** No way to upload or display videos in albums, despite being a stated requirement.
 **Decision (confirmed):** videos are **uploaded files** stored on the volume (not external embeds).
