@@ -95,6 +95,66 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
       </div>
     </section>
 
+    <!-- About Page -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">About Page</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Copy for the <a href="/about/" target="_blank" class="underline" style="color: var(--color-coral);">/about</a> page. Leave any field blank to use the built-in default.</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Portrait image URL</label>
+          <input type="text" name="aboutFounderImage" value={s.aboutFounderImage ?? ''} placeholder="Blank = default portrait" class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Byline name</label>
+          <input type="text" name="aboutBylineName" value={s.aboutBylineName ?? ''} placeholder="Zahra" class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Portrait caption</label>
+          <input type="text" name="aboutCaption" value={s.aboutCaption ?? ''} placeholder="The Tour Industry is Broken." class={inputCls} style={inputStyle} />
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Pull quote</label>
+          <textarea name="aboutQuote" rows="3" placeholder="Blank = default quote" class={inputCls} style={inputStyle}>{s.aboutQuote ?? ''}</textarea>
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Body <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(one paragraph per blank line)</span></label>
+          <textarea name="aboutBody" rows="6" placeholder="Blank = default body copy" class={inputCls} style={inputStyle}>{s.aboutBody ?? ''}</textarea>
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Principles heading</label>
+          <input type="text" name="aboutPrinciplesHeading" value={s.aboutPrinciplesHeading ?? ''} placeholder="How we do it differently" class={inputCls} style={inputStyle} />
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div class="sm:col-span-2 grid gap-2 sm:grid-cols-[1fr_2fr] rounded-2xl p-3" style="background: var(--color-gray-soft);">
+            <div>
+              <label class={labelCls} style={labelStyle}>Principle {i + 1} title</label>
+              <input type="text" name="aboutPrincipleTitle[]" value={s.aboutPrinciples?.[i]?.title ?? ''} class={inputCls} style={inputStyle} />
+            </div>
+            <div>
+              <label class={labelCls} style={labelStyle}>Principle {i + 1} description</label>
+              <input type="text" name="aboutPrincipleDesc[]" value={s.aboutPrinciples?.[i]?.desc ?? ''} class={inputCls} style={inputStyle} />
+            </div>
+          </div>
+        ))}
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>Closing paragraph</label>
+          <textarea name="aboutSignature" rows="3" placeholder="Blank = default closing copy" class={inputCls} style={inputStyle}>{s.aboutSignature ?? ''}</textarea>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Sign-off label</label>
+          <input type="text" name="aboutSignoff" value={s.aboutSignoff ?? ''} placeholder="With love & grit," class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Signature name</label>
+          <input type="text" name="aboutSignName" value={s.aboutSignName ?? ''} placeholder="Zahra" class={inputCls} style={inputStyle} />
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>CTA button label</label>
+          <input type="text" name="aboutCtaLabel" value={s.aboutCtaLabel ?? ''} placeholder="Explore Zahra's Trips" class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </section>
+
     <div class="flex justify-end mb-10">
       <button type="submit"
               class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"

@@ -8,6 +8,10 @@ const TEXT_FIELDS = [
   'email', 'phone', 'whatsappLink', 'instagram', 'address',
   'googleAnalyticsId', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',
+  // About page copy (blank = built-in default, like the legal overrides)
+  'aboutFounderImage', 'aboutBylineName', 'aboutCaption', 'aboutQuote',
+  'aboutBody', 'aboutPrinciplesHeading', 'aboutSignature', 'aboutSignoff',
+  'aboutSignName', 'aboutCtaLabel',
 ];
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -25,6 +29,18 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const igRaw = body.get('instagramImages');
   if (igRaw !== null) {
     updated.instagramImages = igRaw.toString().split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
+  // About-page "How we do it differently" principles: parallel title/desc inputs
+  // -> array of { title, desc }. Empty rows are dropped; all-empty stores [] so
+  // the About page falls back to its built-in defaults.
+  const pTitles = body.getAll('aboutPrincipleTitle[]');
+  const pDescs = body.getAll('aboutPrincipleDesc[]');
+  if (pTitles.length > 0 || pDescs.length > 0) {
+    const principles = pTitles
+      .map((t, i) => ({ title: sanitizeInput(t), desc: sanitizeInput(pDescs[i]) }))
+      .filter(p => p.title || p.desc);
+    updated.aboutPrinciples = principles;
   }
 
   writeSettings(updated);

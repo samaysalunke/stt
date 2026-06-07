@@ -105,7 +105,7 @@ Severity legend:
 - **Trip-level vs departure status vocab** — ✅ FIXED. Admin trips list quick-status dropdown + colour/label maps trimmed to the 3 real trip-level statuses (`booking-open / draft / sold-out`); legacy values still render via fallback.
 - **`/api/uploads/[filename].ts` content-type** — ✅ FIXED. Maps by extension via a MIME table, defaulting to `application/octet-stream` instead of `image/jpeg`.
 - **Stale plan docs** — ✅ FIXED. Moved to `docs/archive/` with a README marking them historical (superseded by the trip-model overhaul; code wins on conflict).
-- **About-page copy** is hardcoded (no admin editor) — parked by you.
+- **About-page copy** — ✅ FIXED. Editable from admin Settings → "About Page" (portrait, byline, caption, quote, body, 3 principles, closing, sign-off, CTA). Blank fields fall back to the built-in defaults, same pattern as the legal-page overrides.
 
 ---
 
