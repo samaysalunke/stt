@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
-import { readTrip, readSiteSettings } from '../../lib/content';
+import { readTrip, readSiteSettings, upcomingBatches } from '../../lib/content';
 import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
@@ -68,14 +68,51 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
-    // Occupancy / room-sharing selection (optional — only trips with sharingOptions)
-    const sharingOption = sanitizeInput(body.sharingOption) || null;
-    const totalAmountNum = Number(body.totalAmount);
-    const totalAmount = Number.isFinite(totalAmountNum) && totalAmountNum > 0 ? Math.round(totalAmountNum) : null;
+    // ── Server-side departure + price resolution (never trust the client) ──
+    const fail = (msg: string) => new Response(
+      JSON.stringify({ success: false, error: msg }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
 
-    // Which departure (batch/date) the booking is for
-    const batchId = sanitizeInput(body.batchId) || null;
-    const selectedBatch = batchId ? (trip?.batches ?? []).find((b: any) => b.id === batchId) : null;
+    const hasBatchArray = Array.isArray(trip?.batches) && trip!.batches.length > 0;
+    let selectedBatch: any = null;
+    let batchId: string | null = null;
+
+    if (hasBatchArray) {
+      batchId = sanitizeInput(body.batchId) || null;
+      if (!batchId) return fail('Please select a departure date.');
+      // Must be one of the currently-bookable departures (upcoming, not draft/completed).
+      const bookable = upcomingBatches(trip!);
+      selectedBatch = bookable.find((b: any) => b.id === batchId);
+      if (!selectedBatch) return fail('That departure date is no longer available. Please pick another.');
+      // And it must not be sold out (by explicit status or by full seats).
+      const full = selectedBatch.totalSpots != null && (selectedBatch.bookedSpots ?? 0) >= selectedBatch.totalSpots;
+      if (selectedBatch.status === 'sold-out' || selectedBatch.status === 'sold_out' || full) {
+        return fail('That departure date is sold out. Please pick another.');
+      }
+    }
+
+    // Occupancy: derive the total from the trip's own options, not the client.
+    const sharingOpts = (Array.isArray(trip?.sharingOptions) ? trip!.sharingOptions : [])
+      .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)));
+    let sharingOption: string | null = null;
+    let totalAmount: number | null = null;
+
+    if (sharingOpts.length > 0) {
+      const wanted = sanitizeInput(body.sharingOption);
+      const match = sharingOpts.find((o: any) => o.label === wanted) ?? sharingOpts[0];
+      sharingOption = match.label;
+      totalAmount = Math.round(Number(match.price));
+    } else {
+      const base = selectedBatch?.price ?? (trip as any)?.pricePerPerson ?? null;
+      totalAmount = Number.isFinite(Number(base)) ? Math.round(Number(base)) : null;
+    }
+
+    // Departure date string, derived from the resolved batch (or legacy fields).
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    const tripDateStr = selectedBatch
+      ? `${fmtDate(selectedBatch.startDate)} – ${fmtDate(selectedBatch.endDate)}`
+      : ((trip as any)?.startDate ? `${fmtDate((trip as any).startDate)} – ${fmtDate((trip as any).endDate ?? (trip as any).startDate)}` : (sanitizeInput(body.tripDate) || ''));
 
     const db = getDb();
     const stmt = db.prepare(`
@@ -94,7 +131,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const insertResult = stmt.run(
       sanitizeInput(body.tripName),
-      sanitizeInput(body.tripDate),
+      tripDateStr,
       required.fullName,
       required.email,
       required.phone,
