@@ -61,7 +61,13 @@ export function writeTrip(slug: string, data: Record<string, any>): void {
 export function deleteTrip(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  if (!fs.existsSync(filePath)) return;
+  // Remove the trip's uploaded images (featured, QR, etc.) before deleting the YAML.
+  try {
+    const data = readTrip(slug);
+    if (data) for (const url of collectImageUrls(data)) deleteImageByUrl(url);
+  } catch { /* best-effort */ }
+  fs.unlinkSync(filePath);
 }
 
 // Batches (departure dates) that should be visible on the public site:
@@ -127,7 +133,13 @@ export function writeAlbum(slug: string, data: Record<string, any>): void {
 export function deleteAlbum(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(ALBUMS_DIR, `${slug}.yaml`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  if (!fs.existsSync(filePath)) return;
+  // Remove the album's cover + all photo files before deleting the YAML.
+  try {
+    const data = readAlbum(slug);
+    if (data) for (const url of collectImageUrls(data)) deleteImageByUrl(url);
+  } catch { /* best-effort */ }
+  fs.unlinkSync(filePath);
 }
 
 // ── Site Settings ────────────────────────────────────────────────────────────
@@ -251,4 +263,35 @@ export async function saveImageFile(
   fs.writeFileSync(path.join(destDir, filename), buffer);
 
   return `/${destSubDir}/${filename}`; // public URL via /images/[...path].ts
+}
+
+// Delete a single uploaded image by its public URL (e.g. "/images/albums/photos/x.jpg").
+// No-ops for external URLs (http…), non-image paths, or anything resolving outside
+// IMAGES_BASE. Best-effort: never throws.
+export function deleteImageByUrl(publicUrl: unknown): void {
+  if (typeof publicUrl !== 'string' || !publicUrl.startsWith('/images/')) return;
+  const rel = publicUrl.replace(/^\/images\//, '');
+  if (!rel || rel.includes('..')) return;
+  const filePath = path.join(IMAGES_BASE, rel);
+  if (!filePath.startsWith(IMAGES_BASE + path.sep)) return; // traversal guard
+  try {
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) fs.unlinkSync(filePath);
+  } catch {
+    /* best-effort cleanup */
+  }
+}
+
+// Recursively collect every "/images/…" URL referenced anywhere in a record
+// (top-level fields, arrays, nested objects). Used to clean up a record's
+// uploaded images on delete. References to *other* records are plain slug
+// strings, so this never reaches across to another record's images.
+export function collectImageUrls(value: unknown, acc: Set<string> = new Set()): Set<string> {
+  if (typeof value === 'string') {
+    if (value.startsWith('/images/')) acc.add(value);
+  } else if (Array.isArray(value)) {
+    for (const v of value) collectImageUrls(v, acc);
+  } else if (value && typeof value === 'object') {
+    for (const v of Object.values(value)) collectImageUrls(v, acc);
+  }
+  return acc;
 }

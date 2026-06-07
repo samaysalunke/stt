@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { readAlbum, writeAlbum } from '../../../../lib/content';
+import { readAlbum, writeAlbum, deleteImageByUrl } from '../../../../lib/content';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -13,6 +13,9 @@ export const POST: APIRoute = async ({ request }) => {
     const photos = Array.isArray(album.photos) ? album.photos : [];
     const updated = photos.filter((p: { image: string }) => p.image !== photoUrl);
     writeAlbum(slug, { ...album, photos: updated });
+
+    // Remove the underlying file from the volume (best-effort).
+    deleteImageByUrl(photoUrl);
 
     return new Response(JSON.stringify({ ok: true }));
   } catch {
