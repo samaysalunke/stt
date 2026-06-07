@@ -10,7 +10,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   if (!slug) return redirect('/admin/trips/new?error=slug');
 
-  const categories = body.getAll('categories').map(c => String(c));
   // Departure dates (batches): parallel arrays -> objects. Filter out blank rows.
   const bStart = body.getAll('batchStart[]').map(s => sanitizeInput(s));
   const bEnd = body.getAll('batchEnd[]').map(s => sanitizeInput(s));
@@ -66,7 +65,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     name,
     status: sanitizeInput(body.get('status')) || 'draft',
     duration: sanitizeInput(body.get('duration')) || null,
-    categories,
     registrationEnabled: body.get('registrationEnabled') === 'true',
     registrationDeadline: sanitizeInput(body.get('registrationDeadline')) || null,
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
