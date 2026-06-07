@@ -22,11 +22,14 @@ function formatDate(d: string | null | undefined) {
 }
 const subtitle = (album.description as string) || [album.location, formatDate(album.date)].filter(Boolean).join(' · ');
 const year = album.date ? new Date(album.date).getFullYear() : new Date().getFullYear();
+// Richer social share: use the album cover (or first photo) as the OG image.
+const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
 ---
 
 <BaseLayout
   title={`${name} — The Vault | Seek the Thrill`}
   description={album.description ?? `Photos from our ${name} adventure.`}
+  image={ogImage}
   nav="none"
 >
   <main style="background-color: var(--color-blush);">

@@ -130,6 +130,17 @@ export function writeAlbum(slug: string, data: Record<string, any>): void {
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
 }
 
+// Last-modified date (YYYY-MM-DD) of a trip/album YAML file, for sitemap freshness.
+// Returns undefined if the file can't be stat'd.
+export function contentLastmod(kind: 'trips' | 'albums', slug: string): string | undefined {
+  const dir = kind === 'trips' ? TRIPS_DIR : ALBUMS_DIR;
+  try {
+    return fs.statSync(path.join(dir, `${slug}.yaml`)).mtime.toISOString().slice(0, 10);
+  } catch {
+    return undefined;
+  }
+}
+
 export function deleteAlbum(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(ALBUMS_DIR, `${slug}.yaml`);

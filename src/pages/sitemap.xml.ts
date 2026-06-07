@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { listTrips, listAlbums, tripHasUpcomingDates } from '../lib/content';
+import { listTrips, listAlbums, tripHasUpcomingDates, contentLastmod } from '../lib/content';
 
 const SITE = 'https://seekthethrill.in';
 
@@ -17,12 +17,12 @@ export const GET: APIRoute = () => {
   // Reads via listTrips() so production reflects the volume (CONTENT_DIR), not seed data.
   const tripPages = listTrips()
     .filter((t) => t.status !== 'draft' && tripHasUpcomingDates(t))
-    .map((t) => url(`/trips/${t.slug}`, '0.8', 'weekly'));
+    .map((t) => url(`/trips/${t.slug}`, '0.8', 'weekly', contentLastmod('trips', t.slug)));
 
   // Published albums only.
   const albumPages = listAlbums()
     .filter((a) => a.published)
-    .map((a) => url(`/photo-vault/${a.slug}`, '0.5', 'monthly'));
+    .map((a) => url(`/photo-vault/${a.slug}`, '0.5', 'monthly', contentLastmod('albums', a.slug)));
 
   const staticPages = [
     url('/', '1.0', 'weekly'),
