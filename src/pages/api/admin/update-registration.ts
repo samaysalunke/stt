@@ -5,6 +5,19 @@ import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from 
 
 const VALID_STATUSES = ['pending', 'confirmed', 'rejected'];
 
+/** The advance (paymentAmount) configured on the trip, used as the amount collected on confirm. */
+function tripAdvanceAmount(tripName: string): number {
+  try {
+    const matched = listTrips().find((t: any) => t.name === tripName);
+    if (!matched) return 0;
+    const tripData = readTrip(matched.slug);
+    const advance = tripData?.paymentAmount;
+    return Number.isFinite(Number(advance)) ? Math.round(Number(advance)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Adjust the booked count on the specific departure (batch) the booking is for. */
 function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1) {
   try {
@@ -64,12 +77,17 @@ export const POST: APIRoute = async ({ request }) => {
     if (reg && newStatus !== prevStatus) {
       const tripName = reg.trip_name as string;
 
-      // ── Booking count adjustment (on the booked departure) ────────────────
+      // ── Booking count + revenue adjustment (on the booked departure) ──────
       const batchId = (reg.batch_id as string) ?? null;
       if (newStatus === 'confirmed' && prevStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, 1);
+        // Revenue: record the advance collected when the booking is confirmed.
+        const advance = tripAdvanceAmount(tripName);
+        getDb().prepare('UPDATE registrations SET amount_paid=? WHERE id=?').run(advance, id);
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, -1);
+        // Reverse the recorded revenue when a confirmation is undone.
+        getDb().prepare('UPDATE registrations SET amount_paid=0 WHERE id=?').run(id);
       }
 
       // ── Email notifications ───────────────────────────────────────────────
