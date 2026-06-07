@@ -1,5 +1,5 @@
 name: QA Test — Sold Out Trip
-status: booking-open
+status: sold-out
 duration: 3 Days
 shortDescription: QA automation fixture. Do not delete.
 description: This trip exists only for automated tests (TC-034).

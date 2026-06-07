@@ -1,0 +1,20 @@
+name: QA Test — Bookable Trip
+status: booking-open
+duration: 3 Days
+shortDescription: QA automation fixture. Do not delete.
+description: Bookable fixture for the register API tests (TC-030/037). Far-future date so it never lapses.
+highlights: []
+included: []
+notIncluded: []
+packingList: []
+itinerary: []
+registrationEnabled: true
+paymentAmount: 2000
+batches:
+  - id: qa-bookable-2099
+    startDate: "2099-01-01"
+    endDate: "2099-01-03"
+    price: 9999
+    totalSpots: 20
+    bookedSpots: 0
+    status: booking-open
