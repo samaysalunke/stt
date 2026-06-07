@@ -1,9 +1,33 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { listTrips } from '../../../lib/content';
+import { listTrips, upcomingBatches } from '../../../lib/content';
 
-const trips = listTrips();
+// Derive an at-a-glance summary from each trip's departures (the source of truth).
+const trips = listTrips().map((t) => {
+  const allBatches = Array.isArray(t.batches) ? t.batches : [];
+  const upcoming = upcomingBatches(t);
+  const lead = upcoming[0] ?? allBatches[0] ?? null;
+  const sharing = (Array.isArray(t.sharingOptions) ? t.sharingOptions : [])
+    .map((o: any) => Number(o?.price)).filter((p: number) => Number.isFinite(p) && p > 0);
+  const fromPrice = sharing.length ? Math.min(...sharing) : (lead?.price ?? null);
+  return {
+    ...t,
+    _fromPrice: fromPrice,
+    _hasSharing: sharing.length > 0,
+    _leadStart: lead?.startDate ?? null,
+    _leadBooked: lead?.bookedSpots ?? null,
+    _leadTotal: lead?.totalSpots ?? null,
+    _departureCount: allBatches.length,
+    _upcomingCount: upcoming.length,
+  };
+});
+
+function fmtDay(d: string | null) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 const statusColors: Record<string, string> = {
   'booking-open': '#16a34a',
@@ -52,16 +76,16 @@ const statusLabels: Record<string, string> = {
 
           <div class="grid grid-cols-3 gap-2 mb-4 text-center">
             <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Price</div>
-              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip.pricePerPerson ? `₹${Number(trip.pricePerPerson).toLocaleString('en-IN')}` : '—'}</div>
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">{trip._hasSharing ? 'From' : 'Price'}</div>
+              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip._fromPrice ? `₹${Number(trip._fromPrice).toLocaleString('en-IN')}` : '—'}</div>
             </div>
             <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Booked</div>
-              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip.currentBookings ?? 0}/{trip.maxGroupSize ?? '?'}</div>
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Next batch</div>
+              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip._leadTotal != null ? `${trip._leadBooked ?? 0}/${trip._leadTotal}` : '—'}</div>
             </div>
             <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Starts</div>
-              <div class="text-xs font-semibold" style="color: var(--color-navy);">{trip.startDate ?? '—'}</div>
+              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">{trip._departureCount > 1 ? `${trip._departureCount} dates` : 'Starts'}</div>
+              <div class="text-xs font-semibold" style="color: var(--color-navy);">{fmtDay(trip._leadStart)}</div>
             </div>
           </div>
 

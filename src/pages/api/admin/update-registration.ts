@@ -5,14 +5,25 @@ import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from 
 
 const VALID_STATUSES = ['pending', 'confirmed', 'rejected'];
 
-/** Adjust the trip's currentBookings count in the YAML file */
-function adjustBookingCount(tripName: string, delta: 1 | -1) {
+/** Adjust the booked count on the specific departure (batch) the booking is for. */
+function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1) {
   try {
-    const allTrips = listTrips();
-    const matched = allTrips.find((t: any) => t.name === tripName);
+    const matched = listTrips().find((t: any) => t.name === tripName);
     if (!matched) return;
     const tripData = readTrip(matched.slug);
     if (!tripData) return;
+
+    const batches = Array.isArray(tripData.batches) ? tripData.batches : [];
+    if (batches.length > 0 && batchId) {
+      const b = batches.find((x: any) => x.id === batchId);
+      if (b) {
+        const cur = typeof b.bookedSpots === 'number' ? b.bookedSpots : 0;
+        b.bookedSpots = Math.max(0, cur + delta);
+        writeTrip(matched.slug, tripData);
+        return;
+      }
+    }
+    // Legacy fallback: trip-level counter (only for old trips without departures).
     const current = typeof tripData.currentBookings === 'number' ? tripData.currentBookings : 0;
     tripData.currentBookings = Math.max(0, current + delta);
     writeTrip(matched.slug, tripData);
@@ -53,11 +64,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (reg && newStatus !== prevStatus) {
       const tripName = reg.trip_name as string;
 
-      // ── Booking count adjustment ──────────────────────────────────────────
+      // ── Booking count adjustment (on the booked departure) ────────────────
+      const batchId = (reg.batch_id as string) ?? null;
       if (newStatus === 'confirmed' && prevStatus !== 'confirmed') {
-        adjustBookingCount(tripName, 1);
+        adjustBookingCount(tripName, batchId, 1);
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
-        adjustBookingCount(tripName, -1);
+        adjustBookingCount(tripName, batchId, -1);
       }
 
       // ── Email notifications ───────────────────────────────────────────────

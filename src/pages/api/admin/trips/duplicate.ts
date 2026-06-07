@@ -23,14 +23,17 @@ export const POST: APIRoute = async ({ request }) => {
       counter++;
     }
 
+    // A copy is a fresh trip — reset booked counts on every departure.
+    const copiedBatches = (Array.isArray(source.batches) ? source.batches : []).map((b: any) => ({
+      ...b,
+      bookedSpots: 0,
+    }));
+
     const newData = {
       ...source,
       name: `${source.name ?? slug} (Copy)`,
       status: 'draft',
-      currentBookings: 0,
-      // Clear dates so admin sets new ones
-      startDate: '',
-      endDate: '',
+      batches: copiedBatches,
     };
 
     writeTrip(newSlug, newData);
