@@ -12,12 +12,30 @@ for (const f of faqs) {
   grouped[cat].push({ q: f.question, a: f.answer });
 }
 const categories = categoryOrder.map((name) => ({ name, questions: grouped[name] }));
+
+// ── FAQPage structured data for rich results ──────────────────────────────
+const faqSchema = faqs.length > 0 ? {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs
+    .filter((f: any) => f.question && f.answer)
+    .map((f: any) => ({
+      '@type': 'Question',
+      name: String(f.question),
+      acceptedAnswer: { '@type': 'Answer', text: String(f.answer) },
+    })),
+} : null;
 ---
 
 <BaseLayout
   title="FAQ — Seek the Thrill"
   description="Everything you need to know about booking, payment, and what to expect on a Seek the Thrill trip."
 >
+  {faqSchema && (
+    <Fragment slot="head">
+      <script type="application/ld+json" is:inline set:html={JSON.stringify(faqSchema)} />
+    </Fragment>
+  )}
 
   <!-- Header -->
   <section class="py-16" style="background-color: var(--color-blush);">
