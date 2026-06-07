@@ -104,7 +104,7 @@ Severity legend:
 - **Testimonial avatars** — ✅ FIXED. The keystatic schema already has a `photo` field; homepage + trip-page renders now show it when set (fallback to initials), so it's no longer dead.
 - **Trip-level vs departure status vocab** — ✅ FIXED. Admin trips list quick-status dropdown + colour/label maps trimmed to the 3 real trip-level statuses (`booking-open / draft / sold-out`); legacy values still render via fallback.
 - **`/api/uploads/[filename].ts` content-type** — ✅ FIXED. Maps by extension via a MIME table, defaulting to `application/octet-stream` instead of `image/jpeg`.
-- **Stale plan docs** — `v2-redesign.md` / `v2-admin-redesign.md` predate the trip-model overhaul; either update or archive them.
+- **Stale plan docs** — ✅ FIXED. Moved to `docs/archive/` with a README marking them historical (superseded by the trip-model overhaul; code wins on conflict).
 - **About-page copy** is hardcoded (no admin editor) — parked by you.
 
 ---
