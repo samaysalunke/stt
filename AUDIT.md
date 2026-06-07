@@ -38,12 +38,12 @@ Severity legend:
 
 ## 🔴 Has to be fixed
 
-### 1. Revenue is permanently ₹0 — `amount_paid` is never written
+### 1. Revenue is permanently ₹0 — `amount_paid` is never written — ✅ FIXED (on confirm, `amount_paid` = trip advance; reversed on un-confirm)
 **Where:** `src/lib/db.ts` (`amount_paid INTEGER DEFAULT 0`); no `INSERT`/`UPDATE` anywhere sets it (`/api/register.ts` doesn't, `/api/admin/update-registration.ts` doesn't).
 **Impact:** Every money figure is dead and always shows ₹0 — dashboard "Payments collected", registrations "Revenue" stat, the per-registration "Amount Paid", and "Recent activity" amounts. The new `total_amount` (what's owed) IS captured, but `amount_paid` (what's actually been paid) never is.
 **Fix options:** (a) on admin **confirm**, set `amount_paid = trip.paymentAmount` (the advance) — simplest, makes revenue = confirmed advances; or (b) add an editable "amount received" field in the registration detail drawer; or (c) set `amount_paid = advance` at registration when a screenshot + transaction ID are provided.
 
-### 2. Videos cannot be added or shown (explicitly requested) — **decision: upload to albums**
+### 2. Videos cannot be added or shown (explicitly requested) — **decision: upload to albums** — ▶ PARKED (2026-06-07; design notes saved, not yet built)
 **Where:** `saveImageFile` and `/api/admin/albums/add-photo.ts` accept images only (`ALLOWED_IMAGE_TYPES` = jpg/png/webp); album photo schema is `{ image, caption }`; the public gallery, album detail, and trip photo strip all render `<img>` only. The reference prototype's album detail had video tiles (play overlay) — that capability was never built.
 **Impact:** No way to upload or display videos in albums, despite being a stated requirement.
 **Decision (confirmed):** videos are **uploaded files** stored on the volume (not external embeds).
@@ -55,7 +55,7 @@ Severity legend:
 - **Frontend:** album detail + photo-vault gallery render `<video controls preload="metadata" poster>` for video items; the trip photo strip should show the poster (or skip videos).
 **Effort:** medium — touches upload lib, a new streaming route, album schema (+migration), album editor UI, and 2–3 frontend renderers.
 
-### 3. Draft / hidden trips are publicly reachable and in the sitemap
+### 3. Draft / hidden trips are publicly reachable and in the sitemap — ✅ FIXED (draft trip + unpublished album detail pages redirect; sitemap filtered)
 **Where:** `src/pages/trips/[slug].astro` renders **any** slug via `readTrip` with no `status === 'draft'` guard; `src/pages/sitemap.xml.ts` lists **every** trip YAML (including drafts and trips with no upcoming departures).
 **Impact:** An unpublished/draft trip is viewable by anyone with the URL and is advertised to search engines. Trips you've "hidden" by lapsing dates still sit in the sitemap.
 **Fix:** on the trip detail page, 404/redirect when `status === 'draft'` (and optionally when there are no upcoming departures); filter `sitemap.xml.ts` to live trips (`status !== 'draft' && tripHasUpcomingDates`).
@@ -64,24 +64,24 @@ Severity legend:
 
 ## 🟡 Should be improved
 
-### 4. Registration consent isn't stored or server-validated
+### 4. Registration consent isn't stored or server-validated — ✅ FIXED (server rejects without both flags; `consent_at` stored)
 **Where:** `trips/[slug].astro` marks the Terms + Cancellation checkboxes `required` (client only); `/api/register.ts` never checks or stores them.
 **Impact:** No durable record that a traveller accepted the terms/cancellation policy for a paid booking, and a non-JS/tampered submit bypasses it. That's a legal/operational gap for bookings.
 **Fix:** send the two flags, reject server-side if missing, and store them (e.g., `consent_at` timestamp column).
 
-### 5. `whoShouldJoin` and `registrationDeadline` are collected but never used
+### 5. `whoShouldJoin` and `registrationDeadline` are collected but never used — ✅ FIXED (`registrationDeadline` removed; `whoShouldJoin` rendered on trip page)
 **Where:** Both are in the trip editor (and persisted) but `whoShouldJoin` is **not rendered** on the trip page and `registrationDeadline` is **not shown or enforced** anywhere on the frontend.
 **Impact:** Admin fills fields that do nothing — the same "dead control" confusion we just cleaned up for pricing.
 **Decisions:**
 - **`registrationDeadline` → REMOVE** (confirmed). Strip it from the New Trip + edit forms, from `create.ts`/`update.ts`, and from existing trip YAMLs (migrate-out, same approach as the retired pricing/date fields).
 - **`whoShouldJoin`** — still open: either render it on the trip page or remove it too.
 
-### 6. Orphaned image files on delete
+### 6. Orphaned image files on delete — ✅ FIXED for trip/album/photo deletes (registration-screenshot prune still deferred)
 **Where:** `deleteTrip` / `deleteAlbum` / album `delete-photo` remove the YAML/record but not the underlying image files in `CONTENT_DIR/images/...`; registration screenshots in the uploads volume are never cleaned either.
 **Impact:** The Railway volume accumulates orphaned files indefinitely.
 **Fix:** delete associated images on trip/album/photo deletion; consider a periodic prune for unreferenced uploads.
 
-### 7. Email is silent unless SMTP is configured
+### 7. Email is silent unless SMTP is configured — ✅ FIXED (admin banner warns when unconfigured; SMTP must still be set in prod)
 **Where:** `src/lib/email.ts` falls back to a console "mock" when `SMTP_HOST/USER/PASS` aren't set. All registration confirmations, status emails, and broadcasts depend on these env vars.
 **Impact:** If production env isn't configured, **travellers get no emails** and there's no in-app warning — it just silently no-ops.
 **Fix:** confirm SMTP is set in production; optionally surface a banner in admin when email is unconfigured.
@@ -139,19 +139,19 @@ _Verified 2026-06-07. Baseline is solid: `SEO.astro` sets title, meta descriptio
 
 ## 🔴 Has to be fixed
 
-### S1. Privacy policy contradicts the tracking actually in use
+### S1. Privacy policy contradicts the tracking actually in use — ✅ FIXED (privacy §7 now discloses GA4 + Clarity)
 **Where:** `src/pages/privacy.astro` §7 states _"We use essential session cookies for admin authentication only… We do not use Google Analytics or similar tracking services."_ But `BaseLayout.astro` loads **GA4** (`G-S17TM9KJTG`) and **Microsoft Clarity** (`x2ms8bxixr`) on every page — both set cookies and track behaviour/session recordings.
 **Impact:** A factually false privacy statement on a site taking payments and personal data — a real compliance/legal exposure (and Clarity does session replay, which is sensitive).
 **Fix:** rewrite the cookies/privacy section to disclose GA4 + Clarity (what they collect, opt-out); add a cookie-consent notice (see S5).
 
-### S2. Sitemap (and draft/unpublished leak) reads seed data, not live content
+### S2. Sitemap (and draft/unpublished leak) reads seed data, not live content — ✅ FIXED (sitemap built from listTrips/listAlbums, filtered to live)
 **Where:** `src/pages/sitemap.xml.ts` reads `join(process.cwd(), 'src/content/trips')` / `…/albums` directly — **not** `CONTENT_DIR` (the Railway volume) and **not** `listTrips()`/`listAlbums()`.
 **Impact:** In production, the sitemap reflects the **repo seed trips**, not the trips Zahra actually manages on the volume → wrong/missing URLs for search engines. It also lists **draft trips** and **unpublished albums** (compounds 🔴#3 — both trip detail and album detail render regardless of `status`/`published`).
 **Fix:** build the sitemap from `listTrips()`/`listAlbums()` filtered to live items (`status !== 'draft' && tripHasUpcomingDates`; albums `published === true`); and 404/redirect draft trips + unpublished albums on their detail pages.
 
 ## 🟡 Should be improved
 
-### S3. GA4 ID is hardcoded — the admin "Google Analytics ID" setting is dead
+### S3. GA4 ID is hardcoded — the admin "Google Analytics ID" setting is dead — ✅ FIXED (BaseLayout reads `settings.googleAnalyticsId`)
 **Where:** `BaseLayout.astro` hardcodes `G-S17TM9KJTG`, ignoring `settings.googleAnalyticsId` (which the Settings page exposes as an editable field).
 **Impact:** Another no-effect admin control; the GA property can't be changed without a code edit.
 **Fix:** read `settings.googleAnalyticsId` in `BaseLayout` and inject it (fall back to the constant, or render nothing when blank). Same call for Clarity if you want it admin-managed — otherwise remove the GA field from Settings to avoid the dead-control trap.
@@ -166,7 +166,7 @@ _Verified 2026-06-07. Baseline is solid: `SEO.astro` sets title, meta descriptio
 **Impact:** Compliance risk (EU visitors / India DPDP direction); pairs with S1.
 **Fix:** add a lightweight consent banner and gate GA4/Clarity behind acceptance (or GA Consent Mode v2).
 
-### S6. Analytics fire in dev and on admin pages
+### S6. Analytics fire in dev and on admin pages — ✅ FIXED (GA4/Clarity only inject in PROD and not on /admin)
 **Where:** The GA4/Clarity snippets in `BaseLayout` have no `import.meta.env.PROD` guard and load on `/admin` too.
 **Impact:** Local/preview traffic and admin sessions pollute analytics (and Clarity may record admin screens).
 **Fix:** only inject in `PROD`, and skip on `/admin` routes.
