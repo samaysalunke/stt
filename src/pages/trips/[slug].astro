@@ -281,7 +281,11 @@ const tripSchema: Record<string, any> = {
                   <span class="absolute right-4 top-3 font-display text-3xl opacity-20" style="color: var(--color-navy);">"</span>
                   <blockquote class="text-sm leading-relaxed" style="color: var(--color-navy);">{t.quote}</blockquote>
                   <figcaption class="mt-5 flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full grid place-items-center font-display font-bold text-white" style="background-color: var(--color-coral);">{(t.name ?? '?')[0]}</div>
+                    {t.photo ? (
+                      <img src={t.photo} alt={t.name} loading="lazy" class="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div class="w-10 h-10 rounded-full grid place-items-center font-display font-bold text-white" style="background-color: var(--color-coral);">{(t.name ?? '?')[0]}</div>
+                    )}
                     <div>
                       <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
                       <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName ?? ''}</p>

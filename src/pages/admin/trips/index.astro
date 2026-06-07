@@ -29,19 +29,18 @@ function fmtDay(d: string | null) {
   return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Trip-level status vocabulary is just these three (departure-level statuses like
+// filling_fast / completed live on individual batches, not the trip). The `?? '#6b7280'`
+// / `?? trip.status` fallbacks at the call sites still render any legacy value.
 const statusColors: Record<string, string> = {
   'booking-open': '#16a34a',
-  'upcoming':     '#2563eb',
   'draft':        '#6b7280',
   'sold-out':     '#dc2626',
-  'completed':    '#7c3aed',
 };
 const statusLabels: Record<string, string> = {
   'booking-open': 'Booking Open',
-  'upcoming':     'Upcoming',
   'draft':        'Draft',
   'sold-out':     'Sold Out',
-  'completed':    'Completed',
 };
 ---
 
@@ -93,7 +92,7 @@ const statusLabels: Record<string, string> = {
             <label class="text-[10px] font-semibold uppercase tracking-widest" style="color: rgba(27,43,58,0.45);">Quick status</label>
             <select class="status-select w-full mt-1 rounded-xl px-3 py-2 text-sm" data-slug={trip.slug}
                     style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white); color: var(--color-navy);">
-              {['booking-open','upcoming','draft','sold-out','completed'].map(s => (
+              {['booking-open','draft','sold-out'].map(s => (
                 <option value={s} selected={s === trip.status}>{statusLabels[s]}</option>
               ))}
             </select>

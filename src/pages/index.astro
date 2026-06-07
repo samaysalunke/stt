@@ -189,7 +189,11 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
             <figure class="reveal flex shrink-0 basis-[84%] snap-start flex-col gap-6 rounded-2xl bg-white p-7 sm:basis-[55%] lg:basis-[28%]" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
               <blockquote class="font-display text-lg leading-snug" style="color: var(--color-navy);">"{t.quote}"</blockquote>
               <figcaption class="mt-auto flex items-center gap-3">
-                <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{(t.name as string)?.[0] ?? '?'}</span>
+                {t.photo ? (
+                  <img src={t.photo} alt={t.name} loading="lazy" class="h-10 w-10 rounded-full object-cover" />
+                ) : (
+                  <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{(t.name as string)?.[0] ?? '?'}</span>
+                )}
                 <div>
                   <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
                   {t.tripName && <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName}</p>}

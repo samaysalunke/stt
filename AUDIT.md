@@ -101,9 +101,9 @@ Severity legend:
 ## 🟢 Could be improved
 
 - **Admin data tables not restyled to cards** (registrations/contacts/newsletter) — functional and on-palette; you parked this. Pure cosmetics.
-- **Testimonial avatars** — homepage code references `t.photo` which never exists (always renders initials). Either add an avatar upload or drop the dead branch.
-- **Trip-level vs departure status vocab** — trip-level offers `draft / booking-open / sold-out` (3); departures offer those + `filling_fast / completed` (5). Intentional but slightly inconsistent; the admin trips list also maps an `upcoming` colour that's no longer selectable.
-- **`/api/uploads/[filename].ts` content-type** — treats anything non-pdf/png as `image/jpeg`. Only used for registration uploads (jpg/png/pdf) so harmless, but brittle if extended.
+- **Testimonial avatars** — ✅ FIXED. The keystatic schema already has a `photo` field; homepage + trip-page renders now show it when set (fallback to initials), so it's no longer dead.
+- **Trip-level vs departure status vocab** — ✅ FIXED. Admin trips list quick-status dropdown + colour/label maps trimmed to the 3 real trip-level statuses (`booking-open / draft / sold-out`); legacy values still render via fallback.
+- **`/api/uploads/[filename].ts` content-type** — ✅ FIXED. Maps by extension via a MIME table, defaulting to `application/octet-stream` instead of `image/jpeg`.
 - **Stale plan docs** — `v2-redesign.md` / `v2-admin-redesign.md` predate the trip-model overhaul; either update or archive them.
 - **About-page copy** is hardcoded (no admin editor) — parked by you.
 
