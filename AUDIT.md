@@ -43,10 +43,17 @@ Severity legend:
 **Impact:** Every money figure is dead and always shows ₹0 — dashboard "Payments collected", registrations "Revenue" stat, the per-registration "Amount Paid", and "Recent activity" amounts. The new `total_amount` (what's owed) IS captured, but `amount_paid` (what's actually been paid) never is.
 **Fix options:** (a) on admin **confirm**, set `amount_paid = trip.paymentAmount` (the advance) — simplest, makes revenue = confirmed advances; or (b) add an editable "amount received" field in the registration detail drawer; or (c) set `amount_paid = advance` at registration when a screenshot + transaction ID are provided.
 
-### 2. Videos cannot be added or shown (explicitly requested)
+### 2. Videos cannot be added or shown (explicitly requested) — **decision: upload to albums**
 **Where:** `saveImageFile` and `/api/admin/albums/add-photo.ts` accept images only (`ALLOWED_IMAGE_TYPES` = jpg/png/webp); album photo schema is `{ image, caption }`; the public gallery, album detail, and trip photo strip all render `<img>` only. The reference prototype's album detail had video tiles (play overlay) — that capability was never built.
-**Impact:** No way to upload or display videos anywhere, despite it being a stated requirement.
-**Fix:** decide scope first (self-hosted video on the volume is heavy and not CDN-optimised). Pragmatic path: support a **video URL / embed** field per album item (YouTube/Instagram/Vimeo) + render an embed/`<video>`; or allow `.mp4` upload with a size cap and serve via a range-aware route. Needs a small design decision before building.
+**Impact:** No way to upload or display videos in albums, despite being a stated requirement.
+**Decision (confirmed):** videos are **uploaded files** stored on the volume (not external embeds).
+**What this requires:**
+- **Storage/serving:** a new upload path that accepts video (`mp4`/`webm`/`mov`) with a sensible cap (e.g. 50–100 MB) — the current 10 MB image limit won't do. Videos must be served by a **range-request-aware** route (HTTP 206 / `Accept-Ranges`); the existing `/images/[...path]` reads the whole file into memory with `readFileSync` and is unsuitable for video — add a streaming route.
+- **Volume sizing:** video is large; confirm the Railway volume has headroom and budget.
+- **Schema:** album items become typed, e.g. `{ type: 'image'|'video', src, caption, poster? }` (with a back-compat read for existing `{ image, caption }`). A poster/thumbnail per video is recommended for the grid.
+- **Admin:** the album editor's "add photo" form needs a video upload control (separate input or accept both).
+- **Frontend:** album detail + photo-vault gallery render `<video controls preload="metadata" poster>` for video items; the trip photo strip should show the poster (or skip videos).
+**Effort:** medium — touches upload lib, a new streaming route, album schema (+migration), album editor UI, and 2–3 frontend renderers.
 
 ### 3. Draft / hidden trips are publicly reachable and in the sitemap
 **Where:** `src/pages/trips/[slug].astro` renders **any** slug via `readTrip` with no `status === 'draft'` guard; `src/pages/sitemap.xml.ts` lists **every** trip YAML (including drafts and trips with no upcoming departures).
@@ -64,8 +71,10 @@ Severity legend:
 
 ### 5. `whoShouldJoin` and `registrationDeadline` are collected but never used
 **Where:** Both are in the trip editor (and persisted) but `whoShouldJoin` is **not rendered** on the trip page and `registrationDeadline` is **not shown or enforced** anywhere on the frontend.
-**Impact:** Admin fills fields that do nothing — the same "dead control" confusion we just cleaned up for pricing. 
-**Fix:** either render `whoShouldJoin` on the trip page and enforce/display `registrationDeadline` (close registration after it), or remove both from the editor.
+**Impact:** Admin fills fields that do nothing — the same "dead control" confusion we just cleaned up for pricing.
+**Decisions:**
+- **`registrationDeadline` → REMOVE** (confirmed). Strip it from the New Trip + edit forms, from `create.ts`/`update.ts`, and from existing trip YAMLs (migrate-out, same approach as the retired pricing/date fields).
+- **`whoShouldJoin`** — still open: either render it on the trip page or remove it too.
 
 ### 6. Orphaned image files on delete
 **Where:** `deleteTrip` / `deleteAlbum` / album `delete-photo` remove the YAML/record but not the underlying image files in `CONTENT_DIR/images/...`; registration screenshots in the uploads volume are never cleaned either.
