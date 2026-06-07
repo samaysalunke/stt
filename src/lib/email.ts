@@ -17,6 +17,11 @@ const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'z
 
 let _transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
+/** True when SMTP is fully configured. When false, all emails are no-op'd to console. */
+export function isEmailConfigured(): boolean {
+  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+}
+
 function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.warn('[Email] SMTP not configured — emails will be logged to console only.');
