@@ -94,6 +94,7 @@ Severity legend:
 ### 9. Registration form collects far less than the schema supports
 **Where:** `registrations` table has dietary/medical/emergency-relationship/num_travelers/etc.; the public form collects only name/email/phone/gender/city/emergency/whyJoin + payment.
 **Impact:** Not a bug (deliberate simple form), but the trip "max group size" is per-departure now while bookings are one-person rows — group bookings (`num_travelers`) aren't capturable. Worth a conscious decision.
+**Decision (confirmed 2026-06-07):** ✅ KEEP the one-person-per-registration model intentionally. Groups simply register more than once. `num_travelers` stays unused. Not to be re-flagged.
 
 ---
 
