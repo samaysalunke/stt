@@ -107,4 +107,6 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN total_amount INTEGER'); } catch {}
   // Migration: which departure (batch/date) the booking is for
   try { db.exec('ALTER TABLE registrations ADD COLUMN batch_id TEXT'); } catch {}
+  // Migration: consent — timestamp the traveller accepted Terms + Cancellation policy
+  try { db.exec('ALTER TABLE registrations ADD COLUMN consent_at DATETIME'); } catch {}
 }

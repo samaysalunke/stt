@@ -104,6 +104,20 @@ test('TC-035 honeypot field filled → 400', async () => {
   assert.equal(data.success, false);
 });
 
+test('TC-036 missing Terms consent → 400', async () => {
+  const { status, data } = await reg({ agreeTerms: '' });
+  assert.equal(status, 400);
+  assert.equal(data.success, false);
+  assert.match(data.error, /terms|cancellation|accept/i);
+});
+
+test('TC-036 missing Cancellation consent → 400', async () => {
+  const { status, data } = await reg({ agreeCancel: '' });
+  assert.equal(status, 400);
+  assert.equal(data.success, false);
+  assert.match(data.error, /terms|cancellation|accept/i);
+});
+
 test('TC-037 successful submission stores record (verify via 200 + success flag)', async () => {
   const { status, data } = await reg({ email: 'qa-verify-store@example.invalid' });
   assert.equal(status, 200);

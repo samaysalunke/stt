@@ -56,4 +56,7 @@ export const VALID_REG = {
   emergencyName:  'QA Emergency Contact',
   emergencyPhone: '9123456789',
   whyJoin:        'Automated QA test submission — safe to ignore.',
+  // Consent is required server-side for a valid booking.
+  agreeTerms:     'on',
+  agreeCancel:    'on',
 };

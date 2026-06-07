@@ -68,6 +68,16 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
+    // Consent: both the Terms and Cancellation policy must be accepted. Checkboxes
+    // post as 'on'/true; treat anything else as not accepted (blocks non-JS/tampered submits).
+    const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
+    if (!truthy(body.agreeTerms) || !truthy(body.agreeCancel)) {
+      return new Response(JSON.stringify({ success: false, error: 'Please accept the Terms and Cancellation Policy to continue.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // ── Server-side departure + price resolution (never trust the client) ──
     const fail = (msg: string) => new Response(
       JSON.stringify({ success: false, error: msg }),
@@ -120,12 +130,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         trip_name, trip_date, full_name, email, phone, gender,
         city, emergency_name, emergency_phone,
         payment_screenshot_url, transaction_id, why_join,
-        sharing_option, total_amount, batch_id, status
+        sharing_option, total_amount, batch_id, consent_at, status
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?,
-        ?, ?, ?, 'pending'
+        ?, ?, ?, CURRENT_TIMESTAMP, 'pending'
       )
     `);
 
