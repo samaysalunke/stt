@@ -84,6 +84,14 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       </div>
     </div>
 
+    <!-- Section: Departure Dates -->
+    <div class="form-section">
+      <h2 class="section-title">Departure Dates</h2>
+      <p class="form-hint" style="margin-bottom:0.75rem;">Add one row per departure — each can have its own price, seats, and status. Past dates auto-hide on the site. Leave empty to use the single Start/End date above.</p>
+      <div id="batches-list" class="dynamic-list"></div>
+      <button type="button" id="add-batch-btn" class="add-item-btn">+ Add Departure Date</button>
+    </div>
+
     <!-- Section 2: Content -->
     <div class="form-section">
       <h2 class="section-title">Content</h2>
@@ -181,6 +189,12 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="form-group full">
           <label class="form-label">Payment Instructions</label>
           <textarea name="paymentInstructions" class="form-input" rows="3" placeholder="How to complete payment..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Room-Sharing / Occupancy Options</label>
+          <p class="form-hint" style="margin-bottom:0.5rem;">Optional. If set, the trip page lets travellers choose an occupancy and that price becomes the total.</p>
+          <div id="sharing-list" class="dynamic-list"></div>
+          <button type="button" id="add-sharing-btn" class="add-item-btn">+ Add Occupancy Option</button>
         </div>
       </div>
     </div>
@@ -370,4 +384,42 @@ document.getElementById('trip-form')!.addEventListener('submit', () => {
   const el = document.getElementById('itinerary_json') as HTMLInputElement;
   el.value = JSON.stringify(serializeItinerary());
 });
+
+// Departure dates (batches) repeater
+document.getElementById('add-batch-btn')?.addEventListener('click', () => {
+  const list = document.getElementById('batches-list')!;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item batch-row';
+  div.style.cssText = 'flex-wrap:wrap; gap:0.4rem; align-items:flex-end; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.6rem;';
+  div.innerHTML =
+    '<div style="flex:1; min-width:130px;"><div class="day-label">Start</div><input type="date" name="batchStart[]" class="form-input" /></div>' +
+    '<div style="flex:1; min-width:130px;"><div class="day-label">End</div><input type="date" name="batchEnd[]" class="form-input" /></div>' +
+    '<div style="flex:1; min-width:90px;"><div class="day-label">Price ₹</div><input type="number" name="batchPrice[]" class="form-input" /></div>' +
+    '<div style="flex:1; min-width:70px;"><div class="day-label">Total spots</div><input type="number" name="batchTotal[]" class="form-input" /></div>' +
+    '<div style="flex:1; min-width:70px;"><div class="day-label">Booked</div><input type="number" name="batchBooked[]" value="0" class="form-input" /></div>' +
+    '<div style="flex:1; min-width:120px;"><div class="day-label">Status</div><select name="batchStatus[]" class="form-input"><option value="booking-open">booking-open</option><option value="filling_fast">filling_fast</option><option value="sold-out">sold-out</option><option value="draft">draft</option><option value="completed">completed</option></select></div>' +
+    '<button type="button" class="remove-btn" onclick="this.closest(\'.batch-row\').remove()">✕</button>';
+  list.appendChild(div);
+});
+
+// Occupancy options repeater
+document.getElementById('add-sharing-btn')?.addEventListener('click', () => {
+  const list = document.getElementById('sharing-list')!;
+  const div = document.createElement('div');
+  div.className = 'dynamic-item sharing-row';
+  div.innerHTML =
+    '<input type="text" name="sharingLabel[]" placeholder="e.g. Double sharing" class="form-input" style="flex:2;" />' +
+    '<input type="number" name="sharingPrice[]" placeholder="₹ per person" class="form-input" style="flex:1;" />' +
+    '<button type="button" class="remove-btn" onclick="this.closest(\'.sharing-row\').remove()">✕</button>';
+  list.appendChild(div);
+});
+
+// Expose the inline-handler functions on window (this script is an ES module,
+// so its top-level functions aren't global by default — inline onclick/oninput
+// attributes need them on window).
+;(window as any).autoSlug = autoSlug;
+(window as any).previewImage = previewImage;
+(window as any).addItem = addItem;
+(window as any).addDay = addDay;
+(window as any).renumberDays = renumberDays;
 </script>
