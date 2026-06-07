@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .sidebar-link.active { background: #E8725A; color: white; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #E8725A; }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot { transform: translateX(100%); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased overflow-x-hidden">
+
+<div id="layout-wrapper" class="flex min-h-[1024px]">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-64 bg-navy text-white flex-shrink-0 flex flex-col sticky top-0 h-[1024px]">
+        <div class="p-8">
+            <span class="font-fraunces text-coral text-2xl font-900 tracking-tight italic">Seek the Thrill</span>
+            <p class="text-[10px] text-white/40 uppercase tracking-[0.2em] mt-1 font-700">Admin Control</p>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-2">
+            <a id="nav-dashboard" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </a>
+            <a id="nav-trips" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-route w-5"></i> Trips
+            </a>
+            <a id="nav-bookings" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-calendar-check w-5"></i> Bookings
+            </a>
+            <a id="nav-photo-vault" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a id="nav-site-content" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-pen-nib w-5"></i> Site Content
+            </a>
+            <a id="nav-settings" href="#" class="sidebar-link active flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+
+        <div class="p-6 border-t border-white/5">
+            <div class="flex items-center gap-3 mb-6">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-10 h-10 rounded-full border border-coral/30" />
+                <div>
+                    <p class="text-sm font-700">Zahra S.</p>
+                    <p class="text-[10px] text-white/40 font-600">Super Admin</p>
+                </div>
+            </div>
+            <button class="w-full py-3 rounded-xl border border-white/10 text-white/40 text-xs font-700 uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all">
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <header id="header" class="h-20 bg-white border-b border-peach/20 flex items-center justify-between px-10 sticky top-0 z-40">
+            <div class="flex items-center gap-4">
+                <h1 class="font-fraunces text-2xl font-700 text-navy">Admin Settings</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="bg-gray-soft text-navy/60 px-6 py-2.5 rounded-xl text-sm font-700 hover:bg-peach/20 transition-all">Discard</button>
+                <button class="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-700 hover:bg-navy/90 transition-all shadow-lg">Save Changes</button>
+            </div>
+        </header>
+
+        <div class="p-10 max-w-[1400px] mx-auto w-full space-y-10">
+            
+            <!-- 1. Roles & Permissions -->
+            <section id="roles-permissions" class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-peach/10 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-fraunces text-xl font-700">Roles & Permissions</h3>
+                        <p class="text-sm text-navy/40">Define what your team can access and manage.</p>
+                    </div>
+                    <button class="bg-coral text-white px-5 py-2 rounded-xl text-xs font-700 hover:bg-dark-coral transition-all">+ New Role</button>
+                </div>
+                <div class="p-8">
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="p-6 bg-gray-soft rounded-3xl border border-peach/10">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-navy text-white text-[10px] font-700 px-3 py-1 rounded-full uppercase">Full Access</span>
+                                <i class="fa-solid fa-ellipsis-vertical text-navy/20"></i>
+                            </div>
+                            <h4 class="font-700 text-base mb-1">Super Admin</h4>
+                            <p class="text-xs text-navy/40 mb-4">Complete control over all platform modules and settings.</p>
+                            <div class="flex items-center gap-2 text-[10px] font-700 text-coral">
+                                <i class="fa-solid fa-user-group"></i> 2 Members
+                            </div>
+                        </div>
+                        <div class="p-6 bg-white rounded-3xl border border-peach/30">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-blue-100 text-blue-600 text-[10px] font-700 px-3 py-1 rounded-full uppercase">Restricted</span>
+                                <i class="fa-solid fa-ellipsis-vertical text-navy/20"></i>
+                            </div>
+                            <h4 class="font-700 text-base mb-1">Content Editor</h4>
+                            <p class="text-xs text-navy/40 mb-4">Can manage trips and site content but no financial access.</p>
+                            <div class="flex items-center gap-2 text-[10px] font-700 text-navy/40">
+                                <i class="fa-solid fa-user-group"></i> 5 Members
+                            </div>
+                        </div>
+                        <div class="p-6 bg-white rounded-3xl border border-peach/30">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="bg-purple-100 text-purple-600 text-[10px] font-700 px-3 py-1 rounded-full uppercase">Restricted</span>
+                                <i class="fa-solid fa-ellipsis-vertical text-navy/20"></i>
+                            </div>
+                            <h4 class="font-700 text-base mb-1">Operations</h4>
+                            <p class="text-xs text-navy/40 mb-4">Access to bookings and traveler data only.</p>
+                            <div class="flex items-center gap-2 text-[10px] font-700 text-navy/40">
+                                <i class="fa-solid fa-user-group"></i> 3 Members
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Branding & Visual Identity -->
+            <section id="branding-settings" class="grid grid-cols-12 gap-8">
+                <div class="col-span-8 bg-white rounded-[2.5rem] border border-peach/30 p-8 shadow-sm">
+                    <h3 class="font-fraunces text-xl font-700 mb-6">Platform Branding</h3>
+                    <div class="space-y-8">
+                        <div class="flex gap-10">
+                            <div class="space-y-4">
+                                <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block">Primary Logo</label>
+                                <div class="w-40 h-40 bg-navy rounded-3xl flex items-center justify-center p-6 border-2 border-dashed border-peach/30">
+                                    <span class="font-fraunces text-coral text-xl font-900 italic text-center leading-tight">Seek the Thrill</span>
+                                </div>
+                                <button class="w-full py-2.5 bg-gray-soft rounded-xl text-xs font-700 hover:bg-peach/20 transition-all">Replace Logo</button>
+                            </div>
+                            <div class="flex-1 space-y-6">
+                                <div>
+                                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block mb-2">Accent Color</label>
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 rounded-xl bg-coral border-4 border-white shadow-lg"></div>
+                                        <input type="text" value="#E8725A" class="flex-1 bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block mb-2">Typography (Headings)</label>
+                                    <select class="w-full bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none">
+                                        <option>Fraunces (Serif)</option>
+                                        <option>Playfair Display</option>
+                                        <option>Montserrat</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-4 bg-blush rounded-[2.5rem] border border-coral/10 p-8 flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-fraunces text-lg font-700 text-dark-coral mb-2">Live Preview</h4>
+                        <p class="text-xs text-navy/60">Real-time visualization of how branding looks on the mobile app.</p>
+                    </div>
+                    <div class="relative mx-auto w-48 h-64 bg-white rounded-t-3xl border-x-8 border-t-8 border-navy/10 shadow-2xl overflow-hidden">
+                        <div class="h-12 bg-navy flex items-center justify-center">
+                            <span class="font-fraunces text-coral text-[8px] font-900 italic">Seek the Thrill</span>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div class="w-full h-16 bg-gray-soft rounded-lg"></div>
+                            <div class="w-3/4 h-2 bg-coral/20 rounded"></div>
+                            <div class="w-full h-8 bg-coral rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Integrations & API -->
+            <section id="integrations" class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-peach/10">
+                    <h3 class="font-fraunces text-xl font-700">Connected Services</h3>
+                    <p class="text-sm text-navy/40">Manage third-party API connections and webhooks.</p>
+                </div>
+                <div class="p-8 grid grid-cols-2 gap-8">
+                    <div class="flex items-center justify-between p-6 border border-peach/20 rounded-3xl hover:border-coral/30 transition-all group">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 bg-gray-soft rounded-2xl flex items-center justify-center text-3xl text-[#635BFF]">
+                                <i class="fa-brands fa-stripe"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-700 text-base">Stripe Payments</h4>
+                                <p class="text-xs text-emerald-500 font-700 uppercase tracking-widest">Active & Connected</p>
+                            </div>
+                        </div>
+                        <button class="text-navy/20 group-hover:text-navy transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="flex items-center justify-between p-6 border border-peach/20 rounded-3xl hover:border-coral/30 transition-all group">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 bg-gray-soft rounded-2xl flex items-center justify-center text-3xl text-[#4285F4]">
+                                <i class="fa-brands fa-google"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-700 text-base">Google Maps SDK</h4>
+                                <p class="text-xs text-navy/40 font-700 uppercase tracking-widest">API Key: AIza...90qw</p>
+                            </div>
+                        </div>
+                        <button class="text-navy/20 group-hover:text-navy transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="flex items-center justify-between p-6 border border-peach/20 rounded-3xl hover:border-coral/30 transition-all group">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 bg-gray-soft rounded-2xl flex items-center justify-center text-3xl text-[#FF5A5F]">
+                                <i class="fa-brands fa-airbnb"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-700 text-base">Inventory Sync</h4>
+                                <p class="text-xs text-coral font-700 uppercase tracking-widest italic">Syncing Paused</p>
+                            </div>
+                        </div>
+                        <button class="text-navy/20 group-hover:text-navy transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div class="flex items-center justify-between p-6 border border-peach/20 rounded-3xl hover:border-coral/30 transition-all group">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 bg-gray-soft rounded-2xl flex items-center justify-center text-3xl text-navy">
+                                <i class="fa-solid fa-envelope-open-text"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-700 text-base">SendGrid Email</h4>
+                                <p class="text-xs text-emerald-500 font-700 uppercase tracking-widest">Connected</p>
+                            </div>
+                        </div>
+                        <button class="text-navy/20 group-hover:text-navy transition-all"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Notifications & Communication -->
+            <section id="notification-settings" class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-peach/10">
+                    <h3 class="font-fraunces text-xl font-700">Notification Triggers</h3>
+                    <p class="text-sm text-navy/40">Configure when and how travelers receive updates.</p>
+                </div>
+                <div class="p-8 space-y-6">
+                    <div class="flex items-center justify-between py-4 border-b border-peach/10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-blush text-coral rounded-xl flex items-center justify-center">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-700">Booking Confirmation</h4>
+                                <p class="text-xs text-navy/40">Send automated email & push when payment is successful.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-[10px] font-700 text-navy/40 uppercase">Email + Push</span>
+                            <div class="relative inline-block w-12 h-6 transition duration-200 ease-linear">
+                                <input type="checkbox" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 border-transparent shadow-sm"/>
+                                <label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between py-4 border-b border-peach/10">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-gray-soft text-navy/40 rounded-xl flex items-center justify-center">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-700">Trip Reminders</h4>
+                                <p class="text-xs text-navy/40">Send preparation checklist 48 hours before departure.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-[10px] font-700 text-navy/40 uppercase">Email Only</span>
+                            <div class="relative inline-block w-12 h-6 transition duration-200 ease-linear">
+                                <input type="checkbox" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 border-transparent shadow-sm"/>
+                                <label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between py-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-gray-soft text-navy/40 rounded-xl flex items-center justify-center">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-700">Abandoned Cart</h4>
+                                <p class="text-xs text-navy/40">Nudge users who left the booking flow without finishing.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-[10px] font-700 text-navy/40 uppercase">Disabled</span>
+                            <div class="relative inline-block w-12 h-6 transition duration-200 ease-linear">
+                                <input type="checkbox" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 border-transparent shadow-sm"/>
+                                <label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. Account & Security -->
+            <section id="account-security" class="bg-navy text-white rounded-[2.5rem] p-10 shadow-xl flex items-center justify-between mb-10">
+                <div class="space-y-4">
+                    <h3 class="font-fraunces text-2xl font-700">Two-Factor Authentication</h3>
+                    <p class="text-sm text-white/60 max-w-md">Add an extra layer of security to your admin account. We'll send a code to your registered mobile device during login.</p>
+                    <div class="flex items-center gap-2 text-emerald-400 text-xs font-700 uppercase tracking-widest">
+                        <i class="fa-solid fa-shield-check"></i> Highly Recommended
+                    </div>
+                </div>
+                <button class="bg-coral text-white px-8 py-4 rounded-2xl font-700 hover:bg-dark-coral transition-all shadow-lg shadow-coral/20">
+                    Enable 2FA Now
+                </button>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    // Simple toggle logic for the UI
+    document.querySelectorAll('.toggle-checkbox').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const label = this.nextElementSibling;
+            if (this.checked) {
+                label.classList.remove('bg-gray-300');
+                label.classList.add('bg-coral');
+                this.style.transform = 'translateX(100%)';
+            } else {
+                label.classList.remove('bg-coral');
+                label.classList.add('bg-gray-300');
+                this.style.transform = 'translateX(0)';
+            }
+        });
+        
+        // Initial state
+        if (toggle.checked) {
+            toggle.nextElementSibling.classList.add('bg-coral');
+            toggle.style.transform = 'translateX(100%)';
+        }
+    });
+
+    // Navigation Active State Simulation
+    const navItems = document.querySelectorAll('.sidebar-link');
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+        });
+    });
+</script>
+
+</body>
+</html>

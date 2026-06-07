@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .sidebar-link.active { background: #E8725A; color: white; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #E8725A; }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot { transform: translateX(100%); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased overflow-x-hidden">
+
+<div id="layout-wrapper" class="flex min-h-[1024px]">
+    <!-- Sidebar Navigation (Consistent with previous screens) -->
+    <aside id="sidebar" class="w-64 bg-navy text-white flex-shrink-0 flex flex-col sticky top-0 h-[1024px]">
+        <div class="p-8">
+            <span class="font-fraunces text-coral text-2xl font-900 tracking-tight italic">Seek the Thrill</span>
+            <p class="text-[10px] text-white/40 uppercase tracking-[0.2em] mt-1 font-700">Admin Control</p>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-2">
+            <a id="nav-dashboard" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </a>
+            <a id="nav-trips" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-route w-5"></i> Trips
+            </a>
+            <a id="nav-bookings" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-calendar-check w-5"></i> Bookings
+            </a>
+            <a id="nav-photo-vault" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a id="nav-site-content" href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-pen-nib w-5"></i> Site Content
+            </a>
+            <a id="nav-settings" href="#" class="sidebar-link active flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+
+        <div class="p-6 border-t border-white/5">
+            <div class="flex items-center gap-3 mb-6">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-10 h-10 rounded-full border border-coral/30" />
+                <div>
+                    <p class="text-sm font-700">Zahra S.</p>
+                    <p class="text-[10px] text-white/40 font-600">Super Admin</p>
+                </div>
+            </div>
+            <button class="w-full py-3 rounded-xl border border-white/10 text-white/40 text-xs font-700 uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all">
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <header id="header" class="h-20 bg-white border-b border-peach/20 flex items-center justify-between px-10 sticky top-0 z-40">
+            <div class="flex items-center gap-4">
+                <h1 class="font-fraunces text-2xl font-700 text-navy">Admin Settings</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="bg-gray-soft text-navy/60 px-6 py-2.5 rounded-xl text-sm font-700 hover:bg-peach/20 transition-all">
+                    Discard Changes
+                </button>
+                <button class="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-700 hover:bg-navy/90 transition-all shadow-lg">
+                    Save Configuration
+                </button>
+            </div>
+        </header>
+
+        <div class="p-10 max-w-[1400px] mx-auto w-full space-y-10">
+            
+            <!-- 1. Profile & Account Settings -->
+            <section id="account-settings" class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                <div class="p-8 border-b border-peach/10">
+                    <h3 class="font-fraunces text-xl font-700">Profile Configuration</h3>
+                    <p class="text-sm text-navy/40">Manage your personal administrative identity.</p>
+                </div>
+                <div class="p-8 flex items-start gap-12">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="relative">
+                            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-32 h-32 rounded-3xl object-cover border-4 border-blush shadow-xl" />
+                            <button class="absolute -bottom-2 -right-2 w-10 h-10 bg-coral text-white rounded-full border-4 border-white flex items-center justify-center shadow-lg">
+                                <i class="fa-solid fa-camera text-sm"></i>
+                            </button>
+                        </div>
+                        <span class="text-[10px] font-700 text-navy/40 uppercase tracking-widest">Profile Picture</span>
+                    </div>
+                    <div class="flex-1 grid grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block ml-1">Full Name</label>
+                            <input type="text" value="Zahra Sharma" class="w-full bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none focus:ring-1 focus:ring-coral">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block ml-1">Email Address</label>
+                            <input type="email" value="zahra@seekthethrill.com" class="w-full bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none focus:ring-1 focus:ring-coral">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block ml-1">Admin Role</label>
+                            <div class="w-full bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 text-navy/40 flex justify-between items-center">
+                                Super Admin <i class="fa-solid fa-lock text-[10px]"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block ml-1">Password</label>
+                            <button class="w-full bg-peach/20 border border-coral/20 text-coral rounded-xl px-4 py-3 text-xs font-700 hover:bg-peach/30 transition-all">
+                                Change Security Password
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Platform Notifications & Preferences -->
+            <section id="notifications-settings" class="grid grid-cols-12 gap-8">
+                <div class="col-span-7 bg-white rounded-[2.5rem] border border-peach/30 p-8 shadow-sm">
+                    <h3 class="font-fraunces text-xl font-700 mb-6">Notification Preferences</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-4 bg-gray-soft rounded-2xl">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-coral shadow-sm">
+                                    <i class="fa-solid fa-bell"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-700">New Booking Alerts</h4>
+                                    <p class="text-xs text-navy/40">Instant desktop & email notification for new trips.</p>
+                                </div>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 transition duration-200 ease-linear">
+                                <input type="checkbox" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10"/>
+                                <label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-gray-soft rounded-2xl">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-navy/40 shadow-sm">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-700">Weekly Performance Digest</h4>
+                                    <p class="text-xs text-navy/40">Summary of bookings, revenue, and site traffic.</p>
+                                </div>
+                            </div>
+                            <div class="relative inline-block w-12 h-6 transition duration-200 ease-linear">
+                                <input type="checkbox" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer z-10"/>
+                                <label class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-5 bg-navy text-white rounded-[2.5rem] p-8 shadow-xl">
+                    <h3 class="font-fraunces text-xl font-700 mb-4">System Health</h3>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-white/60">Server Status</span>
+                            <span class="flex items-center gap-2 text-emerald-400 text-xs font-700">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Operational
+                            </span>
+                        </div>
+                        <div class="h-px bg-white/10"></div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-white/60">Last Backup</span>
+                            <span class="text-xs font-700 text-white/80">2 hours ago</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-white/60">API Latency</span>
+                            <span class="text-xs font-700 text-white/80">42ms</span>
+                        </div>
+                        <div class="mt-8">
+                            <button class="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-700 uppercase tracking-widest transition-all">
+                                <i class="fa-solid fa-terminal mr-2"></i> View System Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Team Management & Permissions -->
+            <section id="team-management">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="font-fraunces text-xl font-700">Admin Team</h3>
+                        <p class="text-sm text-navy/40">Manage sub-admins and their access levels.</p>
+                    </div>
+                    <button class="bg-coral text-white px-5 py-2.5 rounded-xl text-xs font-700 hover:bg-dark-coral transition-all">
+                        <i class="fa-solid fa-plus mr-2"></i> Invite Member
+                    </button>
+                </div>
+                <div class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-soft text-[10px] font-700 text-navy/40 uppercase tracking-[0.15em]">
+                                <th class="px-8 py-4">Admin Member</th>
+                                <th class="px-8 py-4">Role</th>
+                                <th class="px-8 py-4">Access Level</th>
+                                <th class="px-8 py-4">Last Active</th>
+                                <th class="px-8 py-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-peach/10">
+                            <tr>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-10 h-10 rounded-full object-cover" />
+                                        <div>
+                                            <p class="text-sm font-700">Rohan Mehta</p>
+                                            <p class="text-[10px] text-navy/40">rohan@seekthethrill.com</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="bg-blue-100 text-blue-600 text-[10px] font-700 px-3 py-1 rounded-full">Content Editor</span>
+                                </td>
+                                <td class="px-8 py-5 text-sm font-600 text-navy/60">Site Content, Trips</td>
+                                <td class="px-8 py-5 text-sm font-600 text-navy/60">Today, 10:45 AM</td>
+                                <td class="px-8 py-5 text-right">
+                                    <button class="text-navy/20 hover:text-navy transition-all"><i class="fa-solid fa-ellipsis"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-8 py-5">
+                                    <div class="flex items-center gap-3">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-6.jpg" class="w-10 h-10 rounded-full object-cover" />
+                                        <div>
+                                            <p class="text-sm font-700">Ananya Iyer</p>
+                                            <p class="text-[10px] text-navy/40">ananya@seekthethrill.com</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="bg-purple-100 text-purple-600 text-[10px] font-700 px-3 py-1 rounded-full">Operations</span>
+                                </td>
+                                <td class="px-8 py-5 text-sm font-600 text-navy/60">Bookings, Vault</td>
+                                <td class="px-8 py-5 text-sm font-600 text-navy/60">Yesterday</td>
+                                <td class="px-8 py-5 text-right">
+                                    <button class="text-navy/20 hover:text-navy transition-all"><i class="fa-solid fa-ellipsis"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. Global Site Settings & API -->
+            <section id="global-config" class="grid grid-cols-2 gap-8 pb-12">
+                <div class="bg-white rounded-[2.5rem] border border-peach/30 p-8 shadow-sm">
+                    <h3 class="font-fraunces text-xl font-700 mb-6">Payment & Currency</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block mb-2">Primary Currency</label>
+                            <select class="w-full bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none">
+                                <option>INR (₹) - Indian Rupee</option>
+                                <option>USD ($) - US Dollar</option>
+                                <option>EUR (€) - Euro</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between p-4 border border-peach/20 rounded-2xl">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-brands fa-stripe text-3xl text-[#635BFF]"></i>
+                                <div>
+                                    <h4 class="text-sm font-700">Stripe Connection</h4>
+                                    <p class="text-[10px] text-emerald-500 font-700 uppercase tracking-wider">Connected</p>
+                                </div>
+                            </div>
+                            <button class="text-xs font-700 text-navy/40 hover:text-navy transition-all underline">Manage</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[2.5rem] border border-peach/30 p-8 shadow-sm">
+                    <h3 class="font-fraunces text-xl font-700 mb-6">Advanced API Keys</h3>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block mb-2">Google Maps SDK</label>
+                            <div class="flex gap-2">
+                                <input type="password" value="AIzaSyB_1234567890qwertyuiop" class="flex-1 bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none" readonly>
+                                <button class="bg-gray-soft px-4 rounded-xl hover:bg-peach/20"><i class="fa-regular fa-copy text-navy/40"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-700 text-navy/40 uppercase tracking-widest block mb-2">Email Service (SendGrid)</label>
+                            <div class="flex gap-2">
+                                <input type="password" value="SG.v_987654321asdfghjkl" class="flex-1 bg-gray-soft border border-peach/10 rounded-xl px-4 py-3 text-sm font-600 outline-none" readonly>
+                                <button class="bg-gray-soft px-4 rounded-xl hover:bg-peach/20"><i class="fa-regular fa-copy text-navy/40"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<script>
+    // Simple toggle functionality for checkboxes
+    document.querySelectorAll('.toggle-checkbox').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            // Logic for visual feedback or API calls would go here
+        });
+    });
+</script>
+
+</body>
+</html>

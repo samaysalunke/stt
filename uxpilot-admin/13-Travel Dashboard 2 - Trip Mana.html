@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .drawer-transition { transition: transform 0.3s ease-in-out; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased">
+
+<header id="header" class="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-peach/20">
+    <div class="flex items-center gap-3">
+        <button id="menu-toggle" class="w-10 h-10 flex items-center justify-center bg-navy/5 rounded-xl text-navy">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div>
+            <h1 class="font-fraunces font-700 text-lg leading-none">Trip List</h1>
+            <span class="text-[10px] font-600 text-coral uppercase tracking-widest">Active Inventory</span>
+        </div>
+    </div>
+    <button class="w-10 h-10 bg-navy text-white rounded-xl flex items-center justify-center shadow-lg shadow-navy/20">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+</header>
+
+<div id="sidebar-overlay" class="fixed inset-0 bg-navy/40 backdrop-blur-sm z-[60] hidden"></div>
+<aside id="sidebar" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-[70] shadow-2xl drawer-transition -translate-x-full">
+    <div class="p-6 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-10">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compass text-coral text-2xl"></i>
+                <span class="font-fraunces font-900 text-xl tracking-tight">STT Admin</span>
+            </div>
+            <button id="close-menu" class="text-navy/40"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <nav class="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard Overview
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl bg-coral/10 text-coral font-700">
+                <i class="fa-solid fa-route w-5"></i> Trip Management
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-pen-to-square w-5"></i> Trip Edit
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-calendar-check w-5"></i> Booking Management
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-circle-info w-5"></i> Booking Detail
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-cloud-arrow-up w-5"></i> Photo Upload
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-file-lines w-5"></i> Content Editor
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+    </div>
+</aside>
+
+<main class="pt-24 pb-12 px-6">
+    <!-- 1. Search & Filter Bar -->
+    <section id="search-filter" class="mb-6">
+        <div class="relative mb-4">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-navy/30"></i>
+            <input type="text" placeholder="Search trips, locations..." class="w-full bg-white border border-peach/20 py-4 pl-12 pr-4 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-coral/20">
+        </div>
+        <div class="flex gap-2 overflow-x-auto no-scrollbar">
+            <button class="flex-shrink-0 px-5 py-2.5 bg-navy text-white rounded-full text-xs font-700">All Trips</button>
+            <button class="flex-shrink-0 px-5 py-2.5 bg-white border border-peach/30 text-navy/60 rounded-full text-xs font-700">Active</button>
+            <button class="flex-shrink-0 px-5 py-2.5 bg-white border border-peach/30 text-navy/60 rounded-full text-xs font-700">Drafts</button>
+            <button class="flex-shrink-0 px-5 py-2.5 bg-white border border-peach/30 text-navy/60 rounded-full text-xs font-700">Full</button>
+        </div>
+    </section>
+
+    <!-- 2. Trip Stats Summary -->
+    <section id="trip-stats" class="grid grid-cols-3 gap-3 mb-8">
+        <div class="bg-coral text-white p-3 rounded-2xl text-center">
+            <span class="block text-xl font-fraunces font-900">24</span>
+            <span class="text-[9px] uppercase font-700 tracking-wider opacity-80">Live</span>
+        </div>
+        <div class="bg-white border border-peach/20 p-3 rounded-2xl text-center">
+            <span class="block text-xl font-fraunces font-900 text-navy">08</span>
+            <span class="text-[9px] uppercase font-700 tracking-wider text-navy/40">Upcoming</span>
+        </div>
+        <div class="bg-white border border-peach/20 p-3 rounded-2xl text-center">
+            <span class="block text-xl font-fraunces font-900 text-navy">12</span>
+            <span class="text-[9px] uppercase font-700 tracking-wider text-navy/40">Drafts</span>
+        </div>
+    </section>
+
+    <!-- 3. Trip List -->
+    <section id="trip-list" class="space-y-4">
+        <!-- Trip Card 1 -->
+        <div class="bg-white rounded-[2rem] overflow-hidden border border-peach/20 shadow-sm">
+            <div class="relative h-32">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/602be50135-6a9e3094a0e69123ba2e.png" class="w-full h-full object-cover">
+                <div class="absolute top-3 right-3 flex gap-2">
+                    <span class="bg-green-500 text-white text-[9px] font-700 px-2.5 py-1 rounded-full uppercase">Active</span>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-fraunces font-700 text-base">Spiti Valley Circuit</h3>
+                    <div class="flex gap-2">
+                        <button class="w-8 h-8 rounded-lg bg-gray-soft text-navy/40 flex items-center justify-center hover:text-coral"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                        <button class="w-8 h-8 rounded-lg bg-gray-soft text-navy/40 flex items-center justify-center hover:text-navy"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-[11px] text-navy/40 font-600 mb-4">
+                    <span><i class="fa-solid fa-calendar-days text-coral mr-1"></i> 14 Jun 2025</span>
+                    <span><i class="fa-solid fa-users text-coral mr-1"></i> 8/12 Booked</span>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-peach/10">
+                    <span class="text-sm font-fraunces font-900 text-dark-coral">₹18,500</span>
+                    <button class="text-[10px] font-700 text-navy uppercase tracking-widest flex items-center gap-1">Manage Batches <i class="fa-solid fa-chevron-right text-[8px]"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trip Card 2 -->
+        <div class="bg-white rounded-[2rem] overflow-hidden border border-peach/20 shadow-sm opacity-90">
+            <div class="relative h-32">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/fb453836e4-ffbea2a9d68efa3a7a18.png" class="w-full h-full object-cover grayscale">
+                <div class="absolute top-3 right-3 flex gap-2">
+                    <span class="bg-amber-500 text-white text-[9px] font-700 px-2.5 py-1 rounded-full uppercase">Full</span>
+                </div>
+            </div>
+            <div class="p-5">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-fraunces font-700 text-base">Zanskar Expedition</h3>
+                    <div class="flex gap-2">
+                        <button class="w-8 h-8 rounded-lg bg-gray-soft text-navy/40 flex items-center justify-center"><i class="fa-solid fa-pen-to-square text-xs"></i></button>
+                        <button class="w-8 h-8 rounded-lg bg-gray-soft text-navy/40 flex items-center justify-center"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 text-[11px] text-navy/40 font-600 mb-4">
+                    <span><i class="fa-solid fa-calendar-days text-coral mr-1"></i> 22 Jul 2025</span>
+                    <span><i class="fa-solid fa-users text-coral mr-1"></i> 12/12 Booked</span>
+                </div>
+                <div class="flex items-center justify-between pt-4 border-t border-peach/10">
+                    <span class="text-sm font-fraunces font-900 text-dark-coral">₹24,000</span>
+                    <button class="text-[10px] font-700 text-navy uppercase tracking-widest flex items-center gap-1">Manage Batches <i class="fa-solid fa-chevron-right text-[8px]"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trip Card 3 (Draft) -->
+        <div class="bg-white rounded-[2rem] overflow-hidden border border-dashed border-peach/60 shadow-sm">
+            <div class="p-5">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-[9px] font-700 text-navy/40 uppercase tracking-widest mb-1 block">Draft Project</span>
+                        <h3 class="font-fraunces font-700 text-base text-navy/60">Valley of Flowers Trek</h3>
+                    </div>
+                    <span class="bg-gray-soft text-navy/40 text-[9px] font-700 px-2.5 py-1 rounded-full uppercase">Draft</span>
+                </div>
+                <p class="text-xs text-navy/40 mb-4">Last edited 2 hours ago by Zahra</p>
+                <div class="flex gap-2">
+                    <button class="flex-1 bg-coral/10 text-coral py-3 rounded-xl font-700 text-xs">Continue Edit</button>
+                    <button class="w-12 bg-gray-soft text-navy/40 py-3 rounded-xl flex items-center justify-center"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeMenu = document.getElementById('close-menu');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    menuToggle.addEventListener('click', toggleSidebar);
+    closeMenu.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+</script>
+
+</body>
+</html>

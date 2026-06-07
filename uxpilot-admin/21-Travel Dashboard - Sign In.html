@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .auth-glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-blush text-navy antialiased overflow-hidden">
+
+<main id="main-container" class="flex flex-col lg:flex-row h-[1024px] w-full">
+    
+    <!-- Left Section: Branding & Visuals -->
+    <section id="branding-section" class="hidden lg:flex lg:w-1/2 relative bg-navy overflow-hidden items-center justify-center">
+        <div class="absolute inset-0 opacity-40">
+            <img class="w-full h-full object-cover" src="https://storage.googleapis.com/uxpilot-auth.appspot.com/bc98ad5c10-566e2115f5286e3c346d.png" alt="dramatic landscape of spiti valley mountains with a lone traveler, cinematic lighting, earthy tones" />
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-br from-navy/80 via-navy/40 to-transparent"></div>
+        
+        <div class="relative z-10 px-20 text-white">
+            <div class="mb-12">
+                <span class="font-fraunces text-coral text-2xl font-900 tracking-tight italic">Seek the Thrill</span>
+            </div>
+            <h1 class="font-fraunces text-6xl font-900 leading-tight mb-6">Control the <br><span class="text-coral">Adventure.</span></h1>
+            <p class="text-white/70 text-xl max-w-md leading-relaxed">
+                The administrative gateway for managing offbeat journeys, traveler bookings, and the Seek the Thrill photo vault.
+            </p>
+            
+            <div class="mt-16 flex items-center gap-6">
+                <div class="flex -space-x-4">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-12 h-12 rounded-full border-2 border-navy object-cover" />
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-12 h-12 rounded-full border-2 border-navy object-cover" />
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-3.jpg" class="w-12 h-12 rounded-full border-2 border-navy object-cover" />
+                </div>
+                <span class="text-sm font-medium text-white/60">Trusted by 12 core team members</span>
+            </div>
+        </div>
+        
+        <!-- Decorative Element -->
+        <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-coral/20 rounded-full blur-3xl"></div>
+    </section>
+
+    <!-- Right Section: Login Form -->
+    <section id="login-section" class="w-full lg:w-1/2 flex items-center justify-center px-6 sm:px-12 lg:px-24 bg-white relative">
+        <div class="w-full max-w-md">
+            <!-- Mobile Logo (Only visible on small screens) -->
+            <div class="lg:hidden mb-12 text-center">
+                <span class="font-fraunces text-coral text-3xl font-900 italic">STT</span>
+            </div>
+
+            <div id="login-header" class="mb-10">
+                <h2 class="font-fraunces text-4xl font-900 text-navy mb-3">Admin Access</h2>
+                <p class="text-navy/50 font-500">Secure entry for staff and content managers.</p>
+            </div>
+
+            <form id="admin-login-form" class="space-y-6">
+                <!-- Email Field -->
+                <div id="email-group" class="space-y-2">
+                    <label for="email" class="text-xs font-700 uppercase tracking-widest text-navy/40 ml-1">Work Email</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-navy/30">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input type="email" id="email" name="email" required
+                            class="w-full pl-11 pr-4 py-4 bg-gray-soft border border-peach/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral/20 focus:border-coral transition-all font-dm text-navy placeholder:text-navy/30"
+                            placeholder="name@seekthethrill.com">
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div id="password-group" class="space-y-2">
+                    <div class="flex justify-between items-center ml-1">
+                        <label for="password" class="text-xs font-700 uppercase tracking-widest text-navy/40">Secure Password</label>
+                        <a href="#" class="text-[10px] font-700 text-coral uppercase tracking-tighter hover:text-dark-coral transition-colors">Forgot Access?</a>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-navy/30">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="password" name="password" required
+                            class="w-full pl-11 pr-12 py-4 bg-gray-soft border border-peach/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral/20 focus:border-coral transition-all font-dm text-navy placeholder:text-navy/30"
+                            placeholder="••••••••••••">
+                        <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center text-navy/30 hover:text-navy transition-colors">
+                            <i class="fa-solid fa-eye-slash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Remember & Security Info -->
+                <div id="security-controls" class="flex items-center justify-between py-2">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" class="w-5 h-5 rounded-lg border-peach/50 text-coral focus:ring-coral cursor-pointer">
+                        <span class="text-sm font-500 text-navy/60 group-hover:text-navy transition-colors">Keep me signed in</span>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-navy text-white py-5 rounded-2xl font-dm font-700 text-sm shadow-xl shadow-navy/10 hover:bg-coral hover:shadow-coral/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-3">
+                    Enter Dashboard
+                    <i class="fa-solid fa-arrow-right-long text-xs"></i>
+                </button>
+            </form>
+
+            <!-- Footer Info -->
+            <div id="login-footer" class="mt-12 pt-8 border-t border-gray-soft text-center">
+                <div class="flex items-center justify-center gap-4 text-[10px] font-700 text-navy/30 uppercase tracking-widest">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> 256-bit SSL</span>
+                    <span class="w-1 h-1 bg-navy/10 rounded-full"></span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-fingerprint"></i> Staff Only</span>
+                </div>
+                <p class="mt-6 text-[10px] text-navy/20 leading-relaxed max-w-xs mx-auto">
+                    Unauthorized access to this platform is strictly prohibited and monitored. By logging in, you agree to our Internal Data Policy.
+                </p>
+            </div>
+        </div>
+
+        <!-- Floating Decorative Element -->
+        <div class="absolute top-10 right-10 flex gap-2">
+            <div class="w-2 h-2 rounded-full bg-coral"></div>
+            <div class="w-2 h-2 rounded-full bg-peach"></div>
+            <div class="w-2 h-2 rounded-full bg-navy/10"></div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // Simple interactivity for password visibility
+    const passwordInput = document.getElementById('password');
+    const toggleBtn = passwordInput.nextElementSibling;
+    
+    toggleBtn.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        const icon = toggleBtn.querySelector('i');
+        icon.classList.toggle('fa-eye-slash');
+        icon.classList.toggle('fa-eye');
+    });
+
+    // Form submission simulation
+    const loginForm = document.getElementById('admin-login-form');
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = loginForm.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...';
+        btn.classList.add('opacity-80', 'pointer-events-none');
+        
+        // Simulate API delay
+        setTimeout(() => {
+            // In a real app, this would redirect
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Access Granted';
+            btn.classList.remove('bg-navy');
+            btn.classList.add('bg-green-500');
+        }, 1500);
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Upload</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .drawer-transition { transition: transform 0.3s ease-in-out; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased">
+
+<header id="header" class="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-peach/20">
+    <div class="flex items-center gap-3">
+        <button id="menu-toggle" class="w-10 h-10 flex items-center justify-center bg-navy/5 rounded-xl text-navy">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div>
+            <h1 class="font-fraunces font-700 text-lg leading-none">Upload Media</h1>
+            <span class="text-[10px] font-600 text-coral uppercase tracking-widest">New Asset</span>
+        </div>
+    </div>
+    <button class="text-navy/40"><i class="fa-solid fa-circle-question"></i></button>
+</header>
+
+<aside id="sidebar-overlay" class="fixed inset-0 bg-navy/40 backdrop-blur-sm z-[60] hidden"></aside>
+<aside id="sidebar" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-[70] shadow-2xl drawer-transition -translate-x-full">
+    <div class="p-6 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-10">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compass text-coral text-2xl"></i>
+                <span class="font-fraunces font-900 text-xl tracking-tight">STT Admin</span>
+            </div>
+            <button id="close-menu" class="text-navy/40"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <nav class="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-chart-pie w-5"></i> Dashboard Overview</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-route w-5"></i> Trip Management</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-pen-to-square w-5"></i> Trip Edit</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-calendar-check w-5"></i> Booking Management</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-circle-info w-5"></i> Booking Detail</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-images w-5"></i> Photo Vault</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl bg-coral/10 text-coral font-700"><i class="fa-solid fa-cloud-arrow-up w-5"></i> Photo Upload</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-file-lines w-5"></i> Content Editor</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-gear w-5"></i> Settings</a>
+        </nav>
+    </div>
+</aside>
+
+<main class="pt-24 pb-32 px-6 space-y-8">
+    <!-- 1. Upload Dropzone -->
+    <section id="upload-zone" class="relative">
+        <div class="border-2 border-dashed border-coral/30 bg-white rounded-[32px] p-8 flex flex-col items-center justify-center text-center">
+            <div class="w-16 h-16 bg-blush rounded-full flex items-center justify-center text-coral mb-4">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+            </div>
+            <h3 class="font-fraunces font-700 text-lg mb-2">Select Photos</h3>
+            <p class="text-xs text-navy/40 mb-6">PNG, JPG or WEBP up to 10MB each</p>
+            <button class="bg-navy text-white px-6 py-3 rounded-2xl text-xs font-700">Choose Files</button>
+        </div>
+    </section>
+
+    <!-- 2. Preview & Metadata -->
+    <section id="metadata-editor" class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="font-fraunces font-700 text-lg">Asset Details</h3>
+            <span class="text-[10px] font-700 bg-emerald-100 text-emerald-600 px-2 py-1 rounded-md uppercase">Ready</span>
+        </div>
+        
+        <div class="bg-white p-4 rounded-3xl border border-peach/20 shadow-sm flex gap-4">
+            <div class="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 relative">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/602be50135-6a9e3094a0e69123ba2e.png" class="w-full h-full object-cover">
+                <button class="absolute top-1 right-1 w-6 h-6 bg-black/40 backdrop-blur-sm rounded-full text-white text-[10px]"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-1 space-y-3">
+                <div>
+                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-1">Title</label>
+                    <input type="text" value="spiti_valley_sunset" class="w-full bg-gray-soft border-none rounded-xl px-3 py-2 text-xs font-600 focus:ring-1 focus:ring-coral">
+                </div>
+                <div>
+                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-1">Collection</label>
+                    <select class="w-full bg-gray-soft border-none rounded-xl px-3 py-2 text-xs font-600 focus:ring-1 focus:ring-coral">
+                        <option>Spiti 2024</option>
+                        <option>Gokarna</option>
+                        <option>Camping</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Tags & Attributes -->
+    <section id="tags-attributes" class="space-y-4">
+        <h3 class="font-fraunces font-700 text-lg">Tags & SEO</h3>
+        <div class="bg-white p-6 rounded-[32px] border border-peach/20 space-y-4">
+            <div>
+                <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Assigned Tags</label>
+                <div class="flex flex-wrap gap-2">
+                    <span class="bg-blush text-coral px-3 py-1.5 rounded-full text-[10px] font-700 flex items-center gap-2">#Himachal <i class="fa-solid fa-xmark"></i></span>
+                    <span class="bg-blush text-coral px-3 py-1.5 rounded-full text-[10px] font-700 flex items-center gap-2">#Landscape <i class="fa-solid fa-xmark"></i></span>
+                    <button class="border border-dashed border-peach px-3 py-1.5 rounded-full text-[10px] font-700 text-navy/40">+ Add Tag</button>
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Alt Text (SEO)</label>
+                <textarea class="w-full bg-gray-soft border-none rounded-2xl px-4 py-3 text-xs font-500 h-20 focus:ring-1 focus:ring-coral" placeholder="Describe the image for accessibility..."></textarea>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Upload Progress (Hidden by default, shown on confirm) -->
+    <section id="upload-status" class="hidden">
+        <div class="bg-white p-6 rounded-[32px] border border-peach/20 flex flex-col items-center text-center">
+            <div class="w-16 h-16 relative mb-4">
+                <svg class="w-full h-full transform -rotate-90">
+                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" class="text-gray-soft"></circle>
+                    <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="transparent" stroke-dasharray="175.9" stroke-dashoffset="44" class="text-coral"></circle>
+                </svg>
+                <span class="absolute inset-0 flex items-center justify-center text-xs font-700">75%</span>
+            </div>
+            <h4 class="font-700 text-sm mb-1">Uploading spiti_valley_sunset.jpg</h4>
+            <p class="text-[10px] text-navy/40">Estimated time: 4 seconds</p>
+        </div>
+    </section>
+
+    <!-- 5. Confirmation Actions -->
+    <section id="actions" class="grid grid-cols-2 gap-4">
+        <button class="bg-white border border-peach/30 text-navy py-4 rounded-2xl font-700 text-sm shadow-sm">Discard</button>
+        <button id="upload-btn" class="bg-dark-coral text-white py-4 rounded-2xl font-700 text-sm shadow-xl shadow-coral/20">Confirm Upload</button>
+    </section>
+</main>
+
+<footer id="footer" class="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-peach/20 px-8 py-4 flex justify-between items-center pb-8">
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-house"></i><span class="text-[8px] font-700 uppercase">Home</span></button>
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-calendar-check"></i><span class="text-[8px] font-700 uppercase">Bookings</span></button>
+    <button class="w-12 h-12 bg-navy text-white rounded-2xl flex items-center justify-center -mt-8 shadow-xl shadow-navy/20"><i class="fa-solid fa-plus"></i></button>
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-route"></i><span class="text-[8px] font-700 uppercase">Trips</span></button>
+    <button class="flex flex-col items-center gap-1 text-coral"><i class="fa-solid fa-images"></i><span class="text-[8px] font-700 uppercase">Vault</span></button>
+</footer>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeMenu = document.getElementById('close-menu');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const uploadBtn = document.getElementById('upload-btn');
+    const statusSection = document.getElementById('upload-status');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    menuToggle.addEventListener('click', toggleSidebar);
+    closeMenu.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    uploadBtn.addEventListener('click', () => {
+        statusSection.classList.remove('hidden');
+        uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing';
+        uploadBtn.disabled = true;
+    });
+</script>
+
+</body>
+</html>

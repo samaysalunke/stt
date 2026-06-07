@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .drawer-transition { transition: transform 0.3s ease-in-out; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased">
+
+<header id="header" class="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-peach/20">
+    <div class="flex items-center gap-3">
+        <button id="menu-toggle" class="w-10 h-10 flex items-center justify-center bg-navy/5 rounded-xl text-navy">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div>
+            <h1 class="font-fraunces font-700 text-lg leading-none">Content Editor</h1>
+            <span class="text-[10px] font-600 text-coral uppercase tracking-widest">Site Management</span>
+        </div>
+    </div>
+    <button class="w-10 h-10 flex items-center justify-center bg-dark-coral text-white rounded-xl shadow-lg shadow-coral/20">
+        <i class="fa-solid fa-floppy-disk text-xs"></i>
+    </button>
+</header>
+
+<aside id="sidebar-overlay" class="fixed inset-0 bg-navy/40 backdrop-blur-sm z-[60] hidden"></aside>
+<aside id="sidebar" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-[70] shadow-2xl drawer-transition -translate-x-full">
+    <div class="p-6 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-10">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compass text-coral text-2xl"></i>
+                <span class="font-fraunces font-900 text-xl tracking-tight">STT Admin</span>
+            </div>
+            <button id="close-menu" class="text-navy/40"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <nav class="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-chart-pie w-5"></i> Dashboard Overview</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-route w-5"></i> Trip Management</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-pen-to-square w-5"></i> Trip Edit</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-calendar-check w-5"></i> Booking Management</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-circle-info w-5"></i> Booking Detail</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-images w-5"></i> Photo Vault</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-cloud-arrow-up w-5"></i> Photo Upload</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl bg-coral/10 text-coral font-700"><i class="fa-solid fa-file-lines w-5"></i> Content Editor</a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft"><i class="fa-solid fa-gear w-5"></i> Settings</a>
+        </nav>
+    </div>
+</aside>
+
+<main class="pt-24 pb-32 px-6 space-y-6">
+    <!-- 1. Section Selector -->
+    <section id="editor-nav" class="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+        <button class="flex-shrink-0 bg-navy text-white px-5 py-2.5 rounded-full text-xs font-700">Homepage</button>
+        <button class="flex-shrink-0 bg-white border border-peach/30 text-navy/60 px-5 py-2.5 rounded-full text-xs font-700">Trips</button>
+        <button class="flex-shrink-0 bg-white border border-peach/30 text-navy/60 px-5 py-2.5 rounded-full text-xs font-700">Announcements</button>
+        <button class="flex-shrink-0 bg-white border border-peach/30 text-navy/60 px-5 py-2.5 rounded-full text-xs font-700">About Us</button>
+    </section>
+
+    <!-- 2. Hero Content Section -->
+    <section id="homepage-hero" class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="font-fraunces font-700 text-lg">Hero Section</h3>
+            <button class="text-coral text-[10px] font-700 uppercase tracking-widest">Preview</button>
+        </div>
+        <div class="bg-white p-6 rounded-[32px] border border-peach/20 space-y-5 shadow-sm">
+            <div>
+                <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Headline</label>
+                <input type="text" value="Offbeat Journeys for the Wild at Heart" class="w-full bg-gray-soft border-none rounded-2xl px-4 py-3 text-sm font-600 focus:ring-1 focus:ring-coral">
+            </div>
+            <div>
+                <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Sub-headline</label>
+                <textarea class="w-full bg-gray-soft border-none rounded-2xl px-4 py-3 text-sm font-500 h-24 focus:ring-1 focus:ring-coral leading-relaxed">Remote valleys, 1000-year-old monasteries, and roads that touch the sky. Join our small group for an offbeat journey.</textarea>
+            </div>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Primary CTA</label>
+                    <input type="text" value="Explore Trips" class="w-full bg-gray-soft border-none rounded-xl px-4 py-2.5 text-xs font-600">
+                </div>
+                <div class="w-24">
+                    <label class="text-[10px] font-700 text-navy/40 uppercase tracking-wider block mb-2">Color</label>
+                    <div class="flex items-center gap-2 bg-gray-soft p-2.5 rounded-xl">
+                        <div class="w-4 h-4 bg-coral rounded-full"></div>
+                        <span class="text-[10px] font-700">Coral</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Trip Highlight Block -->
+    <section id="trip-descriptions" class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="font-fraunces font-700 text-lg">Featured Trip Copy</h3>
+            <i class="fa-solid fa-circle-plus text-coral text-xl"></i>
+        </div>
+        <div class="bg-white p-4 rounded-3xl border border-peach/20 shadow-sm flex gap-4">
+            <div class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/602be50135-6a9e3094a0e69123ba2e.png" class="w-full h-full object-cover">
+            </div>
+            <div class="flex-1">
+                <h4 class="text-xs font-700 mb-1">Spiti Valley Circuit</h4>
+                <p class="text-[10px] text-navy/40 line-clamp-2 leading-relaxed">Remote valleys, 1000-year-old monasteries, and roads that touch the sky...</p>
+                <div class="flex gap-3 mt-2">
+                    <button class="text-[10px] font-700 text-coral"><i class="fa-solid fa-pen mr-1"></i> Edit Copy</button>
+                    <button class="text-[10px] font-700 text-navy/40"><i class="fa-solid fa-eye mr-1"></i> View</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Site-wide Announcements -->
+    <section id="announcements" class="space-y-4">
+        <h3 class="font-fraunces font-700 text-lg">Active Announcements</h3>
+        <div class="bg-blush border border-coral/20 p-5 rounded-[32px] relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-3">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            </div>
+            <label class="text-[10px] font-700 text-coral uppercase tracking-wider block mb-2">Banner Text</label>
+            <textarea class="w-full bg-white/50 border-none rounded-2xl px-4 py-3 text-xs font-600 text-dark-coral h-16 focus:ring-1 focus:ring-coral">Early Bird Offer: Get 15% off on all Winter Expeditions. Use code: WINTER15</textarea>
+            <div class="flex items-center justify-between mt-4">
+                <span class="text-[10px] font-700 text-navy/40 italic">Visible on: All Pages</span>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-700 text-navy/60">Active</span>
+                    <button class="w-8 h-4 bg-coral rounded-full relative">
+                        <div class="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow-sm"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. Global SEO & Metadata -->
+    <section id="global-seo" class="bg-navy p-6 rounded-[32px] text-white space-y-4">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-magnifying-glass text-coral"></i>
+            <h3 class="font-fraunces font-700 text-lg">Global SEO</h3>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="text-[10px] font-700 text-white/40 uppercase tracking-wider block mb-1">Meta Title</label>
+                <input type="text" value="Spiti Travel Tales | Offbeat Himalayan Adventures" class="w-full bg-white/10 border-none rounded-xl px-4 py-2.5 text-xs font-500 text-white placeholder-white/30">
+            </div>
+            <div>
+                <label class="text-[10px] font-700 text-white/40 uppercase tracking-wider block mb-1">Keywords</label>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <span class="bg-white/10 text-[10px] px-2 py-1 rounded-md">#himalayas</span>
+                    <span class="bg-white/10 text-[10px] px-2 py-1 rounded-md">#spiti</span>
+                    <span class="bg-white/10 text-[10px] px-2 py-1 rounded-md">#offbeat</span>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer id="footer" class="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-peach/20 px-8 py-4 flex justify-between items-center pb-8">
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-house"></i><span class="text-[8px] font-700 uppercase">Home</span></button>
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-calendar-check"></i><span class="text-[8px] font-700 uppercase">Bookings</span></button>
+    <button class="w-12 h-12 bg-navy text-white rounded-2xl flex items-center justify-center -mt-8 shadow-xl shadow-navy/20"><i class="fa-solid fa-plus"></i></button>
+    <button class="flex flex-col items-center gap-1 text-navy/40"><i class="fa-solid fa-route"></i><span class="text-[8px] font-700 uppercase">Trips</span></button>
+    <button class="flex flex-col items-center gap-1 text-coral"><i class="fa-solid fa-file-lines"></i><span class="text-[8px] font-700 uppercase">Editor</span></button>
+</footer>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeMenu = document.getElementById('close-menu');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    menuToggle.addEventListener('click', toggleSidebar);
+    closeMenu.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // Tab switching simulation
+    const navButtons = document.querySelectorAll('#editor-nav button');
+    navButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            navButtons.forEach(b => {
+                b.classList.remove('bg-navy', 'text-white');
+                b.classList.add('bg-white', 'text-navy/60', 'border', 'border-peach/30');
+            });
+            btn.classList.add('bg-navy', 'text-white');
+            btn.classList.remove('bg-white', 'text-navy/60', 'border', 'border-peach/30');
+        });
+    });
+</script>
+
+</body>
+</html>

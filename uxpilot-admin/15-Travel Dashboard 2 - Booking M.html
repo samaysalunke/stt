@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .drawer-transition { transition: transform 0.3s ease-in-out; }
+        .booking-card:active { transform: scale(0.98); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased">
+
+<header id="header" class="fixed top-0 left-0 right-0 z-40 bg-white/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-peach/20">
+    <div class="flex items-center gap-3">
+        <button id="menu-toggle" class="w-10 h-10 flex items-center justify-center bg-navy/5 rounded-xl text-navy">
+            <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+        <div>
+            <h1 class="font-fraunces font-700 text-lg leading-none">Bookings</h1>
+            <span class="text-[10px] font-600 text-coral uppercase tracking-widest">Manage Travelers</span>
+        </div>
+    </div>
+    <div class="flex gap-2">
+        <button class="w-10 h-10 flex items-center justify-center bg-navy/5 rounded-xl text-navy">
+            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Navigation Sidebar -->
+<div id="sidebar-overlay" class="fixed inset-0 bg-navy/40 backdrop-blur-sm z-[60] hidden"></div>
+<aside id="sidebar" class="fixed top-0 left-0 bottom-0 w-72 bg-white z-[70] shadow-2xl drawer-transition -translate-x-full">
+    <div class="p-6 flex flex-col h-full">
+        <div class="flex items-center justify-between mb-10">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compass text-coral text-2xl"></i>
+                <span class="font-fraunces font-900 text-xl tracking-tight">STT Admin</span>
+            </div>
+            <button id="close-menu" class="text-navy/40"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <nav class="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard Overview
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-route w-5"></i> Trip Management
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-pen-to-square w-5"></i> Trip Edit
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl bg-coral/10 text-coral font-700">
+                <i class="fa-solid fa-calendar-check w-5"></i> Booking Management
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-circle-info w-5"></i> Booking Detail
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-cloud-arrow-up w-5"></i> Photo Upload
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-file-lines w-5"></i> Content Editor
+            </a>
+            <a href="#" class="flex items-center gap-4 p-4 rounded-2xl text-navy/60 font-600 hover:bg-gray-soft transition-colors">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+    </div>
+</aside>
+
+<main class="pt-24 pb-12 px-6">
+    <!-- 1. Filter Controls -->
+    <section id="filters" class="mb-8 overflow-x-auto no-scrollbar">
+        <div class="flex gap-3 min-w-max pb-2">
+            <button class="bg-navy text-white px-5 py-2.5 rounded-full text-xs font-700 shadow-lg shadow-navy/20">All Bookings</button>
+            <button class="bg-white text-navy/60 border border-peach/30 px-5 py-2.5 rounded-full text-xs font-700 hover:bg-peach/10">Confirmed</button>
+            <button class="bg-white text-navy/60 border border-peach/30 px-5 py-2.5 rounded-full text-xs font-700 hover:bg-peach/10">Pending</button>
+            <button class="bg-white text-navy/60 border border-peach/30 px-5 py-2.5 rounded-full text-xs font-700 hover:bg-peach/10">Waitlist</button>
+        </div>
+    </section>
+
+    <!-- 2. Booking Summary Stats -->
+    <section id="booking-stats" class="grid grid-cols-2 gap-4 mb-8">
+        <div class="bg-white p-4 rounded-3xl border border-peach/20 shadow-sm">
+            <div class="w-8 h-8 bg-coral/10 rounded-lg flex items-center justify-center text-coral mb-3">
+                <i class="fa-solid fa-ticket"></i>
+            </div>
+            <span class="text-[10px] font-700 text-navy/40 uppercase tracking-widest">Total Active</span>
+            <p class="text-2xl font-fraunces font-900 mt-1">42</p>
+        </div>
+        <div class="bg-white p-4 rounded-3xl border border-peach/20 shadow-sm">
+            <div class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center text-green-600 mb-3">
+                <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+            <span class="text-[10px] font-700 text-navy/40 uppercase tracking-widest">Revenue (M)</span>
+            <p class="text-2xl font-fraunces font-900 mt-1">₹7.8L</p>
+        </div>
+    </section>
+
+    <!-- 3. Booking List -->
+    <section id="booking-list" class="space-y-4">
+        <h3 class="font-fraunces font-700 text-lg mb-2">Recent Bookings</h3>
+        
+        <!-- Booking Card 1 -->
+        <div class="booking-card bg-white p-5 rounded-[32px] border border-peach/20 shadow-sm transition-transform cursor-pointer">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-1.jpg" class="w-12 h-12 rounded-2xl object-cover shadow-sm">
+                    <div>
+                        <h4 class="font-700 text-sm">Aditi Verma</h4>
+                        <span class="text-[10px] font-600 text-navy/40">REF: #STT-9042</span>
+                    </div>
+                </div>
+                <span class="bg-green-100 text-green-600 text-[10px] font-700 px-3 py-1 rounded-full uppercase">Paid</span>
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-peach/10">
+                <div>
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Trip</span>
+                    <p class="text-xs font-700">Spiti Valley Circuit</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Batch</span>
+                    <p class="text-xs font-700">14 Jun, 2025</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Card 2 -->
+        <div class="booking-card bg-white p-5 rounded-[32px] border border-peach/20 shadow-sm transition-transform cursor-pointer">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" class="w-12 h-12 rounded-2xl object-cover shadow-sm">
+                    <div>
+                        <h4 class="font-700 text-sm">Rahul Kapoor</h4>
+                        <span class="text-[10px] font-600 text-navy/40">REF: #STT-9045</span>
+                    </div>
+                </div>
+                <span class="bg-amber-100 text-amber-600 text-[10px] font-700 px-3 py-1 rounded-full uppercase">Partial</span>
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-peach/10">
+                <div>
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Trip</span>
+                    <p class="text-xs font-700">Zanskar Expedition</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Batch</span>
+                    <p class="text-xs font-700">05 Jul, 2025</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Card 3 -->
+        <div class="booking-card bg-white p-5 rounded-[32px] border border-peach/20 shadow-sm transition-transform cursor-pointer">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-12 h-12 rounded-2xl object-cover shadow-sm">
+                    <div>
+                        <h4 class="font-700 text-sm">Meera Nair</h4>
+                        <span class="text-[10px] font-600 text-navy/40">REF: #STT-9048</span>
+                    </div>
+                </div>
+                <span class="bg-red-100 text-red-600 text-[10px] font-700 px-3 py-1 rounded-full uppercase">Pending</span>
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-peach/10">
+                <div>
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Trip</span>
+                    <p class="text-xs font-700">Spiti Valley Circuit</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-700 text-navy/40 uppercase block mb-1">Batch</span>
+                    <p class="text-xs font-700">14 Jun, 2025</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Export & Action -->
+    <section id="list-actions" class="mt-8">
+        <button class="w-full py-4 bg-white border border-peach/30 rounded-2xl text-navy/60 text-sm font-700 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-file-export"></i> Export All Bookings (CSV)
+        </button>
+    </section>
+</main>
+
+<!-- Quick Action FAB -->
+<button class="fixed bottom-6 right-6 w-14 h-14 bg-dark-coral text-white rounded-full shadow-2xl flex items-center justify-center text-xl z-30">
+    <i class="fa-solid fa-plus"></i>
+</button>
+
+<script>
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeMenu = document.getElementById('close-menu');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    menuToggle.addEventListener('click', toggleSidebar);
+    closeMenu.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // Filter toggle simulation
+    document.querySelectorAll('#filters button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#filters button').forEach(b => {
+                b.classList.remove('bg-navy', 'text-white');
+                b.classList.add('bg-white', 'text-navy/60');
+            });
+            this.classList.add('bg-navy', 'text-white');
+            this.classList.remove('bg-white', 'text-navy/60');
+        });
+    });
+</script>
+
+</body>
+</html>

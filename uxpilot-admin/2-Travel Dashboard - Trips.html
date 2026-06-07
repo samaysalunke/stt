@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trips</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .sidebar-link.active { background: #E8725A; color: white; }
+        .status-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased overflow-x-hidden">
+
+<div id="layout-wrapper" class="flex min-h-screen">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-64 bg-navy text-white flex-shrink-0 flex flex-col sticky top-0 h-[1024px]">
+        <div class="p-8">
+            <span class="font-fraunces text-coral text-2xl font-900 tracking-tight italic">Seek the Thrill</span>
+            <p class="text-[10px] text-white/40 uppercase tracking-[0.2em] mt-1 font-700">Admin Control</p>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-2">
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </a>
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600">
+                <i class="fa-solid fa-route w-5"></i> Trips
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-calendar-check w-5"></i> Bookings
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-pen-nib w-5"></i> Site Content
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+
+        <div class="p-6 border-t border-white/5">
+            <div class="flex items-center gap-3 mb-6">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-10 h-10 rounded-full border border-coral/30" />
+                <div>
+                    <p class="text-sm font-700">Zahra S.</p>
+                    <p class="text-[10px] text-white/40 font-600">Super Admin</p>
+                </div>
+            </div>
+            <button class="w-full py-3 rounded-xl border border-white/10 text-white/40 text-xs font-700 uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all">
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <header id="header" class="h-20 bg-white border-b border-peach/20 flex items-center justify-between px-10 sticky top-0 z-40">
+            <div>
+                <h1 class="font-fraunces text-2xl font-700">Trip Listings</h1>
+                <p class="text-xs text-navy/40 font-500">Manage, edit, and create new offbeat experiences.</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center bg-gray-soft rounded-xl px-4 py-2 border border-peach/10">
+                    <i class="fa-solid fa-magnifying-glass text-navy/30 text-xs mr-3"></i>
+                    <input type="text" placeholder="Search trips..." class="bg-transparent border-none text-sm focus:ring-0 w-64 placeholder:text-navy/30">
+                </div>
+                <button class="bg-navy text-white px-6 py-2.5 rounded-xl text-sm font-700 flex items-center gap-2 hover:bg-dark-coral transition-all">
+                    <i class="fa-solid fa-plus text-xs"></i> Create New Trip
+                </button>
+            </div>
+        </header>
+
+        <div class="p-10 space-y-8">
+            <!-- 1. Filters & Bulk Actions -->
+            <section id="filters-section" class="flex items-center justify-between bg-white p-4 rounded-2xl border border-peach/20 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <button class="px-4 py-2 bg-blush text-coral border border-peach rounded-xl text-xs font-700">All Trips (24)</button>
+                    <button class="px-4 py-2 text-navy/60 hover:bg-gray-soft rounded-xl text-xs font-700">Active (18)</button>
+                    <button class="px-4 py-2 text-navy/60 hover:bg-gray-soft rounded-xl text-xs font-700">Drafts (4)</button>
+                    <button class="px-4 py-2 text-navy/60 hover:bg-gray-soft rounded-xl text-xs font-700">Archived (2)</button>
+                    <div class="h-6 w-px bg-peach/30 mx-2"></div>
+                    <button class="flex items-center gap-2 text-navy/60 text-xs font-700 hover:text-coral transition-colors">
+                        <i class="fa-solid fa-sliders"></i> Advanced Filters
+                    </button>
+                </div>
+                <div id="bulk-actions" class="hidden flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                    <span class="text-xs font-600 text-navy/40 mr-2"><span id="selected-count">0</span> selected</span>
+                    <button class="bg-white border border-peach text-navy/60 px-4 py-2 rounded-xl text-xs font-700 hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all">
+                        <i class="fa-solid fa-trash-can mr-2"></i> Delete
+                    </button>
+                    <button class="bg-white border border-peach text-navy/60 px-4 py-2 rounded-xl text-xs font-700 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-100 transition-all">
+                        <i class="fa-solid fa-archive mr-2"></i> Archive
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2. Trips Table -->
+            <section id="trips-table-section" class="bg-white rounded-[2.5rem] border border-peach/30 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-peach/10 bg-gray-soft/30">
+                            <th class="py-5 px-8 w-10">
+                                <input type="checkbox" id="select-all" class="w-4 h-4 rounded border-peach text-coral focus:ring-coral/20 cursor-pointer">
+                            </th>
+                            <th class="py-5 px-4 text-[10px] font-700 uppercase tracking-widest text-navy/40">Trip Details</th>
+                            <th class="py-5 px-4 text-[10px] font-700 uppercase tracking-widest text-navy/40">Status</th>
+                            <th class="py-5 px-4 text-[10px] font-700 uppercase tracking-widest text-navy/40">Dates & Duration</th>
+                            <th class="py-5 px-4 text-[10px] font-700 uppercase tracking-widest text-navy/40">Occupancy</th>
+                            <th class="py-5 px-4 text-[10px] font-700 uppercase tracking-widest text-navy/40 text-right">Pricing</th>
+                            <th class="py-5 px-8 text-[10px] font-700 uppercase tracking-widest text-navy/40 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-peach/10">
+                        <!-- Row 1 -->
+                        <tr class="hover:bg-gray-soft/30 transition-colors group">
+                            <td class="py-6 px-8">
+                                <input type="checkbox" class="trip-checkbox w-4 h-4 rounded border-peach text-coral focus:ring-coral/20 cursor-pointer">
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 border border-peach/20">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/602be50135-6a9e3094a0e69123ba2e.png" class="w-full h-full object-cover" alt="Spiti">
+                                    </div>
+                                    <div>
+                                        <p class="font-fraunces font-700 text-navy group-hover:text-coral transition-colors">Spiti Valley Circuit</p>
+                                        <p class="text-xs text-navy/40 font-500">Himachal • Adventure</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4">
+                                <span class="status-pill px-2.5 py-1 bg-green-100 text-green-600 rounded-lg">Active</span>
+                            </td>
+                            <td class="py-6 px-4">
+                                <p class="text-sm font-600 text-navy">14 Jun - 21 Jun</p>
+                                <p class="text-xs text-navy/40">7 Days / 6 Nights</p>
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="w-32">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <span class="text-xs font-700">8/12</span>
+                                        <span class="text-[10px] font-600 text-navy/40">66%</span>
+                                    </div>
+                                    <div class="w-full bg-peach/20 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-coral h-full w-[66%]"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4 text-right">
+                                <p class="font-fraunces font-700 text-navy">₹18,500</p>
+                                <p class="text-[10px] text-coral font-700">Selling Fast</p>
+                            </td>
+                            <td class="py-6 px-8 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-navy hover:text-white transition-all">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-coral hover:text-white transition-all">
+                                        <i class="fa-solid fa-copy text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="hover:bg-gray-soft/30 transition-colors group">
+                            <td class="py-6 px-8">
+                                <input type="checkbox" class="trip-checkbox w-4 h-4 rounded border-peach text-coral focus:ring-coral/20 cursor-pointer">
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 border border-peach/20">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/59f4e488ba-d487e793680c167dcebe.png" class="w-full h-full object-cover" alt="Zanskar">
+                                    </div>
+                                    <div>
+                                        <p class="font-fraunces font-700 text-navy group-hover:text-coral transition-colors">Hidden Zanskar</p>
+                                        <p class="text-xs text-navy/40 font-500">Ladakh • Cultural</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4">
+                                <span class="status-pill px-2.5 py-1 bg-amber-100 text-amber-600 rounded-lg">Draft</span>
+                            </td>
+                            <td class="py-6 px-4">
+                                <p class="text-sm font-600 text-navy">05 Jul - 15 Jul</p>
+                                <p class="text-xs text-navy/40">10 Days / 9 Nights</p>
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="w-32">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <span class="text-xs font-700">0/10</span>
+                                        <span class="text-[10px] font-600 text-navy/40">0%</span>
+                                    </div>
+                                    <div class="w-full bg-peach/20 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-coral h-full w-[0%]"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4 text-right">
+                                <p class="font-fraunces font-700 text-navy">₹42,000</p>
+                                <p class="text-[10px] text-navy/30 font-700">Not Published</p>
+                            </td>
+                            <td class="py-6 px-8 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-navy hover:text-white transition-all">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-coral hover:text-white transition-all">
+                                        <i class="fa-solid fa-copy text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="hover:bg-gray-soft/30 transition-colors group">
+                            <td class="py-6 px-8">
+                                <input type="checkbox" class="trip-checkbox w-4 h-4 rounded border-peach text-coral focus:ring-coral/20 cursor-pointer">
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 border border-peach/20">
+                                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/fb453836e4-ffbea2a9d68efa3a7a18.png" class="w-full h-full object-cover" alt="Meghalaya">
+                                    </div>
+                                    <div>
+                                        <p class="font-fraunces font-700 text-navy group-hover:text-coral transition-colors">Meghalaya Roots</p>
+                                        <p class="text-xs text-navy/40 font-500">Shillong • Nature</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4">
+                                <span class="status-pill px-2.5 py-1 bg-red-100 text-red-600 rounded-lg">Low Occ.</span>
+                            </td>
+                            <td class="py-6 px-4">
+                                <p class="text-sm font-600 text-navy">12 Aug - 18 Aug</p>
+                                <p class="text-xs text-navy/40">6 Days / 5 Nights</p>
+                            </td>
+                            <td class="py-6 px-4">
+                                <div class="w-32">
+                                    <div class="flex justify-between items-center mb-1.5">
+                                        <span class="text-xs font-700">3/12</span>
+                                        <span class="text-[10px] font-600 text-navy/40">25%</span>
+                                    </div>
+                                    <div class="w-full bg-peach/20 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-red-400 h-full w-[25%]"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-6 px-4 text-right">
+                                <p class="font-fraunces font-700 text-navy">₹24,500</p>
+                                <p class="text-[10px] text-red-500 font-700">Needs Boost</p>
+                            </td>
+                            <td class="py-6 px-8 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-navy hover:text-white transition-all">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </button>
+                                    <button class="w-9 h-9 rounded-xl border border-peach/30 flex items-center justify-center text-navy/40 hover:bg-coral hover:text-white transition-all">
+                                        <i class="fa-solid fa-copy text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <!-- Pagination -->
+                <div class="bg-gray-soft/30 px-8 py-5 flex items-center justify-between border-t border-peach/10">
+                    <p class="text-xs font-600 text-navy/40">Showing 1 to 10 of 24 trips</p>
+                    <div class="flex items-center gap-1">
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-peach/30 text-navy/40 hover:bg-white transition-all"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg bg-navy text-white text-xs font-700">1</button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-peach/30 text-navy/40 hover:bg-white transition-all text-xs font-700">2</button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-peach/30 text-navy/40 hover:bg-white transition-all text-xs font-700">3</button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg border border-peach/30 text-navy/40 hover:bg-white transition-all"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Trip Stats Summary -->
+            <section id="stats-summary" class="grid grid-cols-3 gap-8">
+                <div class="bg-navy p-8 rounded-[2rem] text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="text-[10px] font-700 uppercase tracking-widest text-white/40 mb-2">Inventory Value</h4>
+                        <p class="font-fraunces text-3xl font-900">₹4.2M</p>
+                        <p class="text-xs text-green-400 font-600 mt-2 flex items-center gap-1">
+                            <i class="fa-solid fa-arrow-trend-up"></i> +14.2% from last month
+                        </p>
+                    </div>
+                    <i class="fa-solid fa-wallet absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                </div>
+                <div class="bg-coral p-8 rounded-[2rem] text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="text-[10px] font-700 uppercase tracking-widest text-white/40 mb-2">Total Capacity</h4>
+                        <p class="font-fraunces text-3xl font-900">320 <span class="text-lg font-400 opacity-60">Spots</span></p>
+                        <p class="text-xs text-white/80 font-600 mt-2">
+                            Across all upcoming batches
+                        </p>
+                    </div>
+                    <i class="fa-solid fa-users absolute -right-4 -bottom-4 text-white/5 text-8xl"></i>
+                </div>
+                <div class="bg-white p-8 rounded-[2rem] border border-peach/30 shadow-sm relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="text-[10px] font-700 uppercase tracking-widest text-navy/30 mb-2">Average Rating</h4>
+                        <p class="font-fraunces text-3xl font-900">4.88 <span class="text-lg font-400 text-navy/20">/ 5.0</span></p>
+                        <div class="flex text-amber-400 text-xs mt-2">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-star-half-stroke absolute -right-4 -bottom-4 text-peach/20 text-8xl"></i>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<script>
+    // Simple bulk action handling
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.trip-checkbox');
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+
+    function updateBulkActions() {
+        const checked = document.querySelectorAll('.trip-checkbox:checked').length;
+        if (checked > 0) {
+            bulkActions.classList.remove('hidden');
+            selectedCount.textContent = checked;
+        } else {
+            bulkActions.classList.add('hidden');
+        }
+    }
+
+    selectAll.addEventListener('change', (e) => {
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+        updateBulkActions();
+    });
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateBulkActions);
+    });
+</script>
+
+</body>
+</html>

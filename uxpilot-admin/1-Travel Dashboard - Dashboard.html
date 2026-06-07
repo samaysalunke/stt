@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-3.1.1.min.js"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        .sidebar-link.active { background: #E8725A; color: white; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#E8725A',
+                        'dark-coral': '#D95F3B',
+                        blush: '#FDF0EC',
+                        navy: '#1B2B3A',
+                        peach: '#F5DDD7',
+                        'gray-soft': '#F5F5F3',
+                    },
+                    fontFamily: {
+                        fraunces: ['Fraunces', 'serif'],
+                        dm: ['DM Sans', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-dm bg-gray-soft text-navy antialiased overflow-x-hidden">
+
+<div id="layout-wrapper" class="flex min-h-screen">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-64 bg-navy text-white flex-shrink-0 flex flex-col sticky top-0 h-[1024px]">
+        <div class="p-8">
+            <span class="font-fraunces text-coral text-2xl font-900 tracking-tight italic">Seek the Thrill</span>
+            <p class="text-[10px] text-white/40 uppercase tracking-[0.2em] mt-1 font-700">Admin Control</p>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-2">
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-route w-5"></i> Trips
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-calendar-check w-5"></i> Bookings
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-images w-5"></i> Photo Vault
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-pen-nib w-5"></i> Site Content
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-600 text-white/60 hover:bg-white/5 hover:text-white">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+        </nav>
+
+        <div class="p-6 border-t border-white/5">
+            <div class="flex items-center gap-3 mb-6">
+                <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-5.jpg" class="w-10 h-10 rounded-full border border-coral/30" />
+                <div>
+                    <p class="text-sm font-700">Zahra S.</p>
+                    <p class="text-[10px] text-white/40 font-600">Super Admin</p>
+                </div>
+            </div>
+            <button class="w-full py-3 rounded-xl border border-white/10 text-white/40 text-xs font-700 uppercase tracking-widest hover:bg-white/5 hover:text-white transition-all">
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <header id="header" class="h-20 bg-white border-b border-peach/20 flex items-center justify-between px-10 sticky top-0 z-40">
+            <div>
+                <h1 class="font-fraunces text-2xl font-700">Overview</h1>
+                <p class="text-xs text-navy/40 font-500">Welcome back, Zahra. Here's what's happening today.</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="relative">
+                    <button class="w-10 h-10 rounded-full bg-gray-soft flex items-center justify-center text-navy/60 hover:text-coral transition-colors">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <span class="absolute top-2 right-2 w-2 h-2 bg-coral rounded-full border-2 border-white"></span>
+                    </button>
+                </div>
+                <button class="bg-navy text-white px-5 py-2.5 rounded-xl text-sm font-700 flex items-center gap-2 hover:bg-dark-coral transition-all">
+                    <i class="fa-solid fa-plus text-xs"></i> Create Trip
+                </button>
+            </div>
+        </header>
+
+        <div class="p-10 space-y-8">
+            <!-- 1. KPI Cards -->
+            <section id="kpi-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-[2rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blush rounded-2xl flex items-center justify-center text-coral">
+                            <i class="fa-solid fa-plane-departure text-xl"></i>
+                        </div>
+                        <span class="text-xs font-700 text-green-500 bg-green-50 px-2 py-1 rounded-lg">+12%</span>
+                    </div>
+                    <h3 class="text-navy/40 text-xs font-700 uppercase tracking-widest mb-1">Active Trips</h3>
+                    <p class="font-fraunces text-3xl font-900">24</p>
+                </div>
+                <div class="bg-white p-6 rounded-[2rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
+                            <i class="fa-solid fa-receipt text-xl"></i>
+                        </div>
+                        <span class="text-xs font-700 text-green-500 bg-green-50 px-2 py-1 rounded-lg">+8%</span>
+                    </div>
+                    <h3 class="text-navy/40 text-xs font-700 uppercase tracking-widest mb-1">Total Bookings</h3>
+                    <p class="font-fraunces text-3xl font-900">1,482</p>
+                </div>
+                <div class="bg-white p-6 rounded-[2rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-500">
+                            <i class="fa-solid fa-users text-xl"></i>
+                        </div>
+                        <span class="text-xs font-700 text-purple-500 bg-purple-50 px-2 py-1 rounded-lg">89%</span>
+                    </div>
+                    <h3 class="text-navy/40 text-xs font-700 uppercase tracking-widest mb-1">Avg Occupancy</h3>
+                    <p class="font-fraunces text-3xl font-900">14.2<span class="text-lg text-navy/30">/trip</span></p>
+                </div>
+                <div class="bg-white p-6 rounded-[2rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
+                            <i class="fa-solid fa-indian-rupee-sign text-xl"></i>
+                        </div>
+                        <span class="text-xs font-700 text-green-500 bg-green-50 px-2 py-1 rounded-lg">+15%</span>
+                    </div>
+                    <h3 class="text-navy/40 text-xs font-700 uppercase tracking-widest mb-1">Revenue (MoM)</h3>
+                    <p class="font-fraunces text-3xl font-900">₹8.4M</p>
+                </div>
+            </section>
+
+            <!-- 2. Analytics & Quick Actions -->
+            <section id="analytics-section" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="font-fraunces text-xl font-700">Booking Trends</h3>
+                        <select class="bg-gray-soft border-none text-xs font-700 px-4 py-2 rounded-xl focus:ring-2 focus:ring-coral/20">
+                            <option>Last 30 Days</option>
+                            <option>Last 6 Months</option>
+                        </select>
+                    </div>
+                    <div id="booking-chart" class="h-[300px] w-full"></div>
+                </div>
+                <div class="space-y-6">
+                    <div class="bg-navy p-8 rounded-[2.5rem] text-white overflow-hidden relative">
+                        <div class="relative z-10">
+                            <h3 class="font-fraunces text-xl font-700 mb-2">Quick Actions</h3>
+                            <p class="text-white/50 text-xs mb-6 font-500">Fast access to core functions</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button class="bg-white/10 hover:bg-coral transition-colors p-4 rounded-2xl flex flex-col items-center gap-2 border border-white/5">
+                                    <i class="fa-solid fa-upload text-lg"></i>
+                                    <span class="text-[10px] font-700 uppercase">Upload Media</span>
+                                </button>
+                                <button class="bg-white/10 hover:bg-coral transition-colors p-4 rounded-2xl flex flex-col items-center gap-2 border border-white/5">
+                                    <i class="fa-solid fa-bullhorn text-lg"></i>
+                                    <span class="text-[10px] font-700 uppercase">Broadcast</span>
+                                </button>
+                                <button class="bg-white/10 hover:bg-coral transition-colors p-4 rounded-2xl flex flex-col items-center gap-2 border border-white/5">
+                                    <i class="fa-solid fa-user-plus text-lg"></i>
+                                    <span class="text-[10px] font-700 uppercase">Add Staff</span>
+                                </button>
+                                <button class="bg-white/10 hover:bg-coral transition-colors p-4 rounded-2xl flex flex-col items-center gap-2 border border-white/5">
+                                    <i class="fa-solid fa-file-export text-lg"></i>
+                                    <span class="text-[10px] font-700 uppercase">Reports</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="absolute -right-8 -bottom-8 w-32 h-32 bg-coral/20 rounded-full blur-3xl"></div>
+                    </div>
+                    <div class="bg-coral p-8 rounded-[2.5rem] text-white">
+                        <h3 class="font-fraunces text-xl font-700 mb-4">Vault Capacity</h3>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-600">850 GB of 1 TB used</span>
+                            <span class="text-xs font-900">85%</span>
+                        </div>
+                        <div class="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                            <div class="bg-white h-full w-[85%]"></div>
+                        </div>
+                        <button class="mt-6 text-xs font-700 uppercase tracking-widest underline decoration-2 underline-offset-4">Manage Storage</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Recent Activity & Alerts -->
+            <section id="updates-section" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-[2.5rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="font-fraunces text-xl font-700">Recent Activity</h3>
+                        <button class="text-coral text-xs font-700 uppercase tracking-widest">See History</button>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex gap-4">
+                            <div class="w-10 h-10 rounded-full bg-peach flex items-center justify-center text-coral flex-shrink-0">
+                                <i class="fa-solid fa-check text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-600">Booking Confirmed <span class="text-navy/40 font-400">for "Spiti Circuit"</span></p>
+                                <p class="text-[10px] text-navy/30 font-700 uppercase mt-1">2 mins ago • Arjun Sharma</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-10 h-10 rounded-full bg-gray-soft flex items-center justify-center text-navy/40 flex-shrink-0">
+                                <i class="fa-solid fa-image text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-600">12 New Photos Uploaded <span class="text-navy/40 font-400">to "Zanskar Valley"</span></p>
+                                <p class="text-[10px] text-navy/30 font-700 uppercase mt-1">45 mins ago • Zahra S.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-600">Content Updated <span class="text-navy/40 font-400">in "About Zahra" section</span></p>
+                                <p class="text-[10px] text-navy/30 font-700 uppercase mt-1">2 hours ago • Content Team</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-[2.5rem] border border-peach/30 shadow-sm">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="font-fraunces text-xl font-700">System Alerts</h3>
+                        <span class="bg-red-50 text-red-500 text-[10px] font-900 px-2 py-1 rounded-lg">2 ACTION REQUIRED</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-red-50 border border-red-100 rounded-2xl flex gap-4">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-700 text-red-900">Low Occupancy Alert</p>
+                                <p class="text-xs text-red-800/60 mt-1">The "Meghalaya Roots" batch for July 14th is at 30% capacity.</p>
+                                <button class="mt-3 text-[10px] font-900 text-red-500 uppercase tracking-widest flex items-center gap-2">Boost Listing <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-4">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-600 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-700 text-amber-900">Pending Approvals</p>
+                                <p class="text-xs text-amber-800/60 mt-1">8 traveler reviews are waiting for moderation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<script>
+    window.addEventListener('load', function() {
+        try {
+            const data = [{
+                x: ['Jun 01', 'Jun 05', 'Jun 10', 'Jun 15', 'Jun 20', 'Jun 25', 'Jun 30'],
+                y: [45, 52, 48, 70, 65, 85, 92],
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: '#E8725A', width: 4, shape: 'spline' },
+                marker: { color: '#E8725A', size: 8, borderwidth: 2, bordercolor: '#FFF' },
+                fill: 'tozeroy',
+                fillcolor: 'rgba(232, 114, 90, 0.1)',
+                name: 'Bookings'
+            }];
+
+            const layout = {
+                margin: { t: 20, r: 20, b: 40, l: 40 },
+                xaxis: { 
+                    showgrid: false, 
+                    tickfont: { family: 'DM Sans', size: 10, color: '#1B2B3A66' } 
+                },
+                yaxis: { 
+                    gridcolor: '#F5F5F3', 
+                    tickfont: { family: 'DM Sans', size: 10, color: '#1B2B3A66' } 
+                },
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                showlegend: false,
+                hovermode: 'closest'
+            };
+
+            const config = { responsive: true, displayModeBar: false, displaylogo: false };
+            Plotly.newPlot('booking-chart', data, layout, config);
+        } catch(e) {
+            console.error('Chart error:', e);
+        }
+    });
+</script>
+
+</body>
+</html>
