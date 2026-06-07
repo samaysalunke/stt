@@ -33,32 +33,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Start Date</label>
-          <input type="date" name="startDate" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">End Date</label>
-          <input type="date" name="endDate" class="form-input" />
-        </div>
-        <div class="form-group">
           <label class="form-label">Duration</label>
           <input type="text" name="duration" class="form-input" placeholder="e.g. 7 Days / 6 Nights" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Price Per Person (₹)</label>
-          <input type="number" name="pricePerPerson" class="form-input" placeholder="15000" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Min Group Size</label>
-          <input type="number" name="minGroupSize" class="form-input" placeholder="6" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Max Group Size</label>
-          <input type="number" name="maxGroupSize" class="form-input" placeholder="15" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Current Bookings</label>
-          <input type="number" name="currentBookings" class="form-input" value="0" />
         </div>
         <div class="form-group">
           <label class="form-label">Registration Deadline</label>
@@ -181,10 +157,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="form-group">
           <label class="form-label">Advance / Booking Amount (₹)</label>
           <input type="number" name="paymentAmount" class="form-input" placeholder="e.g. 5000 (paid now to confirm spot)" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Full Trip Payment Amount (₹)</label>
-          <input type="number" name="fullPaymentAmount" class="form-input" placeholder="e.g. 15000 (due 15 days before trip)" />
+          <span class="form-hint">Fixed amount paid now to confirm any departure. The full price comes from the departure (or occupancy option).</span>
         </div>
         <div class="form-group full">
           <label class="form-label">Payment Instructions</label>

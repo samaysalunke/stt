@@ -73,16 +73,6 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
           <span class="fhint">Leave blank to keep <code>{slug}</code>. Changing this changes the public URL.</span>
         </div>
 
-        <div class="field">
-          <label class="flabel">Start Date</label>
-          <input type="date" name="startDate" class="finput" value={trip.startDate ?? ''} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">End Date</label>
-          <input type="date" name="endDate" class="finput" value={trip.endDate ?? ''} />
-        </div>
-
         <div class="field full">
           <label class="flabel">Departure Dates (batches)</label>
           <p class="fhint" style="margin-bottom:0.5rem;">Add one row per departure. Each can have its own price and seats. The trip card shows the first batch; the trip page lets travellers pick a date when there's more than one.</p>
@@ -133,26 +123,6 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
         <div class="field">
           <label class="flabel">Location</label>
           <input type="text" name="location" class="finput" placeholder="e.g. Meghalaya" value={trip.location ?? ''} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">Price Per Person (₹)</label>
-          <input type="number" name="pricePerPerson" class="finput" value={trip.pricePerPerson ?? ''} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">Max Group Size</label>
-          <input type="number" name="maxGroupSize" class="finput" value={trip.maxGroupSize ?? ''} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">Current Bookings</label>
-          <input type="number" name="currentBookings" class="finput" value={trip.currentBookings ?? 0} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">Min Group Size</label>
-          <input type="number" name="minGroupSize" class="finput" value={trip.minGroupSize ?? ''} />
         </div>
 
         <div class="field">
@@ -297,10 +267,6 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
           <input type="number" name="paymentAmount" class="finput" value={trip.paymentAmount ?? ''} />
         </div>
 
-        <div class="field">
-          <label class="flabel">Full Trip Amount (₹)</label>
-          <input type="number" name="fullPaymentAmount" class="finput" value={(trip as any).fullPaymentAmount ?? ''} />
-        </div>
 
         <div class="field full">
           <label class="flabel">Room-Sharing / Occupancy Options</label>
