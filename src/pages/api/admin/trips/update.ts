@@ -70,7 +70,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     name: sanitizeInput(body.get('name')),
     status: sanitizeInput(body.get('status')) || 'draft',
     duration: sanitizeInput(body.get('duration')) || null,
-    registrationDeadline: sanitizeInput(body.get('registrationDeadline')) || null,
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
     description: sanitizeInput(body.get('description')) || null,
     whoShouldJoin: sanitizeInput(body.get('whoShouldJoin')) || null,

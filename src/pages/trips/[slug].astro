@@ -11,6 +11,13 @@ const trip = readTrip(slug!);
 
 if (!trip) return Astro.redirect('/trips/');
 
+// Draft trips are not publicly viewable — redirect to listings. (Published trips
+// with no upcoming departures still render a friendly "new dates soon" state below;
+// they're dropped from listings and the sitemap but aren't a privacy leak.)
+if (trip.status === 'draft') {
+  return Astro.redirect('/trips/');
+}
+
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
@@ -188,6 +195,16 @@ const slugJson = JSON.stringify(slug);
           <section>
             <h2 class="text-2xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">What this trip feels like</h2>
             <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">{description}</p>
+          </section>
+        )}
+
+        <!-- Who this is for -->
+        {trip.whoShouldJoin && (
+          <section>
+            <div class="rounded-xl p-5" style="background-color: var(--color-blush); border-left: 4px solid var(--color-coral);">
+              <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Who this is for</h3>
+              <p class="text-sm leading-relaxed" style="color: var(--color-navy);">{trip.whoShouldJoin}</p>
+            </div>
           </section>
         )}
 

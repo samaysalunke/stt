@@ -1,18 +1,7 @@
 import type { APIRoute } from 'astro';
-import { readdirSync } from 'fs';
-import { join } from 'path';
+import { listTrips, listAlbums, tripHasUpcomingDates } from '../lib/content';
 
 const SITE = 'https://seekthethrill.in';
-
-function getSlugs(contentDir: string): string[] {
-  try {
-    return readdirSync(contentDir)
-      .filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'))
-      .map((f) => f.replace(/\.(yaml|yml)$/, ''));
-  } catch {
-    return [];
-  }
-}
 
 function url(path: string, priority: string, changefreq: string, lastmod?: string): string {
   return `
@@ -24,8 +13,16 @@ function url(path: string, priority: string, changefreq: string, lastmod?: strin
 }
 
 export const GET: APIRoute = () => {
-  const tripSlugs = getSlugs(join(process.cwd(), 'src/content/trips'));
-  const albumSlugs = getSlugs(join(process.cwd(), 'src/content/albums'));
+  // Live trips only: published (not draft) and with at least one upcoming departure.
+  // Reads via listTrips() so production reflects the volume (CONTENT_DIR), not seed data.
+  const tripPages = listTrips()
+    .filter((t) => t.status !== 'draft' && tripHasUpcomingDates(t))
+    .map((t) => url(`/trips/${t.slug}`, '0.8', 'weekly'));
+
+  // Published albums only.
+  const albumPages = listAlbums()
+    .filter((a) => a.published)
+    .map((a) => url(`/photo-vault/${a.slug}`, '0.5', 'monthly'));
 
   const staticPages = [
     url('/', '1.0', 'weekly'),
@@ -37,9 +34,6 @@ export const GET: APIRoute = () => {
     url('/privacy', '0.3', 'yearly'),
     url('/terms', '0.3', 'yearly'),
   ];
-
-  const tripPages = tripSlugs.map((slug) => url(`/trips/${slug}`, '0.8', 'weekly'));
-  const albumPages = albumSlugs.map((slug) => url(`/photo-vault/${slug}`, '0.5', 'monthly'));
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticPages, ...tripPages, ...albumPages].join('')}

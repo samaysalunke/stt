@@ -10,6 +10,9 @@ const album = readAlbum(slug!);
 
 if (!album) return Astro.redirect('/photo-vault/');
 
+// Unpublished albums are not publicly viewable.
+if (!album.published) return Astro.redirect('/photo-vault/');
+
 const name = (album.name as string) || slug;
 const photos = (album.photos ?? []) as any[];
 
