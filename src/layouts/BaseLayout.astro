@@ -26,6 +26,14 @@ try {
   settings = readSiteSettings();
 } catch (e) {}
 
+// Analytics: only load in production and never on admin pages (keeps local/preview
+// traffic and admin sessions out of GA4 / Clarity). GA4 id is admin-managed via
+// Settings, falling back to the built-in property; blank disables GA4.
+const isAdminRoute = Astro.url.pathname.startsWith('/admin');
+const analyticsEnabled = import.meta.env.PROD && !isAdminRoute;
+const gaId = (settings.googleAnalyticsId ?? 'G-S17TM9KJTG') || '';
+const clarityId = 'x2ms8bxixr';
+
 const orgSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
@@ -65,23 +73,29 @@ const orgSchema = {
 
     <slot name="head" />
 
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S17TM9KJTG" is:inline></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-S17TM9KJTG');
-    </script>
+    {analyticsEnabled && gaId && (
+      <>
+        <!-- Google tag (gtag.js) -->
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} is:inline></script>
+        <script is:inline define:vars={{ gaId }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', gaId);
+        </script>
+      </>
+    )}
 
-    <!-- Microsoft Clarity -->
-    <script type="text/javascript" is:inline>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "x2ms8bxixr");
-    </script>
+    {analyticsEnabled && (
+      <!-- Microsoft Clarity -->
+      <script type="text/javascript" is:inline define:vars={{ clarityId }}>
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", clarityId);
+      </script>
+    )}
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
     {nav === 'scroll' && <Header hidden={true} />}
