@@ -86,7 +86,7 @@ Severity legend:
 **Impact:** If production env isn't configured, **travellers get no emails** and there's no in-app warning — it just silently no-ops.
 **Fix:** confirm SMTP is set in production; optionally surface a banner in admin when email is unconfigured.
 
-### 8. `bookedSpots` update is read-modify-write (race)
+### 8. `bookedSpots` update is read-modify-write (race) — ✅ ADDRESSED (kept admin-editable counter; documented atomicity invariant — the write is already synchronous so concurrent confirms can't interleave; DB-derived count rejected as it would drop manual/offline seat edits)
 **Where:** `/api/admin/update-registration.ts` reads the trip YAML, mutates the departure's `bookedSpots`, and writes it back.
 **Impact:** Two confirmations processed simultaneously could lose an increment. Low risk at current scale, but real.
 **Fix:** acceptable to defer; note it. A DB-derived count (count of confirmed regs per `batch_id`) would be race-free and is arguably a better source of truth than the YAML counter.

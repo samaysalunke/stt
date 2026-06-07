@@ -18,7 +18,21 @@ function tripAdvanceAmount(tripName: string): number {
   }
 }
 
-/** Adjust the booked count on the specific departure (batch) the booking is for. */
+/**
+ * Adjust the booked count on the specific departure (batch) the booking is for.
+ *
+ * `bookedSpots` is an admin-maintained counter, NOT a pure derived value: it's
+ * seeded/edited by hand in the trip editor (e.g. to reflect offline/phone
+ * bookings) and confirm/un-confirm nudge it by ±1. So it must stay a stored
+ * field — do not replace it with a live DB count.
+ *
+ * ATOMICITY INVARIANT — keep this function fully SYNCHRONOUS. Node is
+ * single-threaded, so a synchronous read-modify-write (readTrip → mutate →
+ * writeTrip) runs to completion in one tick and cannot interleave with another
+ * confirmation. That is the only thing making concurrent confirms race-free.
+ * Do NOT introduce `await` between the read and the write here (and never make
+ * this `async`) — doing so reopens the lost-update race.
+ */
 function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1) {
   try {
     const matched = listTrips().find((t: any) => t.name === tripName);
