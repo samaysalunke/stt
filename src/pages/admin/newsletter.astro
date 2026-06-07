@@ -29,35 +29,24 @@ function fmt(date: string) {
     </a>
   </div>
 
-  <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0.75rem;">
-  <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;overflow:hidden;min-width:400px;">
-    {subscribers.length === 0 ? (
-      <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);">No subscribers yet.</p>
-    ) : (
-      <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
-        <thead>
-          <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
-            {['#', 'Email', 'Status', 'Subscribed'].map(h => (
-              <th style="padding:0.65rem 0.875rem;text-align:left;font-size:0.75rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {subscribers.map((s, i) => (
-            <tr style={`border-bottom:1px solid var(--color-border);${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}>
-              <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{s.id}</td>
-              <td style="padding:0.65rem 0.875rem;font-weight:500;">{s.email}</td>
-              <td style="padding:0.65rem 0.875rem;">
-                <span style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${s.active ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}`}>
-                  {s.active ? 'active' : 'unsubscribed'}
-                </span>
-              </td>
-              <td style="padding:0.65rem 0.875rem;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(s.subscribed_at as string)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    )}
-  </div>
-  </div>
+  {subscribers.length === 0 ? (
+    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;">No subscribers yet.</p>
+  ) : (
+    <div style="display:grid;gap:0.75rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
+      {subscribers.map((s) => (
+        <div style="background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;padding:1rem 1.15rem;display:flex;flex-direction:column;gap:0.6rem;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
+            <span style="font-weight:600;color:var(--color-navy);word-break:break-all;font-size:0.9rem;">{s.email}</span>
+            <span style={`flex:none;padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${s.active ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}`}>
+              {s.active ? 'active' : 'unsubscribed'}
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--color-text-secondary);">
+            <span>#{s.id}</span>
+            <span>{fmt(s.subscribed_at as string)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
 </AdminLayout>

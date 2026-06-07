@@ -166,139 +166,121 @@ function fmtCurrency(n: number) {
               </div>
             </div>
 
-            <!-- Registrations table for this trip -->
+            <!-- Registrations cards for this trip -->
             <div class="trip-group-table" id={groupId}>
-              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:0 0 0.75rem 0.75rem;">
-                <div style="background:white;border:1px solid var(--color-border);border-top:none;border-radius:0 0 0.75rem 0.75rem;min-width:700px;">
-                  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
-                    <thead>
-                      <tr style="background:var(--color-surface);border-bottom:2px solid var(--color-border);">
-                        {['#', 'Name', 'Email', 'Phone', 'Amount', 'Status', 'Date', ''].map(h => (
-                          <th style="padding:0.55rem 0.875rem;text-align:left;font-size:0.72rem;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {regs.map((r, i) => (
-                        <>
-                          <tr
-                            class="reg-row"
-                            data-name={(r.full_name as string).toLowerCase()}
-                            data-email={(r.email as string).toLowerCase()}
-                            data-trip={(r.trip_name as string ?? '').toLowerCase()}
-                            data-status={r.status}
-                            style={`border-bottom:1px solid var(--color-border);cursor:pointer;${i % 2 === 1 ? 'background:#FAFAF7;' : ''}`}
-                          >
-                            <td style="padding:0.6rem 0.875rem;color:var(--color-text-secondary);font-size:0.75rem;">{r.id}</td>
-                            <td style="padding:0.6rem 0.875rem;font-weight:600;">{r.full_name}</td>
-                            <td style="padding:0.6rem 0.875rem;color:var(--color-text-secondary);">{r.email}</td>
-                            <td style="padding:0.6rem 0.875rem;">{r.phone}</td>
-                            <td style="padding:0.6rem 0.875rem;font-weight:600;">{fmtCurrency(r.amount_paid)}</td>
-                            <td style="padding:0.6rem 0.875rem;">
-                              <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${statusStyle(r.status)}`}>
-                                {r.status}
-                              </span>
-                            </td>
-                            <td style="padding:0.6rem 0.875rem;white-space:nowrap;color:var(--color-text-secondary);font-size:0.8rem;">{fmt(r.created_at as string)}</td>
-                            <td style="padding:0.6rem 0.875rem;">
-                              <button
-                                onclick={`toggleDetail(${r.id})`}
-                                style="font-size:0.75rem;color:var(--color-primary);background:none;border:1px solid var(--color-primary);border-radius:0.35rem;padding:0.2rem 0.6rem;cursor:pointer;"
-                              >
-                                Details
-                              </button>
-                            </td>
-                          </tr>
+              <div style="background:var(--color-gray-soft);border:1px solid var(--color-border);border-top:none;border-radius:0 0 0.75rem 0.75rem;padding:0.75rem;display:flex;flex-direction:column;gap:0.6rem;">
+                {regs.map((r) => (
+                  <div
+                    class="reg-row"
+                    data-name={(r.full_name as string).toLowerCase()}
+                    data-email={(r.email as string).toLowerCase()}
+                    data-trip={(r.trip_name as string ?? '').toLowerCase()}
+                    data-status={r.status}
+                    style="background:white;border:1px solid var(--color-border);border-radius:0.9rem;padding:0.85rem 1rem;"
+                  >
+                    <!-- Summary -->
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+                      <div style="min-width:0;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                          <span style="font-weight:700;color:var(--color-navy);">{r.full_name}</span>
+                          <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.72rem;font-weight:700;${statusStyle(r.status)}`}>
+                            {r.status}
+                          </span>
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--color-text-secondary);word-break:break-all;margin-top:0.15rem;">#{r.id} · {r.email} · {r.phone}</div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;flex:none;">
+                        <span style="font-weight:700;color:var(--color-navy);font-size:0.9rem;">{fmtCurrency(r.amount_paid)}</span>
+                        <span style="font-size:0.72rem;color:var(--color-text-secondary);white-space:nowrap;">{fmt(r.created_at as string)}</span>
+                        <button
+                          onclick={`toggleDetail(${r.id})`}
+                          style="font-size:0.72rem;color:var(--color-coral);background:none;border:1px solid var(--color-coral);border-radius:0.5rem;padding:0.18rem 0.65rem;cursor:pointer;"
+                        >
+                          Details
+                        </button>
+                      </div>
+                    </div>
 
-                          <!-- Expandable detail row -->
-                          <tr id={`detail-${r.id}`} style="display:none;" class="detail-row">
-                            <td colspan="8" style="padding:0;border-bottom:2px solid var(--color-border);">
-                              <div style="padding:1.25rem 1.5rem;background:var(--color-gray-soft);">
+                    <!-- Expandable detail -->
+                    <div id={`detail-${r.id}`} class="detail-row" style="display:none;margin-top:0.9rem;padding-top:0.9rem;border-top:1px solid var(--color-border);">
+                      <div class="detail-panel-grid" style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
 
-                                <!-- Two columns: info + actions -->
-                                <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
-
-                                  <!-- Left: fields -->
-                                  <div>
-                                    <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
-                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
-                                      {[
-                                        ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
-                                        ['Gender', r.gender ?? '—'], ['City', r.city], ['Country', r.country ?? '—'],
-                                        ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
-                                        ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
-                                        ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
-                                        ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
-                                        ['Special Requests', r.special_requests ?? '—'],
-                                        ['Why Joining', r.why_join ?? '—'],
-                                        ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
-                                        ['Occupancy', r.sharing_option ?? '—'],
-                                        ['Total (selected)', r.total_amount ? fmtCurrency(r.total_amount) : '—'],
-                                        ['Amount Paid', fmtCurrency(r.amount_paid)],
-                                      ].map(([label, val]) => (
-                                        <div>
-                                          <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
-                                          <span>{val}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {r.payment_screenshot_url && (
-                                      <div style="margin-top:0.75rem;">
-                                        <a
-                                          href={r.payment_screenshot_url}
-                                          target="_blank"
-                                          style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
-                                        >
-                                          View Payment Screenshot →
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <!-- Right: status update + admin notes -->
-                                  <div style="background:white;border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
-                                    <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
-                                    <div id={`status-section-${r.id}`}>
-                                      <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
-                                      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                                        {['pending', 'confirmed', 'rejected'].map(s => (
-                                          <button
-                                            onclick={`updateStatus(${r.id}, '${s}')`}
-                                            style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
-                                              r.status === s
-                                                ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
-                                                : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
-                                            }`}
-                                          >
-                                            {s.charAt(0).toUpperCase() + s.slice(1)}
-                                          </button>
-                                        ))}
-                                      </div>
-                                      <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
-                                      <textarea
-                                        id={`notes-${r.id}`}
-                                        rows={3}
-                                        placeholder="Add internal notes…"
-                                        style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
-                                      >{r.admin_notes ?? ''}</textarea>
-                                      <button
-                                        onclick={`saveNotes(${r.id})`}
-                                        style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
-                                      >
-                                        Save Notes
-                                      </button>
-                                      <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
-                                    </div>
-                                  </div>
-                                </div>
+                        <!-- Left: fields -->
+                        <div>
+                          <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
+                            {[
+                              ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
+                              ['Gender', r.gender ?? '—'], ['City', r.city], ['Country', r.country ?? '—'],
+                              ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
+                              ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
+                              ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
+                              ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
+                              ['Special Requests', r.special_requests ?? '—'],
+                              ['Why Joining', r.why_join ?? '—'],
+                              ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
+                              ['Occupancy', r.sharing_option ?? '—'],
+                              ['Total (selected)', r.total_amount ? fmtCurrency(r.total_amount) : '—'],
+                              ['Amount Paid', fmtCurrency(r.amount_paid)],
+                            ].map(([label, val]) => (
+                              <div>
+                                <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
+                                <span>{val}</span>
                               </div>
-                            </td>
-                          </tr>
-                        </>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            ))}
+                          </div>
+                          {r.payment_screenshot_url && (
+                            <div style="margin-top:0.75rem;">
+                              <a
+                                href={r.payment_screenshot_url}
+                                target="_blank"
+                                style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
+                              >
+                                View Payment Screenshot →
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        <!-- Right: status update + admin notes -->
+                        <div style="background:var(--color-gray-soft);border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
+                          <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
+                          <div id={`status-section-${r.id}`}>
+                            <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                              {['pending', 'confirmed', 'rejected'].map(s => (
+                                <button
+                                  onclick={`updateStatus(${r.id}, '${s}')`}
+                                  style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
+                                    r.status === s
+                                      ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
+                                      : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
+                                  }`}
+                                >
+                                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                            <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
+                            <textarea
+                              id={`notes-${r.id}`}
+                              rows={3}
+                              placeholder="Add internal notes…"
+                              style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
+                            >{r.admin_notes ?? ''}</textarea>
+                            <button
+                              onclick={`saveNotes(${r.id})`}
+                              style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
+                            >
+                              Save Notes
+                            </button>
+                            <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -324,7 +306,7 @@ function fmtCurrency(n: number) {
   function toggleDetail(id: number) {
     const row = document.getElementById('detail-' + id);
     if (!row) return;
-    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    row.style.display = row.style.display === 'none' ? 'block' : 'none';
   }
 
   async function updateStatus(id: number, status: string) {

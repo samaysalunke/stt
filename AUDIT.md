@@ -100,7 +100,7 @@ Severity legend:
 
 ## 🟢 Could be improved
 
-- **Admin data tables not restyled to cards** (registrations/contacts/newsletter) — functional and on-palette; you parked this. Pure cosmetics.
+- **Admin data tables not restyled to cards** (registrations/contacts/newsletter) — ✅ FIXED. All three converted from horizontal-scroll tables to responsive card layouts (mobile-friendly); all interactivity preserved (filters, detail expanders, status/resolve actions, CSV export).
 - **Testimonial avatars** — ✅ FIXED. The keystatic schema already has a `photo` field; homepage + trip-page renders now show it when set (fallback to initials), so it's no longer dead.
 - **Trip-level vs departure status vocab** — ✅ FIXED. Admin trips list quick-status dropdown + colour/label maps trimmed to the 3 real trip-level statuses (`booking-open / draft / sold-out`); legacy values still render via fallback.
 - **`/api/uploads/[filename].ts` content-type** — ✅ FIXED. Maps by extension via a MIME table, defaulting to `application/octet-stream` instead of `image/jpeg`.
