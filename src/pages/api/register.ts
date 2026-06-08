@@ -36,13 +36,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     // Required field validation
     const required: Record<string, string> = {
-      fullName:      sanitizeInput(body.fullName),
-      email:         sanitizeInput(body.email),
-      phone:         sanitizeInput(body.phone),
-      city:          sanitizeInput(body.city),
-      emergencyName: sanitizeInput(body.emergencyName),
+      fullName:       sanitizeInput(body.fullName),
+      email:          sanitizeInput(body.email),
+      phone:          sanitizeInput(body.phone),
+      age:            sanitizeInput(body.age),
+      city:           sanitizeInput(body.city),
+      instagram:      sanitizeInput(body.instagram),
+      emergencyName:  sanitizeInput(body.emergencyName),
       emergencyPhone: sanitizeInput(body.emergencyPhone),
-      whyJoin:       sanitizeInput(body.whyJoin),
+      whyJoin:        sanitizeInput(body.whyJoin),
     };
 
     for (const [field, value] of Object.entries(required)) {
@@ -128,13 +130,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const stmt = db.prepare(`
       INSERT INTO registrations (
         trip_name, trip_date, full_name, email, phone, gender,
-        city, emergency_name, emergency_phone,
-        payment_screenshot_url, transaction_id, why_join,
+        age, city, instagram, emergency_name, emergency_phone,
+        payment_screenshot_url, why_join,
         sharing_option, total_amount, batch_id, consent_at, status
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?,
         ?, ?, ?, CURRENT_TIMESTAMP, 'pending'
       )
     `);
@@ -146,11 +148,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       required.email,
       required.phone,
       sanitizeInput(body.gender) || null,
+      required.age,
       required.city,
+      required.instagram,
       required.emergencyName,
       required.emergencyPhone,
       sanitizeInput(body.paymentScreenshotUrl) || null,
-      sanitizeInput(body.transactionId) || null,
       required.whyJoin,
       sharingOption,
       totalAmount,
@@ -176,7 +179,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       if (s.upiId) upiId = s.upiId;
     } catch {}
 
-    const hasPayment = !!(sanitizeInput(body.paymentScreenshotUrl)) && !!(sanitizeInput(body.transactionId));
+    const hasPayment = !!(sanitizeInput(body.paymentScreenshotUrl));
     const firstName = required.fullName.split(' ')[0];
 
     // Send confirmation email — wrapped so failure never blocks success response

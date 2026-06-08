@@ -211,7 +211,8 @@ function fmtCurrency(n: number) {
                           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
                             {[
                               ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
-                              ['Gender', r.gender ?? '—'], ['City', r.city], ['Country', r.country ?? '—'],
+                              ['Age', r.age ?? '—'], ['Gender', r.gender ?? '—'], ['City', r.city],
+                              ['Instagram', r.instagram ?? '—'],
                               ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
                               ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
                               ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],

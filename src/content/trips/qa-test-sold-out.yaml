@@ -1,18 +1,14 @@
-name: QA Test — Sold Out Trip
+title: QA Test — Sold Out Trip
+slug: qa-test-sold-out
 status: sold-out
-duration: 3 Days
-shortDescription: QA automation fixture. Do not delete.
-description: This trip exists only for automated tests (TC-034).
-highlights: []
-included: []
-notIncluded: []
-packingList: []
-itinerary: []
+registrationEnabled: false
+duration: 3 Days, 2 Nights
+description: Automated QA fixture trip. Do not delete.
 batches:
-  - id: qa-test-sold-out-2026-01-01
-    startDate: 2026-01-01
-    endDate: 2026-01-03
-    price: 1
-    totalSpots: null
-    bookedSpots: 0
-    status: booking-open
+  - id: qa-sold-out-2099
+    startDate: "2099-01-01"
+    endDate: "2099-01-03"
+    price: 5000
+    totalSpots: 20
+    bookedSpots: 20
+paymentAmount: 1000

@@ -539,12 +539,16 @@ const tripSchema: Record<string, any> = {
                     <input type="text" name="fullName" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all" style="border-color: var(--color-border);" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Email Address <span style="color: var(--color-coral);">*</span></label>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Email ID <span style="color: var(--color-coral);">*</span></label>
                     <input type="email" name="email" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
                   </div>
                   <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Phone Number <span style="color: var(--color-coral);">*</span></label>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">WhatsApp Number <span style="color: var(--color-coral);">*</span></label>
                     <input type="tel" name="phone" placeholder="+91 XXXXX XXXXX" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">How old are you? <span style="color: var(--color-coral);">*</span></label>
+                    <input type="text" name="age" placeholder="e.g. 24" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
                   </div>
                   <div>
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Gender</label>
@@ -552,12 +556,34 @@ const tripSchema: Record<string, any> = {
                       <option value="">Prefer not to say</option>
                       <option value="male">Male</option>
                       <option value="female">Female</option>
-                      <option value="non-binary">Non-binary</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
                   <div>
                     <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">City <span style="color: var(--color-coral);">*</span></label>
                     <input type="text" name="city" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Instagram Handle <span style="color: var(--color-coral);">*</span></label>
+                    <input type="text" name="instagram" placeholder="@yourhandle" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
+                  </div>
+                </div>
+              </div>
+
+              <hr style="border-color: var(--color-peach);" />
+
+              <!-- Emergency Contact -->
+              <div>
+                <h3 class="font-bold text-base mb-1" style="font-family: var(--font-display); color: var(--color-navy);">Emergency Contact</h3>
+                <p class="text-xs mb-4" style="color: rgba(27,43,58,0.5);">Someone we can reach if we can't get hold of you on the trip.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Their Name <span style="color: var(--color-coral);">*</span></label>
+                    <input type="text" name="emergencyName" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Their Number <span style="color: var(--color-coral);">*</span></label>
+                    <input type="tel" name="emergencyPhone" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
                   </div>
                 </div>
               </div>
@@ -566,9 +592,10 @@ const tripSchema: Record<string, any> = {
 
               <!-- Human question -->
               <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">What made you want to join this one?</label>
+                <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Why do you want to join this trip? <span style="color: var(--color-coral);">*</span></label>
                 <textarea
                   name="whyJoin"
+                  required
                   rows="3"
                   placeholder="No perfect answer. Tell us what pulled you here."
                   class="w-full px-4 py-3 border rounded-xl text-sm outline-none resize-none"
