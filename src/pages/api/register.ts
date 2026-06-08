@@ -169,9 +169,11 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const advanceAmount = (trip as any)?.paymentAmount ?? 3000;
 
     let whatsappLink = 'https://wa.me/917975027491';
+    let upiId = '';
     try {
       const s = readSiteSettings();
       if (s.whatsappLink) whatsappLink = s.whatsappLink;
+      if (s.upiId) upiId = s.upiId;
     } catch {}
 
     const hasPayment = !!(sanitizeInput(body.paymentScreenshotUrl)) && !!(sanitizeInput(body.transactionId));
@@ -183,7 +185,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       if (hasPayment) {
         await sendRegistrationPaymentReceived({ firstName, email: required.email, tripName, startDate, endDate, whatsappLink });
       } else {
-        await sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink });
+        await sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink, upiId });
       }
       emailSent = 1;
     } catch (emailErr) {

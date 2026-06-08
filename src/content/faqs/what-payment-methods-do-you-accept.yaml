@@ -1,5 +1,7 @@
 question: What payment methods do you accept?
-answer: UPI only right now — GPay, PhonePe, Paytm, BHIM. Scan the QR code on the
-  trip page, pay, screenshot it, upload it. Simple.
+answer: "UPI or bank transfer. For UPI — send to zahrashakir2002-2@okaxis via GPay,
+  PhonePe, Paytm, or any UPI app. For bank transfer — Account Name: SEEK THE THRILL,
+  Account No: 259370349738, IFSC: INDB0000560 (IndusInd Bank, Byramji Town branch).
+  Screenshot or note your transaction ID and upload it with your registration."
 category: Payment
 order: 7

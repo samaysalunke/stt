@@ -21,6 +21,12 @@ if (trip.status === 'draft') {
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
+const upiId = settings.upiId ?? '';
+const bankAccountName = settings.bankAccountName ?? '';
+const bankAccountNumber = settings.bankAccountNumber ?? '';
+const bankBranch = settings.bankBranch ?? '';
+const bankIfsc = settings.bankIfsc ?? '';
+
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
@@ -601,15 +607,43 @@ const tripSchema: Record<string, any> = {
                   )}
                 </div>
 
-                <!-- UPI instructions -->
-                <div class="rounded-xl p-4 mb-5 text-sm" style="background-color: var(--color-blush);">
-                  <ol class="space-y-1.5 list-decimal list-inside" style="color: var(--color-navy);">
-                    <li>Scan the QR code with any UPI app (GPay, PhonePe, Paytm)</li>
-                    <li>Pay the exact booking amount</li>
-                    <li>Take a screenshot of the successful payment</li>
-                    <li>Upload it below</li>
-                    <li>Enter your transaction ID</li>
-                  </ol>
+                <!-- UPI / bank payment instructions -->
+                <div class="rounded-xl p-4 mb-5 text-sm space-y-4" style="background-color: var(--color-blush);">
+                  {upiId && (
+                    <div>
+                      <p class="font-semibold mb-1" style="color: var(--color-navy);">Pay via UPI</p>
+                      <p class="font-mono text-base font-bold mb-2" style="color: var(--color-coral);">{upiId}</p>
+                      <ol class="space-y-1 list-decimal list-inside" style="color: var(--color-navy);">
+                        <li>Open GPay, PhonePe, Paytm or any UPI app</li>
+                        <li>Send to UPI ID above (or scan the QR code if shown)</li>
+                        <li>Pay the exact booking amount</li>
+                        <li>Screenshot the payment confirmation and upload below</li>
+                        <li>Enter your transaction ID</li>
+                      </ol>
+                    </div>
+                  )}
+                  {!upiId && (
+                    <ol class="space-y-1.5 list-decimal list-inside" style="color: var(--color-navy);">
+                      <li>Scan the QR code with any UPI app (GPay, PhonePe, Paytm)</li>
+                      <li>Pay the exact booking amount</li>
+                      <li>Take a screenshot of the successful payment</li>
+                      <li>Upload it below</li>
+                      <li>Enter your transaction ID</li>
+                    </ol>
+                  )}
+                  {bankAccountNumber && (
+                    <div class="pt-3" style="border-top: 1px solid rgba(27,43,58,0.12);">
+                      <p class="font-semibold mb-2" style="color: var(--color-navy);">Or pay via Bank Transfer</p>
+                      <table class="text-xs w-full" style="color: var(--color-navy); border-collapse: collapse;">
+                        <tbody>
+                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Account Name</td><td class="py-0.5 font-semibold">{bankAccountName}</td></tr>
+                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Account No.</td><td class="py-0.5 font-mono font-semibold">{bankAccountNumber}</td></tr>
+                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Branch</td><td class="py-0.5">{bankBranch}</td></tr>
+                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">IFSC</td><td class="py-0.5 font-mono">{bankIfsc}</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
 
                 <!-- Screenshot upload -->

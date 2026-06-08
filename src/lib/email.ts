@@ -292,6 +292,7 @@ export async function sendRegistrationPaymentPending(data: {
   endDate: string;
   advanceAmount: number;
   whatsappLink: string;
+  upiId?: string;
 }) {
   const html = `<!DOCTYPE html>
 <html>
@@ -315,11 +316,12 @@ export async function sendRegistrationPaymentPending(data: {
     </table>
     <p style="margin: 0 0 16px; font-size: 14px; color: #1B2B3A; font-weight: 600;">Your spot isn't confirmed yet — we're waiting on your payment.</p>
     <p style="margin: 0 0 8px; font-size: 14px; color: #1B2B3A;">To lock it in:</p>
-    <ol style="margin: 0 0 24px; padding-left: 20px; font-size: 14px; color: #1B2B3A; line-height: 1.8;">
-      <li>Pay ₹${data.advanceAmount.toLocaleString('en-IN')} via UPI</li>
+    <ol style="margin: 0 0 16px; padding-left: 20px; font-size: 14px; color: #1B2B3A; line-height: 1.8;">
+      <li>Pay ₹${data.advanceAmount.toLocaleString('en-IN')} via UPI${data.upiId ? ` to <strong>${escapeHtml(data.upiId)}</strong>` : ''} (or any UPI app)</li>
       <li>Screenshot the payment confirmation</li>
       <li>Reply to this email with the screenshot + transaction ID</li>
     </ol>
+    ${data.upiId ? `<p style="margin: 0 0 16px; font-size: 14px; font-family: monospace; font-weight: 700; color: #E8725A;">${escapeHtml(data.upiId)}</p>` : ''}
     <p style="margin: 0 0 16px; font-size: 13px; color: #6B7280;">Spots fill up fast. If you've already paid, ignore this.</p>
     <p style="margin: 0 0 24px; font-size: 14px; color: #1B2B3A;">Questions? <a href="${escapeHtml(data.whatsappLink)}" style="color: #E8725A; font-weight: 600;">WhatsApp us.</a></p>
     <p style="margin: 0; font-size: 14px; color: #6B7280;"><strong style="color: #1B2B3A;">Zahra &amp; the Seek the Thrill team</strong><br>seekthethrill.in</p>

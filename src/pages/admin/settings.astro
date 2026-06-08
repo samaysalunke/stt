@@ -54,6 +54,34 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
       </div>
     </section>
 
+    <!-- Payment Details -->
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Payment Details</h2>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Shown on trip booking forms and in payment reminder emails.</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class={labelCls} style={labelStyle}>UPI ID</label>
+          <input type="text" name="upiId" value={s.upiId ?? ''} placeholder="name@bank" class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Bank account name</label>
+          <input type="text" name="bankAccountName" value={s.bankAccountName ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Account number</label>
+          <input type="text" name="bankAccountNumber" value={s.bankAccountNumber ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Branch name</label>
+          <input type="text" name="bankBranch" value={s.bankBranch ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>IFSC code</label>
+          <input type="text" name="bankIfsc" value={s.bankIfsc ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    </section>
+
     <!-- Policies & Payment -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Legal Page Overrides</h2>

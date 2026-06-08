@@ -6,6 +6,7 @@ import { sanitizeInput } from '../../../../lib/utils';
 // preserved from the existing site-settings.yaml (merge, not overwrite).
 const TEXT_FIELDS = [
   'email', 'phone', 'whatsappLink', 'instagram', 'address',
+  'upiId', 'bankAccountName', 'bankAccountNumber', 'bankBranch', 'bankIfsc',
   'googleAnalyticsId', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',
   // About page copy (blank = built-in default, like the legal overrides)
