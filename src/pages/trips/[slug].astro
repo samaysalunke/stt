@@ -609,16 +609,27 @@ const tripSchema: Record<string, any> = {
               <div>
                 <h3 class="font-bold text-base mb-4" style="font-family: var(--font-display); color: var(--color-navy);">Payment Details</h3>
 
+                <!-- Price breakdown card -->
                 <div class="rounded-xl overflow-hidden border mb-5" style="border-color: var(--color-peach);">
                   <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush);">
                     <div>
-                      <div class="text-sm font-medium" style="color: var(--color-navy);">Advance amount (now)</div>
-                      <div class="text-xs" style="color: var(--color-gray-text);">Pay now to confirm spot</div>
+                      <div class="text-sm font-medium" style="color: var(--color-navy);">Advance</div>
+                      <div class="text-xs" style="color: var(--color-gray-text);">Pay now to confirm your spot</div>
                     </div>
                     <strong style="color: var(--color-coral); font-family: var(--font-display);">₹{paymentAmount.toLocaleString('en-IN')}</strong>
                   </div>
                   {(price || hasSharing) && (
                     <>
+                      <!-- Progress bar -->
+                      <div class="px-4 pt-2 pb-1" style="background-color: var(--color-blush);">
+                        <div class="rounded-full h-1.5" style="background-color: #F5DDD7;">
+                          <div id="rf-pbar-fill" class="rounded-full h-1.5" style="background-color: var(--color-coral); width: 0%;"></div>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                          <span id="rf-pbar-now" class="text-xs" style="color: rgba(27,43,58,0.4);">Pay now</span>
+                          <span id="rf-pbar-later" class="text-xs" style="color: rgba(27,43,58,0.4);">Balance later</span>
+                        </div>
+                      </div>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach);">
                         <div>
                           <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
@@ -627,49 +638,145 @@ const tripSchema: Record<string, any> = {
                         <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{(((hasSharing ? leadPrice : price) ?? 0) - paymentAmount).toLocaleString('en-IN')}</strong>
                       </div>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
-                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total{hasSharing && <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span>}</div>
+                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total trip cost{hasSharing && <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span>}</div>
                         <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{((hasSharing ? leadPrice : price) ?? 0).toLocaleString('en-IN')}</strong>
                       </div>
                     </>
                   )}
                 </div>
 
-                <!-- UPI / bank payment instructions -->
-                <div class="rounded-xl p-4 mb-5 text-sm space-y-4" style="background-color: var(--color-blush);">
-                  {upiId && (
-                    <div>
-                      <p class="font-semibold mb-1" style="color: var(--color-navy);">Pay via UPI</p>
-                      <p class="font-mono text-base font-bold mb-2" style="color: var(--color-coral);">{upiId}</p>
-                      <ol class="space-y-1 list-decimal list-inside" style="color: var(--color-navy);">
-                        <li>Open GPay, PhonePe, Paytm or any UPI app</li>
-                        <li>Send to UPI ID above (or scan the QR code if shown)</li>
-                        <li>Pay the exact booking amount</li>
-                        <li>Screenshot the payment confirmation and upload below</li>
-                      </ol>
-                    </div>
-                  )}
-                  {!upiId && (
-                    <ol class="space-y-1.5 list-decimal list-inside" style="color: var(--color-navy);">
-                      <li>Scan the QR code with any UPI app (GPay, PhonePe, Paytm)</li>
-                      <li>Pay the exact booking amount</li>
-                      <li>Take a screenshot of the successful payment</li>
-                      <li>Upload it below</li>
-                    </ol>
-                  )}
-                  {bankAccountNumber && (
-                    <div class="pt-3" style="border-top: 1px solid rgba(27,43,58,0.12);">
-                      <p class="font-semibold mb-2" style="color: var(--color-navy);">Or pay via Bank Transfer</p>
-                      <table class="text-xs w-full" style="color: var(--color-navy); border-collapse: collapse;">
-                        <tbody>
-                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Account Name</td><td class="py-0.5 font-semibold">{bankAccountName}</td></tr>
-                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Account No.</td><td class="py-0.5 font-mono font-semibold">{bankAccountNumber}</td></tr>
-                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">Branch</td><td class="py-0.5">{bankBranch}</td></tr>
-                          <tr><td class="py-0.5 pr-3 font-medium" style="color: rgba(27,43,58,0.55);">IFSC</td><td class="py-0.5 font-mono">{bankIfsc}</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                <!-- Payment method tabs -->
+                {(upiId || bankAccountNumber) && (
+                  <div class="mb-5">
+                    {upiId && bankAccountNumber ? (
+                      <>
+                        <!-- Tab switcher -->
+                        <div class="flex rounded-xl p-1 mb-3" style="background: rgba(27,43,58,0.07);" role="tablist">
+                          <button type="button" id="tab-upi" role="tab" aria-selected="true" onclick="sttPayTab('upi')"
+                            class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
+                            style="background: white; color: var(--color-navy); box-shadow: 0 1px 3px rgba(27,43,58,0.08);">
+                            Pay via UPI
+                          </button>
+                          <button type="button" id="tab-bank" role="tab" aria-selected="false" onclick="sttPayTab('bank')"
+                            class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
+                            style="color: rgba(27,43,58,0.5);">
+                            Bank Transfer
+                          </button>
+                        </div>
+
+                        <!-- UPI panel -->
+                        <div id="panel-upi" class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
+                          <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">UPI ID</p>
+                          <div class="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style="background: rgba(217,95,59,0.06); border: 1px solid rgba(217,95,59,0.25);">
+                            <span class="text-sm font-medium" style="color: var(--color-coral); word-break: break-all;">{upiId}</span>
+                            <button type="button" class="stt-copy-btn ml-3 flex-shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all" style="border: 0.5px solid rgba(217,95,59,0.45); color: var(--color-coral);" data-copy={upiId}>
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              Copy
+                            </button>
+                          </div>
+                          <div class="space-y-2.5">
+                            {['Open GPay, PhonePe, Paytm or any UPI app', 'Send to the UPI ID above', `Pay exactly ₹${paymentAmount.toLocaleString('en-IN')} — the advance amount`, 'Screenshot the confirmation and upload below'].map((step, i) => (
+                              <div class="flex gap-2.5 items-start">
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium mt-0.5" style="background: var(--color-navy); font-size: 10px;">{i + 1}</span>
+                                <span class="text-sm leading-snug" style="color: rgba(27,43,58,0.7);">{step}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <!-- Bank panel -->
+                        <div id="panel-bank" class="rounded-xl p-4 text-sm hidden" style="background-color: var(--color-blush);">
+                          <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">Bank Account Details</p>
+                          <table class="w-full" style="border-collapse: collapse;">
+                            <tbody>
+                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account name</td>
+                                <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankAccountName}</td>
+                              </tr>
+                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account no.</td>
+                                <td class="py-2 text-right">
+                                  <div class="flex items-center justify-end gap-2">
+                                    <span class="text-xs font-medium" style="color: var(--color-navy);">{bankAccountNumber}</span>
+                                    <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankAccountNumber}>Copy</button>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Branch</td>
+                                <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankBranch}</td>
+                              </tr>
+                              <tr>
+                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">IFSC</td>
+                                <td class="py-2 text-right">
+                                  <div class="flex items-center justify-end gap-2">
+                                    <span class="text-xs font-medium" style="color: var(--color-navy);">{bankIfsc}</span>
+                                    <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankIfsc}>Copy</button>
+                                  </div>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    ) : upiId ? (
+                      <!-- UPI only (no tabs) -->
+                      <div class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">UPI ID</p>
+                        <div class="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style="background: rgba(217,95,59,0.06); border: 1px solid rgba(217,95,59,0.25);">
+                          <span class="text-sm font-medium" style="color: var(--color-coral); word-break: break-all;">{upiId}</span>
+                          <button type="button" class="stt-copy-btn ml-3 flex-shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all" style="border: 0.5px solid rgba(217,95,59,0.45); color: var(--color-coral);" data-copy={upiId}>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            Copy
+                          </button>
+                        </div>
+                        <div class="space-y-2.5">
+                          {['Open GPay, PhonePe, Paytm or any UPI app', 'Send to the UPI ID above', `Pay exactly ₹${paymentAmount.toLocaleString('en-IN')} — the advance amount`, 'Screenshot the confirmation and upload below'].map((step, i) => (
+                            <div class="flex gap-2.5 items-start">
+                              <span class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium mt-0.5" style="background: var(--color-navy); font-size: 10px;">{i + 1}</span>
+                              <span class="text-sm leading-snug" style="color: rgba(27,43,58,0.7);">{step}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <!-- Bank only (no tabs) -->
+                      <div class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
+                        <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">Bank Account Details</p>
+                        <table class="w-full" style="border-collapse: collapse;">
+                          <tbody>
+                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account name</td>
+                              <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankAccountName}</td>
+                            </tr>
+                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account no.</td>
+                              <td class="py-2 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <span class="text-xs font-medium" style="color: var(--color-navy);">{bankAccountNumber}</span>
+                                  <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankAccountNumber}>Copy</button>
+                                </div>
+                              </td>
+                            </tr>
+                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
+                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Branch</td>
+                              <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankBranch}</td>
+                            </tr>
+                            <tr>
+                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">IFSC</td>
+                              <td class="py-2 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                  <span class="text-xs font-medium" style="color: var(--color-navy);">{bankIfsc}</span>
+                                  <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankIfsc}>Copy</button>
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <!-- Screenshot upload -->
                 <div class="mb-4">
@@ -889,6 +996,10 @@ const tripSchema: Record<string, any> = {
     let currentBatch = batchData.find((b) => b.id === wantId) || batchData[0] || null;
     let occPrice = radios.length ? (Number((radios.find((r) => r.checked) ?? radios[0])?.dataset.price) || 0) : null;
 
+    const pbarFill = document.getElementById('rf-pbar-fill') as HTMLElement | null;
+    const pbarNow = document.getElementById('rf-pbar-now');
+    const pbarLater = document.getElementById('rf-pbar-later');
+
     function recompute() {
       const total = hasSharing ? (occPrice || 0) : (currentBatch?.price || 0);
       const balance = Math.max(0, total - advance);
@@ -897,6 +1008,12 @@ const tripSchema: Record<string, any> = {
       if (rfTotal) rfTotal.textContent = inr(total);
       if (rfBalance) rfBalance.textContent = inr(balance);
       if (fTotal) fTotal.value = String(total);
+      if (pbarFill && total > 0) {
+        const pct = Math.round((advance / total) * 100);
+        pbarFill.style.width = pct + '%';
+        if (pbarNow) pbarNow.textContent = `Pay now (${pct}%)`;
+        if (pbarLater) pbarLater.textContent = `Balance later (${100 - pct}%)`;
+      }
       if (currentBatch) {
         if (fBatch) fBatch.value = currentBatch.id;
         if (fDate) fDate.value = `${fmtD(currentBatch.startDate)} – ${fmtD(currentBatch.endDate)}`;
@@ -933,4 +1050,40 @@ const tripSchema: Record<string, any> = {
 
     recompute();
   })();
+
+  // ── Payment tab switcher ──────────────────────────────────────────────────
+  (window as any).sttPayTab = function (which: string) {
+    const upi = document.getElementById('panel-upi');
+    const bank = document.getElementById('panel-bank');
+    const tabUpi = document.getElementById('tab-upi');
+    const tabBank = document.getElementById('tab-bank');
+    if (upi) upi.classList.toggle('hidden', which !== 'upi');
+    if (bank) bank.classList.toggle('hidden', which !== 'bank');
+    [tabUpi, tabBank].forEach((t) => {
+      if (!t) return;
+      const active = t.id === `tab-${which}`;
+      t.style.background = active ? 'white' : '';
+      t.style.color = active ? 'var(--color-navy)' : 'rgba(27,43,58,0.5)';
+      t.style.boxShadow = active ? '0 1px 3px rgba(27,43,58,0.08)' : '';
+      t.setAttribute('aria-selected', String(active));
+    });
+  };
+
+  // ── Copy-to-clipboard buttons ─────────────────────────────────────────────
+  document.querySelectorAll<HTMLButtonElement>('.stt-copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy || '';
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.cssText = 'position:absolute;opacity:0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+      }
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ Copied!';
+      btn.style.color = 'rgba(27,43,58,0.55)';
+      btn.style.borderColor = 'rgba(27,43,58,0.22)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1800);
+    });
+  });
 </script>
