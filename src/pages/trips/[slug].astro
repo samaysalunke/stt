@@ -618,7 +618,6 @@ const tripSchema: Record<string, any> = {
                         <li>Send to UPI ID above (or scan the QR code if shown)</li>
                         <li>Pay the exact booking amount</li>
                         <li>Screenshot the payment confirmation and upload below</li>
-                        <li>Enter your transaction ID</li>
                       </ol>
                     </div>
                   )}
@@ -628,7 +627,6 @@ const tripSchema: Record<string, any> = {
                       <li>Pay the exact booking amount</li>
                       <li>Take a screenshot of the successful payment</li>
                       <li>Upload it below</li>
-                      <li>Enter your transaction ID</li>
                     </ol>
                   )}
                   {bankAccountNumber && (
@@ -650,7 +648,6 @@ const tripSchema: Record<string, any> = {
                 <div class="mb-4">
                   <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">
                     Payment Screenshot
-                    <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(optional)</span>
                   </label>
                   <div id="upload-zone" class="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors" style="border-color: var(--color-border);">
                     <svg class="w-7 h-7 mx-auto mb-2" style="color: var(--color-gray-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -664,11 +661,7 @@ const tripSchema: Record<string, any> = {
                   <div id="upload-preview" class="hidden mt-2 text-xs" style="color: var(--color-success);"></div>
                 </div>
 
-                <!-- Transaction ID -->
-                <div>
-                  <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Transaction ID</label>
-                  <input type="text" name="transactionId" placeholder="From your UPI app" class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                </div>
+
               </div>
 
               <!-- Trust line -->
