@@ -1,0 +1,108 @@
+title: Mystic Trails of the Sahyadris — A Monsoon Retreat
+slug: sahyadri-monsoon-retreat
+location: Maharashtra
+status: booking-open
+registrationEnabled: true
+duration: 4 Days, 3 Nights
+coverImage: ""
+description: >
+  A 4-day monsoon escape into the heart of the Sahyadris near Bhandardara —
+  where rolling mist, lush trails, and waterfalls await. Stay at a charming
+  lakeside property overlooking the Sahyadri hills. Chase waterfalls, rappel
+  down a 200-ft cliff, dip in secret natural pools, and hike through ridges
+  blanketed in green. Road trip together, live together, laugh together. Price:
+  ₹17,999 (double sharing cottage) or ₹16,999 (dorm). Departure from Mumbai.
+shortDescription: Waterfall rappelling, offbeat ridge hikes, and lakeside living
+  near Bhandardara. A monsoon trip done right.
+whoShouldJoin: Anyone craving a monsoon trip that's slow, scenic, and a little
+  wild. All activities are beginner-friendly.
+batches:
+  - id: sahyadri-jul1-2026
+    startDate: 2026-07-03
+    endDate: 2026-07-06
+    price: 16999
+    totalSpots: 15
+    bookedSpots: 0
+  - id: sahyadri-jul2-2026
+    startDate: 2026-07-10
+    endDate: 2026-07-13
+    price: 16999
+    totalSpots: 15
+    bookedSpots: 0
+  - id: sahyadri-jul3-2026
+    startDate: 2026-07-17
+    endDate: 2026-07-20
+    price: 16999
+    totalSpots: 15
+    bookedSpots: 0
+sharingOptions:
+  - id: double
+    label: Double Sharing Cottage
+    price: 17999
+  - id: dorm
+    label: Dorm Bed
+    price: 16999
+highlights:
+  - Waterfall rappelling — 200-ft descent, first-timer friendly
+  - Secret natural pool hidden in the green hills
+  - Offbeat ridge hike with open ridgeline landscapes
+  - Evening visit to a majestic waterfall on Day 1
+  - Lakeside chill at Bhandardara Lake
+  - Waterfall hopping through misty hills on the drive back
+  - 3 nights at a lakeside property in Bhandardara
+itinerary:
+  - day: 1
+    title: Depart Mumbai — Arrive Bhandardara
+    description: Depart Mumbai at 8 AM in private AC tempo traveller. Arrive by
+      early afternoon at the lakeside property. Slow evening — visit a majestic
+      waterfall, chill at Bhandardara Lake. Good food, good stories.
+    stay: Lakeside property, Bhandardara
+    meals:
+      - evening snacks
+    transport: AC tempo traveller from Mumbai
+  - day: 2
+    title: Waterfall Rappelling & Natural Pool
+    description: 45-min hike to the rappelling site, then 200-ft descent —
+      first-timer friendly and a core memory in the making. Local lunch. Wind
+      down with a dip in an offbeat hidden natural pool.
+    stay: Lakeside property, Bhandardara
+    meals:
+      - B
+      - L
+  - day: 3
+    title: Offbeat Ridge Hike
+    description: Hike along stunning ridgelines and open landscapes. Dip in a
+      natural pool in the middle of nowhere. Beginner-friendly but you'll get
+      those steps in. Evening relaxing and soaking in the monsoon mood.
+    stay: Lakeside property, Bhandardara
+    meals:
+      - B
+      - L
+  - day: 4
+    title: Waterfall Hopping & Return to Mumbai
+    description: Slow last morning in the countryside. Waterfall hopping through
+      misty hills on the drive back — windows down, fresh air, monsoon magic.
+      Depart post-lunch. Arrive Mumbai around 10 PM.
+    stay: ""
+    meals:
+      - B
+    transport: AC tempo traveller back to Mumbai
+included:
+  - AC private tempo traveller from Mumbai and back
+  - All local transport
+  - 3 nights stay at a lakeside property (dorm or double sharing cottage)
+  - Breakfast on all days (Sat–Mon) + local style lunch on Sat & Sun + evening
+    snacks
+  - All experiences — guided hike, waterfall rappelling, natural pools,
+    waterfall hopping
+excluded:
+  - Meals not mentioned in inclusions
+  - Personal expenses or additional activities
+  - Anything not listed under inclusions
+paymentAmount: 10000
+meetingPoint: Mumbai — departure point shared with the group on booking. 8:00 AM sharp.
+importantNotes: >
+  Monsoon-friendly itinerary — nature will do its thing. Safety is top priority;
+  rain or shine, the spirit of the trip comes through. Double sharing cottages
+  are limited and allocated first-come. Advance of ₹10,000 is non-refundable.
+  Minimum 8 people to confirm the trip.

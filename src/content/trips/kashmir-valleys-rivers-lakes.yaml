@@ -1,0 +1,110 @@
+title: Kashmir — Valleys, Rivers & Lakes
+slug: kashmir-valleys-rivers-lakes
+location: Kashmir
+status: booking-open
+registrationEnabled: true
+duration: 7 Days, 6 Nights
+coverImage: ""
+description: >
+  We're heading to Kashmir — not the tourist spots everyone knows, but quiet
+  mountain roads, riverside meadows, and hidden valleys most travellers never
+  reach. From ancient 8th-century ruins by mountain streams to the remote Gurez
+  Valley, one of the most underrated destinations in the country. Hosted by
+  Prateek Sanyal — seasoned traveller, STT host for 2 years, cycled Jammu to Leh
+  and Gujarat to Kanyakumari.
+shortDescription: Quiet roads, hidden valleys, Dal Lake houseboat, and the
+  remote Gurez Valley — Kashmir beyond the obvious.
+whoShouldJoin: Those who'd rather trade crowds for cold river air and mountain
+  stillness. No prior trekking experience needed.
+batches:
+  - id: kashmir-jun-2026
+    startDate: 2026-06-07
+    endDate: 2026-06-13
+    price: 26000
+    totalSpots: 15
+    bookedSpots: 0
+highlights:
+  - Naranag — ancient 8th-century temple ruins by a Himalayan stream
+  - Doodhpathri meadows and riverside picnic on the Shaliganga
+  - Sunset shikara ride on Dal Lake
+  - Overnight stay on a traditional Dal Lake houseboat
+  - Manasbal Lake and Wular Lake en route to Gurez
+  - Razdan Pass scenic stop
+  - Tulail day trip and Habba Khatoon Springs
+  - Kishenganga riverside evening in Gurez Valley
+itinerary:
+  - day: 1
+    title: Arrival in Srinagar
+    description: Meet the crew, settle in, soak in the city energy. Tonight is for
+      introductions and excitement.
+    stay: Srinagar
+    meals:
+      - D
+  - day: 2
+    title: Naranag — Ruins & the River
+    description: Drive to Naranag — ancient temple ruins on a high riverbank, horses
+      grazing, mountains all around. Walk slowly, sit by the stream, just be.
+    stay: Srinagar
+    meals:
+      - B
+      - D
+    transport: Private vehicle
+  - day: 3
+    title: Doodhpathri & Dal Lake Houseboat
+    description: Riverside picnic on the Shaliganga at Doodhpathri. Optional horse
+      riding across open grasslands. Sunset shikara ride on Dal Lake, then
+      overnight on a traditional houseboat.
+    stay: Houseboat, Dal Lake
+    meals:
+      - B
+      - D
+    transport: Private vehicle
+  - day: 4
+    title: Srinagar → Dawar (Gurez Valley)
+    description: Scenic drive past Manasbal Lake, vast Wular Lake, and Razdan Pass
+      into the breathtaking Gurez Valley.
+    stay: Dawar, Gurez Valley
+    meals:
+      - B
+      - D
+    transport: Private vehicle
+  - day: 5
+    title: Tulail & The Kishenganga
+    description: Day trip to Tulail, Habba Khatoon Springs, and Dawar viewpoint.
+      Evening by the Kishenganga River — few travellers ever make it this far.
+    stay: Dawar, Gurez Valley
+    meals:
+      - B
+      - D
+  - day: 6
+    title: Dawar → Srinagar
+    description: One last look at Gurez before heading back. The drive out is as
+      beautiful as the drive in. Evening arrival in Srinagar.
+    stay: Srinagar
+    meals:
+      - B
+      - D
+    transport: Private vehicle
+  - day: 7
+    title: Departure
+    description: A slow final morning — one last cup of kahwa, a wander through the
+      city, then back to wherever home is.
+    stay: ""
+    meals:
+      - B
+included:
+  - 6 nights accommodation — homestays (double sharing) + houseboat (triple
+    sharing)
+  - Breakfast and Dinner from Day 1–7
+  - Private vehicle (Srinagar ↔ Srinagar)
+  - Sightseeing for the entire itinerary
+  - All permits for restricted areas
+excluded:
+  - Meals not mentioned in inclusions
+  - Personal expenses
+  - Horse riding at Doodhpathri (paid separately)
+  - Activity charges at individual sites
+paymentAmount: 10000
+meetingPoint: Srinagar — location shared on booking.
+importantNotes: Minimum 6 people required to confirm the trip. Hosted by Prateek
+  Sanyal. Balance payment due 10 days before trip.

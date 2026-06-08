@@ -1,0 +1,137 @@
+title: Monsoon Meghalaya
+slug: monsoon-meghalaya
+location: Meghalaya
+status: booking-open
+registrationEnabled: true
+duration: 7 Days, 6 Nights
+coverImage: ""
+description: >
+  A backpacking-style, monsoon-powered adventure through both iconic and
+  lesser-known gems of Meghalaya. Cliff jumps, bamboo sky bridges, hidden hill
+  towns, river canyons, and dreamy turquoise pools. From jungle tents to cozy
+  hill cottages — all clean, comfortable, and nestled in nature. Joined by
+  Ankit, a trusted local explorer who knows these lands inside out. Price:
+  ₹29,000 per person (triple sharing) or ₹31,000 (double sharing).
+shortDescription: Misty meadows, jungle canyons, turquoise waterfalls, and
+  monsoon magic through the Abode of Clouds.
+whoShouldJoin: Those craving stillness in the hills or thrill in the rivers.
+  Beginners and first-timers welcome.
+batches:
+  - id: meghalaya-jun-2026
+    startDate: 2026-06-21
+    endDate: 2026-06-27
+    price: 29000
+    totalSpots: 15
+    bookedSpots: 0
+  - id: meghalaya-aug-2026
+    startDate: 2026-08-02
+    endDate: 2026-08-08
+    price: 29000
+    totalSpots: 15
+    bookedSpots: 0
+  - id: meghalaya-sep1-2026
+    startDate: 2026-09-06
+    endDate: 2026-09-12
+    price: 29000
+    totalSpots: 15
+    bookedSpots: 0
+  - id: meghalaya-sep2-2026
+    startDate: 2026-09-20
+    endDate: 2026-09-26
+    price: 29000
+    totalSpots: 15
+    bookedSpots: 0
+highlights:
+  - Stay at Meghalaya's best-kept secret — a serene lake town tucked in green
+    rolling hills
+  - Cliff jump, kayak, and river canyon at Mawlyngbna
+  - Jungle camping in tents by the forest
+  - Split Rock — a surreal geological cave experience
+  - Waterfalls — Krang Suri, Phe Phe, Kynrem, and Wei Saw Dong (three-tiered
+    turquoise)
+  - Garden of Caves — natural pools, waterfalls, limestone formations
+  - Guided walk through the legendary Mawphlang Sacred Forest
+  - Souvenir shopping and local food at Police Bazaar, Shillong
+itinerary:
+  - day: 1
+    title: Journey to a Hidden Hill Town
+    description: Depart Guwahati at 7 AM. Drive into the misty green hills to a
+      serene offbeat village with tiny lakes and rolling meadows. Settle in,
+      slow evening by the meadows, bonfire, and homely dinner.
+    stay: Homestay, Hidden Hill Town (Meghalaya)
+    meals:
+      - D
+    transport: Force Traveller from Guwahati
+  - day: 2
+    title: Split Rocks & Jungle Camping
+    description: Drive to Mawlyngbna. Hike to the Split Rock — a massive crack in
+      the earth you can walk through. Afternoon jungle camping in tents with
+      mist rolling in at sunset. Bonfire chats and card games.
+    stay: Jungle tent camp, Mawlyngbna
+    meals:
+      - B
+  - day: 3
+    title: Cliff Jumps & Canyons
+    description: Half-day river canyoning — swimming, cliff jumping, waterfall
+      sliding, and kayaking. After lunch, drive to Sohra (Cherrapunji) to rest
+      up for a big waterfall day.
+    stay: Guesthouse, Sohra/Cherrapunji
+    meals:
+      - B
+  - day: 4
+    title: Chasing Waterfalls
+    description: Visit Prut Falls, Kynrem, Lyngksiar, and Wei Saw Dong — a
+      three-tiered turquoise waterfall that looks absolutely unreal. Jump, swim,
+      and play to your heart's content.
+    stay: Guesthouse, Sohra/Cherrapunji
+    meals:
+      - B
+  - day: 5
+    title: Garden of Caves & Shillong
+    description: Explore the Garden of Caves — limestone formations, natural pools,
+      shaded trails. Head to Shillong. Evening wandering through the market,
+      souvenir shopping at Police Bazaar, dinner at a local food joint.
+    stay: Guesthouse, Shillong
+    meals:
+      - B
+  - day: 6
+    title: Turquoise Waters & Forested Falls
+    description: Early start north to Phe Phe Falls and Krang Suri Falls —
+      crystal-clear turquoise water and dense green surroundings. Return to
+      Shillong by night.
+    stay: Guesthouse, Shillong
+    meals:
+      - B
+  - day: 7
+    title: Mawphlang Sacred Forest & Departure
+    description: Guided walk through the Mawphlang Sacred Forest — ancient trees,
+      tribal stories. Nothing may be taken from the forest. Lunch, then return
+      journey to Guwahati, arriving by 7 PM.
+    stay: ""
+    meals:
+      - B
+    transport: Force Traveller back to Guwahati
+included:
+  - Pick-up and drop from Guwahati
+  - All internal travel in a Force Traveller
+  - 6N/7D accommodation as per itinerary
+  - Tent stay in Mawlyngbna (double sharing)
+  - All breakfasts from Day 2–Day 7
+  - Guided tour of Mawphlang Sacred Forest
+  - Activities at Mawlyngbna — canyoning, kayaking, cliff jumping
+  - Local guide for Mawphlang, Split Rock, and River Canyoning
+  - Fuel, tolls, parking, driver charges
+excluded:
+  - Entry fees to waterfalls and caves other than Mawphlang and Mawlyngbna
+  - Lunches and dinners
+  - Personal expenses
+  - Anything not mentioned in inclusions
+paymentAmount: 10000
+meetingPoint: Guwahati — departure sharp at 7:00 AM. Arrive in Guwahati a day prior.
+importantNotes: >
+  Arrive in Guwahati the evening before — departure is at 7 AM sharp, late
+  arrivals cannot be accommodated. On return, drop at Khanapara (Guwahati) for
+  airport connections. Price is ₹29,000 (triple sharing) or ₹31,000 (double
+  sharing). Advance of ₹10,000 is non-refundable. Cancellations within 15 days
+  of departure attract 100% cancellation charges. Balance due 10 days before
+  trip.
