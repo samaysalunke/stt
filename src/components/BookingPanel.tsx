@@ -203,6 +203,7 @@ export default function BookingPanel({
               return (
                 <button
                   key={dep.id}
+                  data-testid={`departure-${dep.id}`}
                   onClick={() => selectDeparture(dep)}
                   disabled={isSoldOut}
                   className="w-full text-left rounded-xl border-2 p-4 transition-all duration-150"
@@ -297,6 +298,7 @@ export default function BookingPanel({
                 return (
                   <label
                     key={offer.tierId}
+                    data-testid={`tier-${offer.tierId}`}
                     className="flex items-start justify-between gap-3 rounded-xl border px-4 py-3"
                     style={{
                       borderColor: isSelected ? C.coral : C.peach,

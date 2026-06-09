@@ -1,0 +1,42 @@
+title: QA Test — Booking Panel
+slug: qa-test-booking-panel
+status: booking-open
+registrationEnabled: true
+duration: 3 Days, 2 Nights
+description: >
+  Automated QA fixture for Playwright E2E tests. Mirrors the Sahyadri
+  per-departure occupancy scenario with stable far-future dates. Do not delete.
+occupancyCatalog:
+  - id: dorm
+    label: Dorm Bed
+    helperText: Shared room, backpacker style.
+  - id: private
+    label: Private Room
+    helperText: Room shared with one other traveller. Limited, first come.
+batches:
+  # dep-A: both tiers offered, private sold out (cap=booked)
+  - id: qa-panel-dep-a
+    startDate: "2099-03-01"
+    endDate: "2099-03-03"
+    status: booking-open
+    offers:
+      - { tierId: dorm,    price: 5000, cap: 12, booked: 0 }
+      - { tierId: private, price: 7000, cap: 3,  booked: 3 }
+  # dep-B: dorm only (private absent from this departure)
+  - id: qa-panel-dep-b
+    startDate: "2099-04-01"
+    endDate: "2099-04-03"
+    status: booking-open
+    offers:
+      - { tierId: dorm, price: 5000, cap: 15, booked: 0 }
+  # dep-C: both tiers available
+  - id: qa-panel-dep-c
+    startDate: "2099-05-01"
+    endDate: "2099-05-03"
+    status: booking-open
+    offers:
+      - { tierId: dorm,    price: 5000, cap: 12, booked: 0 }
+      - { tierId: private, price: 7000, cap: 3,  booked: 0 }
+paymentAmount: 1000
+balanceDueRule: 15 days before trip
+meetingPoint: QA fixture — no real meeting point.

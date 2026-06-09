@@ -7,6 +7,7 @@
 
 import { spawn, execSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { writeFileSync, mkdirSync } from 'node:fs';
 
 const PORT = 4399; // dedicated test port to avoid colliding with dev server
 const BASE = `http://localhost:${PORT}`;
@@ -16,10 +17,12 @@ const includeRateLimits = process.argv.includes('--all');
 
 const TEST_FILES = [
   'tests/api/register.test.mjs',
+  'tests/api/register-v2.test.mjs',
   'tests/api/contact.test.mjs',
   'tests/api/newsletter.test.mjs',
   'tests/api/auth.test.mjs',
   'tests/api/security.test.mjs',
+  'tests/api/admin-trips.test.mjs',
   ...(includeRateLimits ? ['tests/api/rate-limits.test.mjs'] : []),
 ];
 
@@ -66,6 +69,22 @@ try {
   );
 
   exitCode = await new Promise(resolve => runner.on('close', resolve));
+
+  // Write a minimal API report to test-reports/api-report.md
+  try {
+    mkdirSync('test-reports', { recursive: true });
+    const status = exitCode === 0 ? '✅ PASSED' : '❌ FAILED';
+    const lines = [
+      `# API Test Report`,
+      ``,
+      `**${status}**`,
+      ``,
+      `Generated: ${new Date().toISOString()}`,
+      `Exit code: ${exitCode}`,
+      '',
+    ];
+    writeFileSync('test-reports/api-report.md', lines.join('\n'), 'utf-8');
+  } catch { /* non-fatal */ }
 } catch (err) {
   console.error('\nTest runner error:', err.message);
 } finally {

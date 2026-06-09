@@ -1,0 +1,51 @@
+name: ""
+status: booking-open
+duration: null
+shortDescription: null
+description: null
+whoShouldJoin: null
+highlights: []
+included: []
+notIncluded: []
+packingList: []
+itinerary: []
+meetingPoint: null
+meetingTime: null
+importantNotes: null
+cancellationPolicy: null
+featuredImage: null
+paymentQrCode: null
+paymentAmount: 1000
+paymentInstructions: null
+linkedAlbumSlug: null
+balanceDueRule: 15 days before trip
+occupancyCatalog:
+  - id: economy
+    label: Economy
+    helperText: Budget option.
+  - id: premium
+    label: Premium
+    helperText: Private room.
+batches:
+  - id: qa-v2-both-2099
+    startDate: 2099-01-01
+    endDate: 2099-01-03
+    status: booking-open
+    offers:
+      - tierId: economy
+        price: 5000
+        cap: 20
+        booked: 0
+      - tierId: premium
+        price: 8000
+        cap: 5
+        booked: 0
+  - id: qa-v2-economy-only-2099
+    startDate: 2099-02-01
+    endDate: 2099-02-03
+    status: booking-open
+    offers:
+      - tierId: economy
+        price: 5000
+        cap: 20
+        booked: 0

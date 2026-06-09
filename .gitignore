@@ -28,3 +28,6 @@ public/uploads/
 
 # jetbrains setting folder
 .idea/
+
+# test reports (generated on each run, not committed)
+test-reports/
