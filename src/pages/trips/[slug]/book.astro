@@ -1,0 +1,88 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import BookingCheckout from '../../../components/BookingCheckout';
+import { readTrip, readSiteSettings, resolveBooking } from '../../../lib/content';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const trip = readTrip(slug!);
+
+if (!trip || trip.status === 'draft') return Astro.redirect('/trips/');
+
+const booking = resolveBooking(trip);
+const departures = booking.departures;
+const tripName = (trip.title as string) || (trip.name as string) || slug!;
+
+// No bookable dates → back to trip page
+if (departures.length === 0) return Astro.redirect(`/trips/${slug}/`);
+
+const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out'
+  || (departures.length > 0 && departures.every((d) => d.soldOut));
+if (isSoldOut || !trip.registrationEnabled) return Astro.redirect(`/trips/${slug}/`);
+
+// Validate ?batch and ?tier params
+const batchParam = Astro.url.searchParams.get('batch') ?? '';
+const tierParam  = Astro.url.searchParams.get('tier')  ?? '';
+
+const selectedDeparture = batchParam
+  ? departures.find((d) => d.id === batchParam && !d.soldOut)
+  : departures.find((d) => !d.soldOut) ?? null;
+
+if (!selectedDeparture) return Astro.redirect(`/trips/${slug}/`);
+
+const availableOffers = selectedDeparture.offers.filter((o) => o.available);
+if (availableOffers.length === 0) return Astro.redirect(`/trips/${slug}/`);
+
+const cheapest = availableOffers.reduce((min, o) => (o.price < min.price ? o : min), availableOffers[0]);
+const selectedOffer = (tierParam && availableOffers.find((o) => o.tierId === tierParam)) || cheapest;
+
+let settings: any = {};
+try { settings = readSiteSettings(); } catch {}
+
+const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
+---
+
+<BaseLayout
+  title={`Book — ${tripName} — Seek the Thrill`}
+  description={`Complete your booking for ${tripName}.`}
+  image={heroImg}
+>
+  <!-- Slim trip header -->
+  <div class="border-b" style="border-color: var(--color-peach);">
+    <div class="container-app py-4 flex items-center gap-3">
+      <a href={`/trips/${slug}/`} class="flex items-center gap-1.5 text-sm transition-colors hover:opacity-70" style="color: var(--color-coral);">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+        Back
+      </a>
+      <span class="text-sm" style="color: rgba(27,43,58,0.3);">/</span>
+      <span class="text-sm font-medium truncate" style="color: var(--color-navy);">{tripName}</span>
+    </div>
+  </div>
+
+  <div class="container-app py-10 lg:py-14">
+    <div class="max-w-lg mx-auto">
+      <h1 class="text-2xl font-bold mb-1" style="font-family: var(--font-display); color: var(--color-navy);">
+        Save your spot
+      </h1>
+      <p class="text-sm mb-8" style="color: var(--color-gray-text);">A few spots are still open. If this one is calling you, don't wait.</p>
+
+      <BookingCheckout
+        slug={slug!}
+        tripName={tripName}
+        departure={selectedDeparture}
+        offer={selectedOffer}
+        advanceAmount={booking.advanceAmount}
+        balanceDueRule={booking.balanceDueRule}
+        upiId={settings.upiId ?? ''}
+        bankAccountName={settings.bankAccountName ?? ''}
+        bankAccountNumber={settings.bankAccountNumber ?? ''}
+        bankBranch={settings.bankBranch ?? ''}
+        bankIfsc={settings.bankIfsc ?? ''}
+        client:load
+      />
+    </div>
+  </div>
+</BaseLayout>

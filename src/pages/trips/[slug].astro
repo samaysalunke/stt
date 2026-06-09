@@ -21,11 +21,6 @@ if (trip.status === 'draft') {
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
-const upiId = settings.upiId ?? '';
-const bankAccountName = settings.bankAccountName ?? '';
-const bankAccountNumber = settings.bankAccountNumber ?? '';
-const bankBranch = settings.bankBranch ?? '';
-const bankIfsc = settings.bankIfsc ?? '';
 const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
 
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
@@ -71,18 +66,13 @@ const formattedLead = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN'
 const hasBatchArray = Array.isArray(trip.batches) && trip.batches.length > 0;
 const noUpcomingDates = hasBatchArray && departures.length === 0;
 
-const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-
-// The departure + occupancy the panel pre-selects on load: first non-sold-out
-// date, then its cheapest available tier. Mirrors BookingPanel so the SSR'd
-// registration form and price breakdown start in the same state.
+// First non-sold-out departure and its cheapest available offer — used to
+// seed the mobile sticky bar's initial price and the book-page link.
 const firstDeparture = departures.find((d) => !d.soldOut) ?? departures[0] ?? null;
 const initialOffer = firstDeparture
   ? firstDeparture.offers.filter((o) => o.available).sort((a, b) => a.price - b.price)[0] ?? null
   : null;
 const initialPerPerson = initialOffer?.price ?? 0;
-const initialBalance = Math.max(0, initialPerPerson - Math.min(paymentAmount, initialPerPerson || paymentAmount));
-const initialDateStr = firstDeparture ? `${fmtD(firstDeparture.startDate)} – ${fmtD(firstDeparture.endDate)}` : '';
 
 const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
 const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out' || allSoldOut;
@@ -385,6 +375,7 @@ const tripSchema: Record<string, any> = {
                 balanceDueRule={balanceDueRule}
                 fromPrice={fromPrice}
                 whatsappLink={whatsappLink}
+                slug={slug!}
                 client:load
               />
             ) : (
@@ -428,332 +419,9 @@ const tripSchema: Record<string, any> = {
       </div>
     </div>
 
-    <!-- ── REGISTRATION SECTION ─────────────────────────── -->
-    <div id="register" class="mt-16 scroll-mt-24">
-      {isOpen ? (
-        <div>
-          <div class="text-center mb-10">
-            <h2 class="text-2xl lg:text-3xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">
-              Save your spot on {tripName}
-            </h2>
-            <p style="color: var(--color-gray-text);">A few spots are still open. If this one is calling you, don't wait.</p>
-          </div>
-
-          <div class="max-w-2xl mx-auto bg-white rounded-2xl p-8" style="box-shadow: var(--shadow-lifted);">
-            <form id="reg-form" class="space-y-6">
-              <input type="hidden" name="tripSlug" value={slug} />
-              <input type="hidden" name="tripName" value={tripName} />
-              <input type="hidden" name="batchId" id="reg-batch-id" value={firstDeparture?.id ?? ''} />
-              <input type="hidden" name="tierId" id="reg-tier-id" value={initialOffer?.tierId ?? ''} />
-              <input type="hidden" name="tripDate" id="reg-trip-date" value={initialDateStr} />
-              <input type="hidden" name="totalAmount" id="reg-total-amount" value={initialPerPerson || ''} />
-              <input type="hidden" name="sharingOption" id="reg-sharing-option" value={initialOffer?.label ?? ''} />
-              <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
-
-              <!-- Personal Info -->
-              <div>
-                <h3 class="font-bold text-base mb-4" style="font-family: var(--font-display); color: var(--color-navy);">Personal Information</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Full Name <span style="color: var(--color-coral);">*</span></label>
-                    <input type="text" name="fullName" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Email ID <span style="color: var(--color-coral);">*</span></label>
-                    <input type="email" name="email" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">WhatsApp Number <span style="color: var(--color-coral);">*</span></label>
-                    <input type="tel" name="phone" placeholder="+91 XXXXX XXXXX" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">How old are you? <span style="color: var(--color-coral);">*</span></label>
-                    <input type="text" name="age" placeholder="e.g. 24" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Gender</label>
-                    <select name="gender" class="w-full px-4 py-3 border rounded-xl text-sm bg-white cursor-pointer outline-none" style="border-color: var(--color-border);">
-                      <option value="">Prefer not to say</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">City <span style="color: var(--color-coral);">*</span></label>
-                    <input type="text" name="city" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Instagram Handle <span style="color: var(--color-coral);">*</span></label>
-                    <input type="text" name="instagram" placeholder="@yourhandle" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                </div>
-              </div>
-
-              <hr style="border-color: var(--color-peach);" />
-
-              <!-- Emergency Contact -->
-              <div>
-                <h3 class="font-bold text-base mb-1" style="font-family: var(--font-display); color: var(--color-navy);">Emergency Contact</h3>
-                <p class="text-xs mb-4" style="color: rgba(27,43,58,0.5);">Someone we can reach if we can't get hold of you on the trip.</p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Their Name <span style="color: var(--color-coral);">*</span></label>
-                    <input type="text" name="emergencyName" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Their Number <span style="color: var(--color-coral);">*</span></label>
-                    <input type="tel" name="emergencyPhone" required class="w-full px-4 py-3 border rounded-xl text-sm outline-none" style="border-color: var(--color-border);" />
-                  </div>
-                </div>
-              </div>
-
-              <hr style="border-color: var(--color-peach);" />
-
-              <!-- Human question -->
-              <div>
-                <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">Why do you want to join this trip? <span style="color: var(--color-coral);">*</span></label>
-                <textarea
-                  name="whyJoin"
-                  required
-                  rows="3"
-                  placeholder="No perfect answer. Tell us what pulled you here."
-                  class="w-full px-4 py-3 border rounded-xl text-sm outline-none resize-none"
-                  style="border-color: var(--color-border);"
-                ></textarea>
-              </div>
-
-              <hr style="border-color: var(--color-peach);" />
-
-              <!-- Payment -->
-              <div>
-                <h3 class="font-bold text-base mb-4" style="font-family: var(--font-display); color: var(--color-navy);">Payment Details</h3>
-
-                <!-- Price breakdown card -->
-                <div class="rounded-xl overflow-hidden border mb-5" style="border-color: var(--color-peach);">
-                  <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush);">
-                    <div>
-                      <div class="text-sm font-medium" style="color: var(--color-navy);">Advance</div>
-                      <div class="text-xs" style="color: var(--color-gray-text);">Pay now to confirm your spot</div>
-                    </div>
-                    <strong style="color: var(--color-coral); font-family: var(--font-display);">₹{paymentAmount.toLocaleString('en-IN')}</strong>
-                  </div>
-                  {initialPerPerson > 0 && (
-                    <>
-                      <!-- Progress bar -->
-                      <div class="px-4 pt-2 pb-1" style="background-color: var(--color-blush);">
-                        <div class="rounded-full h-1.5" style="background-color: #F5DDD7;">
-                          <div id="rf-pbar-fill" class="rounded-full h-1.5" style="background-color: var(--color-coral); width: 0%;"></div>
-                        </div>
-                        <div class="flex justify-between mt-1">
-                          <span id="rf-pbar-now" class="text-xs" style="color: rgba(27,43,58,0.4);">Pay now</span>
-                          <span id="rf-pbar-later" class="text-xs" style="color: rgba(27,43,58,0.4);">Balance later</span>
-                        </div>
-                      </div>
-                      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach);">
-                        <div>
-                          <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
-                          <div class="text-xs" style="color: var(--color-gray-text);">Due {balanceDueRule}</div>
-                        </div>
-                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{initialBalance.toLocaleString('en-IN')}</strong>
-                      </div>
-                      <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
-                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total trip cost <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span></div>
-                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{initialPerPerson.toLocaleString('en-IN')}</strong>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <!-- Payment method tabs -->
-                {(upiId || bankAccountNumber) && (
-                  <div class="mb-5">
-                    {upiId && bankAccountNumber ? (
-                      <>
-                        <!-- Tab switcher -->
-                        <div class="flex rounded-xl p-1 mb-3" style="background: rgba(27,43,58,0.07);" role="tablist">
-                          <button type="button" id="tab-upi" role="tab" aria-selected="true" onclick="sttPayTab('upi')"
-                            class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
-                            style="background: white; color: var(--color-navy); box-shadow: 0 1px 3px rgba(27,43,58,0.08);">
-                            Pay via UPI
-                          </button>
-                          <button type="button" id="tab-bank" role="tab" aria-selected="false" onclick="sttPayTab('bank')"
-                            class="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
-                            style="color: rgba(27,43,58,0.5);">
-                            Bank Transfer
-                          </button>
-                        </div>
-
-                        <!-- UPI panel -->
-                        <div id="panel-upi" class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
-                          <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">UPI ID</p>
-                          <div class="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style="background: rgba(217,95,59,0.06); border: 1px solid rgba(217,95,59,0.25);">
-                            <span class="text-sm font-medium" style="color: var(--color-coral); word-break: break-all;">{upiId}</span>
-                            <button type="button" class="stt-copy-btn ml-3 flex-shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all" style="border: 0.5px solid rgba(217,95,59,0.45); color: var(--color-coral);" data-copy={upiId}>
-                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                              Copy
-                            </button>
-                          </div>
-                          <div class="space-y-2.5">
-                            {['Open GPay, PhonePe, Paytm or any UPI app', 'Send to the UPI ID above', `Pay exactly ₹${paymentAmount.toLocaleString('en-IN')} — the advance amount`, 'Screenshot the confirmation and upload below'].map((step, i) => (
-                              <div class="flex gap-2.5 items-start">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium mt-0.5" style="background: var(--color-navy); font-size: 10px;">{i + 1}</span>
-                                <span class="text-sm leading-snug" style="color: rgba(27,43,58,0.7);">{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <!-- Bank panel -->
-                        <div id="panel-bank" class="rounded-xl p-4 text-sm hidden" style="background-color: var(--color-blush);">
-                          <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">Bank Account Details</p>
-                          <table class="w-full" style="border-collapse: collapse;">
-                            <tbody>
-                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account name</td>
-                                <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankAccountName}</td>
-                              </tr>
-                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account no.</td>
-                                <td class="py-2 text-right">
-                                  <div class="flex items-center justify-end gap-2">
-                                    <span class="text-xs font-medium" style="color: var(--color-navy);">{bankAccountNumber}</span>
-                                    <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankAccountNumber}>Copy</button>
-                                  </div>
-                                </td>
-                              </tr>
-                              <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Branch</td>
-                                <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankBranch}</td>
-                              </tr>
-                              <tr>
-                                <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">IFSC</td>
-                                <td class="py-2 text-right">
-                                  <div class="flex items-center justify-end gap-2">
-                                    <span class="text-xs font-medium" style="color: var(--color-navy);">{bankIfsc}</span>
-                                    <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankIfsc}>Copy</button>
-                                  </div>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </>
-                    ) : upiId ? (
-                      <!-- UPI only (no tabs) -->
-                      <div class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
-                        <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">UPI ID</p>
-                        <div class="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style="background: rgba(217,95,59,0.06); border: 1px solid rgba(217,95,59,0.25);">
-                          <span class="text-sm font-medium" style="color: var(--color-coral); word-break: break-all;">{upiId}</span>
-                          <button type="button" class="stt-copy-btn ml-3 flex-shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all" style="border: 0.5px solid rgba(217,95,59,0.45); color: var(--color-coral);" data-copy={upiId}>
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                            Copy
-                          </button>
-                        </div>
-                        <div class="space-y-2.5">
-                          {['Open GPay, PhonePe, Paytm or any UPI app', 'Send to the UPI ID above', `Pay exactly ₹${paymentAmount.toLocaleString('en-IN')} — the advance amount`, 'Screenshot the confirmation and upload below'].map((step, i) => (
-                            <div class="flex gap-2.5 items-start">
-                              <span class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-medium mt-0.5" style="background: var(--color-navy); font-size: 10px;">{i + 1}</span>
-                              <span class="text-sm leading-snug" style="color: rgba(27,43,58,0.7);">{step}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <!-- Bank only (no tabs) -->
-                      <div class="rounded-xl p-4 text-sm" style="background-color: var(--color-blush);">
-                        <p class="text-xs font-semibold uppercase tracking-wider mb-2.5" style="color: rgba(27,43,58,0.38);">Bank Account Details</p>
-                        <table class="w-full" style="border-collapse: collapse;">
-                          <tbody>
-                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account name</td>
-                              <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankAccountName}</td>
-                            </tr>
-                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Account no.</td>
-                              <td class="py-2 text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                  <span class="text-xs font-medium" style="color: var(--color-navy);">{bankAccountNumber}</span>
-                                  <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankAccountNumber}>Copy</button>
-                                </div>
-                              </td>
-                            </tr>
-                            <tr style="border-bottom: 0.5px solid rgba(27,43,58,0.07);">
-                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">Branch</td>
-                              <td class="py-2 text-xs font-medium text-right" style="color: var(--color-navy);">{bankBranch}</td>
-                            </tr>
-                            <tr>
-                              <td class="py-2 pr-3 text-xs" style="color: rgba(27,43,58,0.48);">IFSC</td>
-                              <td class="py-2 text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                  <span class="text-xs font-medium" style="color: var(--color-navy);">{bankIfsc}</span>
-                                  <button type="button" class="stt-copy-btn flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md transition-all" style="border: 0.5px solid rgba(27,43,58,0.22); color: rgba(27,43,58,0.55);" data-copy={bankIfsc}>Copy</button>
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <!-- Screenshot upload -->
-                <div class="mb-4">
-                  <label class="block text-sm font-medium mb-1.5" style="color: var(--color-navy);">
-                    Payment Screenshot
-                  </label>
-                  <div id="upload-zone" class="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors" style="border-color: var(--color-border);">
-                    <svg class="w-7 h-7 mx-auto mb-2" style="color: var(--color-gray-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p class="text-sm" style="color: var(--color-gray-text);">Tap to upload screenshot</p>
-                    <p class="text-xs mt-1" style="color: var(--color-gray-text);">JPG, PNG, PDF up to 5MB</p>
-                    <input type="file" id="screenshot-file" accept=".jpg,.jpeg,.png,.pdf" class="hidden" />
-                  </div>
-                  <input type="hidden" name="paymentScreenshotUrl" id="screenshot-url" />
-                  <div id="upload-preview" class="hidden mt-2 text-xs" style="color: var(--color-success);"></div>
-                </div>
-
-
-              </div>
-
-              <!-- Trust line -->
-              <p class="text-xs leading-relaxed rounded-lg px-4 py-3" style="background-color: var(--color-blush); color: var(--color-navy);">
-                Run by Zahra and a small team who've actually done these routes. Real humans, one WhatsApp away.
-              </p>
-
-              <hr style="border-color: var(--color-peach);" />
-
-              <!-- Legal -->
-              <div class="space-y-3">
-                <label class="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" name="agreeTerms" required class="mt-0.5" />
-                  <span class="text-sm" style="color: var(--color-navy);">I agree to the <a href="/terms/" target="_blank" class="underline" style="color: var(--color-coral);">Terms and Conditions</a> <span style="color: var(--color-coral);">*</span></span>
-                </label>
-                <label class="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" name="agreeCancel" required class="mt-0.5" />
-                  <span class="text-sm" style="color: var(--color-navy);">I have read the <a href="/cancellation/" target="_blank" class="underline" style="color: var(--color-coral);">Cancellation Policy</a> <span style="color: var(--color-coral);">*</span></span>
-                </label>
-              </div>
-
-              <!-- Error -->
-              <div id="form-error" class="hidden p-4 rounded-xl text-sm" style="background-color: #fee2e2; color: #991b1b;"></div>
-
-              <!-- Submit -->
-              <button
-                type="submit"
-                id="submit-btn"
-                class="w-full font-semibold text-white py-4 rounded-full transition-all hover:opacity-90 text-base"
-                style="background-color: var(--color-cta);"
-              >
-                Save my spot →
-              </button>
-              <p class="text-center text-xs" style="color: var(--color-gray-text);">We'll confirm your registration within 24 hours.</p>
-            </form>
-          </div>
-        </div>
-      ) : (
+    <!-- ── CLOSED / SOLD-OUT STATE ────────────────────────── -->
+    {!isOpen && (
+      <div class="mt-16">
         <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl" style="box-shadow: var(--shadow-card);">
           <p class="text-base font-medium mb-4" style="color: var(--color-navy);">
             {isSoldOut ? 'All spots on this trip are filled.' : noUpcomingDates ? 'New dates for this trip are coming soon.' : 'Registration for this trip is currently closed.'}
@@ -762,8 +430,8 @@ const tripSchema: Record<string, any> = {
             See other trips →
           </a>
         </div>
-      )}
-    </div>
+      </div>
+    )}
   </div>
 
   <!-- Mobile sticky booking bar -->
@@ -775,7 +443,12 @@ const tripSchema: Record<string, any> = {
         </span>
         <span class="text-xs block" style="color: var(--color-gray-text);">per person</span>
       </div>
-      <a href="#register" class="font-semibold text-white px-7 py-3 rounded-full text-sm" style="background-color: var(--color-cta);">
+      <a
+        id="sticky-cta"
+        href={`/trips/${slug}/book?batch=${firstDeparture?.id ?? ''}&tier=${initialOffer?.tierId ?? ''}`}
+        class="font-semibold text-white px-7 py-3 rounded-full text-sm"
+        style="background-color: var(--color-cta);"
+      >
         Save my spot →
       </a>
     </div>
@@ -783,185 +456,17 @@ const tripSchema: Record<string, any> = {
 
 </BaseLayout>
 
-<style>
-  #reg-form input:focus,
-  #reg-form select:focus,
-  #reg-form textarea:focus {
-    border-color: var(--color-coral) !important;
-    box-shadow: 0 0 0 3px rgba(232,114,90,0.15);
-    outline: none;
-  }
-</style>
-
 <script>
-  const form = document.getElementById('reg-form') as HTMLFormElement | null;
-  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
-  const errorDiv = document.getElementById('form-error');
-  const uploadZone = document.getElementById('upload-zone');
-  const fileInput = document.getElementById('screenshot-file') as HTMLInputElement | null;
-  const screenshotUrl = document.getElementById('screenshot-url') as HTMLInputElement | null;
-  const uploadPreview = document.getElementById('upload-preview');
-
-  uploadZone?.addEventListener('click', () => fileInput?.click());
-  uploadZone?.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    (uploadZone as HTMLElement).style.borderColor = 'var(--color-coral)';
-  });
-  uploadZone?.addEventListener('dragleave', () => {
-    (uploadZone as HTMLElement).style.borderColor = 'var(--color-border)';
-  });
-  uploadZone?.addEventListener('drop', (e: DragEvent) => {
-    e.preventDefault();
-    (uploadZone as HTMLElement).style.borderColor = 'var(--color-border)';
-    if (e.dataTransfer?.files[0]) handleUpload(e.dataTransfer.files[0]);
-  });
-  fileInput?.addEventListener('change', () => {
-    if (fileInput.files?.[0]) handleUpload(fileInput.files[0]);
-  });
-
-  async function handleUpload(file: File) {
-    if (!uploadPreview) return;
-    uploadPreview.textContent = 'Uploading...';
-    uploadPreview.style.color = 'var(--color-gray-text)';
-    uploadPreview.classList.remove('hidden');
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        screenshotUrl!.value = data.url;
-        uploadPreview.textContent = '✓ ' + file.name + ' uploaded';
-        uploadPreview.style.color = 'var(--color-success)';
-      } else {
-        uploadPreview.textContent = data.error ?? 'Upload failed';
-        uploadPreview.style.color = 'var(--color-danger)';
-      }
-    } catch {
-      uploadPreview.textContent = 'Upload failed. Try again.';
-      uploadPreview.style.color = 'var(--color-danger)';
-    }
-  }
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (errorDiv) errorDiv.classList.add('hidden');
-    if (form._honey?.value) return;
-
-    const fd = new FormData(form);
-    const body: Record<string, any> = {};
-    fd.forEach((v, k) => { body[k] = v; });
-
-    try {
-      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.success) {
-        if (typeof (window as any).gtag === 'function') {
-          (window as any).gtag('event', 'submit_registration', { trip_slug: body.tripSlug ?? '' });
-        }
-        window.location.href = `/thank-you/?trip=${encodeURIComponent(String(body.tripName ?? ''))}`;
-      } else {
-        if (errorDiv) { errorDiv.textContent = data.error ?? 'Something went wrong. Try again.'; errorDiv.classList.remove('hidden'); }
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save my spot →'; }
-      }
-    } catch {
-      if (errorDiv) { errorDiv.textContent = 'Network error. Please check your connection.'; errorDiv.classList.remove('hidden'); }
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Save my spot →'; }
-    }
-  });
-
-  // GA4 begin_registration event
-  document.getElementById('register')?.addEventListener('focus', () => {}, { once: true });
-  const regSection = document.getElementById('register');
-  if (regSection) {
-    new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && typeof (window as any).gtag !== 'undefined') {
-        (window as any).gtag('event', 'begin_registration');
-      }
-    }, { threshold: 0.5 }).observe(regSection);
-  }
-
-  // ── Booking applier: BookingPanel (React island) owns selection truth and
-  //    emits `stt:booking-changed`. This is a dumb DOM sink that mirrors the
-  //    selection into the registration form's hidden fields + price breakdown
-  //    and the mobile sticky bar (all outside the island). ────────────────────
-  (function () {
-    const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
-
+  // Update sticky price + CTA link when BookingPanel selection changes
+  const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
+  window.addEventListener('stt:booking-changed', (e: any) => {
+    const d = e.detail || {};
     const stickyPrice = document.getElementById('sticky-price');
-    const rfTotal = document.getElementById('rf-total');
-    const rfBalance = document.getElementById('rf-balance');
-    const pbarFill = document.getElementById('rf-pbar-fill') as HTMLElement | null;
-    const pbarNow = document.getElementById('rf-pbar-now');
-    const pbarLater = document.getElementById('rf-pbar-later');
-    const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
-    const fTotal = document.getElementById('reg-total-amount') as HTMLInputElement | null;
-    const fBatch = document.getElementById('reg-batch-id') as HTMLInputElement | null;
-    const fTier = document.getElementById('reg-tier-id') as HTMLInputElement | null;
-    const fDate = document.getElementById('reg-trip-date') as HTMLInputElement | null;
-
-    window.addEventListener('stt:booking-changed', (e: any) => {
-      const d = e.detail || {};
-      const total = Number(d.perPersonPrice) || 0;
-      const advanceDue = Number(d.advanceDue) || 0;
-      const balance = Number(d.balance) || 0;
-
-      if (stickyPrice) stickyPrice.textContent = inr(total);
-      if (rfTotal) rfTotal.textContent = inr(total);
-      if (rfBalance) rfBalance.textContent = inr(balance);
-      if (fTotal) fTotal.value = String(total);
-      if (fBatch && d.departureId) fBatch.value = d.departureId;
-      if (fTier && d.tierId) fTier.value = d.tierId;
-      if (fOption && d.tierLabel) fOption.value = d.tierLabel;
-      if (fDate && d.dateStr) fDate.value = d.dateStr;
-
-      if (pbarFill && total > 0) {
-        const pct = Math.round((advanceDue / total) * 100);
-        pbarFill.style.width = pct + '%';
-        if (pbarNow) pbarNow.textContent = `Pay now (${pct}%)`;
-        if (pbarLater) pbarLater.textContent = `Balance later (${100 - pct}%)`;
-      }
-    });
-  })();
-
-  // ── Payment tab switcher ──────────────────────────────────────────────────
-  (window as any).sttPayTab = function (which: string) {
-    const upi = document.getElementById('panel-upi');
-    const bank = document.getElementById('panel-bank');
-    const tabUpi = document.getElementById('tab-upi');
-    const tabBank = document.getElementById('tab-bank');
-    if (upi) upi.classList.toggle('hidden', which !== 'upi');
-    if (bank) bank.classList.toggle('hidden', which !== 'bank');
-    [tabUpi, tabBank].forEach((t) => {
-      if (!t) return;
-      const active = t.id === `tab-${which}`;
-      t.style.background = active ? 'white' : '';
-      t.style.color = active ? 'var(--color-navy)' : 'rgba(27,43,58,0.5)';
-      t.style.boxShadow = active ? '0 1px 3px rgba(27,43,58,0.08)' : '';
-      t.setAttribute('aria-selected', String(active));
-    });
-  };
-
-  // ── Copy-to-clipboard buttons ─────────────────────────────────────────────
-  document.querySelectorAll<HTMLButtonElement>('.stt-copy-btn').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const text = btn.dataset.copy || '';
-      try { await navigator.clipboard.writeText(text); }
-      catch {
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.style.cssText = 'position:absolute;opacity:0';
-        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-      }
-      const orig = btn.innerHTML;
-      btn.innerHTML = '✓ Copied!';
-      btn.style.color = 'rgba(27,43,58,0.55)';
-      btn.style.borderColor = 'rgba(27,43,58,0.22)';
-      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1800);
-    });
+    const stickyCta = document.getElementById('sticky-cta') as HTMLAnchorElement | null;
+    if (stickyPrice && d.perPersonPrice) stickyPrice.textContent = inr(Number(d.perPersonPrice));
+    if (stickyCta && d.departureId && d.tierId) {
+      const base = stickyCta.href.split('?')[0];
+      stickyCta.href = `${base}?batch=${d.departureId}&tier=${d.tierId}`;
+    }
   });
 </script>

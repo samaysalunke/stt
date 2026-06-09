@@ -28,6 +28,7 @@ interface Props {
   balanceDueRule: string;
   fromPrice: number | null;
   whatsappLink: string;
+  slug: string;
   initialDepartureId?: string;
 }
 
@@ -62,6 +63,7 @@ export default function BookingPanel({
   balanceDueRule,
   fromPrice,
   whatsappLink,
+  slug,
   initialDepartureId,
 }: Props) {
   const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
@@ -368,7 +370,7 @@ export default function BookingPanel({
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
       <a
-        href="#register"
+        href={`/trips/${slug}/book?batch=${departureId}&tier=${tierId}`}
         className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all hover:opacity-90 hover:shadow-md"
         style={{ background: C.cta }}
       >
