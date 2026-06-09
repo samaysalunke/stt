@@ -45,9 +45,9 @@ async function fillAllStep2(page: any, overrides: Record<string, string> = {}) {
   await page.locator('textarea').fill(vals.whyJoin);
 }
 
-async function goToStep3(page: any) {
+async function goToStep3(page: any, overrides: Record<string, string> = {}) {
   await goToStep2(page);
-  await fillAllStep2(page);
+  await fillAllStep2(page, overrides);
   await page.locator('text=Continue to payment').click();
   await expect(page.locator('text=Pay & Confirm')).toBeVisible({ timeout: 10_000 });
 }
@@ -179,7 +179,7 @@ test.describe('WF-2: Step 2 field-level validation', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('WF-3: Pay-later full submission journey', () => {
   test('pay-later submission reaches thank-you page', async ({ page }) => {
-    await goToStep3(page);
+    await goToStep3(page, { email: `wf3-a-${Date.now()}@example.invalid` });
 
     // Toggle to pay-later
     await page.locator('text=Save spot, pay later').click();
@@ -208,7 +208,7 @@ test.describe('WF-3: Pay-later full submission journey', () => {
   });
 
   test('thank-you page shows trip name in URL', async ({ page }) => {
-    await goToStep3(page);
+    await goToStep3(page, { email: `wf3-b-${Date.now()}@example.invalid` });
     await page.locator('text=Save spot, pay later').click();
     await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
     await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();

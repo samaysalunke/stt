@@ -22,6 +22,7 @@ export default defineConfig({
     url: 'http://localhost:4321',
     reuseExistingServer: true,
     timeout: 60_000,
+    env: { ...(process.env as Record<string, string>), DISABLE_RATE_LIMIT: 'true' },
   },
   workers: 1,
 });
