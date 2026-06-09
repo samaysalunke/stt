@@ -79,23 +79,25 @@ test.describe('BookingPanel — switch to dep-C (both available)', () => {
     await expect(page.locator('text=₹7,000').first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test('hidden reg-tier-id input updates to private tierId', async ({ page }) => {
+  test('selecting private on dep-C updates the CTA href to include tierId=private', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
     await page.click('[data-testid="departure-qa-panel-dep-c"]');
     await page.click('[data-testid="tier-private"]');
-    await page.waitForTimeout(200); // allow event to propagate
-    const tierId = await page.locator('#reg-tier-id').inputValue();
-    expect(tierId).toBe('private');
+    await page.waitForTimeout(300); // allow stt:booking-changed to fire
+    const cta = page.locator('a[href*="/book?"]').first();
+    const href = await cta.getAttribute('href');
+    expect(href).toContain('tier=private');
   });
 
-  test('hidden reg-batch-id updates to dep-C id', async ({ page }) => {
+  test('CTA href updates batch id when dep-C is selected', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
     await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await page.waitForTimeout(200);
-    const batchId = await page.locator('#reg-batch-id').inputValue();
-    expect(batchId).toBe('qa-panel-dep-c');
+    await page.waitForTimeout(300);
+    const cta = page.locator('a[href*="/book?"]').first();
+    const href = await cta.getAttribute('href');
+    expect(href).toContain('batch=qa-panel-dep-c');
   });
 });
 
@@ -122,10 +124,10 @@ test.describe('BookingPanel — mobile viewport (375×812)', () => {
     await expect(sticky).toBeVisible();
   });
 
-  test('CTA button is visible and reachable on mobile', async ({ page }) => {
+  test('CTA button links to the book page and is visible on mobile', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
-    const cta = page.locator('a[href="#register"]').last();
+    const cta = page.locator('a[href*="/book?"]').first();
     await expect(cta).toBeVisible();
   });
 

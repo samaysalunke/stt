@@ -110,6 +110,8 @@ export default function BookingCheckout({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [payTab, setPayTab] = useState<'upi' | 'bank'>('upi');
+  const [payNow, setPayNow] = useState(true);
+  const [uploadError, setUploadError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const perPerson = offer.price;
@@ -171,11 +173,16 @@ export default function BookingCheckout({
   }
 
   async function handleSubmit() {
+    if (payNow && !screenshotUrl) {
+      setUploadError('Please upload your payment screenshot to confirm your spot.');
+      return;
+    }
     if (!agreeTerms || !agreeCancel) {
       setSubmitError('Please accept the Terms and Cancellation Policy to continue.');
       return;
     }
     setSubmitError('');
+    setUploadError('');
     setSubmitting(true);
     try {
       const res = await fetch('/api/register', {
@@ -408,130 +415,159 @@ export default function BookingCheckout({
         )}
       </div>
 
-      {/* Payment method */}
-      {(upiId || bankAccountNumber) && (
-        <div className="mb-5">
-          {hasBoth && (
-            <div className="flex rounded-xl p-1 mb-3" style={{ background: 'rgba(27,43,58,0.07)' }}>
-              {(['upi', 'bank'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setPayTab(tab)}
-                  className="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
-                  style={payTab === tab
-                    ? { background: 'white', color: C.navy, boxShadow: '0 1px 3px rgba(27,43,58,0.08)' }
-                    : { color: 'rgba(27,43,58,0.5)' }}
-                >
-                  {tab === 'upi' ? 'Pay via UPI' : 'Bank Transfer'}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {(!hasBoth || payTab === 'upi') && upiId && (
-            <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>UPI ID</p>
-              <div className="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style={{ background: 'rgba(217,95,59,0.06)', border: '1px solid rgba(217,95,59,0.25)' }}>
-                <span className="text-sm font-medium" style={{ color: C.coral, wordBreak: 'break-all' }}>{upiId}</span>
-                <button
-                  type="button"
-                  onClick={(e) => copyToClipboard(upiId, e.currentTarget)}
-                  className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all"
-                  style={{ border: '0.5px solid rgba(217,95,59,0.45)', color: C.coral }}
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  Copy
-                </button>
-              </div>
-              <div className="space-y-2.5">
-                {[
-                  'Open GPay, PhonePe, Paytm or any UPI app',
-                  'Send to the UPI ID above',
-                  `Pay exactly ${inr(advanceDue)} — the advance amount`,
-                  'Screenshot the confirmation and upload below',
-                ].map((step, i) => (
-                  <div key={i} className="flex gap-2.5 items-start">
-                    <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white font-medium mt-0.5" style={{ background: C.navy, fontSize: 10 }}>{i + 1}</span>
-                    <span className="text-sm leading-snug" style={{ color: 'rgba(27,43,58,0.7)' }}>{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {(!hasBoth || payTab === 'bank') && bankAccountNumber && (
-            <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>Bank Account Details</p>
-              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-                <tbody>
-                  {[
-                    { label: 'Account name', value: bankAccountName },
-                    { label: 'Account no.', value: bankAccountNumber, copy: true },
-                    { label: 'Branch', value: bankBranch },
-                    { label: 'IFSC', value: bankIfsc, copy: true },
-                  ].map(({ label, value, copy }) => (
-                    <tr key={label} style={{ borderBottom: '0.5px solid rgba(27,43,58,0.07)' }}>
-                      <td className="py-2 pr-3 text-xs" style={{ color: 'rgba(27,43,58,0.48)' }}>{label}</td>
-                      <td className="py-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-xs font-medium" style={{ color: C.navy }}>{value}</span>
-                          {copy && value && (
-                            <button
-                              type="button"
-                              onClick={(e) => copyToClipboard(value, e.currentTarget)}
-                              className="text-xs font-medium px-2 py-0.5 rounded-md transition-all"
-                              style={{ border: '0.5px solid rgba(27,43,58,0.22)', color: 'rgba(27,43,58,0.55)' }}
-                            >
-                              Copy
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+      {/* Pay-now path: payment instructions + upload */}
+      {payNow && (
+        <>
+          {/* Payment method */}
+          {(upiId || bankAccountNumber) && (
+            <div className="mb-5">
+              {hasBoth && (
+                <div className="flex rounded-xl p-1 mb-3" style={{ background: 'rgba(27,43,58,0.07)' }}>
+                  {(['upi', 'bank'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setPayTab(tab)}
+                      className="flex-1 text-center py-2 rounded-lg text-sm font-medium transition-all"
+                      style={payTab === tab
+                        ? { background: 'white', color: C.navy, boxShadow: '0 1px 3px rgba(27,43,58,0.08)' }
+                        : { color: 'rgba(27,43,58,0.5)' }}
+                    >
+                      {tab === 'upi' ? 'Pay via UPI' : 'Bank Transfer'}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
+
+              {(!hasBoth || payTab === 'upi') && upiId && (
+                <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>UPI ID</p>
+                  <div className="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style={{ background: 'rgba(217,95,59,0.06)', border: '1px solid rgba(217,95,59,0.25)' }}>
+                    <span className="text-sm font-medium" style={{ color: C.coral, wordBreak: 'break-all' }}>{upiId}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => copyToClipboard(upiId, e.currentTarget)}
+                      className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all"
+                      style={{ border: '0.5px solid rgba(217,95,59,0.45)', color: C.coral }}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      Copy
+                    </button>
+                  </div>
+                  <div className="space-y-2.5">
+                    {[
+                      'Open GPay, PhonePe, Paytm or any UPI app',
+                      'Send to the UPI ID above',
+                      `Pay exactly ${inr(advanceDue)} — the advance amount`,
+                      'Screenshot the confirmation and upload below',
+                    ].map((s, i) => (
+                      <div key={i} className="flex gap-2.5 items-start">
+                        <span className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white font-medium mt-0.5" style={{ background: C.navy, fontSize: 10 }}>{i + 1}</span>
+                        <span className="text-sm leading-snug" style={{ color: 'rgba(27,43,58,0.7)' }}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!hasBoth || payTab === 'bank') && bankAccountNumber && (
+                <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>Bank Account Details</p>
+                  <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {[
+                        { label: 'Account name', value: bankAccountName },
+                        { label: 'Account no.', value: bankAccountNumber, copy: true },
+                        { label: 'Branch', value: bankBranch },
+                        { label: 'IFSC', value: bankIfsc, copy: true },
+                      ].map(({ label, value, copy }) => (
+                        <tr key={label} style={{ borderBottom: '0.5px solid rgba(27,43,58,0.07)' }}>
+                          <td className="py-2 pr-3 text-xs" style={{ color: 'rgba(27,43,58,0.48)' }}>{label}</td>
+                          <td className="py-2 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="text-xs font-medium" style={{ color: C.navy }}>{value}</span>
+                              {copy && value && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => copyToClipboard(value, e.currentTarget)}
+                                  className="text-xs font-medium px-2 py-0.5 rounded-md transition-all"
+                                  style={{ border: '0.5px solid rgba(27,43,58,0.22)', color: 'rgba(27,43,58,0.55)' }}
+                                >
+                                  Copy
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Screenshot upload */}
+          <div className="mb-5">
+            <label className="block text-sm font-medium mb-1.5" style={{ color: C.navy }}>
+              Payment Screenshot <span style={{ color: C.coral }}>*</span>
+            </label>
+            <div
+              onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); (e.currentTarget as HTMLDivElement).style.borderColor = C.coral; }}
+              onDragLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = uploadError ? C.coral : C.border; }}
+              onDrop={(e) => {
+                e.preventDefault();
+                (e.currentTarget as HTMLDivElement).style.borderColor = C.border;
+                if (e.dataTransfer.files[0]) { setUploadError(''); handleUpload(e.dataTransfer.files[0]); }
+              }}
+              className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+              style={{ borderColor: uploadStatus === 'done' ? '#22c55e' : uploadError ? C.coral : C.border }}
+            >
+              {uploadStatus === 'done' ? (
+                <p className="text-sm" style={{ color: '#16a34a' }}>✓ {uploadName} uploaded</p>
+              ) : uploadStatus === 'uploading' ? (
+                <p className="text-sm" style={{ color: C.gray }}>Uploading...</p>
+              ) : (
+                <>
+                  <svg className="w-7 h-7 mx-auto mb-2" style={{ color: C.gray }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-sm" style={{ color: C.gray }}>Tap to upload screenshot</p>
+                  <p className="text-xs mt-1" style={{ color: C.gray }}>JPG, PNG, PDF up to 5MB</p>
+                </>
+              )}
+            </div>
+            {uploadStatus === 'error' && <p className="text-xs mt-1" style={{ color: C.coral }}>Upload failed. Please try again.</p>}
+            {uploadError && <p className="text-xs mt-1" style={{ color: C.coral }}>{uploadError}</p>}
+            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
+              onChange={(e) => { if (e.target.files?.[0]) { setUploadError(''); handleUpload(e.target.files[0]); } }} />
+          </div>
+        </>
+      )}
+
+      {/* Pay-later path: info card */}
+      {!payNow && (
+        <div className="mb-5 rounded-xl px-5 py-4 text-sm" style={{ background: 'rgba(27,43,58,0.04)', border: `1px solid ${C.peach}` }}>
+          <p className="font-medium mb-1" style={{ color: C.navy }}>We'll email you the payment details.</p>
+          <p className="text-sm leading-relaxed" style={{ color: C.gray }}>
+            Your spot is reserved but not confirmed until payment is received and verified. Seats are held on a first-paid, first-confirmed basis.
+          </p>
         </div>
       )}
 
-      {/* Screenshot upload */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-1.5" style={{ color: C.navy }}>Payment Screenshot</label>
-        <div
-          onClick={() => fileRef.current?.click()}
-          onDragOver={(e) => { e.preventDefault(); (e.currentTarget as HTMLDivElement).style.borderColor = C.coral; }}
-          onDragLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; }}
-          onDrop={(e) => {
-            e.preventDefault();
-            (e.currentTarget as HTMLDivElement).style.borderColor = C.border;
-            if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
-          }}
-          className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
-          style={{ borderColor: uploadStatus === 'done' ? '#22c55e' : C.border }}
-        >
-          {uploadStatus === 'done' ? (
-            <p className="text-sm" style={{ color: '#16a34a' }}>✓ {uploadName} uploaded</p>
-          ) : uploadStatus === 'uploading' ? (
-            <p className="text-sm" style={{ color: C.gray }}>Uploading...</p>
-          ) : (
-            <>
-              <svg className="w-7 h-7 mx-auto mb-2" style={{ color: C.gray }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p className="text-sm" style={{ color: C.gray }}>Tap to upload screenshot</p>
-              <p className="text-xs mt-1" style={{ color: C.gray }}>JPG, PNG, PDF up to 5MB</p>
-            </>
-          )}
-        </div>
-        {uploadStatus === 'error' && <p className="text-xs mt-1" style={{ color: C.coral }}>Upload failed. Please try again.</p>}
-        <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleUpload(e.target.files[0]); }} />
+      {/* Verification note — always visible */}
+      <div className="mb-5 flex gap-2.5 items-start rounded-xl px-4 py-3" style={{ background: C.blush }}>
+        <svg className="w-4 h-4 shrink-0 mt-0.5" style={{ color: C.coral }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-xs leading-relaxed" style={{ color: C.navy }}>
+          Your spot is confirmed once we verify your payment, in order of receipt. Usually within a few hours.
+        </p>
       </div>
 
       {/* Trust line */}
-      <p className="text-xs leading-relaxed rounded-lg px-4 py-3 mb-5" style={{ background: C.blush, color: C.navy }}>
+      <p className="text-xs leading-relaxed rounded-lg px-4 py-3 mb-5" style={{ background: 'rgba(27,43,58,0.03)', border: `1px solid ${C.peach}`, color: 'rgba(27,43,58,0.6)' }}>
         Run by Zahra and a small team who've actually done these routes. Real humans, one WhatsApp away.
       </p>
 
@@ -555,7 +591,7 @@ export default function BookingCheckout({
         <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b' }}>{submitError}</div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 mb-3">
         <button
           onClick={() => { setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex-1 py-4 rounded-full text-sm font-medium border transition-all"
@@ -570,10 +606,35 @@ export default function BookingCheckout({
           className="flex-[3] font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 disabled:opacity-60"
           style={{ background: C.cta }}
         >
-          {submitting ? 'Submitting...' : 'Save my spot →'}
+          {submitting ? 'Submitting...' : payNow ? 'Confirm my spot →' : 'Save my spot →'}
         </button>
       </div>
-      <p className="text-center text-xs mt-3" style={{ color: C.gray }}>We'll confirm your registration within 24 hours.</p>
+
+      {/* Toggle pay path */}
+      <p className="text-center text-xs" style={{ color: 'rgba(27,43,58,0.45)' }}>
+        {payNow ? (
+          <>
+            Not ready to pay yet?{' '}
+            <button
+              type="button"
+              onClick={() => { setPayNow(false); setUploadError(''); }}
+              className="underline"
+              style={{ color: C.coral }}
+            >
+              Save spot, pay later
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPayNow(true)}
+            className="underline"
+            style={{ color: C.coral }}
+          >
+            ← I'll pay now
+          </button>
+        )}
+      </p>
     </div>
   );
 }

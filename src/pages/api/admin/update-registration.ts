@@ -3,12 +3,12 @@ import { getDb } from '../../../lib/db';
 import { listTrips, readTrip, writeTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 
-const VALID_STATUSES = ['pending', 'confirmed', 'rejected'];
+const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
 /** The advance (paymentAmount) configured on the trip, used as the amount collected on confirm. */
 function tripAdvanceAmount(tripName: string): number {
   try {
-    const matched = listTrips().find((t: any) => t.name === tripName);
+    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
     if (!matched) return 0;
     const tripData = readTrip(matched.slug);
     const advance = tripData?.paymentAmount;
@@ -26,16 +26,18 @@ function tripAdvanceAmount(tripName: string): number {
  * bookings) and confirm/un-confirm nudge it by ±1. So it must stay a stored
  * field — do not replace it with a live DB count.
  *
+ * When `tierId` is provided and the batch uses the new per-offer schema
+ * (batches[].offers[]), also updates the matching `offer.booked` field so that
+ * `resolveBooking` reflects the confirmed count accurately.
+ *
  * ATOMICITY INVARIANT — keep this function fully SYNCHRONOUS. Node is
  * single-threaded, so a synchronous read-modify-write (readTrip → mutate →
  * writeTrip) runs to completion in one tick and cannot interleave with another
- * confirmation. That is the only thing making concurrent confirms race-free.
- * Do NOT introduce `await` between the read and the write here (and never make
- * this `async`) — doing so reopens the lost-update race.
+ * confirmation. Do NOT introduce `await` here — doing so reopens the race.
  */
-function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1) {
+function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1, tierId?: string | null) {
   try {
-    const matched = listTrips().find((t: any) => t.name === tripName);
+    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
     if (!matched) return;
     const tripData = readTrip(matched.slug);
     if (!tripData) return;
@@ -46,6 +48,14 @@ function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 |
       if (b) {
         const cur = typeof b.bookedSpots === 'number' ? b.bookedSpots : 0;
         b.bookedSpots = Math.max(0, cur + delta);
+        // Also update per-tier offer.booked for new-schema trips.
+        if (tierId && Array.isArray(b.offers)) {
+          const offer = b.offers.find((o: any) => o.tierId === tierId);
+          if (offer) {
+            const curBooked = typeof offer.booked === 'number' ? offer.booked : 0;
+            offer.booked = Math.max(0, curBooked + delta);
+          }
+        }
         writeTrip(matched.slug, tripData);
         return;
       }
@@ -79,6 +89,31 @@ export const POST: APIRoute = async ({ request }) => {
       .get(id) as Record<string, any> | null;
 
     const prevStatus = reg?.status ?? 'pending';
+    const tripName = reg?.trip_name as string;
+    const batchId = (reg?.batch_id as string) ?? null;
+    const tierId = (reg?.tier_id as string) ?? null;
+
+    // ── Pre-flight: capacity check BEFORE writing to DB ──────────────────────
+    // Must run before the UPDATE so the confirmed count doesn't include this row.
+    if (reg && newStatus === 'confirmed' && prevStatus !== 'confirmed' && batchId && tierId) {
+      const confirmedCount = (getDb()
+        .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
+        .get(batchId, tierId, 'confirmed') as { n: number }).n;
+      try {
+        const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+        if (matched) {
+          const tripData = readTrip(matched.slug);
+          const batch = (tripData?.batches as any[])?.find((b: any) => b.id === batchId);
+          const offer = (batch?.offers as any[])?.find((o: any) => o.tierId === tierId);
+          if (offer?.cap != null && confirmedCount >= offer.cap) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: `This tier is now full (${confirmedCount}/${offer.cap} confirmed). Please confirm another departure or reject this booking.`,
+            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          }
+        }
+      } catch { /* non-fatal: proceed with confirm if cap check fails */ }
+    }
 
     // Update DB
     getDb()
@@ -89,17 +124,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Side-effects only when status actually changes
     if (reg && newStatus !== prevStatus) {
-      const tripName = reg.trip_name as string;
-
       // ── Booking count + revenue adjustment (on the booked departure) ──────
-      const batchId = (reg.batch_id as string) ?? null;
       if (newStatus === 'confirmed' && prevStatus !== 'confirmed') {
-        adjustBookingCount(tripName, batchId, 1);
+        adjustBookingCount(tripName, batchId, 1, tierId);
         // Revenue: record the advance collected when the booking is confirmed.
         const advance = tripAdvanceAmount(tripName);
         getDb().prepare('UPDATE registrations SET amount_paid=? WHERE id=?').run(advance, id);
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
-        adjustBookingCount(tripName, batchId, -1);
+        adjustBookingCount(tripName, batchId, -1, tierId);
         // Reverse the recorded revenue when a confirmation is undone.
         getDb().prepare('UPDATE registrations SET amount_paid=0 WHERE id=?').run(id);
       }

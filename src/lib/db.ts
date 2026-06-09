@@ -112,4 +112,6 @@ function initializeSchema(db: Database.Database) {
   // Migration: age (text) + instagram handle
   try { db.exec('ALTER TABLE registrations ADD COLUMN age TEXT'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN instagram TEXT'); } catch {}
+  // Migration: tier_id for per-departure occupancy tracking (new schema)
+  try { db.exec('ALTER TABLE registrations ADD COLUMN tier_id TEXT'); } catch {}
 }

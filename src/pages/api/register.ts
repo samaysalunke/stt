@@ -115,18 +115,23 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     const tripDateStr = `${fmtDate(selectedDeparture.startDate)} – ${fmtDate(selectedDeparture.endDate)}`;
 
+    // Status: 'pending' when screenshot uploaded (awaiting ops verification);
+    // 'lead' when no screenshot (registered but unpaid — holds no seat).
+    const screenshotUrl = sanitizeInput(body.paymentScreenshotUrl) || null;
+    const registrationStatus = screenshotUrl ? 'pending' : 'lead';
+
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO registrations (
         trip_name, trip_date, full_name, email, phone, gender,
         age, city, instagram, emergency_name, emergency_phone,
         payment_screenshot_url, why_join,
-        sharing_option, total_amount, batch_id, consent_at, status
+        sharing_option, total_amount, batch_id, tier_id, consent_at, status
       ) VALUES (
         ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?,
-        ?, ?, ?, CURRENT_TIMESTAMP, 'pending'
+        ?, ?, ?, ?, CURRENT_TIMESTAMP, ?
       )
     `);
 
@@ -142,11 +147,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       required.instagram,
       required.emergencyName,
       required.emergencyPhone,
-      sanitizeInput(body.paymentScreenshotUrl) || null,
+      screenshotUrl,
       required.whyJoin,
       sharingOption,
       totalAmount,
       batchId,
+      selectedOffer.tierId,
+      registrationStatus,
     );
 
     const registrationId = insertResult.lastInsertRowid;
@@ -166,7 +173,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       if (s.upiId) upiId = s.upiId;
     } catch {}
 
-    const hasPayment = !!(sanitizeInput(body.paymentScreenshotUrl));
+    const hasPayment = !!screenshotUrl;
     const firstName = required.fullName.split(' ')[0];
 
     // Send confirmation email — wrapped so failure never blocks success response

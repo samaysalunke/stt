@@ -1,0 +1,23 @@
+title: QA Test — Capacity Check
+slug: qa-test-capacity
+status: booking-open
+registrationEnabled: true
+duration: 2 Days
+description: Automated QA fixture. Cap=1 tier for over-confirm testing.
+paymentAmount: 500
+balanceDueRule: 7 days before trip
+occupancyCatalog:
+  - id: solo
+    label: Solo Tent
+    helperText: One person per tent.
+batches:
+  - id: qa-cap-2099
+    startDate: 2099-03-01
+    endDate: 2099-03-02
+    status: booking-open
+    offers:
+      - tierId: solo
+        price: 3000
+        cap: 1
+        booked: 1
+    bookedSpots: 1

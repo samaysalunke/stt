@@ -9,6 +9,7 @@ const registrations = getDb()
   .all() as Record<string, any>[];
 
 const total = registrations.length;
+const leads = registrations.filter(r => r.status === 'lead').length;
 const pending = registrations.filter(r => r.status === 'pending').length;
 const confirmed = registrations.filter(r => r.status === 'confirmed').length;
 const rejected = registrations.filter(r => r.status === 'rejected').length;
@@ -38,6 +39,7 @@ const tripGroups = [...regsByTrip.entries()].sort(([aName], [bName]) => {
 
 function groupStats(regs: typeof registrations) {
   return {
+    lead:      regs.filter(r => r.status === 'lead').length,
     pending:   regs.filter(r => r.status === 'pending').length,
     confirmed: regs.filter(r => r.status === 'confirmed').length,
     rejected:  regs.filter(r => r.status === 'rejected').length,
@@ -46,7 +48,8 @@ function groupStats(regs: typeof registrations) {
 
 function statusStyle(status: string) {
   if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
-  if (status === 'rejected') return 'background:#FEE2E2;color:#991B1B;';
+  if (status === 'rejected')  return 'background:#FEE2E2;color:#991B1B;';
+  if (status === 'lead')      return 'background:#FEF9C3;color:#78350F;';
   return 'background:#FEF3C7;color:#92400E;';
 }
 
@@ -79,6 +82,7 @@ function fmtCurrency(n: number) {
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
     {[
       { label: 'Total', value: total, color: 'var(--color-primary)' },
+      { label: 'Leads', value: leads, color: '#78350F' },
       { label: 'Pending', value: pending, color: '#D97706' },
       { label: 'Confirmed', value: confirmed, color: 'var(--color-success)' },
       { label: 'Rejected', value: rejected, color: 'var(--color-danger)' },
@@ -102,6 +106,7 @@ function fmtCurrency(n: number) {
       />
       <select id="statusFilter" style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);">
         <option value="">All statuses</option>
+        <option value="lead">Lead</option>
         <option value="pending">Pending</option>
         <option value="confirmed">Confirmed</option>
         <option value="rejected">Rejected</option>
@@ -153,6 +158,9 @@ function fmtCurrency(n: number) {
                 </span>
               </div>
               <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                {stats.lead > 0 && (
+                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEF9C3;color:#78350F;">{stats.lead} lead</span>
+                )}
                 {stats.pending > 0 && (
                   <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEF3C7;color:#92400E;">{stats.pending} pending</span>
                 )}
@@ -249,12 +257,15 @@ function fmtCurrency(n: number) {
                           <div id={`status-section-${r.id}`}>
                             <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
                             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                              {['pending', 'confirmed', 'rejected'].map(s => (
+                              {(['lead', 'pending', 'confirmed', 'rejected'] as const).map(s => (
                                 <button
                                   onclick={`updateStatus(${r.id}, '${s}')`}
                                   style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
                                     r.status === s
-                                      ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;' : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
+                                      ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;'
+                                        : s === 'rejected'  ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;'
+                                        : s === 'lead'      ? 'background:#FEF9C3;color:#78350F;border-color:#FDE68A;'
+                                        : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
                                       : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
                                   }`}
                                 >
@@ -328,6 +339,7 @@ function fmtCurrency(n: number) {
         badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${
           status === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' :
           status === 'rejected'  ? 'background:#FEE2E2;color:#991B1B;' :
+          status === 'lead'      ? 'background:#FEF9C3;color:#78350F;' :
                                    'background:#FEF3C7;color:#92400E;'
         }`;
       }

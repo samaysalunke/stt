@@ -1,52 +1,174 @@
 import { test, expect } from '@playwright/test';
 
-// Uses qa-test-bookable (legacy schema) — single standard tier, no occupancy chooser.
-// Tests the full public flow: load page → booking summary visible → CTA scrolls to form.
+// ── Trip details page (qa-test-bookable) ─────────────────────────────────────
+// This trip uses the legacy schema (flat price, no occupancy chooser).
+// The registration form has moved to /trips/[slug]/book — this page is now
+// purely browse/marketing with a CTA that navigates to the checkout flow.
 const TRIP_URL = '/trips/qa-test-bookable/';
+const BOOK_URL = '/trips/qa-test-bookable/book';
 
-test('booking summary is visible on page load', async ({ page }) => {
+async function waitForPanel(page: any) {
+  await page.waitForSelector('text=Advance now', { timeout: 15_000 });
+}
+
+// ── Trip page — booking summary ───────────────────────────────────────────────
+test('booking summary is visible on trip page load', async ({ page }) => {
   await page.goto(TRIP_URL);
-  // The booking summary "Advance now" section appears once BookingPanel hydrates
   await expect(page.locator('text=Advance now').first()).toBeVisible({ timeout: 15_000 });
 });
 
-test('"Save my spot" CTA scrolls to the registration form', async ({ page }) => {
+// ── Trip page — CTA navigates to /book ───────────────────────────────────────
+test('sidebar "Save my spot" CTA links to the book page', async ({ page }) => {
   await page.goto(TRIP_URL);
-  await page.waitForSelector('a[href="#register"]', { timeout: 15_000 });
-  // Click the sidebar CTA (first occurrence — the one inside the booking panel)
-  await page.locator('a[href="#register"]').first().click();
-  // Registration form heading should now be in view
-  await expect(page.locator('#register')).toBeVisible();
+  await waitForPanel(page);
+  // The CTA inside BookingPanel
+  const cta = page.locator('a[href*="/book?"]').first();
+  await expect(cta).toBeVisible({ timeout: 10_000 });
+  const href = await cta.getAttribute('href');
+  expect(href).toMatch(/\/trips\/qa-test-bookable\/book\?batch=.+&tier=.+/);
 });
 
-test('registration form has required fields', async ({ page }) => {
+test('sticky CTA also links to the book page', async ({ page }) => {
   await page.goto(TRIP_URL);
-  await page.waitForSelector('#reg-form', { timeout: 15_000 });
-  const form = page.locator('#reg-form');
-  await expect(form.locator('input[name="fullName"]')).toBeVisible();
-  await expect(form.locator('input[name="email"]')).toBeVisible();
-  await expect(form.locator('input[name="phone"]')).toBeVisible();
+  await waitForPanel(page);
+  // Sticky bar is CSS-hidden on desktop; check the element exists with the right href
+  const sticky = page.locator('#sticky-cta');
+  await expect(sticky).toBeAttached({ timeout: 10_000 });
+  const href = await sticky.getAttribute('href');
+  expect(href).toMatch(/\/trips\/qa-test-bookable\/book/);
 });
 
-test('hidden batchId input is populated from BookingPanel', async ({ page }) => {
-  await page.goto(TRIP_URL);
-  // Wait for BookingPanel to hydrate and fire stt:booking-changed
-  await page.waitForSelector('text=Advance now', { timeout: 15_000 });
-  await page.waitForTimeout(300);
-  const batchId = await page.locator('#reg-batch-id').inputValue();
-  expect(batchId).toBeTruthy();
-  expect(batchId).toBe('qa-bookable-2099');
+// ── Book page — Step 1 ────────────────────────────────────────────────────────
+test('book page loads Step 1 with trip and price summary', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  // Step bar should show "Your Trip" active
+  await expect(page.locator('text=Your Trip').first()).toBeVisible({ timeout: 15_000 });
+  // Trip name card (use the card heading specifically)
+  await expect(page.locator('div.font-semibold').filter({ hasText: 'QA Test' }).first()).toBeVisible();
+  // Advance amount in summary
+  await expect(page.locator('text=Advance now').first()).toBeVisible();
 });
 
-test('form submission with missing required field shows client-side block (HTML5 validation)', async ({ page }) => {
-  await page.goto(TRIP_URL);
-  await page.waitForSelector('#reg-form', { timeout: 15_000 });
-  // Try to submit empty form — HTML5 required validation should block it
-  await page.locator('#reg-form').evaluate((form: HTMLFormElement) => {
-    // Dispatch submit to trigger validation without actual network request
-    form.reportValidity();
+test('book page Step 1 has a "Continue to your details" button', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await expect(page.locator('text=Continue to your details')).toBeVisible({ timeout: 15_000 });
+});
+
+test('book page Step 1 has a "Back to trip details" link', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  const back = page.locator('a[href*="/trips/qa-test-bookable"]').first();
+  await expect(back).toBeVisible({ timeout: 15_000 });
+});
+
+// ── Book page — Step 2 ────────────────────────────────────────────────────────
+test('book page advances to Step 2 after clicking Continue', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await page.locator('text=Continue to your details').click();
+  await expect(page.locator('text=Your Details')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('input[placeholder*="handle"]')).toBeVisible();
+});
+
+test('book page Step 2 shows all required fields', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await page.locator('text=Continue to your details').click();
+  await expect(page.locator('text=Full Name')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('text=Email ID')).toBeVisible();
+  await expect(page.locator('text=WhatsApp Number')).toBeVisible();
+  await expect(page.locator('text=Emergency Contact')).toBeVisible();
+  await expect(page.locator('text=Why do you want to join')).toBeVisible();
+});
+
+test('book page Step 2 blocks advance with missing required field', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await page.locator('text=Continue to your details').click();
+  // Click "Continue to payment" without filling anything
+  await page.locator('text=Continue to payment').click();
+  // Error messages should appear for required fields
+  await expect(page.locator('text=is required').first()).toBeVisible({ timeout: 5_000 });
+});
+
+// ── Book page — Step 3 ────────────────────────────────────────────────────────
+async function fillStep2AndAdvance(page: any) {
+  await page.locator('text=Continue to your details').click();
+  await expect(page.locator('text=Full Name').first()).toBeVisible({ timeout: 10_000 });
+
+  // text inputs in DOM order: Full Name, Age, City, Instagram, Emergency Name
+  const textInputs = page.locator('input[type="text"]');
+  await textInputs.nth(0).fill('QA Playwright User'); // Full Name
+  await textInputs.nth(1).fill('25');                  // Age
+  await textInputs.nth(2).fill('Mumbai');              // City
+  await textInputs.nth(3).fill('@qa_pw');              // Instagram
+  await textInputs.nth(4).fill('QA Emergency');        // Emergency Name
+
+  // email + tel
+  await page.locator('input[type="email"]').first().fill('qa-pw@example.invalid');
+  const telInputs = page.locator('input[type="tel"]');
+  await telInputs.nth(0).fill('+91 9876543210');  // WhatsApp
+  await telInputs.nth(1).fill('9123456789');       // Emergency Phone
+
+  // Why join textarea
+  await page.locator('textarea').fill('Playwright E2E QA test.');
+  await page.locator('text=Continue to payment').click();
+}
+
+test('book page Step 3 shows payment instructions by default (pay-now mode)', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await fillStep2AndAdvance(page);
+  await expect(page.locator('text=Pay & Confirm')).toBeVisible({ timeout: 10_000 });
+  // Default is pay-now: screenshot upload should be visible
+  await expect(page.locator('text=Payment Screenshot')).toBeVisible();
+  // "Not ready to pay" toggle link
+  await expect(page.locator('text=Save spot, pay later')).toBeVisible();
+});
+
+test('book page Step 3 always shows the verification note', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await fillStep2AndAdvance(page);
+  await expect(page.locator('text=Your spot is confirmed once we verify')).toBeVisible({ timeout: 10_000 });
+});
+
+test('book page Step 3 "Save spot, pay later" toggles to pay-later mode', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await fillStep2AndAdvance(page);
+  await page.locator('text=Save spot, pay later').click();
+  // Payment instructions collapse; info card appears
+  await expect(page.locator("text=We'll email you the payment details")).toBeVisible({ timeout: 5_000 });
+  // Screenshot upload should be gone
+  await expect(page.locator('text=Payment Screenshot')).not.toBeVisible();
+  // CTA changes to "Save my spot"
+  await expect(page.locator('button:has-text("Save my spot")')).toBeVisible();
+  // "I'll pay now" back link appears
+  await expect(page.locator("text=I'll pay now")).toBeVisible();
+});
+
+test('book page Step 3 pay-now blocks submit when no screenshot', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await fillStep2AndAdvance(page);
+  // Accept T&C — go up to the <label> which contains both text and checkbox
+  await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
+  await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
+  // Try to submit without screenshot
+  await page.locator('button:has-text("Confirm my spot")').click();
+  await expect(page.locator('text=Please upload your payment screenshot')).toBeVisible({ timeout: 5_000 });
+});
+
+test('book page redirects to trip page when batch param is invalid', async ({ page }) => {
+  const res = await page.goto(`${BOOK_URL}?batch=bad-batch-id&tier=standard`);
+  // Server should redirect back to the trip page
+  expect(page.url()).toMatch(/\/trips\/qa-test-bookable\/?$/);
+});
+
+// ── Mobile viewport ───────────────────────────────────────────────────────────
+test.describe('Book page — mobile (375×812)', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('Step 1 renders and CTA is visible on mobile', async ({ page }) => {
+    await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+    await expect(page.locator('text=Continue to your details')).toBeVisible({ timeout: 15_000 });
   });
-  // At least one required field should show browser validation state
-  const invalid = page.locator('#reg-form input:invalid');
-  expect(await invalid.count()).toBeGreaterThan(0);
+
+  test('step bar is visible on mobile', async ({ page }) => {
+    await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+    await expect(page.locator('text=Your Trip')).toBeVisible({ timeout: 15_000 });
+  });
 });
