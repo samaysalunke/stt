@@ -28,13 +28,11 @@ function dispatchSelected(batch: Batch) {
 }
 
 export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
-  // Default to the first non-sold-out batch.
   const firstBookable = batches.find(
     (b) => b.totalSpots - b.bookedSpots > 0 && b.status !== 'sold-out' && b.status !== 'sold_out'
   ) ?? batches[0];
   const [selected, setSelected] = useState<string>(firstBookable?.id ?? '');
 
-  // Announce the initial selection so the booking form/total stays in sync.
   useEffect(() => {
     if (firstBookable) dispatchSelected(firstBookable);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,6 +53,7 @@ export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
         const spotsLeft = batch.totalSpots - batch.bookedSpots;
         const isSelected = selected === batch.id;
         const isSoldOut = spotsLeft <= 0 || batch.status === 'sold-out' || batch.status === 'sold_out';
+        const isLowStock = !isSoldOut && spotsLeft <= 3;
 
         return (
           <button
@@ -69,51 +68,31 @@ export default function BatchPicker({ batches, tripSlug, onSelect }: Props) {
               cursor: isSoldOut ? 'not-allowed' : 'pointer',
             }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-sm" style={{ color: '#1B2B3A', fontFamily: 'var(--font-display)' }}>
-                  {formatDate(batch.startDate)} – {formatDate(batch.endDate)}
-                </div>
-                <div className="text-xs mt-1" style={{ color: '#6B7280' }}>
-                  {isSoldOut ? 'Sold out' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`}
-                </div>
-              </div>
-              <div className="flex-shrink-0 text-right">
-                <div className="font-bold text-base" style={{ color: '#E8725A', fontFamily: 'var(--font-display)' }}>
-                  ₹{batch.price.toLocaleString('en-IN')}
-                </div>
-                <div className="text-xs" style={{ color: '#6B7280' }}>per person</div>
-              </div>
+            <div className="font-semibold text-sm" style={{ color: '#1B2B3A', fontFamily: 'var(--font-display)' }}>
+              {formatDate(batch.startDate)} – {formatDate(batch.endDate)}
             </div>
 
-            {!isSoldOut && (
+            {isSoldOut ? (
+              <div className="text-xs mt-1" style={{ color: '#6B7280' }}>Sold out</div>
+            ) : (
               <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1" style={{ color: '#6B7280' }}>
-                  <span>{batch.bookedSpots}/{batch.totalSpots} booked</span>
-                  <span style={spotsLeft <= 4 ? { color: '#E8725A', fontWeight: 600 } : {}}>{spotsLeft} left</span>
+                <div
+                  className="text-xs mb-1"
+                  style={{ color: isLowStock ? '#E8725A' : '#6B7280', fontWeight: isLowStock ? 600 : 400 }}
+                >
+                  {isLowStock
+                    ? `Only ${spotsLeft} left`
+                    : `${spotsLeft} of ${batch.totalSpots} left`}
                 </div>
                 <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: '#F5DDD7' }}>
                   <div
                     className="h-full rounded-full"
                     style={{
                       width: `${Math.min(100, (batch.bookedSpots / batch.totalSpots) * 100)}%`,
-                      background: spotsLeft <= 4 ? '#E8725A' : '#1B2B3A',
+                      background: isLowStock ? '#E8725A' : '#1B2B3A',
                     }}
                   />
                 </div>
-              </div>
-            )}
-
-            {isSelected && !isSoldOut && (
-              <div className="mt-3 flex justify-end">
-                <a
-                  href={`/trips/${tripSlug}/?batch=${batch.id}#register`}
-                  className="text-xs font-semibold text-white px-3 py-1.5 rounded-full"
-                  style={{ background: '#D95F3B' }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Save my spot →
-                </a>
               </div>
             )}
           </button>

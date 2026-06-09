@@ -126,7 +126,17 @@ excluded:
   - Lunches and dinners
   - Personal expenses
   - Anything not mentioned in inclusions
+sharingOptions:
+  - id: triple
+    label: Triple Sharing
+    price: 29000
+    helperText: Room shared with two others.
+  - id: double
+    label: Double Sharing Cottage
+    price: 31000
+    helperText: Room shared with one other traveller. Limited, first come.
 paymentAmount: 10000
+balanceDueRule: 10 days before trip
 meetingPoint: Guwahati — departure sharp at 7:00 AM. Arrive in Guwahati a day prior.
 importantNotes: >
   Arrive in Guwahati the evening before — departure is at 7 AM sharp, late

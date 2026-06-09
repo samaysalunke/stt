@@ -127,6 +127,7 @@ excluded:
   - Personal expenses
   - Anything not mentioned in inclusions
 paymentAmount: 10000
+balanceDueRule: 15 days before trip
 meetingPoint: Leh Airport — pickup arranged on Day 1.
 importantNotes: >
   High-altitude destination (11,000 ft and above). Day 1 kept relaxed for

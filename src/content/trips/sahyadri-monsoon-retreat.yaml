@@ -36,12 +36,15 @@ batches:
     totalSpots: 15
     bookedSpots: 0
 sharingOptions:
-  - id: double
-    label: Double Sharing Cottage
-    price: 17999
   - id: dorm
     label: Dorm Bed
     price: 16999
+    helperText: Shared room, backpacker style.
+  - id: double
+    label: Double Sharing Cottage
+    price: 17999
+    helperText: Room shared with one other traveller. Limited, first come.
+balanceDueRule: 15 days before trip
 highlights:
   - Waterfall rappelling — 200-ft descent, first-timer friendly
   - Secret natural pool hidden in the green hills

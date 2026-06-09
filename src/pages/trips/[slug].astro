@@ -91,6 +91,11 @@ const hasSharing = sharingOptions.length > 0;
 const sharingPrices = sharingOptions.map((o: any) => Number(o.price));
 const leadPrice = hasSharing ? Math.min(...sharingPrices) : price;
 const formattedLead = leadPrice ? `₹${leadPrice.toLocaleString('en-IN')}` : 'TBD';
+// Pre-select the cheapest occupancy option (not the first).
+const cheapestIdx = sharingPrices.length > 0
+  ? sharingPrices.indexOf(Math.min(...sharingPrices))
+  : 0;
+const balanceDueRule = (trip.balanceDueRule as string) ?? '15 days before trip';
 
 const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out';
 const isOpen = trip.registrationEnabled && !isSoldOut && batches.length > 0;
@@ -431,40 +436,48 @@ const tripSchema: Record<string, any> = {
                 <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: var(--color-gray-text);">Choose occupancy</p>
                 <div class="flex flex-col gap-2">
                   {sharingOptions.map((o: any, i: number) => (
-                    <label class="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 cursor-pointer occ-option" style="border-color: var(--color-peach);">
-                      <span class="flex items-center gap-2.5">
-                        <input type="radio" name="__occupancy" value={o.label} data-price={o.price} checked={i === 0} class="accent-current" style="accent-color: var(--color-coral);" />
-                        <span class="text-sm font-medium" style="color: var(--color-navy);">{o.label}</span>
+                    <label class="flex items-start justify-between gap-3 rounded-xl border px-4 py-3 cursor-pointer occ-option" style="border-color: var(--color-peach);">
+                      <span class="flex items-start gap-2.5">
+                        <input type="radio" name="__occupancy" value={o.label} data-price={o.price} checked={i === cheapestIdx} class="mt-0.5 accent-current" style="accent-color: var(--color-coral);" />
+                        <span>
+                          <span class="block text-sm font-medium" style="color: var(--color-navy);">{o.label}</span>
+                          {o.helperText && <span class="block text-xs mt-0.5" style="color: var(--color-gray-text);">{o.helperText}</span>}
+                        </span>
                       </span>
-                      <span class="text-sm font-semibold" style="font-family: var(--font-display); color: var(--color-coral);">₹{Number(o.price).toLocaleString('en-IN')}</span>
+                      <span class="text-sm font-semibold shrink-0" style="font-family: var(--font-display); color: var(--color-coral);">₹{Number(o.price).toLocaleString('en-IN')}</span>
                     </label>
                   ))}
                 </div>
               </div>
             )}
 
-            <!-- Advance + (when occupancy set) total/balance -->
+            <!-- Booking summary (single source of truth) -->
             {isOpen && paymentAmount && (
-              <div class="mb-5 rounded-xl overflow-hidden border" style="border-color: var(--color-peach);">
-                <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush);">
-                  <div>
-                    <div class="text-xs font-semibold" style="color: var(--color-coral);">Advance to confirm spot</div>
-                    <div class="text-xs mt-0.5" style="color: var(--color-gray-text);">Pay now · Balance due before trip</div>
-                  </div>
-                  <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">₹{paymentAmount.toLocaleString('en-IN')}</span>
+              <div class="mb-5 rounded-xl overflow-hidden border text-sm" style="border-color: var(--color-peach);">
+                <div class="flex items-center justify-between px-4 py-3" style="border-bottom: 1px solid var(--color-peach);">
+                  <span style="color: var(--color-gray-text);">Per person</span>
+                  <span class="font-semibold" id="sb-total" style="font-family: var(--font-display); color: var(--color-navy);">
+                    {hasSharing
+                      ? `₹${Number(sharingOptions[cheapestIdx].price).toLocaleString('en-IN')}`
+                      : (price ? `₹${price.toLocaleString('en-IN')}` : '—')}
+                  </span>
                 </div>
-                {hasSharing && (
-                  <div class="px-4 py-3 text-sm" style="border-top: 1px solid var(--color-peach);">
-                    <div class="flex items-center justify-between">
-                      <span style="color: var(--color-gray-text);">Total (selected)</span>
-                      <span class="font-semibold" id="sb-total" style="color: var(--color-navy);">—</span>
-                    </div>
-                    <div class="flex items-center justify-between mt-1">
-                      <span style="color: var(--color-gray-text);">Balance before trip</span>
-                      <span class="font-semibold" id="sb-balance" style="color: var(--color-navy);">—</span>
-                    </div>
+                <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush); border-bottom: 1px solid var(--color-peach);">
+                  <span class="font-semibold" style="color: var(--color-coral);">Advance now</span>
+                  <span class="font-bold" style="font-family: var(--font-display); color: var(--color-coral);">₹{paymentAmount.toLocaleString('en-IN')}</span>
+                </div>
+                <div class="px-4 py-3" style="border-bottom: 1px solid var(--color-peach);">
+                  <div class="flex items-center justify-between">
+                    <span style="color: var(--color-gray-text);">Balance before trip</span>
+                    <span class="font-semibold" id="sb-balance" style="color: var(--color-navy);">
+                      {hasSharing
+                        ? `₹${Math.max(0, Number(sharingOptions[cheapestIdx].price) - paymentAmount).toLocaleString('en-IN')}`
+                        : (price ? `₹${Math.max(0, price - paymentAmount).toLocaleString('en-IN')}` : '—')}
+                    </span>
                   </div>
-                )}
+                  <div class="text-xs mt-0.5" style="color: var(--color-gray-text);">due {balanceDueRule}</div>
+                </div>
+                <div class="px-4 py-2 text-xs" style="color: var(--color-gray-text);">Advance is non-refundable.</div>
               </div>
             )}
 
@@ -525,8 +538,8 @@ const tripSchema: Record<string, any> = {
               <input type="hidden" name="tripName" value={tripName} />
               <input type="hidden" name="batchId" id="reg-batch-id" value={firstBatch?.id ?? ''} />
               <input type="hidden" name="tripDate" id="reg-trip-date" value={batchDateStr(firstBatch)} />
-              <input type="hidden" name="totalAmount" id="reg-total-amount" value={hasSharing ? sharingOptions[0].price : (firstBatch?.price ?? '')} />
-              {hasSharing && <input type="hidden" name="sharingOption" id="reg-sharing-option" value={sharingOptions[0].label} />}
+              <input type="hidden" name="totalAmount" id="reg-total-amount" value={hasSharing ? sharingOptions[cheapestIdx].price : (firstBatch?.price ?? '')} />
+              {hasSharing && <input type="hidden" name="sharingOption" id="reg-sharing-option" value={sharingOptions[cheapestIdx].label} />}
               <script type="application/json" id="batches-data" is:inline data-advance={paymentAmount} set:html={JSON.stringify(batches.map((b: any) => ({ id: b.id, startDate: b.startDate, endDate: b.endDate, price: b.price })))}></script>
               <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
 
@@ -633,13 +646,13 @@ const tripSchema: Record<string, any> = {
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach);">
                         <div>
                           <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
-                          <div class="text-xs" style="color: var(--color-gray-text);">Due 15 days before trip</div>
+                          <div class="text-xs" style="color: var(--color-gray-text);">Due {balanceDueRule}</div>
                         </div>
-                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{(((hasSharing ? leadPrice : price) ?? 0) - paymentAmount).toLocaleString('en-IN')}</strong>
+                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{Math.max(0, ((hasSharing ? Number(sharingOptions[cheapestIdx]?.price) : price) ?? 0) - paymentAmount).toLocaleString('en-IN')}</strong>
                       </div>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
                         <div class="text-sm font-semibold" style="color: var(--color-navy);">Total trip cost{hasSharing && <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span>}</div>
-                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{((hasSharing ? leadPrice : price) ?? 0).toLocaleString('en-IN')}</strong>
+                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{((hasSharing ? Number(sharingOptions[cheapestIdx]?.price) : price) ?? 0).toLocaleString('en-IN')}</strong>
                       </div>
                     </>
                   )}
@@ -850,7 +863,11 @@ const tripSchema: Record<string, any> = {
   {isOpen && (
     <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 flex items-center justify-between" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
       <div>
-        {price && <span class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedPrice}</span>}
+        {(price || hasSharing) && (
+          <span id="sticky-price" class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">
+            {hasSharing ? formattedLead : formattedPrice}
+          </span>
+        )}
         <span class="text-xs block" style="color: var(--color-gray-text);">per person</span>
       </div>
       <a href="#register" class="font-semibold text-white px-7 py-3 rounded-full text-sm" style="background-color: var(--color-cta);">
@@ -983,6 +1000,7 @@ const tripSchema: Record<string, any> = {
     const sbLead = document.getElementById('sb-lead-price');
     const sbTotal = document.getElementById('sb-total');
     const sbBalance = document.getElementById('sb-balance');
+    const stickyPrice = document.getElementById('sticky-price');
     const rfTotal = document.getElementById('rf-total');
     const rfBalance = document.getElementById('rf-balance');
     const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
@@ -990,7 +1008,7 @@ const tripSchema: Record<string, any> = {
     const fBatch = document.getElementById('reg-batch-id') as HTMLInputElement | null;
     const fDate = document.getElementById('reg-trip-date') as HTMLInputElement | null;
 
-    // Initial selection: ?batch= from the URL (set by BatchPicker CTA) or first.
+    // Initial selection: ?batch= from the URL or first batch.
     const params = new URLSearchParams(window.location.search);
     const wantId = params.get('batch');
     let currentBatch = batchData.find((b) => b.id === wantId) || batchData[0] || null;
@@ -1002,14 +1020,16 @@ const tripSchema: Record<string, any> = {
 
     function recompute() {
       const total = hasSharing ? (occPrice || 0) : (currentBatch?.price || 0);
-      const balance = Math.max(0, total - advance);
+      const advanceDue = Math.min(advance, total);
+      const balance = Math.max(0, total - advanceDue);
       if (sbTotal) sbTotal.textContent = inr(total);
       if (sbBalance) sbBalance.textContent = inr(balance);
+      if (stickyPrice) stickyPrice.textContent = inr(total);
       if (rfTotal) rfTotal.textContent = inr(total);
       if (rfBalance) rfBalance.textContent = inr(balance);
       if (fTotal) fTotal.value = String(total);
       if (pbarFill && total > 0) {
-        const pct = Math.round((advance / total) * 100);
+        const pct = Math.round((advanceDue / total) * 100);
         pbarFill.style.width = pct + '%';
         if (pbarNow) pbarNow.textContent = `Pay now (${pct}%)`;
         if (pbarLater) pbarLater.textContent = `Balance later (${100 - pct}%)`;
@@ -1017,7 +1037,7 @@ const tripSchema: Record<string, any> = {
       if (currentBatch) {
         if (fBatch) fBatch.value = currentBatch.id;
         if (fDate) fDate.value = `${fmtD(currentBatch.startDate)} – ${fmtD(currentBatch.endDate)}`;
-        // Non-occupancy trips: the sidebar lead price tracks the chosen date.
+        // Non-sharing trips: sidebar lead price tracks the selected date's price.
         if (!hasSharing && sbLead) sbLead.textContent = inr(currentBatch.price);
       }
     }
