@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
-import { readTrip, readSiteSettings, upcomingBatches } from '../../lib/content';
+import { readTrip, readSiteSettings, resolveBooking } from '../../lib/content';
 import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
@@ -80,51 +80,40 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
-    // ── Server-side departure + price resolution (never trust the client) ──
+    // ── Server-side departure + occupancy resolution (never trust the client) ──
+    // resolveBooking() is the single source of truth: it filters to bookable
+    // departures and resolves per-departure offers (new schema or legacy).
     const fail = (msg: string) => new Response(
       JSON.stringify({ success: false, error: msg }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     );
 
-    const hasBatchArray = Array.isArray(trip?.batches) && trip!.batches.length > 0;
-    let selectedBatch: any = null;
-    let batchId: string | null = null;
+    const booking = resolveBooking(trip!);
+    if (booking.departures.length === 0) return fail('This trip has no bookable dates right now.');
 
-    if (hasBatchArray) {
-      batchId = sanitizeInput(body.batchId) || null;
-      if (!batchId) return fail('Please select a departure date.');
-      // Must be one of the currently-bookable departures (upcoming, not draft/completed).
-      const bookable = upcomingBatches(trip!);
-      selectedBatch = bookable.find((b: any) => b.id === batchId);
-      if (!selectedBatch) return fail('That departure date is no longer available. Please pick another.');
-      // And it must not be sold out (by explicit status or by full seats).
-      const full = selectedBatch.totalSpots != null && (selectedBatch.bookedSpots ?? 0) >= selectedBatch.totalSpots;
-      if (selectedBatch.status === 'sold-out' || selectedBatch.status === 'sold_out' || full) {
-        return fail('That departure date is sold out. Please pick another.');
-      }
-    }
+    const wantedDeparture = sanitizeInput(body.batchId) || null;
+    const selectedDeparture = wantedDeparture
+      ? booking.departures.find((d) => d.id === wantedDeparture)
+      : booking.departures.find((d) => !d.soldOut);
+    if (!selectedDeparture) return fail('That departure date is no longer available. Please pick another.');
+    if (selectedDeparture.soldOut) return fail('That departure date is sold out. Please pick another.');
 
-    // Occupancy: derive the total from the trip's own options, not the client.
-    const sharingOpts = (Array.isArray(trip?.sharingOptions) ? trip!.sharingOptions : [])
-      .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)));
-    let sharingOption: string | null = null;
-    let totalAmount: number | null = null;
+    const batchId: string = selectedDeparture.id;
 
-    if (sharingOpts.length > 0) {
-      const wanted = sanitizeInput(body.sharingOption);
-      const match = sharingOpts.find((o: any) => o.label === wanted) ?? sharingOpts[0];
-      sharingOption = match.label;
-      totalAmount = Math.round(Number(match.price));
-    } else {
-      const base = selectedBatch?.price ?? (trip as any)?.pricePerPerson ?? null;
-      totalAmount = Number.isFinite(Number(base)) ? Math.round(Number(base)) : null;
-    }
+    // Occupancy: pick the requested available offer; fall back to cheapest available.
+    const wantedTier = sanitizeInput(body.tierId) || null;
+    const availableOffers = selectedDeparture.offers.filter((o) => o.available);
+    if (availableOffers.length === 0) return fail('That departure date is sold out. Please pick another.');
+    const cheapest = availableOffers.reduce((min, o) => (o.price < min.price ? o : min), availableOffers[0]);
+    const selectedOffer =
+      (wantedTier && availableOffers.find((o) => o.tierId === wantedTier)) || cheapest;
 
-    // Departure date string, derived from the resolved batch (or legacy fields).
+    const sharingOption: string | null = booking.occupancyCatalog.length > 1 ? selectedOffer.label : null;
+    const totalAmount: number = selectedOffer.price;
+
+    // Departure date string, derived from the resolved departure.
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const tripDateStr = selectedBatch
-      ? `${fmtDate(selectedBatch.startDate)} – ${fmtDate(selectedBatch.endDate)}`
-      : ((trip as any)?.startDate ? `${fmtDate((trip as any).startDate)} – ${fmtDate((trip as any).endDate ?? (trip as any).startDate)}` : (sanitizeInput(body.tripDate) || ''));
+    const tripDateStr = `${fmtDate(selectedDeparture.startDate)} – ${fmtDate(selectedDeparture.endDate)}`;
 
     const db = getDb();
     const stmt = db.prepare(`
@@ -162,14 +151,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const registrationId = insertResult.lastInsertRowid;
 
-    // Resolve trip/batch data for email
+    // Resolve trip data for email from the booked departure.
     const tripName = sanitizeInput(body.tripName);
-    // Prefer the booked departure; fall back to the first batch.
-    const emailBatch = selectedBatch ?? (trip?.batches ?? [])[0];
     const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const startDate = emailBatch?.startDate ? fmt(emailBatch.startDate) : (sanitizeInput(body.tripDate) || 'TBD');
-    const endDate   = emailBatch?.endDate   ? fmt(emailBatch.endDate)   : startDate;
-    const advanceAmount = (trip as any)?.paymentAmount ?? 3000;
+    const startDate = fmt(selectedDeparture.startDate);
+    const endDate   = fmt(selectedDeparture.endDate);
+    const advanceAmount = booking.advanceAmount;
 
     let whatsappLink = 'https://wa.me/917975027491';
     let upiId = '';

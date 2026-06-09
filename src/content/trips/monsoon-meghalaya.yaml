@@ -16,31 +16,42 @@ shortDescription: Misty meadows, jungle canyons, turquoise waterfalls, and
   monsoon magic through the Abode of Clouds.
 whoShouldJoin: Those craving stillness in the hills or thrill in the rivers.
   Beginners and first-timers welcome.
+occupancyCatalog:
+  - id: triple
+    label: Triple Sharing
+    helperText: Room shared with two others.
+  - id: double
+    label: Double Sharing Cottage
+    helperText: Room shared with one other traveller. Limited, first come.
 batches:
   - id: meghalaya-jun-2026
     startDate: 2026-06-21
     endDate: 2026-06-27
-    price: 29000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: triple, price: 29000, cap: 12, booked: 0 }
+      - { tierId: double, price: 31000, cap: 3, booked: 0 }
   - id: meghalaya-aug-2026
     startDate: 2026-08-02
     endDate: 2026-08-08
-    price: 29000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: triple, price: 29000, cap: 12, booked: 0 }
+      - { tierId: double, price: 31000, cap: 3, booked: 0 }
   - id: meghalaya-sep1-2026
     startDate: 2026-09-06
     endDate: 2026-09-12
-    price: 29000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: triple, price: 29000, cap: 12, booked: 0 }
+      - { tierId: double, price: 31000, cap: 3, booked: 0 }
   - id: meghalaya-sep2-2026
     startDate: 2026-09-20
     endDate: 2026-09-26
-    price: 29000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: triple, price: 29000, cap: 12, booked: 0 }
+      - { tierId: double, price: 31000, cap: 3, booked: 0 }
 highlights:
   - Stay at Meghalaya's best-kept secret — a serene lake town tucked in green
     rolling hills
@@ -126,15 +137,6 @@ excluded:
   - Lunches and dinners
   - Personal expenses
   - Anything not mentioned in inclusions
-sharingOptions:
-  - id: triple
-    label: Triple Sharing
-    price: 29000
-    helperText: Room shared with two others.
-  - id: double
-    label: Double Sharing Cottage
-    price: 31000
-    helperText: Room shared with one other traveller. Limited, first come.
 paymentAmount: 10000
 balanceDueRule: 10 days before trip
 meetingPoint: Guwahati — departure sharp at 7:00 AM. Arrive in Guwahati a day prior.

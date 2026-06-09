@@ -23,10 +23,12 @@ export const POST: APIRoute = async ({ request }) => {
       counter++;
     }
 
-    // A copy is a fresh trip — reset booked counts on every departure.
+    // A copy is a fresh trip — reset booked counts on every departure, both the
+    // legacy per-batch count and the new per-offer counts.
     const copiedBatches = (Array.isArray(source.batches) ? source.batches : []).map((b: any) => ({
       ...b,
       bookedSpots: 0,
+      ...(Array.isArray(b.offers) ? { offers: b.offers.map((o: any) => ({ ...o, booked: 0 })) } : {}),
     }));
 
     const newData = {

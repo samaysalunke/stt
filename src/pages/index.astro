@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { listTrips, listTestimonials, readSiteSettings, upcomingBatches, tripHasUpcomingDates } from '../lib/content';
+import { listTrips, listTestimonials, readSiteSettings, tripHasUpcomingDates, tripCardSummary } from '../lib/content';
 
 const allTrips = listTrips();
 const featuredTrips = allTrips
@@ -121,27 +121,27 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
 
       {featuredTrips.length > 0 ? (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredTrips.map((trip) => (
-            <TripCard
-              slug={trip.slug}
-              title={trip.title}
-              name={trip.name}
-              status={trip.status}
-              coverImage={trip.coverImage}
-              featuredImage={trip.featuredImage}
-              description={trip.description}
-              shortDescription={trip.shortDescription}
-              location={trip.location}
-              duration={trip.duration}
-              batches={upcomingBatches(trip)}
-              startDate={trip.startDate}
-              endDate={trip.endDate}
-              pricePerPerson={trip.pricePerPerson}
-              maxGroupSize={trip.maxGroupSize}
-              currentBookings={trip.currentBookings}
-              sharingOptions={trip.sharingOptions}
-            />
-          ))}
+          {featuredTrips.map((trip) => {
+            const card = tripCardSummary(trip);
+            return (
+              <TripCard
+                slug={trip.slug}
+                title={trip.title}
+                name={trip.name}
+                status={trip.status}
+                coverImage={trip.coverImage}
+                featuredImage={trip.featuredImage}
+                description={trip.description}
+                shortDescription={trip.shortDescription}
+                location={trip.location}
+                duration={trip.duration}
+                fromPrice={card.fromPrice}
+                multiPrice={card.multiPrice}
+                spotsLeft={card.spotsLeft}
+                soldOut={card.soldOut}
+              />
+            );
+          })}
         </div>
       ) : (
         <p class="text-center py-12" style="color: var(--color-gray-text);">More trips coming soon. Stay tuned.</p>

@@ -45,12 +45,19 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
       </div>
     </div>
 
-    <!-- Section: Departure Dates -->
+    <!-- Section: Occupancy + Departures -->
     <div class="form-section">
-      <h2 class="section-title">Departure Dates</h2>
-      <p class="form-hint" style="margin-bottom:0.75rem;">Add one row per departure — each can have its own price, seats, and status. Past dates auto-hide on the site. Leave empty to use the single Start/End date above.</p>
-      <div id="batches-list" class="dynamic-list"></div>
-      <button type="button" id="add-batch-btn" class="add-item-btn">+ Add Departure Date</button>
+      <h2 class="section-title">Occupancy Tiers</h2>
+      <p class="form-hint" style="margin-bottom:0.75rem;">Define each room type once (e.g. Dorm Bed, Double Sharing). For a trip with no real choice, add a single tier like "Standard".</p>
+      <div id="catalog-editor"></div>
+      <button type="button" id="add-tier-btn" class="add-item-btn">+ Add Occupancy Tier</button>
+      <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
+
+      <h2 class="section-title" style="margin-top:1.25rem;">Departures &amp; Offers</h2>
+      <p class="form-hint" style="margin-bottom:0.75rem;">One block per departure date. Tick which tiers it offers; set price, stock (cap) and booked per tier. Past dates auto-hide on the site.</p>
+      <div id="departures-editor"></div>
+      <button type="button" id="add-departure-btn" class="add-item-btn">+ Add Departure Date</button>
+      <input type="hidden" name="departures_json" id="departures_json" />
     </div>
 
     <!-- Section 2: Content -->
@@ -142,17 +149,16 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
         <div class="form-group">
           <label class="form-label">Advance / Booking Amount (₹)</label>
           <input type="number" name="paymentAmount" class="form-input" placeholder="e.g. 5000 (paid now to confirm spot)" />
-          <span class="form-hint">Fixed amount paid now to confirm any departure. The full price comes from the departure (or occupancy option).</span>
+          <span class="form-hint">Fixed amount paid now to confirm any departure. The full price comes from the per-departure occupancy offers.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Balance Due Rule</label>
+          <input type="text" name="balanceDueRule" class="form-input" placeholder="e.g. 15 days before trip" />
+          <span class="form-hint">Shown in the booking summary, e.g. "due 15 days before trip".</span>
         </div>
         <div class="form-group full">
           <label class="form-label">Payment Instructions</label>
           <textarea name="paymentInstructions" class="form-input" rows="3" placeholder="How to complete payment..."></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Room-Sharing / Occupancy Options</label>
-          <p class="form-hint" style="margin-bottom:0.5rem;">Optional. If set, the trip page lets travellers choose an occupancy and that price becomes the total.</p>
-          <div id="sharing-list" class="dynamic-list"></div>
-          <button type="button" id="add-sharing-btn" class="add-item-btn">+ Add Occupancy Option</button>
         </div>
       </div>
     </div>
@@ -343,34 +349,112 @@ document.getElementById('trip-form')!.addEventListener('submit', () => {
   el.value = JSON.stringify(serializeItinerary());
 });
 
-// Departure dates (batches) repeater
-document.getElementById('add-batch-btn')?.addEventListener('click', () => {
-  const list = document.getElementById('batches-list')!;
-  const div = document.createElement('div');
-  div.className = 'dynamic-item batch-row';
-  div.style.cssText = 'flex-wrap:wrap; gap:0.4rem; align-items:flex-end; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.6rem;';
-  div.innerHTML =
-    '<div style="flex:1; min-width:130px;"><div class="day-label">Start</div><input type="date" name="batchStart[]" class="form-input" /></div>' +
-    '<div style="flex:1; min-width:130px;"><div class="day-label">End</div><input type="date" name="batchEnd[]" class="form-input" /></div>' +
-    '<div style="flex:1; min-width:90px;"><div class="day-label">Price ₹</div><input type="number" name="batchPrice[]" class="form-input" /></div>' +
-    '<div style="flex:1; min-width:70px;"><div class="day-label">Total spots</div><input type="number" name="batchTotal[]" class="form-input" /></div>' +
-    '<div style="flex:1; min-width:70px;"><div class="day-label">Booked</div><input type="number" name="batchBooked[]" value="0" class="form-input" /></div>' +
-    '<div style="flex:1; min-width:120px;"><div class="day-label">Status</div><select name="batchStatus[]" class="form-input"><option value="booking-open">booking-open</option><option value="filling_fast">filling_fast</option><option value="sold-out">sold-out</option><option value="draft">draft</option><option value="completed">completed</option></select></div>' +
-    '<button type="button" class="remove-btn" onclick="this.closest(\'.batch-row\').remove()">✕</button>';
-  list.appendChild(div);
-});
+// ── Occupancy catalog + per-departure offers editor ──────────────────────────
+(function () {
+  const STATUSES = ['booking-open', 'filling_fast', 'sold-out', 'draft', 'completed'];
+  const catalog: any[] = [];
+  const departures: any[] = [];
 
-// Occupancy options repeater
-document.getElementById('add-sharing-btn')?.addEventListener('click', () => {
-  const list = document.getElementById('sharing-list')!;
-  const div = document.createElement('div');
-  div.className = 'dynamic-item sharing-row';
-  div.innerHTML =
-    '<input type="text" name="sharingLabel[]" placeholder="e.g. Double sharing" class="form-input" style="flex:2;" />' +
-    '<input type="number" name="sharingPrice[]" placeholder="₹ per person" class="form-input" style="flex:1;" />' +
-    '<button type="button" class="remove-btn" onclick="this.closest(\'.sharing-row\').remove()">✕</button>';
-  list.appendChild(div);
-});
+  const catalogEl = document.getElementById('catalog-editor')!;
+  const departuresEl = document.getElementById('departures-editor')!;
+  const form = document.getElementById('trip-form')!;
+
+  const slug = (s: any) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const ensureTierId = (t: any, i: number) => { if (!t.id) t.id = slug(t.label) || ('tier-' + i); return t.id; };
+
+  function renderCatalog() {
+    catalogEl.innerHTML = '';
+    catalog.forEach((tier, i) => {
+      ensureTierId(tier, i);
+      const row = document.createElement('div');
+      row.className = 'dynamic-item';
+      row.style.cssText = 'gap:0.5rem; align-items:flex-start;';
+      row.innerHTML =
+        '<div style="flex:2;"><div class="day-label">Label</div>' +
+          '<input type="text" class="form-input tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
+        '<div style="flex:3;"><div class="day-label">Helper text</div>' +
+          '<input type="text" class="form-input tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
+        '<button type="button" class="remove-btn" style="margin-top:1.2rem;">✕</button>';
+      row.querySelector('.tier-label')!.addEventListener('input', (e: any) => { tier.label = e.target.value; });
+      row.querySelector('.tier-helper')!.addEventListener('input', (e: any) => { tier.helperText = e.target.value; });
+      row.querySelector('.remove-btn')!.addEventListener('click', () => { catalog.splice(i, 1); renderCatalog(); renderDepartures(); });
+      catalogEl.appendChild(row);
+    });
+  }
+
+  function renderDepartures() {
+    departuresEl.innerHTML = '';
+    departures.forEach((dep, di) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--color-border); border-radius:0.5rem; padding:0.75rem; margin-bottom:0.75rem;';
+      const head = document.createElement('div');
+      head.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;';
+      head.innerHTML =
+        '<div style="flex:1; min-width:140px;"><div class="day-label">Start</div><input type="date" class="form-input dep-start" value="' + esc(dep.startDate) + '" /></div>' +
+        '<div style="flex:1; min-width:140px;"><div class="day-label">End</div><input type="date" class="form-input dep-end" value="' + esc(dep.endDate) + '" /></div>' +
+        '<div style="flex:1; min-width:130px;"><div class="day-label">Status</div><select class="form-input dep-status">' +
+          STATUSES.map((s) => '<option value="' + s + '"' + (s === dep.status ? ' selected' : '') + '>' + s + '</option>').join('') +
+        '</select></div>' +
+        '<button type="button" class="remove-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
+      head.querySelector('.dep-start')!.addEventListener('input', (e: any) => { dep.startDate = e.target.value; });
+      head.querySelector('.dep-end')!.addEventListener('input', (e: any) => { dep.endDate = e.target.value; });
+      head.querySelector('.dep-status')!.addEventListener('change', (e: any) => { dep.status = e.target.value; });
+      head.querySelector('.dep-remove')!.addEventListener('click', () => { departures.splice(di, 1); renderDepartures(); });
+      card.appendChild(head);
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
+      if (catalog.length === 0) grid.innerHTML = '<span class="form-hint">Add an occupancy tier above to set offers.</span>';
+      catalog.forEach((tier, ti) => {
+        const tierId = ensureTierId(tier, ti);
+        const offer = dep.offers.find((o: any) => o.tierId === tierId);
+        const on = !!offer;
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
+        r.innerHTML =
+          '<label style="display:flex; align-items:center; gap:0.4rem; flex:2; min-width:160px; cursor:pointer;">' +
+            '<input type="checkbox" class="off-on"' + (on ? ' checked' : '') + ' /><span>' + esc(tier.label || tierId) + '</span></label>' +
+          '<div style="flex:1; min-width:90px;"><div class="day-label">Price ₹</div><input type="number" class="form-input off-price" value="' + (offer && offer.price != null ? offer.price : '') + '"' + (on ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><div class="day-label">Cap</div><input type="number" class="form-input off-cap" value="' + (offer && offer.cap != null ? offer.cap : '') + '"' + (on ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><div class="day-label">Booked</div><input type="number" class="form-input off-booked" value="' + (offer && offer.booked != null ? offer.booked : 0) + '"' + (on ? '' : ' disabled') + ' /></div>';
+        const cb = r.querySelector('.off-on') as HTMLInputElement;
+        const priceI = r.querySelector('.off-price') as HTMLInputElement;
+        const capI = r.querySelector('.off-cap') as HTMLInputElement;
+        const bookedI = r.querySelector('.off-booked') as HTMLInputElement;
+        const getOffer = () => dep.offers.find((o: any) => o.tierId === tierId);
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            if (!getOffer()) dep.offers.push({ tierId, price: null, cap: null, booked: 0 });
+            priceI.disabled = capI.disabled = bookedI.disabled = false;
+          } else {
+            dep.offers = dep.offers.filter((o: any) => o.tierId !== tierId);
+            priceI.disabled = capI.disabled = bookedI.disabled = true;
+          }
+        });
+        priceI.addEventListener('input', () => { const o = getOffer(); if (o) o.price = priceI.value === '' ? null : Number(priceI.value); });
+        capI.addEventListener('input', () => { const o = getOffer(); if (o) o.cap = capI.value === '' ? null : Number(capI.value); });
+        bookedI.addEventListener('input', () => { const o = getOffer(); if (o) o.booked = bookedI.value === '' ? 0 : Number(bookedI.value); });
+        grid.appendChild(r);
+      });
+      card.appendChild(grid);
+      departuresEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('add-tier-btn')!.addEventListener('click', () => { catalog.push({ id: '', label: '', helperText: '' }); renderCatalog(); renderDepartures(); });
+  document.getElementById('add-departure-btn')!.addEventListener('click', () => { departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', offers: [] }); renderDepartures(); });
+
+  form.addEventListener('submit', () => {
+    catalog.forEach((t, i) => ensureTierId(t, i));
+    departures.forEach((d) => { if (!d.id && d.startDate) d.id = slug(d.startDate); });
+    (document.getElementById('occupancyCatalog_json') as HTMLInputElement).value = JSON.stringify(catalog);
+    (document.getElementById('departures_json') as HTMLInputElement).value = JSON.stringify(departures);
+  });
+
+  renderCatalog();
+  renderDepartures();
+})();
 
 // Expose the inline-handler functions on window (this script is an ES module,
 // so its top-level functions aren't global by default — inline onclick/oninput

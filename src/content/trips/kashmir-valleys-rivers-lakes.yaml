@@ -16,13 +16,17 @@ shortDescription: Quiet roads, hidden valleys, Dal Lake houseboat, and the
   remote Gurez Valley — Kashmir beyond the obvious.
 whoShouldJoin: Those who'd rather trade crowds for cold river air and mountain
   stillness. No prior trekking experience needed.
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: ""
 batches:
   - id: kashmir-jun-2026
     startDate: 2026-06-07
     endDate: 2026-06-13
-    price: 26000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: standard, price: 26000, cap: 15, booked: 0 }
 highlights:
   - Naranag — ancient 8th-century temple ruins by a Himalayan stream
   - Doodhpathri meadows and riverside picnic on the Shaliganga

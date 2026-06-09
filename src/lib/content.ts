@@ -100,6 +100,232 @@ export function tripHasUpcomingDates(trip: Record<string, any>): boolean {
   return upcomingBatches(trip).length > 0;
 }
 
+// ── Booking resolution (single normalization boundary) ──────────────────────
+// resolveBooking(trip) is the ONE place that turns whatever a trip's YAML holds
+// — new per-departure `offers`, legacy trip-wide `sharingOptions`, or a flat
+// per-batch price — into a single canonical shape. Every downstream consumer
+// (public booking panel, register API, trip card, listings) reads this shape so
+// price/occupancy/stock logic can never disagree across the codebase.
+//
+// New schema (authored shape):
+//   trip.occupancyCatalog: [{ id, label, helperText }]    — tier identity only
+//   trip.batches[i].offers: [{ tierId, price, cap, booked }] — per date × tier
+// Legacy schema (still read):
+//   trip.sharingOptions: [{ id, label, price }] applied to every date, OR
+//   a flat trip/batch price with no occupancy options at all.
+
+export interface ResolvedOffer {
+  tierId: string;
+  label: string;
+  helperText: string;
+  price: number;
+  cap: number | null;     // null = unmetered stock for this tier
+  booked: number;
+  available: boolean;     // cap == null || cap - booked > 0
+}
+
+export interface ResolvedDeparture {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  offers: ResolvedOffer[];
+  totalCap: number | null;  // null when any offered tier is unmetered
+  spotsLeft: number | null; // Σ(cap - booked); null when unmetered
+  soldOut: boolean;
+}
+
+export interface ResolvedBooking {
+  occupancyCatalog: Array<{ id: string; label: string; helperText: string }>;
+  departures: ResolvedDeparture[];
+  advanceAmount: number;
+  balanceDueRule: string;
+  currency: string;
+  fromPrice: number | null; // min available offer price across all departures
+}
+
+const DEFAULT_ADVANCE = 3000;
+const DEFAULT_BALANCE_RULE = '15 days before trip';
+
+// Build the trip-level tier catalog. Prefer an explicit occupancyCatalog; else
+// derive it from legacy sharingOptions; else a single implicit "standard" tier.
+function resolveCatalog(trip: Record<string, any>): ResolvedBooking['occupancyCatalog'] {
+  const cat = Array.isArray(trip?.occupancyCatalog) ? trip.occupancyCatalog : [];
+  if (cat.length > 0) {
+    return cat
+      .filter((c: any) => c && (c.id || c.label))
+      .map((c: any) => ({
+        id: String(c.id ?? slugifyTier(c.label)),
+        label: String(c.label ?? c.id ?? ''),
+        helperText: String(c.helperText ?? ''),
+      }));
+  }
+  const sharing = Array.isArray(trip?.sharingOptions) ? trip.sharingOptions : [];
+  if (sharing.length > 0) {
+    return sharing
+      .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)))
+      .map((o: any) => ({
+        id: String(o.id ?? slugifyTier(o.label)),
+        label: String(o.label),
+        helperText: String(o.helperText ?? ''),
+      }));
+  }
+  return [{ id: 'standard', label: 'Standard', helperText: '' }];
+}
+
+function slugifyTier(label: unknown): string {
+  return String(label ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'tier';
+}
+
+// Resolve a single departure's offers, synthesizing them from legacy data when
+// the batch has no explicit `offers` array.
+function resolveOffers(
+  batch: Record<string, any>,
+  trip: Record<string, any>,
+  catalog: ResolvedBooking['occupancyCatalog'],
+): ResolvedOffer[] {
+  const labelOf = (tierId: string) => catalog.find((c) => c.id === tierId);
+  const mk = (tierId: string, price: number, cap: number | null, booked: number): ResolvedOffer => {
+    const meta = labelOf(tierId);
+    const c = cap == null ? null : Math.max(0, cap);
+    const b = Math.max(0, booked || 0);
+    return {
+      tierId,
+      label: meta?.label ?? tierId,
+      helperText: meta?.helperText ?? '',
+      price: Math.round(price),
+      cap: c,
+      booked: b,
+      available: c == null ? true : c - b > 0,
+    };
+  };
+
+  // New schema: explicit per-departure offers.
+  if (Array.isArray(batch?.offers) && batch.offers.length > 0) {
+    return batch.offers
+      .filter((o: any) => o && o.tierId != null && Number.isFinite(Number(o.price)))
+      .map((o: any) => mk(
+        String(o.tierId),
+        Number(o.price),
+        o.cap == null || o.cap === '' ? null : Number(o.cap),
+        Number(o.booked),
+      ));
+  }
+
+  // Legacy: trip-wide sharingOptions priced per tier; the date's single
+  // totalSpots/bookedSpots count is shared across all tiers (best we can do).
+  const sharing = Array.isArray(trip?.sharingOptions) ? trip.sharingOptions : [];
+  const dateCap = Number.isFinite(Number(batch?.totalSpots)) ? Number(batch.totalSpots) : null;
+  const dateBooked = Number.isFinite(Number(batch?.bookedSpots)) ? Number(batch.bookedSpots) : 0;
+  if (sharing.length > 0) {
+    return sharing
+      .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)))
+      .map((o: any) => mk(String(o.id ?? slugifyTier(o.label)), Number(o.price), dateCap, dateBooked));
+  }
+
+  // Legacy flat price: a single implicit "standard" tier.
+  const flat = Number.isFinite(Number(batch?.price))
+    ? Number(batch.price)
+    : Number((trip as any)?.pricePerPerson);
+  if (!Number.isFinite(flat)) return [];
+  return [mk('standard', flat, dateCap, dateBooked)];
+}
+
+export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
+  const catalog = resolveCatalog(trip);
+
+  // Which departures are visible/bookable. Reuse the existing upcoming filter
+  // for batch-array trips; fall back to a synthetic single departure for legacy
+  // flat-date trips.
+  const hasBatchArray = Array.isArray(trip?.batches) && trip.batches.length > 0;
+  const rawDepartures: Array<Record<string, any>> = hasBatchArray
+    ? upcomingBatches(trip)
+    : trip?.startDate
+    ? [{
+        id: 'default',
+        startDate: trip.startDate,
+        endDate: trip.endDate ?? trip.startDate,
+        price: trip.pricePerPerson ?? 0,
+        totalSpots: trip.maxGroupSize ?? null,
+        bookedSpots: trip.currentBookings ?? 0,
+        status: trip.status ?? 'booking-open',
+      }]
+    : [];
+
+  const departures: ResolvedDeparture[] = rawDepartures.map((b) => {
+    const offers = resolveOffers(b, trip, catalog);
+    const metered = offers.every((o) => o.cap != null);
+    const spotsLeft = metered
+      ? offers.reduce((sum, o) => sum + Math.max(0, (o.cap as number) - o.booked), 0)
+      : null;
+    const totalCap = metered
+      ? offers.reduce((sum, o) => sum + (o.cap as number), 0)
+      : null;
+    const statusSoldOut = b.status === 'sold-out' || b.status === 'sold_out';
+    const soldOut = statusSoldOut || (spotsLeft != null && spotsLeft <= 0);
+    return {
+      id: String(b.id),
+      startDate: String(b.startDate),
+      endDate: String(b.endDate ?? b.startDate),
+      status: String(b.status ?? 'booking-open'),
+      offers,
+      totalCap,
+      spotsLeft,
+      soldOut,
+    };
+  });
+
+  // fromPrice: cheapest price among offers that are available on a not-sold-out
+  // departure. Falls back to the cheapest offer overall so a header still shows.
+  const availablePrices: number[] = [];
+  const allPrices: number[] = [];
+  for (const d of departures) {
+    for (const o of d.offers) {
+      allPrices.push(o.price);
+      if (!d.soldOut && o.available) availablePrices.push(o.price);
+    }
+  }
+  const pool = availablePrices.length > 0 ? availablePrices : allPrices;
+  const fromPrice = pool.length > 0 ? Math.min(...pool) : null;
+
+  return {
+    occupancyCatalog: catalog,
+    departures,
+    advanceAmount: Number.isFinite(Number(trip?.paymentAmount)) ? Number(trip.paymentAmount) : DEFAULT_ADVANCE,
+    balanceDueRule: typeof trip?.balanceDueRule === 'string' && trip.balanceDueRule.trim()
+      ? trip.balanceDueRule
+      : DEFAULT_BALANCE_RULE,
+    currency: 'INR',
+    fromPrice,
+  };
+}
+
+// Compact summary for the listing/trip card: the "from" floor, whether more than
+// one price exists (so "from" is honest), the soonest departure's stock (for a
+// low-stock signal), and whether the whole trip is sold out.
+export function tripCardSummary(trip: Record<string, any>): {
+  fromPrice: number | null;
+  multiPrice: boolean;
+  spotsLeft: number | null;
+  soldOut: boolean;
+} {
+  const booking = resolveBooking(trip);
+  const prices = new Set<number>();
+  for (const d of booking.departures) for (const o of d.offers) prices.add(o.price);
+  const soonest = booking.departures.find((d) => !d.soldOut) ?? booking.departures[0] ?? null;
+  const statusSoldOut = trip?.status === 'sold_out' || trip?.status === 'sold-out';
+  const allSoldOut = booking.departures.length > 0 && booking.departures.every((d) => d.soldOut);
+  return {
+    fromPrice: booking.fromPrice,
+    multiPrice: prices.size > 1,
+    spotsLeft: soonest?.spotsLeft ?? null,
+    soldOut: statusSoldOut || allSoldOut,
+  };
+}
+
 // ── Albums ────────────────────────────────────────────────────────────────────
 
 export function listAlbums(): Array<Record<string, any>> {

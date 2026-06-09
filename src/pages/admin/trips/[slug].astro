@@ -2,6 +2,7 @@
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { readTrip, listAlbums } from '../../../lib/content';
+import { editableBooking } from '../../../lib/tripEditor';
 
 const { slug } = Astro.params;
 const trip = slug ? readTrip(slug) : null;
@@ -10,12 +11,16 @@ if (!trip) return Astro.redirect('/admin/trips');
 const publishedAlbums = listAlbums().filter(a => a.published);
 
 const highlights = Array.isArray(trip.highlights) ? trip.highlights : [];
-const sharingOptions = Array.isArray(trip.sharingOptions) ? trip.sharingOptions : [];
-const batches = Array.isArray(trip.batches) ? trip.batches : [];
 const included = Array.isArray(trip.included) ? trip.included : [];
 const notIncluded = Array.isArray(trip.notIncluded) ? trip.notIncluded : [];
 const packingList = Array.isArray(trip.packingList) ? trip.packingList : [];
 const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
+
+// Occupancy catalog + departures-with-offers for the editor. Unlike
+// resolveBooking (public, filters to upcoming dates) this keeps EVERY departure
+// so saving never silently drops past/draft ones, and synthesizes offers from
+// legacy sharingOptions/flat-price so opening an old trip auto-migrates it.
+const { editorCatalog, editorDepartures } = editableBooking(trip);
 ---
 
 <AdminLayout title={`Edit: ${trip.name ?? slug}`} page="trips">
@@ -74,45 +79,19 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
         </div>
 
         <div class="field full">
-          <label class="flabel">Departure Dates (batches)</label>
-          <p class="fhint" style="margin-bottom:0.5rem;">Add one row per departure. Each can have its own price and seats. The trip card shows the first batch; the trip page lets travellers pick a date when there's more than one.</p>
-          <div id="batches-list" class="dyn-list">
-            {batches.map((b: any) => (
-              <div class="dyn-item batch-row" style="flex-wrap:wrap; gap:0.5rem; align-items:flex-end; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.6rem;">
-                <input type="hidden" name="batchId[]" value={b.id ?? ''} />
-                <div style="flex:1; min-width:130px;">
-                  <span class="fhint">Start</span>
-                  <input type="date" name="batchStart[]" value={b.startDate ?? ''} class="finput" />
-                </div>
-                <div style="flex:1; min-width:130px;">
-                  <span class="fhint">End</span>
-                  <input type="date" name="batchEnd[]" value={b.endDate ?? ''} class="finput" />
-                </div>
-                <div style="flex:1; min-width:90px;">
-                  <span class="fhint">Price ₹</span>
-                  <input type="number" name="batchPrice[]" value={b.price ?? ''} class="finput" />
-                </div>
-                <div style="flex:1; min-width:70px;">
-                  <span class="fhint">Total spots</span>
-                  <input type="number" name="batchTotal[]" value={b.totalSpots ?? ''} class="finput" />
-                </div>
-                <div style="flex:1; min-width:70px;">
-                  <span class="fhint">Booked</span>
-                  <input type="number" name="batchBooked[]" value={b.bookedSpots ?? 0} class="finput" />
-                </div>
-                <div style="flex:1; min-width:120px;">
-                  <span class="fhint">Status</span>
-                  <select name="batchStatus[]" class="finput">
-                    {['booking-open','filling_fast','sold-out','draft','completed'].map(s => (
-                      <option value={s} selected={(b.status ?? 'booking-open') === s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <button type="button" class="rm-btn" onclick="this.closest('.batch-row').remove()">✕</button>
-              </div>
-            ))}
-          </div>
-          <button type="button" id="add-batch-btn" class="add-btn">+ Add Departure Date</button>
+          <label class="flabel">Occupancy Tiers</label>
+          <p class="fhint" style="margin-bottom:0.5rem;">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
+          <div id="catalog-editor"></div>
+          <button type="button" id="add-tier-btn" class="add-btn">+ Add Occupancy Tier</button>
+          <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
+        </div>
+
+        <div class="field full">
+          <label class="flabel">Departures &amp; Offers</label>
+          <p class="fhint" style="margin-bottom:0.5rem;">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
+          <div id="departures-editor"></div>
+          <button type="button" id="add-departure-btn" class="add-btn">+ Add Departure Date</button>
+          <input type="hidden" name="departures_json" id="departures_json" />
         </div>
 
         <div class="field">
@@ -262,21 +241,12 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
           <input type="number" name="paymentAmount" class="finput" value={trip.paymentAmount ?? ''} />
         </div>
 
-
-        <div class="field full">
-          <label class="flabel">Room-Sharing / Occupancy Options</label>
-          <p class="fhint" style="margin-bottom:0.5rem;">Optional. If set, the trip page lets travellers choose an occupancy and the total updates to that price (overrides the per-batch price for display). Leave empty to use the batch price.</p>
-          <div id="sharing-list" class="dyn-list">
-            {sharingOptions.map((o: any) => (
-              <div class="dyn-item" style="gap:0.5rem;">
-                <input type="text" name="sharingLabel[]" value={o.label} placeholder="e.g. Double sharing" class="finput" style="flex:2;" />
-                <input type="number" name="sharingPrice[]" value={o.price} placeholder="₹ per person" class="finput" style="flex:1;" />
-                <button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>
-              </div>
-            ))}
-          </div>
-          <button type="button" id="add-sharing-btn" class="add-btn">+ Add Occupancy Option</button>
+        <div class="field">
+          <label class="flabel">Balance Due Rule</label>
+          <input type="text" name="balanceDueRule" class="finput" placeholder="e.g. 15 days before trip" value={trip.balanceDueRule ?? ''} />
+          <span class="fhint">Shown in the booking summary, e.g. "due 15 days before trip".</span>
         </div>
+
 
         <div class="field full">
           <label class="flabel">Payment Instructions</label>
@@ -936,33 +906,146 @@ document.getElementById('collapse-all-btn').addEventListener('click', collapseAl
 document.querySelectorAll('.add-btn[data-list]').forEach(btn => {
   btn.addEventListener('click', () => addItem(btn.dataset.list, btn.dataset.name, btn.dataset.placeholder ?? ''));
 });
-document.getElementById('add-batch-btn')?.addEventListener('click', () => {
-  const list = document.getElementById('batches-list');
-  const div = document.createElement('div');
-  div.className = 'dyn-item batch-row';
-  div.style.cssText = 'flex-wrap:wrap; gap:0.5rem; align-items:flex-end; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.6rem;';
-  div.innerHTML =
-    '<input type="hidden" name="batchId[]" value="" />' +
-    '<div style="flex:1; min-width:130px;"><span class="fhint">Start</span><input type="date" name="batchStart[]" class="finput" /></div>' +
-    '<div style="flex:1; min-width:130px;"><span class="fhint">End</span><input type="date" name="batchEnd[]" class="finput" /></div>' +
-    '<div style="flex:1; min-width:90px;"><span class="fhint">Price ₹</span><input type="number" name="batchPrice[]" class="finput" /></div>' +
-    '<div style="flex:1; min-width:70px;"><span class="fhint">Total spots</span><input type="number" name="batchTotal[]" class="finput" /></div>' +
-    '<div style="flex:1; min-width:70px;"><span class="fhint">Booked</span><input type="number" name="batchBooked[]" value="0" class="finput" /></div>' +
-    '<div style="flex:1; min-width:120px;"><span class="fhint">Status</span><select name="batchStatus[]" class="finput"><option value="booking-open">booking-open</option><option value="filling_fast">filling_fast</option><option value="sold-out">sold-out</option><option value="draft">draft</option><option value="completed">completed</option></select></div>' +
-    '<button type="button" class="rm-btn" onclick="this.closest(\'.batch-row\').remove()">✕</button>';
-  list.appendChild(div);
-  div.querySelector('input[name="batchStart[]"]').focus();
-});
-document.getElementById('add-sharing-btn')?.addEventListener('click', () => {
-  const list = document.getElementById('sharing-list');
-  const div = document.createElement('div');
-  div.className = 'dyn-item';
-  div.style.gap = '0.5rem';
-  div.innerHTML = '<input type="text" name="sharingLabel[]" placeholder="e.g. Double sharing" class="finput" style="flex:2;" /><input type="number" name="sharingPrice[]" placeholder="₹ per person" class="finput" style="flex:1;" /><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>';
-  list.appendChild(div);
-  div.querySelector('input').focus();
-});
 document.querySelectorAll('.file-input[data-preview]').forEach(input => {
   input.addEventListener('change', () => previewImage(input, input.dataset.preview));
 });
+</script>
+
+<!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
+<script define:vars={{ editorCatalog, editorDepartures }}>
+(function () {
+  const STATUSES = ['booking-open', 'filling_fast', 'sold-out', 'draft', 'completed'];
+  // Working state (deep-cloned from server data).
+  let catalog = JSON.parse(JSON.stringify(editorCatalog || []));
+  let departures = JSON.parse(JSON.stringify(editorDepartures || []));
+
+  const catalogEl = document.getElementById('catalog-editor');
+  const departuresEl = document.getElementById('departures-editor');
+  const form = document.getElementById('trip-form');
+
+  const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  function ensureTierId(tier, i) {
+    if (!tier.id) tier.id = slugify(tier.label) || ('tier-' + i);
+    return tier.id;
+  }
+
+  // ── Catalog ───────────────────────────────────────────────────────────────
+  function renderCatalog() {
+    catalogEl.innerHTML = '';
+    catalog.forEach((tier, i) => {
+      ensureTierId(tier, i);
+      const row = document.createElement('div');
+      row.className = 'dyn-item';
+      row.style.cssText = 'gap:0.5rem; align-items:flex-start;';
+      row.innerHTML =
+        '<div style="flex:2;"><span class="fhint">Label</span>' +
+          '<input type="text" class="finput tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
+        '<div style="flex:3;"><span class="fhint">Helper text (what this sharing means)</span>' +
+          '<input type="text" class="finput tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
+        '<button type="button" class="rm-btn" style="margin-top:1.2rem;">✕</button>';
+      row.querySelector('.tier-label').addEventListener('input', (e) => { tier.label = e.target.value; });
+      row.querySelector('.tier-helper').addEventListener('input', (e) => { tier.helperText = e.target.value; });
+      row.querySelector('.rm-btn').addEventListener('click', () => {
+        catalog.splice(i, 1);
+        renderCatalog();
+        renderDepartures(); // offer grids depend on the catalog
+      });
+      catalogEl.appendChild(row);
+    });
+  }
+
+  // ── Departures ──────────────────────────────────────────────────────────────
+  function renderDepartures() {
+    departuresEl.innerHTML = '';
+    departures.forEach((dep, di) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--color-border); border-radius:0.5rem; padding:0.75rem; margin-bottom:0.75rem;';
+
+      const head = document.createElement('div');
+      head.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;';
+      head.innerHTML =
+        '<div style="flex:1; min-width:140px;"><span class="fhint">Start</span>' +
+          '<input type="date" class="finput dep-start" value="' + esc(dep.startDate) + '" /></div>' +
+        '<div style="flex:1; min-width:140px;"><span class="fhint">End</span>' +
+          '<input type="date" class="finput dep-end" value="' + esc(dep.endDate) + '" /></div>' +
+        '<div style="flex:1; min-width:130px;"><span class="fhint">Status</span>' +
+          '<select class="finput dep-status">' +
+            STATUSES.map((s) => '<option value="' + s + '"' + (s === dep.status ? ' selected' : '') + '>' + s + '</option>').join('') +
+          '</select></div>' +
+        '<button type="button" class="rm-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
+      head.querySelector('.dep-start').addEventListener('input', (e) => { dep.startDate = e.target.value; });
+      head.querySelector('.dep-end').addEventListener('input', (e) => { dep.endDate = e.target.value; });
+      head.querySelector('.dep-status').addEventListener('change', (e) => { dep.status = e.target.value; });
+      head.querySelector('.dep-remove').addEventListener('click', () => { departures.splice(di, 1); renderDepartures(); });
+      card.appendChild(head);
+
+      // Offer grid — one row per catalog tier.
+      const grid = document.createElement('div');
+      grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
+      if (catalog.length === 0) {
+        grid.innerHTML = '<span class="fhint">Add an occupancy tier above to set offers.</span>';
+      }
+      catalog.forEach((tier, ti) => {
+        const tierId = ensureTierId(tier, ti);
+        const offer = dep.offers.find((o) => o.tierId === tierId);
+        const offered = !!offer;
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
+        r.innerHTML =
+          '<label style="display:flex; align-items:center; gap:0.4rem; flex:2; min-width:160px; cursor:pointer;">' +
+            '<input type="checkbox" class="off-on"' + (offered ? ' checked' : '') + ' />' +
+            '<span>' + esc(tier.label || tierId) + '</span></label>' +
+          '<div style="flex:1; min-width:90px;"><span class="fhint">Price ₹</span>' +
+            '<input type="number" class="finput off-price" value="' + (offer && offer.price != null ? offer.price : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><span class="fhint">Cap</span>' +
+            '<input type="number" class="finput off-cap" value="' + (offer && offer.cap != null ? offer.cap : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><span class="fhint">Booked</span>' +
+            '<input type="number" class="finput off-booked" value="' + (offer && offer.booked != null ? offer.booked : 0) + '"' + (offered ? '' : ' disabled') + ' /></div>';
+        const cb = r.querySelector('.off-on');
+        const priceI = r.querySelector('.off-price');
+        const capI = r.querySelector('.off-cap');
+        const bookedI = r.querySelector('.off-booked');
+        const getOffer = () => dep.offers.find((o) => o.tierId === tierId);
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            if (!getOffer()) dep.offers.push({ tierId, price: null, cap: null, booked: 0 });
+            priceI.disabled = capI.disabled = bookedI.disabled = false;
+          } else {
+            dep.offers = dep.offers.filter((o) => o.tierId !== tierId);
+            priceI.disabled = capI.disabled = bookedI.disabled = true;
+          }
+        });
+        priceI.addEventListener('input', () => { const o = getOffer(); if (o) o.price = priceI.value === '' ? null : Number(priceI.value); });
+        capI.addEventListener('input', () => { const o = getOffer(); if (o) o.cap = capI.value === '' ? null : Number(capI.value); });
+        bookedI.addEventListener('input', () => { const o = getOffer(); if (o) o.booked = bookedI.value === '' ? 0 : Number(bookedI.value); });
+        grid.appendChild(r);
+      });
+      card.appendChild(grid);
+      departuresEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('add-tier-btn').addEventListener('click', () => {
+    catalog.push({ id: '', label: '', helperText: '' });
+    renderCatalog();
+    renderDepartures();
+  });
+  document.getElementById('add-departure-btn').addEventListener('click', () => {
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', offers: [] });
+    renderDepartures();
+  });
+
+  // Serialize on submit — assign stable tier ids + departure ids first.
+  form.addEventListener('submit', () => {
+    catalog.forEach((t, i) => ensureTierId(t, i));
+    departures.forEach((d) => { if (!d.id && d.startDate) d.id = slugify(d.startDate); });
+    document.getElementById('occupancyCatalog_json').value = JSON.stringify(catalog);
+    document.getElementById('departures_json').value = JSON.stringify(departures);
+  });
+
+  renderCatalog();
+  renderDepartures();
+})();
 </script>

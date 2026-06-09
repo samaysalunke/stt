@@ -16,34 +16,34 @@ shortDescription: Waterfall rappelling, offbeat ridge hikes, and lakeside living
   near Bhandardara. A monsoon trip done right.
 whoShouldJoin: Anyone craving a monsoon trip that's slow, scenic, and a little
   wild. All activities are beginner-friendly.
+occupancyCatalog:
+  - id: dorm
+    label: Dorm Bed
+    helperText: Shared room, backpacker style.
+  - id: double
+    label: Double Sharing Cottage
+    helperText: Room shared with one other traveller. Limited, first come.
 batches:
   - id: sahyadri-jul1-2026
     startDate: 2026-07-03
     endDate: 2026-07-06
-    price: 16999
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: dorm, price: 16999, cap: 12, booked: 4 }
+      - { tierId: double, price: 17999, cap: 3, booked: 3 }
   - id: sahyadri-jul2-2026
     startDate: 2026-07-10
     endDate: 2026-07-13
-    price: 16999
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: dorm, price: 16999, cap: 15, booked: 0 }
   - id: sahyadri-jul3-2026
     startDate: 2026-07-17
     endDate: 2026-07-20
-    price: 16999
-    totalSpots: 15
-    bookedSpots: 0
-sharingOptions:
-  - id: dorm
-    label: Dorm Bed
-    price: 16999
-    helperText: Shared room, backpacker style.
-  - id: double
-    label: Double Sharing Cottage
-    price: 17999
-    helperText: Room shared with one other traveller. Limited, first come.
+    status: booking-open
+    offers:
+      - { tierId: dorm, price: 16999, cap: 12, booked: 0 }
+      - { tierId: double, price: 17999, cap: 3, booked: 0 }
 balanceDueRule: 15 days before trip
 highlights:
   - Waterfall rappelling — 200-ft descent, first-timer friendly

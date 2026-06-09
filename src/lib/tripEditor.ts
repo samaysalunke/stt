@@ -1,0 +1,141 @@
+import { slugify } from './utils';
+
+// Editor-facing view of a trip's occupancy catalog + departures-with-offers.
+// Mirrors resolveBooking's synthesis (src/lib/content.ts) BUT keeps every
+// departure (no upcoming/draft filtering) so the admin editor round-trips all
+// dates. Opening a legacy trip here synthesizes offers from sharingOptions or a
+// flat price, so the first save migrates it to the new schema.
+
+export interface EditorTier { id: string; label: string; helperText: string }
+export interface EditorOffer { tierId: string; price: number | null; cap: number | null; booked: number }
+export interface EditorDeparture {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  offers: EditorOffer[];
+}
+
+export function editableBooking(trip: Record<string, any>): {
+  editorCatalog: EditorTier[];
+  editorDepartures: EditorDeparture[];
+} {
+  const catalog = buildCatalog(trip);
+  const batches = Array.isArray(trip?.batches) ? trip.batches : [];
+  const sharing = Array.isArray(trip?.sharingOptions) ? trip.sharingOptions : [];
+
+  const editorDepartures: EditorDeparture[] = batches.map((b: any) => {
+    let offers: EditorOffer[];
+    if (Array.isArray(b?.offers) && b.offers.length > 0) {
+      offers = b.offers
+        .filter((o: any) => o && o.tierId != null)
+        .map((o: any) => ({
+          tierId: String(o.tierId),
+          price: numOrNull(o.price),
+          cap: numOrNull(o.cap),
+          booked: Number(o.booked) || 0,
+        }));
+    } else if (sharing.length > 0) {
+      // Legacy: each sharing tier offered on this date, sharing the date's stock.
+      offers = sharing
+        .filter((o: any) => o && o.label)
+        .map((o: any) => ({
+          tierId: String(o.id ?? slugify(o.label)),
+          price: numOrNull(o.price),
+          cap: numOrNull(b?.totalSpots),
+          booked: Number(b?.bookedSpots) || 0,
+        }));
+    } else {
+      offers = [{
+        tierId: 'standard',
+        price: numOrNull(b?.price),
+        cap: numOrNull(b?.totalSpots),
+        booked: Number(b?.bookedSpots) || 0,
+      }];
+    }
+    return {
+      id: String(b?.id ?? ''),
+      startDate: String(b?.startDate ?? ''),
+      endDate: String(b?.endDate ?? ''),
+      status: String(b?.status ?? 'booking-open'),
+      offers,
+    };
+  });
+
+  return { editorCatalog: catalog, editorDepartures };
+}
+
+function buildCatalog(trip: Record<string, any>): EditorTier[] {
+  const cat = Array.isArray(trip?.occupancyCatalog) ? trip.occupancyCatalog : [];
+  if (cat.length > 0) {
+    return cat
+      .filter((c: any) => c && (c.id || c.label))
+      .map((c: any) => ({
+        id: String(c.id ?? slugify(c.label)),
+        label: String(c.label ?? c.id ?? ''),
+        helperText: String(c.helperText ?? ''),
+      }));
+  }
+  const sharing = Array.isArray(trip?.sharingOptions) ? trip.sharingOptions : [];
+  if (sharing.length > 0) {
+    return sharing
+      .filter((o: any) => o && o.label)
+      .map((o: any) => ({
+        id: String(o.id ?? slugify(o.label)),
+        label: String(o.label),
+        helperText: String(o.helperText ?? ''),
+      }));
+  }
+  return [{ id: 'standard', label: 'Standard', helperText: '' }];
+}
+
+function numOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Parse the editor's serialized JSON fields back into trip YAML shape. Shared by
+// the create + update API routes so authoring and persistence stay in lockstep.
+export function parseEditorBooking(catalogJson: string, departuresJson: string): {
+  occupancyCatalog: EditorTier[];
+  batches: Array<{ id: string; startDate: string; endDate: string; status: string; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+} {
+  let cat: any[] = [];
+  let deps: any[] = [];
+  try { cat = JSON.parse(catalogJson || '[]'); } catch { /* ignore */ }
+  try { deps = JSON.parse(departuresJson || '[]'); } catch { /* ignore */ }
+
+  const occupancyCatalog: EditorTier[] = (Array.isArray(cat) ? cat : [])
+    .map((c: any) => ({
+      id: String(c?.id || slugify(c?.label || '')),
+      label: String(c?.label ?? '').trim(),
+      helperText: String(c?.helperText ?? '').trim(),
+    }))
+    .filter((c) => c.label && c.id);
+
+  const validTierIds = new Set(occupancyCatalog.map((c) => c.id));
+
+  const batches = (Array.isArray(deps) ? deps : [])
+    .map((d: any) => {
+      const startDate = String(d?.startDate ?? '').trim();
+      const offers = (Array.isArray(d?.offers) ? d.offers : [])
+        .filter((o: any) => o && validTierIds.has(String(o.tierId)) && Number.isFinite(Number(o.price)))
+        .map((o: any) => ({
+          tierId: String(o.tierId),
+          price: Math.round(Number(o.price)),
+          cap: o.cap == null || o.cap === '' ? null : Math.max(0, Number(o.cap)),
+          booked: Math.max(0, Number(o.booked) || 0),
+        }));
+      return {
+        id: String(d?.id || (startDate ? slugify(startDate) : '')).trim(),
+        startDate,
+        endDate: String(d?.endDate ?? '').trim() || startDate,
+        status: String(d?.status ?? 'booking-open').trim() || 'booking-open',
+        offers,
+      };
+    })
+    .filter((b) => b.startDate && b.offers.length > 0);
+
+  return { occupancyCatalog, batches };
+}

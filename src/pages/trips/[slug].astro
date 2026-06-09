@@ -1,8 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
-import BatchPicker from '../../components/BatchPicker';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, upcomingBatches } from '../../lib/content';
+import BookingPanel from '../../components/BookingPanel';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking } from '../../lib/content';
 
 export const prerender = false;
 
@@ -26,6 +26,7 @@ const bankAccountName = settings.bankAccountName ?? '';
 const bankAccountNumber = settings.bankAccountNumber ?? '';
 const bankBranch = settings.bankBranch ?? '';
 const bankIfsc = settings.bankIfsc ?? '';
+const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
 
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
@@ -56,50 +57,36 @@ const tripTestimonials = (() => {
   return matched.length > 0 ? matched : allTestimonials.slice(0, 3);
 })();
 
-// Determine bookable batches. Trips with a batches array show only their
-// upcoming, non-hidden departures (past/draft/completed are filtered out).
-// Legacy trips (no batches) fall back to a single batch from the flat fields.
-const hasBatchArray = Array.isArray(trip.batches) && trip.batches.length > 0;
-const batches: Array<{ id: string; startDate: string; endDate: string; price: number; totalSpots: number; bookedSpots: number; status?: string }> =
-  hasBatchArray
-    ? upcomingBatches(trip) as any
-    : trip.startDate
-    ? [{
-        id: 'default',
-        startDate: trip.startDate,
-        endDate: trip.endDate ?? trip.startDate,
-        price: trip.pricePerPerson ?? 0,
-        totalSpots: trip.maxGroupSize ?? 12,
-        bookedSpots: trip.currentBookings ?? 0,
-      }]
-    : [];
+// Resolve the whole booking model through the single normalization boundary.
+// `booking` is the one source of truth for departures, occupancy and price —
+// new per-departure offers or legacy sharingOptions/flat price, all the same shape.
+const booking = resolveBooking(trip);
+const departures = booking.departures;
+const paymentAmount = booking.advanceAmount;
+const balanceDueRule = booking.balanceDueRule;
+const fromPrice = booking.fromPrice;
+const formattedLead = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : 'TBD';
+
 // A batches-trip whose dates have all passed has nothing to book.
-const noUpcomingDates = hasBatchArray && batches.length === 0;
+const hasBatchArray = Array.isArray(trip.batches) && trip.batches.length > 0;
+const noUpcomingDates = hasBatchArray && departures.length === 0;
 
 const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-const batchDateStr = (b: any) => b ? `${fmtD(b.startDate)} – ${fmtD(b.endDate)}` : '';
 
-const firstBatch = batches[0];
-const price = firstBatch?.price ?? trip.pricePerPerson;
-const formattedPrice = price ? `₹${price.toLocaleString('en-IN')}` : 'TBD';
+// The departure + occupancy the panel pre-selects on load: first non-sold-out
+// date, then its cheapest available tier. Mirrors BookingPanel so the SSR'd
+// registration form and price breakdown start in the same state.
+const firstDeparture = departures.find((d) => !d.soldOut) ?? departures[0] ?? null;
+const initialOffer = firstDeparture
+  ? firstDeparture.offers.filter((o) => o.available).sort((a, b) => a.price - b.price)[0] ?? null
+  : null;
+const initialPerPerson = initialOffer?.price ?? 0;
+const initialBalance = Math.max(0, initialPerPerson - Math.min(paymentAmount, initialPerPerson || paymentAmount));
+const initialDateStr = firstDeparture ? `${fmtD(firstDeparture.startDate)} – ${fmtD(firstDeparture.endDate)}` : '';
 
-// Occupancy / room-sharing options (trip-level, absolute per-person prices).
-// When present they drive pricing; the lead (lowest) price is shown as "from".
-const sharingOptions = (Array.isArray(trip.sharingOptions) ? trip.sharingOptions : [])
-  .filter((o: any) => o && o.label && Number.isFinite(Number(o.price)));
-const hasSharing = sharingOptions.length > 0;
-const sharingPrices = sharingOptions.map((o: any) => Number(o.price));
-const leadPrice = hasSharing ? Math.min(...sharingPrices) : price;
-const formattedLead = leadPrice ? `₹${leadPrice.toLocaleString('en-IN')}` : 'TBD';
-// Pre-select the cheapest occupancy option (not the first).
-const cheapestIdx = sharingPrices.length > 0
-  ? sharingPrices.indexOf(Math.min(...sharingPrices))
-  : 0;
-const balanceDueRule = (trip.balanceDueRule as string) ?? '15 days before trip';
-
-const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out';
-const isOpen = trip.registrationEnabled && !isSoldOut && batches.length > 0;
-const hasMultipleBatches = batches.length > 1;
+const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
+const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out' || allSoldOut;
+const isOpen = trip.registrationEnabled && !isSoldOut && departures.length > 0;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({
@@ -120,15 +107,13 @@ const included: string[] = trip.included ?? [];
 const excluded: string[] = trip.excluded ?? trip.notIncluded ?? [];
 const highlights: string[] = trip.highlights ?? [];
 
-const paymentAmount = trip.paymentAmount ?? 3000;
-
 // GA4 event on page load
 const tripNameJson = JSON.stringify(tripName);
 const slugJson = JSON.stringify(slug);
 
 // ── Structured data (Event + Offer) for rich results ──────────────────────
 const canonicalUrl = `https://seekthethrill.in/trips/${slug}`;
-const offerPrice = hasSharing ? leadPrice : price;
+const offerPrice = fromPrice;
 const tripSchema: Record<string, any> = {
   '@context': 'https://schema.org',
   '@type': 'Event',
@@ -139,8 +124,8 @@ const tripSchema: Record<string, any> = {
   eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
   eventStatus: 'https://schema.org/EventScheduled',
   organizer: { '@type': 'Organization', name: 'Seek the Thrill', url: 'https://seekthethrill.in' },
-  ...(firstBatch?.startDate ? { startDate: firstBatch.startDate } : {}),
-  ...(firstBatch?.endDate ? { endDate: firstBatch.endDate } : {}),
+  ...(firstDeparture?.startDate ? { startDate: firstDeparture.startDate } : {}),
+  ...(firstDeparture?.endDate ? { endDate: firstDeparture.endDate } : {}),
   ...(trip.location ? { location: { '@type': 'Place', name: trip.location, address: trip.location } } : {}),
   ...(Number.isFinite(Number(offerPrice)) ? {
     offers: {
@@ -212,9 +197,9 @@ const tripSchema: Record<string, any> = {
               {trip.duration}
             </span>
           )}
-          {price && (
+          {fromPrice != null && (
             <span class="flex items-center gap-1.5 text-sm font-bold text-white px-3 py-1.5 rounded-full" style="background-color: rgba(232,114,90,0.85);">
-              from {formattedPrice} / person
+              from {formattedLead} / person
             </span>
           )}
         </div>
@@ -392,107 +377,29 @@ const tripSchema: Record<string, any> = {
         <div class="bg-white rounded-2xl overflow-hidden" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
           <div class="p-6">
 
-            {(price || hasSharing) && (
-              <div class="mb-5">
-                {hasSharing && <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>}
-                <span id="sb-lead-price" class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{hasSharing ? formattedLead : formattedPrice}</span>
-                <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
-              </div>
-            )}
-
-            <!-- Date picker for multi-batch -->
-            {hasMultipleBatches ? (
-              <div class="mb-5">
-                <p class="text-xs font-semibold uppercase tracking-widest mb-3" style="color: var(--color-gray-text);">Choose your dates</p>
-                <BatchPicker batches={batches} tripSlug={slug!} client:load />
-              </div>
-            ) : firstBatch ? (
-              <div class="mb-5 text-sm">
-                <p class="text-xs font-semibold uppercase tracking-widest mb-1" style="color: var(--color-gray-text);">Dates</p>
-                <p style="color: var(--color-navy);">
-                  {new Date(firstBatch.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} –&nbsp;
-                  {new Date(firstBatch.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-                {(() => {
-                  const spotsLeft = firstBatch.totalSpots - firstBatch.bookedSpots;
-                  return (
-                    <div class="mt-3">
-                      <div class="flex justify-between text-xs mb-1.5" style="color: var(--color-gray-text);">
-                        <span>{firstBatch.bookedSpots}/{firstBatch.totalSpots} booked</span>
-                        <span style={spotsLeft <= 4 ? 'color: var(--color-coral); font-weight: 600;' : ''}>{spotsLeft} spots left</span>
-                      </div>
-                      <div class="w-full h-1.5 rounded-full overflow-hidden" style="background-color: var(--color-peach);">
-                        <div class="h-full rounded-full" style={`width: ${Math.min(100, (firstBatch.bookedSpots / firstBatch.totalSpots) * 100)}%; background-color: ${spotsLeft <= 4 ? 'var(--color-coral)' : 'var(--color-navy)'};`}></div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : null}
-
-            <!-- Occupancy / room-sharing selector -->
-            {isOpen && hasSharing && (
-              <div class="mb-5" id="occupancy-selector" data-advance={paymentAmount}>
-                <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color: var(--color-gray-text);">Choose occupancy</p>
-                <div class="flex flex-col gap-2">
-                  {sharingOptions.map((o: any, i: number) => (
-                    <label class="flex items-start justify-between gap-3 rounded-xl border px-4 py-3 cursor-pointer occ-option" style="border-color: var(--color-peach);">
-                      <span class="flex items-start gap-2.5">
-                        <input type="radio" name="__occupancy" value={o.label} data-price={o.price} checked={i === cheapestIdx} class="mt-0.5 accent-current" style="accent-color: var(--color-coral);" />
-                        <span>
-                          <span class="block text-sm font-medium" style="color: var(--color-navy);">{o.label}</span>
-                          {o.helperText && <span class="block text-xs mt-0.5" style="color: var(--color-gray-text);">{o.helperText}</span>}
-                        </span>
-                      </span>
-                      <span class="text-sm font-semibold shrink-0" style="font-family: var(--font-display); color: var(--color-coral);">₹{Number(o.price).toLocaleString('en-IN')}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <!-- Booking summary (single source of truth) -->
-            {isOpen && paymentAmount && (
-              <div class="mb-5 rounded-xl overflow-hidden border text-sm" style="border-color: var(--color-peach);">
-                <div class="flex items-center justify-between px-4 py-3" style="border-bottom: 1px solid var(--color-peach);">
-                  <span style="color: var(--color-gray-text);">Per person</span>
-                  <span class="font-semibold" id="sb-total" style="font-family: var(--font-display); color: var(--color-navy);">
-                    {hasSharing
-                      ? `₹${Number(sharingOptions[cheapestIdx].price).toLocaleString('en-IN')}`
-                      : (price ? `₹${price.toLocaleString('en-IN')}` : '—')}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between px-4 py-3" style="background-color: var(--color-blush); border-bottom: 1px solid var(--color-peach);">
-                  <span class="font-semibold" style="color: var(--color-coral);">Advance now</span>
-                  <span class="font-bold" style="font-family: var(--font-display); color: var(--color-coral);">₹{paymentAmount.toLocaleString('en-IN')}</span>
-                </div>
-                <div class="px-4 py-3" style="border-bottom: 1px solid var(--color-peach);">
-                  <div class="flex items-center justify-between">
-                    <span style="color: var(--color-gray-text);">Balance before trip</span>
-                    <span class="font-semibold" id="sb-balance" style="color: var(--color-navy);">
-                      {hasSharing
-                        ? `₹${Math.max(0, Number(sharingOptions[cheapestIdx].price) - paymentAmount).toLocaleString('en-IN')}`
-                        : (price ? `₹${Math.max(0, price - paymentAmount).toLocaleString('en-IN')}` : '—')}
-                    </span>
-                  </div>
-                  <div class="text-xs mt-0.5" style="color: var(--color-gray-text);">due {balanceDueRule}</div>
-                </div>
-                <div class="px-4 py-2 text-xs" style="color: var(--color-gray-text);">Advance is non-refundable.</div>
-              </div>
-            )}
-
             {isOpen ? (
-              <a
-                href="#register"
-                class="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all hover:opacity-90 hover:shadow-md"
-                style="background-color: var(--color-cta);"
-              >
-                Save my spot →
-              </a>
+              <BookingPanel
+                departures={departures}
+                occupancyCatalog={booking.occupancyCatalog}
+                advanceAmount={paymentAmount}
+                balanceDueRule={balanceDueRule}
+                fromPrice={fromPrice}
+                whatsappLink={whatsappLink}
+                client:load
+              />
             ) : (
-              <div class="w-full py-3.5 rounded-full text-center text-sm font-medium" style="background-color: #f3f4f6; color: var(--color-gray-text);">
-                {isSoldOut ? 'Sold out' : 'Registration closed'}
-              </div>
+              <>
+                {fromPrice != null && (
+                  <div class="mb-5">
+                    <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>
+                    <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedLead}</span>
+                    <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
+                  </div>
+                )}
+                <div class="w-full py-3.5 rounded-full text-center text-sm font-medium" style="background-color: #f3f4f6; color: var(--color-gray-text);">
+                  {isSoldOut ? 'Sold out' : 'Registration closed'}
+                </div>
+              </>
             )}
 
             <!-- Duration + group size -->
@@ -503,10 +410,10 @@ const tripSchema: Record<string, any> = {
                   <div class="font-medium mt-0.5" style="color: var(--color-navy);">{trip.duration}</div>
                 </div>
               )}
-              {firstBatch?.totalSpots && (
+              {firstDeparture?.totalCap && (
                 <div>
                   <div class="text-xs" style="color: var(--color-gray-text);">Group size</div>
-                  <div class="font-medium mt-0.5" style="color: var(--color-navy);">Max {firstBatch.totalSpots}</div>
+                  <div class="font-medium mt-0.5" style="color: var(--color-navy);">Max {firstDeparture.totalCap}</div>
                 </div>
               )}
             </div>
@@ -536,11 +443,11 @@ const tripSchema: Record<string, any> = {
             <form id="reg-form" class="space-y-6">
               <input type="hidden" name="tripSlug" value={slug} />
               <input type="hidden" name="tripName" value={tripName} />
-              <input type="hidden" name="batchId" id="reg-batch-id" value={firstBatch?.id ?? ''} />
-              <input type="hidden" name="tripDate" id="reg-trip-date" value={batchDateStr(firstBatch)} />
-              <input type="hidden" name="totalAmount" id="reg-total-amount" value={hasSharing ? sharingOptions[cheapestIdx].price : (firstBatch?.price ?? '')} />
-              {hasSharing && <input type="hidden" name="sharingOption" id="reg-sharing-option" value={sharingOptions[cheapestIdx].label} />}
-              <script type="application/json" id="batches-data" is:inline data-advance={paymentAmount} set:html={JSON.stringify(batches.map((b: any) => ({ id: b.id, startDate: b.startDate, endDate: b.endDate, price: b.price })))}></script>
+              <input type="hidden" name="batchId" id="reg-batch-id" value={firstDeparture?.id ?? ''} />
+              <input type="hidden" name="tierId" id="reg-tier-id" value={initialOffer?.tierId ?? ''} />
+              <input type="hidden" name="tripDate" id="reg-trip-date" value={initialDateStr} />
+              <input type="hidden" name="totalAmount" id="reg-total-amount" value={initialPerPerson || ''} />
+              <input type="hidden" name="sharingOption" id="reg-sharing-option" value={initialOffer?.label ?? ''} />
               <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
 
               <!-- Personal Info -->
@@ -631,7 +538,7 @@ const tripSchema: Record<string, any> = {
                     </div>
                     <strong style="color: var(--color-coral); font-family: var(--font-display);">₹{paymentAmount.toLocaleString('en-IN')}</strong>
                   </div>
-                  {(price || hasSharing) && (
+                  {initialPerPerson > 0 && (
                     <>
                       <!-- Progress bar -->
                       <div class="px-4 pt-2 pb-1" style="background-color: var(--color-blush);">
@@ -648,11 +555,11 @@ const tripSchema: Record<string, any> = {
                           <div class="text-sm font-medium" style="color: var(--color-navy);">Balance</div>
                           <div class="text-xs" style="color: var(--color-gray-text);">Due {balanceDueRule}</div>
                         </div>
-                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{Math.max(0, ((hasSharing ? Number(sharingOptions[cheapestIdx]?.price) : price) ?? 0) - paymentAmount).toLocaleString('en-IN')}</strong>
+                        <strong id="rf-balance" style="font-family: var(--font-display); color: var(--color-navy);">₹{initialBalance.toLocaleString('en-IN')}</strong>
                       </div>
                       <div class="flex items-center justify-between px-4 py-3 border-t" style="border-color: var(--color-peach); background-color: rgba(245,221,215,0.3);">
-                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total trip cost{hasSharing && <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span>}</div>
-                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{((hasSharing ? Number(sharingOptions[cheapestIdx]?.price) : price) ?? 0).toLocaleString('en-IN')}</strong>
+                        <div class="text-sm font-semibold" style="color: var(--color-navy);">Total trip cost <span class="text-xs font-normal ml-1" style="color: var(--color-gray-text);">(selected)</span></div>
+                        <strong id="rf-total" style="font-family: var(--font-display); color: var(--color-navy);">₹{initialPerPerson.toLocaleString('en-IN')}</strong>
                       </div>
                     </>
                   )}
@@ -863,11 +770,9 @@ const tripSchema: Record<string, any> = {
   {isOpen && (
     <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 flex items-center justify-between" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
       <div>
-        {(price || hasSharing) && (
-          <span id="sticky-price" class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">
-            {hasSharing ? formattedLead : formattedPrice}
-          </span>
-        )}
+        <span id="sticky-price" class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">
+          {initialPerPerson > 0 ? `₹${initialPerPerson.toLocaleString('en-IN')}` : formattedLead}
+        </span>
         <span class="text-xs block" style="color: var(--color-gray-text);">per person</span>
       </div>
       <a href="#register" class="font-semibold text-white px-7 py-3 rounded-full text-sm" style="background-color: var(--color-cta);">
@@ -981,94 +886,47 @@ const tripSchema: Record<string, any> = {
     }, { threshold: 0.5 }).observe(regSection);
   }
 
-  // ── Booking coordinator: selected date (batch) + occupancy → total ───────
+  // ── Booking applier: BookingPanel (React island) owns selection truth and
+  //    emits `stt:booking-changed`. This is a dumb DOM sink that mirrors the
+  //    selection into the registration form's hidden fields + price breakdown
+  //    and the mobile sticky bar (all outside the island). ────────────────────
   (function () {
-    const dataEl = document.getElementById('batches-data');
-    let batchData: Array<{ id: string; startDate: string; endDate: string; price: number }> = [];
-    try { batchData = JSON.parse(dataEl?.textContent || '[]'); } catch {}
-    const advance = Number(dataEl?.dataset.advance) || 0;
+    const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
 
-    const selector = document.getElementById('occupancy-selector');
-    const hasSharing = !!selector;
-    const radios = selector
-      ? Array.from(selector.querySelectorAll<HTMLInputElement>('input[name="__occupancy"]'))
-      : [];
-
-    const inr = (n: number) => '₹' + (n || 0).toLocaleString('en-IN');
-    const fmtD = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-
-    const sbLead = document.getElementById('sb-lead-price');
-    const sbTotal = document.getElementById('sb-total');
-    const sbBalance = document.getElementById('sb-balance');
     const stickyPrice = document.getElementById('sticky-price');
     const rfTotal = document.getElementById('rf-total');
     const rfBalance = document.getElementById('rf-balance');
-    const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
-    const fTotal = document.getElementById('reg-total-amount') as HTMLInputElement | null;
-    const fBatch = document.getElementById('reg-batch-id') as HTMLInputElement | null;
-    const fDate = document.getElementById('reg-trip-date') as HTMLInputElement | null;
-
-    // Initial selection: ?batch= from the URL or first batch.
-    const params = new URLSearchParams(window.location.search);
-    const wantId = params.get('batch');
-    let currentBatch = batchData.find((b) => b.id === wantId) || batchData[0] || null;
-    let occPrice = radios.length ? (Number((radios.find((r) => r.checked) ?? radios[0])?.dataset.price) || 0) : null;
-
     const pbarFill = document.getElementById('rf-pbar-fill') as HTMLElement | null;
     const pbarNow = document.getElementById('rf-pbar-now');
     const pbarLater = document.getElementById('rf-pbar-later');
+    const fOption = document.getElementById('reg-sharing-option') as HTMLInputElement | null;
+    const fTotal = document.getElementById('reg-total-amount') as HTMLInputElement | null;
+    const fBatch = document.getElementById('reg-batch-id') as HTMLInputElement | null;
+    const fTier = document.getElementById('reg-tier-id') as HTMLInputElement | null;
+    const fDate = document.getElementById('reg-trip-date') as HTMLInputElement | null;
 
-    function recompute() {
-      const total = hasSharing ? (occPrice || 0) : (currentBatch?.price || 0);
-      const advanceDue = Math.min(advance, total);
-      const balance = Math.max(0, total - advanceDue);
-      if (sbTotal) sbTotal.textContent = inr(total);
-      if (sbBalance) sbBalance.textContent = inr(balance);
+    window.addEventListener('stt:booking-changed', (e: any) => {
+      const d = e.detail || {};
+      const total = Number(d.perPersonPrice) || 0;
+      const advanceDue = Number(d.advanceDue) || 0;
+      const balance = Number(d.balance) || 0;
+
       if (stickyPrice) stickyPrice.textContent = inr(total);
       if (rfTotal) rfTotal.textContent = inr(total);
       if (rfBalance) rfBalance.textContent = inr(balance);
       if (fTotal) fTotal.value = String(total);
+      if (fBatch && d.departureId) fBatch.value = d.departureId;
+      if (fTier && d.tierId) fTier.value = d.tierId;
+      if (fOption && d.tierLabel) fOption.value = d.tierLabel;
+      if (fDate && d.dateStr) fDate.value = d.dateStr;
+
       if (pbarFill && total > 0) {
         const pct = Math.round((advanceDue / total) * 100);
         pbarFill.style.width = pct + '%';
         if (pbarNow) pbarNow.textContent = `Pay now (${pct}%)`;
         if (pbarLater) pbarLater.textContent = `Balance later (${100 - pct}%)`;
       }
-      if (currentBatch) {
-        if (fBatch) fBatch.value = currentBatch.id;
-        if (fDate) fDate.value = `${fmtD(currentBatch.startDate)} – ${fmtD(currentBatch.endDate)}`;
-        // Non-sharing trips: sidebar lead price tracks the selected date's price.
-        if (!hasSharing && sbLead) sbLead.textContent = inr(currentBatch.price);
-      }
-    }
-
-    // Date selection comes from the BatchPicker island via a custom event.
-    window.addEventListener('stt:batch-selected', (e: any) => {
-      const d = e.detail;
-      if (d?.id) { currentBatch = d; recompute(); }
     });
-
-    // Occupancy selection
-    radios.forEach((r) => r.addEventListener('change', () => {
-      occPrice = Number(r.dataset.price) || 0;
-      if (fOption) fOption.value = r.value;
-      selector!.querySelectorAll('.occ-option').forEach((el) => {
-        (el as HTMLElement).style.borderColor = 'var(--color-peach)';
-        (el as HTMLElement).style.background = '';
-      });
-      const card = r.closest('.occ-option') as HTMLElement | null;
-      if (card) { card.style.borderColor = 'var(--color-coral)'; card.style.background = 'var(--color-blush)'; }
-      recompute();
-    }));
-    if (radios.length) {
-      const init = radios.find((r) => r.checked) ?? radios[0];
-      init.checked = true;
-      const card = init.closest('.occ-option') as HTMLElement | null;
-      if (card) { card.style.borderColor = 'var(--color-coral)'; card.style.background = 'var(--color-blush)'; }
-      if (fOption) fOption.value = init.value;
-    }
-
-    recompute();
   })();
 
   // ── Payment tab switcher ──────────────────────────────────────────────────

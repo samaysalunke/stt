@@ -1,13 +1,4 @@
 ---
-interface Batch {
-  id: string;
-  startDate: string;
-  endDate: string;
-  price: number;
-  totalSpots: number;
-  bookedSpots: number;
-}
-
 interface Props {
   slug: string;
   title?: string;
@@ -19,71 +10,35 @@ interface Props {
   shortDescription?: string;
   location?: string | null;
   duration?: string | null;
-  batches?: Batch[];
-  startDate?: string | null;
-  endDate?: string | null;
-  pricePerPerson?: number | null;
-  maxGroupSize?: number | null;
-  currentBookings?: number | null;
-  sharingOptions?: Array<{ id?: string; label?: string; price?: number }> | null;
+  fromPrice?: number | null;
+  multiPrice?: boolean;
+  spotsLeft?: number | null;
+  soldOut?: boolean;
 }
 
 const {
   slug,
   title,
   name,
-  status,
   coverImage,
   featuredImage,
   description,
   shortDescription,
   location,
   duration,
-  batches = [],
-  startDate,
-  endDate,
-  pricePerPerson,
-  maxGroupSize,
-  currentBookings,
-  sharingOptions = [],
+  fromPrice = null,
+  multiPrice = false,
+  spotsLeft = null,
+  soldOut = false,
 } = Astro.props;
 
 const tripName = title || name || slug;
 const img = coverImage || featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop&q=80';
-const desc = description || shortDescription || '';
 
-// Determine price/spots from batches or legacy fields
-const hasBatches = batches && batches.length > 0;
-const firstBatch = hasBatches ? batches[0] : null;
-const price = firstBatch?.price ?? pricePerPerson;
-const totalSpots = firstBatch?.totalSpots ?? maxGroupSize;
-const bookedSpots = firstBatch?.bookedSpots ?? currentBookings ?? 0;
-const spotsLeft = totalSpots ? totalSpots - bookedSpots : null;
-const moreDates = hasBatches && batches.length > 1 ? batches.length - 1 : 0;
-
-function formatDate(d: string | null | undefined) {
-  if (!d) return '';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-const displayDate = firstBatch
-  ? `${formatDate(firstBatch.startDate)} – ${formatDate(firstBatch.endDate)}`
-  : (startDate ? `${formatDate(startDate)} – ${formatDate(endDate ?? '')}` : '');
-
-// Occupancy options (if any) drive the displayed price as "from <lowest>".
-const sharingPrices = (sharingOptions ?? [])
-  .map((o) => Number(o?.price))
-  .filter((p) => Number.isFinite(p) && p > 0);
-const hasSharing = sharingPrices.length > 0;
-const displayPrice = hasSharing ? Math.min(...sharingPrices) : price;
-
-const formattedPrice = displayPrice
-  ? `₹${displayPrice.toLocaleString('en-IN')}`
-  : null;
-
-const firstBatchStatus = firstBatch?.status;
-const isSoldOut = status === 'sold_out' || status === 'sold-out'
-  || firstBatchStatus === 'sold-out' || firstBatchStatus === 'sold_out';
+const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : null;
+const isSoldOut = soldOut;
+// One capacity signal, only when stock is low.
+const showLowStock = !isSoldOut && spotsLeft != null && spotsLeft <= 3;
 ---
 
 <article
@@ -125,7 +80,7 @@ const isSoldOut = status === 'sold_out' || status === 'sold-out'
         )}
       </div>
       <div class="shrink-0 text-right">
-        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{hasSharing && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
+        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
         <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
       </div>
     </div>
@@ -143,8 +98,8 @@ const isSoldOut = status === 'sold_out' || status === 'sold-out'
         >
           View Details
         </a>
-        {spotsLeft !== null && (
-          <p class="text-center text-xs" style="color: var(--color-gray-text);">{spotsLeft} spots left</p>
+        {showLowStock && (
+          <p class="text-center text-xs" style="color: var(--color-coral);">Only {spotsLeft} spots left</p>
         )}
       </div>
     )}

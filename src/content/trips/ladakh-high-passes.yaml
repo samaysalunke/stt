@@ -18,13 +18,17 @@ shortDescription: A full Ladakh circuit — Khardung La, Turtuk, Pangong, Hanle,
 whoShouldJoin: First-time Ladakh explorers wanting a safe, structured
   experience. Those comfortable with long road journeys and raw high-altitude
   conditions.
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: ""
 batches:
   - id: ladakh-jun-jul-2026
     startDate: 2026-06-27
     endDate: 2026-07-05
-    price: 35000
-    totalSpots: 15
-    bookedSpots: 0
+    status: booking-open
+    offers:
+      - { tierId: standard, price: 35000, cap: 15, booked: 0 }
 highlights:
   - Khardung La — one of the highest motorable roads in the world
   - Turtuk — a culturally unique border village with Balti culture
