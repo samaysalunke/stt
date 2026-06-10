@@ -98,7 +98,9 @@ test('TC-213 setLeaderboard opt-out removes from leaderboard_cache', async () =>
 
 // ── TC-214: setUsername — valid, first-time change succeeds ───────────────────
 test('TC-214 setUsername first-time → success', async () => {
-  const { cookie } = seedUserWithSession({ username: 'auto-generated-name' });
+  // Use unique auto-generated name to avoid UNIQUE collisions across test runs
+  const autoName = `auto-${crypto.randomBytes(4).toString('hex')}`;
+  const { cookie } = seedUserWithSession({ username: autoName });
   const newName = `traveller-${crypto.randomBytes(3).toString('hex')}`;
 
   const res = await fetch(`${BASE}/api/profile/settings`, {
@@ -114,7 +116,9 @@ test('TC-214 setUsername first-time → success', async () => {
 // ── TC-215: setUsername — second change is rejected ───────────────────────────
 test('TC-215 setUsername second attempt → 400 (one-change limit)', async () => {
   const Database = require('better-sqlite3');
-  const { userId, cookie } = seedUserWithSession({ username: 'already-set' });
+  // Use unique username per run to avoid UNIQUE index collisions across test runs
+  const alreadySet = `set-${crypto.randomBytes(4).toString('hex')}`;
+  const { userId, cookie } = seedUserWithSession({ username: alreadySet });
 
   // Mark as already changed manually
   const db = new Database(DB_PATH);
