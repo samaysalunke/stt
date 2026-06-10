@@ -82,6 +82,7 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
         bankBranch={settings.bankBranch ?? ''}
         bankIfsc={settings.bankIfsc ?? ''}
         whatsappLink={settings.whatsappLink ?? 'https://wa.me/917975027491'}
+        isLoggedIn={!!Astro.locals.user}
         client:load
       />
     </div>

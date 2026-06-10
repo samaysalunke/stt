@@ -1,9 +1,10 @@
 ---
 interface Props {
   hidden?: boolean;
+  user?: { id: string; email: string; displayName: string | null; avatarUrl: string | null } | null;
 }
 
-const { hidden = false } = Astro.props;
+const { hidden = false, user = null } = Astro.props;
 
 const navLinks = [
   { href: '/trips/', label: 'Trips' },
@@ -15,6 +16,7 @@ const navLinks = [
 ];
 
 const pathname = Astro.url.pathname;
+const firstName = user?.displayName?.split(' ')[0] ?? null;
 ---
 
 <header
@@ -30,18 +32,46 @@ const pathname = Astro.url.pathname;
         <span class="hidden sm:block font-semibold text-sm text-white">Seek the Thrill</span>
       </a>
 
-      <!-- Menu Button (hamburger-only on all sizes; drawer holds all nav) -->
-      <button
-        id="menu-btn"
-        class="p-2 rounded-lg"
-        style="color: white;"
-        aria-label="Open menu"
-        aria-expanded="false"
-      >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      <!-- Right side: login/profile button (desktop) + hamburger -->
+      <div class="flex items-center gap-3">
+        <!-- Desktop auth button (hidden on mobile — handled in drawer) -->
+        {user ? (
+          <a
+            href="/profile"
+            class="hidden sm:flex items-center gap-2 text-sm font-medium text-white hover:opacity-80 transition-opacity"
+          >
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={firstName ?? ''} class="w-7 h-7 rounded-full object-cover" referrerpolicy="no-referrer" />
+            ) : (
+              <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                   style="background: var(--color-coral);">
+                {(firstName ?? 'U')[0].toUpperCase()}
+              </div>
+            )}
+            {firstName}
+          </a>
+        ) : (
+          <a
+            href="/login"
+            class="hidden sm:block text-sm font-semibold px-4 py-1.5 rounded-full border border-white/40 text-white hover:bg-white/10 transition-colors"
+          >
+            Sign in
+          </a>
+        )}
+
+        <!-- Hamburger button (all sizes) -->
+        <button
+          id="menu-btn"
+          class="p-2 rounded-lg"
+          style="color: white;"
+          aria-label="Open menu"
+          aria-expanded="false"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
     </div>
   </div>
 </header>
@@ -63,7 +93,7 @@ const pathname = Astro.url.pathname;
       </button>
     </div>
 
-    <!-- Links -->
+    <!-- Nav links -->
     <nav class="flex flex-col gap-1">
       {navLinks.map((link) => (
         <a
@@ -76,10 +106,39 @@ const pathname = Astro.url.pathname;
           {link.label}
         </a>
       ))}
+
+      <!-- Auth link in drawer -->
+      {user ? (
+        <a
+          href="/profile"
+          class="rounded-lg px-3 py-3 text-base font-medium flex items-center gap-2.5 transition-colors"
+          style={pathname.startsWith('/profile')
+            ? 'color: var(--color-coral); background: var(--color-blush);'
+            : 'color: rgba(27,43,58,0.8);'}
+        >
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" class="w-6 h-6 rounded-full object-cover" referrerpolicy="no-referrer" />
+          ) : (
+            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                 style="background: var(--color-coral);">
+              {(firstName ?? 'U')[0].toUpperCase()}
+            </div>
+          )}
+          My Profile
+        </a>
+      ) : (
+        <a
+          href="/login"
+          class="rounded-lg px-3 py-3 text-base font-medium transition-colors"
+          style="color: rgba(27,43,58,0.8);"
+        >
+          Sign in
+        </a>
+      )}
     </nav>
 
-    <!-- Bottom CTA -->
-    <div class="mt-auto">
+    <!-- Bottom CTAs -->
+    <div class="mt-auto flex flex-col gap-2">
       <a
         href="/trips/"
         class="block w-full text-center font-semibold text-white py-3.5 rounded-full"
@@ -87,6 +146,18 @@ const pathname = Astro.url.pathname;
       >
         Join a trip
       </a>
+
+      {user && (
+        <form method="POST" action="/api/auth/logout">
+          <button
+            type="submit"
+            class="w-full text-center text-sm font-medium py-2.5 rounded-full border transition-colors hover:opacity-70"
+            style="color: var(--color-coral); border-color: var(--color-peach);"
+          >
+            Sign out
+          </button>
+        </form>
+      )}
     </div>
   </div>
 </div>
@@ -125,8 +196,6 @@ const pathname = Astro.url.pathname;
 </script>
 
 <style is:global>
-  /* Homepage hero mode: fixed (reserves no layout space, so no band above
-     the hero), hidden until the page is scrolled past the hero. */
   #site-header.is-hideable { transform: translateY(-100%); }
   #site-header.is-hideable.header-visible { transform: translateY(0); }
 </style>

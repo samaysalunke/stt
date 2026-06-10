@@ -114,4 +114,25 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN instagram TEXT'); } catch {}
   // Migration: tier_id for per-departure occupancy tracking (new schema)
   try { db.exec('ALTER TABLE registrations ADD COLUMN tier_id TEXT'); } catch {}
+
+  // feature/auth — user accounts + sessions
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      displayName TEXT,
+      avatarUrl TEXT,
+      googleId TEXT UNIQUE NOT NULL,
+      createdAt INTEGER DEFAULT (unixepoch()),
+      lastLoginAt INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expiresAt INTEGER NOT NULL,
+      createdAt INTEGER DEFAULT (unixepoch())
+    );
+  `);
 }

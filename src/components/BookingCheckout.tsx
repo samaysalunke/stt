@@ -24,6 +24,7 @@ interface Props {
   bankBranch: string;
   bankIfsc: string;
   whatsappLink?: string;
+  isLoggedIn?: boolean;
 }
 
 const C = {
@@ -97,6 +98,7 @@ export default function BookingCheckout({
   slug, tripName, departure, offer, advanceAmount, balanceDueRule,
   upiId, bankAccountName, bankAccountNumber, bankBranch, bankIfsc,
   whatsappLink = 'https://wa.me/917975027491',
+  isLoggedIn = false,
 }: Props) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -413,6 +415,15 @@ export default function BookingCheckout({
         <p className="text-sm leading-relaxed" style={{ color: C.gray }}>
           You'll hear from us on WhatsApp once it's confirmed.
         </p>
+        {!isLoggedIn && (
+          <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
+            <p className="text-xs mb-3" style={{ color: C.gray }}>Sign in to see your km from home and join the leaderboard.</p>
+            <a href="/api/auth/google" className="inline-block text-sm font-semibold px-5 py-2 rounded-full text-white" style={{ background: C.coral }}>
+              Sign in with Google →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -448,6 +459,15 @@ export default function BookingCheckout({
             Chat on WhatsApp
           </a>
         </p>
+        {!isLoggedIn && (
+          <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
+            <p className="text-xs mb-3" style={{ color: C.gray }}>Sign in to see your km from home and join the leaderboard.</p>
+            <a href="/api/auth/google" className="inline-block text-sm font-semibold px-5 py-2 rounded-full text-white" style={{ background: C.coral }}>
+              Sign in with Google →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

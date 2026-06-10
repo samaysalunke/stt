@@ -1,0 +1,109 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getDb } from '../lib/db';
+
+export const prerender = false;
+
+// Middleware guarantees user is set; redirect is handled there
+const user = Astro.locals.user!;
+
+const db = getDb();
+const bookings = db.prepare(`
+  SELECT trip_name, trip_date, batch_id, status, created_at
+  FROM registrations
+  WHERE email = ?
+  ORDER BY created_at DESC
+`).all(user.email) as {
+  trip_name: string;
+  trip_date: string | null;
+  batch_id: string | null;
+  status: string;
+  created_at: string;
+}[];
+
+const statusLabel: Record<string, { label: string; color: string }> = {
+  lead:      { label: 'Registered',  color: 'var(--color-gray-text)' },
+  pending:   { label: 'Pending',     color: '#F59E0B' },
+  confirmed: { label: 'Confirmed',   color: '#10B981' },
+  rejected:  { label: 'Rejected',    color: 'var(--color-coral)' },
+};
+
+const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
+---
+
+<BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." nav="back">
+  <div class="container-app py-10 max-w-lg mx-auto">
+
+    <!-- User header -->
+    <div class="flex items-center gap-4 mb-10">
+      {user.avatarUrl ? (
+        <img src={user.avatarUrl} alt={firstName} class="w-14 h-14 rounded-full object-cover" referrerpolicy="no-referrer" />
+      ) : (
+        <div class="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold"
+             style="background: var(--color-coral);">
+          {firstName[0].toUpperCase()}
+        </div>
+      )}
+      <div>
+        <p class="font-semibold text-lg" style="color: var(--color-navy);">{user.displayName ?? firstName}</p>
+        <p class="text-sm" style="color: var(--color-gray-text);">{user.email}</p>
+      </div>
+    </div>
+
+    <!-- My Trips -->
+    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">My Trips</h2>
+
+    {bookings.length === 0 ? (
+      <div class="rounded-xl p-6 text-center mb-10" style="background: var(--color-blush);">
+        <p class="text-sm mb-3" style="color: var(--color-gray-text);">No trips yet.</p>
+        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
+      </div>
+    ) : (
+      <div class="flex flex-col gap-3 mb-10">
+        {bookings.map((b) => {
+          const s = statusLabel[b.status] ?? { label: b.status, color: 'var(--color-gray-text)' };
+          return (
+            <div class="rounded-xl px-4 py-4 flex items-center justify-between" style="background: white; border: 1px solid var(--color-peach);">
+              <div>
+                <p class="font-medium text-sm" style="color: var(--color-navy);">{b.trip_name}</p>
+                {b.trip_date && (
+                  <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{b.trip_date}</p>
+                )}
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style={`color: ${s.color}; background: ${s.color}1a;`}>
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    <!-- Settings (stubs — enabled in feature/gamification) -->
+    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Settings</h2>
+    <div class="rounded-xl overflow-hidden mb-10" style="border: 1px solid var(--color-peach);">
+      {[
+        { label: 'Show me on the leaderboard', sub: 'Coming soon' },
+        { label: 'Show my trips publicly', sub: 'Coming soon' },
+      ].map((item, i) => (
+        <div class={`flex items-center justify-between px-4 py-4 ${i > 0 ? 'border-t' : ''}`}
+             style={i > 0 ? 'border-color: var(--color-peach);' : ''}>
+          <div>
+            <p class="text-sm font-medium" style="color: rgba(27,43,58,0.4);">{item.label}</p>
+            <p class="text-xs" style="color: rgba(27,43,58,0.3);">{item.sub}</p>
+          </div>
+          <div class="w-10 h-6 rounded-full" style="background: #e5e7eb;"></div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Sign out -->
+    <form method="POST" action="/api/auth/logout">
+      <button type="submit" class="w-full py-3.5 rounded-full text-sm font-semibold border transition-all hover:opacity-70"
+              style="color: var(--color-coral); border-color: var(--color-coral);">
+        Sign out
+      </button>
+    </form>
+
+  </div>
+</BaseLayout>
