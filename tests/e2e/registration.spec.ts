@@ -111,45 +111,38 @@ async function fillStep2AndAdvance(page: any) {
   await page.locator('text=Continue to payment').click();
 }
 
-test('book page Step 3 shows payment instructions by default (pay-now mode)', async ({ page }) => {
+test('book page Step 3 shows booking summary, payment instructions, and upload zone', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
   await expect(page.locator('text=Pay & Confirm')).toBeVisible({ timeout: 10_000 });
-  // Default is pay-now: screenshot upload should be visible
-  await expect(page.locator('text=Payment Screenshot')).toBeVisible();
-  // "Not ready to pay" toggle link
-  await expect(page.locator('text=Save spot, pay later')).toBeVisible();
+  // Booking summary card
+  await expect(page.locator('text=Your booking')).toBeVisible();
+  // Payment instructions
+  await expect(page.locator('text=How to pay')).toBeVisible();
+  // Screenshot upload always visible
+  await expect(page.locator('text=Upload payment screenshot')).toBeVisible();
+  // Secondary action present
+  await expect(page.locator('button:has-text("Register without paying")')).toBeVisible();
 });
 
-test('book page Step 3 always shows the verification note', async ({ page }) => {
+test('book page Step 3 always shows the honesty line', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
-  await expect(page.locator('text=Your spot is confirmed once we verify')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('text=Spots are confirmed only after we verify').first()).toBeVisible({ timeout: 10_000 });
 });
 
-test('book page Step 3 "Save spot, pay later" toggles to pay-later mode', async ({ page }) => {
+test('book page Step 3 "Confirm my spot" is disabled without a screenshot', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
-  await page.locator('text=Save spot, pay later').click();
-  // Payment instructions collapse; info card appears
-  await expect(page.locator("text=We'll email you the payment details")).toBeVisible({ timeout: 5_000 });
-  // Screenshot upload should be gone
-  await expect(page.locator('text=Payment Screenshot')).not.toBeVisible();
-  // CTA changes to "Save my spot"
-  await expect(page.locator('button:has-text("Save my spot")')).toBeVisible();
-  // "I'll pay now" back link appears
-  await expect(page.locator("text=I'll pay now")).toBeVisible();
+  await expect(page.locator('button:has-text("Confirm my spot")')).toBeDisabled({ timeout: 10_000 });
 });
 
-test('book page Step 3 pay-now blocks submit when no screenshot', async ({ page }) => {
+test('book page Step 3 T&C required for "Register without paying"', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
-  // Accept T&C — go up to the <label> which contains both text and checkbox
-  await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
-  await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
-  // Try to submit without screenshot
-  await page.locator('button:has-text("Confirm my spot")').click();
-  await expect(page.locator('text=Please upload your payment screenshot')).toBeVisible({ timeout: 5_000 });
+  // Do NOT check T&C — submit should show error
+  await page.locator('button:has-text("Register without paying")').click();
+  await expect(page.locator('text=Please accept the Terms and Cancellation Policy')).toBeVisible({ timeout: 5_000 });
 });
 
 test('book page redirects to trip page when batch param is invalid', async ({ page }) => {
