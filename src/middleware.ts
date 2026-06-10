@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
-import crypto from 'node:crypto';
 import { getUserBySession } from './lib/session';
+import { getAdminBySession } from './lib/admin-session';
 
 export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirect }, next) => {
   // ── User session (all routes) ──────────────────────────────────────────────
@@ -12,21 +12,52 @@ export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirec
     return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
   }
 
-  // ── Admin auth (unchanged) ─────────────────────────────────────────────────
+  // ── Admin auth ─────────────────────────────────────────────────────────────
   const isAdminRoute =
     url.pathname.startsWith('/admin') ||
     url.pathname.startsWith('/api/admin') ||
     url.pathname.startsWith('/api/uploads') ||
     url.pathname.startsWith('/keystatic');
-  const isLoginRoute =
-    url.pathname === '/admin/login' ||
-    url.pathname.startsWith('/api/admin/login');
 
-  if (isAdminRoute && !isLoginRoute) {
+  // Auth endpoints that are always public
+  const isAuthRoute =
+    url.pathname === '/admin/login' ||
+    url.pathname.startsWith('/api/admin/login') ||
+    url.pathname.startsWith('/api/admin/auth/');
+
+  if (isAdminRoute && !isAuthRoute) {
     const token = cookies.get('admin_token')?.value;
-    const password = (import.meta.env.ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '');
-    const expected = crypto.createHash('sha256').update(password).digest('hex');
-    if (!token || token !== expected) return redirect('/admin/login');
+    if (!token) return redirect('/admin/login');
+
+    const adminUser = getAdminBySession(token);
+    if (!adminUser) {
+      // Clear stale cookie
+      cookies.delete('admin_token', { path: '/' });
+      return redirect('/admin/login');
+    }
+
+    locals.adminUser = adminUser;
+
+    // Role-based page guards
+    const ownerOnlyPages = [
+      '/admin/settings/roles',
+      '/admin/audit',
+      '/api/admin/roles',
+    ];
+    const ownerOrOpsOnly = [
+      '/admin/trips',
+      '/api/admin/trips',
+    ];
+
+    const path = url.pathname;
+    if (ownerOnlyPages.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {
+      return new Response('Access denied', { status: 403 });
+    }
+    if (ownerOrOpsOnly.some(p => path.startsWith(p)) && adminUser.role === 'trip_lead') {
+      return new Response('Access denied', { status: 403 });
+    }
+  } else {
+    locals.adminUser = null;
   }
 
   return next();

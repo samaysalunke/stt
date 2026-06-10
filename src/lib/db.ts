@@ -135,4 +135,40 @@ function initializeSchema(db: Database.Database) {
       createdAt INTEGER DEFAULT (unixepoch())
     );
   `);
+
+  // feature/rbac — roles, admin sessions, audit log
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_roles (
+      userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK(role IN ('owner','ops','trip_lead')),
+      assignedBy TEXT REFERENCES users(id),
+      assignedAt INTEGER DEFAULT (unixepoch()),
+      tripIds TEXT DEFAULT '[]',
+      PRIMARY KEY (userId, role)
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      expiresAt INTEGER NOT NULL,
+      lastActivityAt INTEGER NOT NULL,
+      ipAddress TEXT,
+      createdAt INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id TEXT PRIMARY KEY,
+      actorUserId TEXT,
+      actorEmail TEXT,
+      actorRole TEXT,
+      action TEXT NOT NULL,
+      targetType TEXT,
+      targetId TEXT,
+      previousValue TEXT,
+      newValue TEXT,
+      ipAddress TEXT,
+      createdAt INTEGER DEFAULT (unixepoch())
+    );
+  `);
 }

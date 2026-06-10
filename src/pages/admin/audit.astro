@@ -1,0 +1,129 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+export const prerender = false;
+
+const adminUser = Astro.locals.adminUser;
+if (!adminUser || adminUser.role !== 'owner') {
+  return Astro.redirect('/admin/');
+}
+
+const PAGE_SIZE = 50;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') ?? '1'));
+const offset = (page - 1) * PAGE_SIZE;
+
+const db = getDb();
+const total = (db.prepare('SELECT COUNT(*) as n FROM audit_log').get() as any).n as number;
+const totalPages = Math.ceil(total / PAGE_SIZE);
+
+const rows = db.prepare(`
+  SELECT id, actorEmail, actorRole, action, targetType, targetId,
+         previousValue, newValue, ipAddress, createdAt
+  FROM audit_log
+  ORDER BY createdAt DESC
+  LIMIT ? OFFSET ?
+`).all(PAGE_SIZE, offset) as Array<{
+  id: string;
+  actorEmail: string | null;
+  actorRole: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  previousValue: string | null;
+  newValue: string | null;
+  ipAddress: string | null;
+  createdAt: number;
+}>;
+
+function formatTs(unix: number) {
+  return new Date(unix * 1000).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+---
+
+<AdminLayout title="Audit Log" page="audit">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">Audit Log</h1>
+    <p class="text-sm mt-1" style="color: var(--color-gray-text);">{total} total entries · read-only</p>
+  </div>
+
+  <div class="bg-white rounded-[2rem] overflow-hidden" style="border: 1px solid rgba(245,221,215,0.6);">
+    {rows.length === 0 ? (
+      <div class="px-6 py-12 text-center text-sm" style="color: var(--color-gray-text);">
+        No audit entries yet.
+      </div>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="background: rgba(245,221,215,0.2);">
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Time</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Actor</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Action</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Target</th>
+              <th class="px-4 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Diff</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr class="border-t" style="border-color: var(--color-peach);">
+                <td class="px-4 py-3 whitespace-nowrap text-xs" style="color: var(--color-gray-text);">
+                  {formatTs(row.createdAt)}
+                </td>
+                <td class="px-4 py-3">
+                  <div class="text-xs font-medium" style="color: var(--color-navy);">{row.actorEmail ?? '—'}</div>
+                  {row.actorRole && (
+                    <div class="text-xs" style="color: var(--color-gray-text);">{row.actorRole}</div>
+                  )}
+                </td>
+                <td class="px-4 py-3">
+                  <code class="text-xs px-2 py-0.5 rounded" style="background: rgba(245,221,215,0.4); color: var(--color-navy);">
+                    {row.action}
+                  </code>
+                </td>
+                <td class="px-4 py-3 text-xs" style="color: var(--color-gray-text);">
+                  {row.targetType && <span>{row.targetType}</span>}
+                  {row.targetId && <span class="ml-1 font-mono">#{row.targetId}</span>}
+                </td>
+                <td class="px-4 py-3 text-center">
+                  {(row.previousValue || row.newValue) && (
+                    <details class="text-left">
+                      <summary class="cursor-pointer text-xs font-medium" style="color: var(--color-coral);">view</summary>
+                      <div class="mt-2 p-3 rounded-xl text-xs font-mono whitespace-pre-wrap max-w-xs"
+                           style="background: var(--color-blush); color: var(--color-navy); max-height: 200px; overflow-y: auto;">
+                        {row.previousValue && <div><strong>Before:</strong>{'\n'}{JSON.stringify(JSON.parse(row.previousValue), null, 2)}</div>}
+                        {row.newValue && <div class="mt-2"><strong>After:</strong>{'\n'}{JSON.stringify(JSON.parse(row.newValue), null, 2)}</div>}
+                      </div>
+                    </details>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  {totalPages > 1 && (
+    <div class="flex items-center justify-center gap-2 mt-6">
+      {page > 1 && (
+        <a href={`?page=${page - 1}`}
+           class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
+           style="border: 1px solid var(--color-peach); color: var(--color-navy);">
+          ← Prev
+        </a>
+      )}
+      <span class="text-sm" style="color: var(--color-gray-text);">Page {page} of {totalPages}</span>
+      {page < totalPages && (
+        <a href={`?page=${page + 1}`}
+           class="px-4 py-2 rounded-full text-sm font-medium transition-colors"
+           style="border: 1px solid var(--color-peach); color: var(--color-navy);">
+          Next →
+        </a>
+      )}
+    </div>
+  )}
+</AdminLayout>

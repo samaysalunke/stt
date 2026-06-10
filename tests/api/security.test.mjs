@@ -69,13 +69,14 @@ test('TC-193 SQL injection payload is stored safely via prepared statements', as
   assert.equal(row.full_name, sqlPayload, 'Payload should be stored verbatim (not executed)');
 });
 
-test('TC-194 admin_token cookie value is a SHA-256 hash not the plain password', async () => {
+test('TC-194 admin_token cookie value is a session UUID (not the plain password)', async () => {
   const { cookie } = await adminLogin('changeme');
   const tokenMatch = cookie.match(/admin_token=([^;]+)/);
   assert.ok(tokenMatch, 'Cookie should contain admin_token');
   const token = tokenMatch[1];
   assert.notEqual(token, 'changeme', 'Token must not be the plain password');
-  assert.match(token, /^[0-9a-f]{64}$/, 'Token should be a 64-char hex SHA-256 hash');
+  // Session tokens are UUIDs: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  assert.match(token, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, 'Token should be a UUID');
 });
 
 test('TC-195 Set-Cookie header has httpOnly flag', async () => {

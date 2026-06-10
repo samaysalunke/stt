@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { listTrips, readTrip, writeTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
+import { logAction } from '../../../lib/audit';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
@@ -69,7 +70,7 @@ function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 |
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
     const id = parseInt(body.id);
@@ -151,6 +152,20 @@ export const POST: APIRoute = async ({ request }) => {
           trip_name: tripName,
         }).catch(err => console.error('[Email rejected]', err));
       }
+    }
+
+    // Audit log (non-blocking)
+    if (reg && newStatus !== prevStatus) {
+      logAction({
+        actorUserId: locals.adminUser?.userId,
+        actorEmail:  locals.adminUser?.email,
+        actorRole:   locals.adminUser?.role,
+        action: `booking.${newStatus}`,
+        targetType: 'registration',
+        targetId: String(id),
+        previousValue: { status: prevStatus },
+        newValue: { status: newStatus, admin_notes: adminNotes || undefined },
+      });
     }
 
     return new Response(JSON.stringify({ success: true }), {

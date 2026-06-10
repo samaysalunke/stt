@@ -4,9 +4,20 @@ import { getDb } from '../../lib/db';
 import { listTrips } from '../../lib/content';
 export const prerender = false;
 
-const registrations = getDb()
-  .prepare('SELECT * FROM registrations ORDER BY id DESC')
-  .all() as Record<string, any>[];
+const adminUser = Astro.locals.adminUser;
+
+// trip_lead: scoped to their assigned trips only; no payment actions
+const isTripLead = adminUser?.role === 'trip_lead';
+const allowedBatchIds = isTripLead ? (adminUser?.tripIds ?? []) : null;
+
+const registrations = (allowedBatchIds !== null
+  ? getDb()
+      .prepare(`SELECT * FROM registrations WHERE batch_id IN (${allowedBatchIds.map(() => '?').join(',') || "''"}) ORDER BY id DESC`)
+      .all(...allowedBatchIds)
+  : getDb()
+      .prepare('SELECT * FROM registrations ORDER BY id DESC')
+      .all()
+) as Record<string, any>[];
 
 const total = registrations.length;
 const leads = registrations.filter(r => r.status === 'lead').length;

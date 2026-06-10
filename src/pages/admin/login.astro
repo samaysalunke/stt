@@ -2,7 +2,13 @@
 import '../../styles/global.css';
 export const prerender = false;
 
-const hasError = Astro.url.searchParams.get('error') === '1';
+const errorCode = Astro.url.searchParams.get('error');
+const hasPasswordError = errorCode === '1';
+const hasNoRoleError   = errorCode === 'no_role';
+const hasOAuthError    = errorCode === 'oauth';
+
+// Password fallback only available when ADMIN_PASSWORD is configured
+const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD);
 ---
 
 <!doctype html>
@@ -28,37 +34,68 @@ const hasError = Astro.url.searchParams.get('error') === '1';
             </svg>
           </div>
           <span class="text-[10px] font-semibold uppercase tracking-widest" style="color: var(--color-coral);">Admin Portal</span>
-          <h1 class="font-display text-2xl font-semibold mt-1" style="color: var(--color-navy);">Welcome back, Zahra</h1>
+          <h1 class="font-display text-2xl font-semibold mt-1" style="color: var(--color-navy);">Welcome back</h1>
           <p class="text-sm mt-1" style="color: rgba(27,43,58,0.5);">Sign in to manage Seek the Thrill</p>
         </div>
 
-        {hasError && (
+        {hasNoRoleError && (
+          <div class="rounded-2xl px-4 py-3 mb-5 text-sm"
+               style="background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626;">
+            Your Google account doesn't have admin access. Contact the owner to get a role assigned.
+          </div>
+        )}
+        {hasOAuthError && (
+          <div class="rounded-2xl px-4 py-3 mb-5 text-sm"
+               style="background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626;">
+            Something went wrong with Google sign-in. Please try again.
+          </div>
+        )}
+        {hasPasswordError && (
           <div class="rounded-2xl px-4 py-3 mb-5 text-sm"
                style="background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626;">
             Incorrect password. Please try again.
           </div>
         )}
 
-        <form method="POST" action="/api/admin/login">
-          <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5"
-                 style="color: var(--color-navy);">Password</label>
-          <input
-            type="password"
-            name="password"
-            required
-            autofocus
-            placeholder="Enter admin password"
-            class="w-full rounded-2xl px-4 py-3 text-sm outline-none mb-5"
-            style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white);"
-          />
-          <button
-            type="submit"
-            class="w-full rounded-full py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style="background-color: var(--color-cta);"
-          >
-            Enter Dashboard
-          </button>
-        </form>
+        <!-- Primary: Google Sign In -->
+        <a
+          href="/api/admin/auth/google"
+          class="flex items-center justify-center gap-3 w-full rounded-full py-3.5 text-sm font-semibold transition-all hover:opacity-90"
+          style="background: var(--color-navy); color: white;"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Sign in with Google
+        </a>
+
+        {hasPasswordFallback && (
+          <details class="mt-5">
+            <summary class="text-xs text-center cursor-pointer" style="color: rgba(27,43,58,0.4);">
+              Password fallback
+            </summary>
+            <form method="POST" action="/api/admin/login" class="mt-4">
+              <input
+                type="password"
+                name="password"
+                required
+                placeholder="Admin password"
+                class="w-full rounded-2xl px-4 py-3 text-sm outline-none mb-3"
+                style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-blush);"
+              />
+              <button
+                type="submit"
+                class="w-full rounded-full py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style="background-color: var(--color-cta);"
+              >
+                Enter Dashboard
+              </button>
+            </form>
+          </details>
+        )}
 
         <div class="flex items-center justify-center gap-2 mt-6">
           <span class="w-2 h-2 rounded-full" style="background: var(--color-success);"></span>
