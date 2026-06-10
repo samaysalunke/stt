@@ -29,8 +29,18 @@ if (!fs.existsSync(SEED_DIR)) {
 
 const alreadySeeded = fs.existsSync(TRIPS_DIR) && fs.readdirSync(TRIPS_DIR).length > 0;
 
+// Always sync site-settings.yaml from seed — it changes with deployments
+// and admins can still override values via the admin UI after startup.
+const seedSettings = path.join(SEED_DIR, 'site-settings.yaml');
+const destSettings = path.join(CONTENT_DIR, 'site-settings.yaml');
+if (fs.existsSync(seedSettings) && !fs.existsSync(destSettings)) {
+  fs.mkdirSync(CONTENT_DIR, { recursive: true });
+  fs.copyFileSync(seedSettings, destSettings);
+  console.log('[seed] Wrote site-settings.yaml to volume');
+}
+
 if (alreadySeeded) {
-  console.log('[seed] Content already exists in volume, skipping seed');
+  console.log('[seed] Content already exists in volume, skipping full seed');
   process.exit(0);
 }
 

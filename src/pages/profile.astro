@@ -208,42 +208,25 @@ const canChangeUsername = !userRow?.usernameChangedAt;
       <p id="username-msg" class="text-xs mt-2 hidden"></p>
     </div>
 
-    <!-- Settings -->
-    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Settings</h2>
-    <div class="rounded-xl overflow-hidden mb-10" style="border: 1px solid var(--color-peach);">
-      <div class="flex items-center justify-between px-4 py-4">
-        <div>
-          <p class="text-sm font-medium" style="color: var(--color-navy);">Show me on the leaderboard</p>
-          <p class="text-xs" style="color: var(--color-gray-text);">Appear on the public km &amp; trips leaderboard</p>
+    <!-- Share profile -->
+    {userRow?.username && (
+      <div class="rounded-xl p-4 mb-6" style="border: 1px solid var(--color-peach);">
+        <p class="text-sm font-medium mb-3" style="color: var(--color-navy);">Share your profile</p>
+        <div class="flex items-center gap-2">
+          <code id="share-profile-url" class="text-xs px-2 py-1.5 rounded-lg flex-1 truncate"
+                style="background: var(--color-blush); color: var(--color-navy);">
+            seekthethrill.in/u/{userRow.username}
+          </code>
+          <button id="share-profile-copy"
+                  data-url={`https://seekthethrill.in/u/${userRow.username}`}
+                  class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
+                  style="background: var(--color-coral);">
+            Copy
+          </button>
         </div>
-        <button
-          type="button"
-          id="toggle-leaderboard"
-          data-on={userRow?.leaderboardOptOut ? 'false' : 'true'}
-          class="w-10 h-6 rounded-full transition-colors relative flex-shrink-0"
-          style={`background: ${userRow?.leaderboardOptOut ? '#e5e7eb' : 'var(--color-coral)'};`}
-          aria-label="Toggle leaderboard visibility">
-          <span class="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow"
-                style={`left: ${userRow?.leaderboardOptOut ? '2px' : '18px'};`}></span>
-        </button>
+        <p id="share-profile-copied" class="text-xs mt-2 hidden" style="color: var(--color-coral);">Copied!</p>
       </div>
-      <div class="flex items-center justify-between px-4 py-4 border-t" style="border-color: var(--color-peach);">
-        <div>
-          <p class="text-sm font-medium" style="color: var(--color-navy);">Show my trips publicly</p>
-          <p class="text-xs" style="color: var(--color-gray-text);">Let others see your trip history on your profile</p>
-        </div>
-        <button
-          type="button"
-          id="toggle-show-trips"
-          data-on={userRow?.showTripsPublicly ? 'true' : 'false'}
-          class="w-10 h-6 rounded-full transition-colors relative flex-shrink-0"
-          style={`background: ${userRow?.showTripsPublicly ? 'var(--color-coral)' : '#e5e7eb'};`}
-          aria-label="Toggle trips visibility">
-          <span class="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow"
-                style={`left: ${userRow?.showTripsPublicly ? '18px' : '2px'};`}></span>
-        </button>
-      </div>
-    </div>
+    )}
 
     <!-- Leaderboard link -->
     <a href="/leaderboard" class="flex items-center justify-between px-4 py-4 rounded-xl mb-6 transition-opacity hover:opacity-80"
@@ -273,6 +256,16 @@ const canChangeUsername = !userRow?.usernameChangedAt;
     });
   }
 
+  // Share profile (permanent)
+  document.getElementById('share-profile-copy')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const url = btn.dataset.url ?? '';
+    try { await navigator.clipboard.writeText(url); } catch { /* fallback */ }
+    const msg = document.getElementById('share-profile-copied');
+    if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2000); }
+  });
+
+  // Share banner (post-trip)
   document.getElementById('share-banner-copy')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     const url = btn.dataset.url ?? '';
@@ -316,30 +309,4 @@ const canChangeUsername = !userRow?.usernameChangedAt;
     if (data.success) setTimeout(() => location.reload(), 800);
   });
 
-  // Toggle helper
-  function makeToggle(btnId: string, action: string) {
-    const btn = document.getElementById(btnId) as HTMLButtonElement | null;
-    if (!btn) return;
-
-    btn.addEventListener('click', async () => {
-      const isOn = btn.dataset.on === 'true';
-      const newVal = !isOn;
-
-      const res = await fetch('/api/profile/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, value: newVal }),
-      });
-      if (!res.ok) return;
-
-      btn.dataset.on = String(newVal);
-      const coral = 'var(--color-coral)';
-      btn.style.background = newVal ? coral : '#e5e7eb';
-      const dot = btn.querySelector('span') as HTMLElement | null;
-      if (dot) dot.style.left = newVal ? '18px' : '2px';
-    });
-  }
-
-  makeToggle('toggle-leaderboard', 'setLeaderboard');
-  makeToggle('toggle-show-trips', 'setShowTrips');
 </script>

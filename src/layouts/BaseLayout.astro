@@ -34,7 +34,7 @@ try {
 // Settings, falling back to the built-in property; blank disables GA4.
 const isAdminRoute = Astro.url.pathname.startsWith('/admin');
 const analyticsEnabled = import.meta.env.PROD && !isAdminRoute;
-const gaId = (settings.googleAnalyticsId ?? 'G-S17TM9KJTG') || '';
+const gaId = settings.googleAnalyticsId || '';
 const clarityId = 'x2ms8bxixr';
 
 const orgSchema = {
