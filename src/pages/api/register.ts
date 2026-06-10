@@ -178,20 +178,18 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const hasPayment = !!screenshotUrl;
     const firstName = required.fullName.split(' ')[0];
 
-    // Send confirmation email — wrapped so failure never blocks success response
-    let emailSent = 0;
-    try {
-      if (hasPayment) {
-        await sendRegistrationPaymentReceived({ firstName, email: required.email, tripName, startDate, endDate, whatsappLink });
-      } else {
-        await sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink, upiId });
-      }
-      emailSent = 1;
-    } catch (emailErr) {
-      console.error('[Register email error]', emailErr);
-    }
+    // Send confirmation email non-blocking — never delays the success response
+    const emailPromise = hasPayment
+      ? sendRegistrationPaymentReceived({ firstName, email: required.email, tripName, startDate, endDate, whatsappLink })
+      : sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink, upiId });
 
-    try { db.prepare('UPDATE registrations SET email_sent = ? WHERE id = ?').run(emailSent, registrationId); } catch {}
+    emailPromise
+      .then(() => {
+        try { db.prepare('UPDATE registrations SET email_sent = 1 WHERE id = ?').run(registrationId); } catch {}
+      })
+      .catch((emailErr) => {
+        console.error('[Register email error]', emailErr);
+      });
 
     sendAdminRegistrationNotification({
       trip_name:       tripName,
