@@ -38,19 +38,25 @@ export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirec
 
     locals.adminUser = adminUser;
 
-    // Role-based page guards
-    const ownerOnlyPages = [
+    // Role-based access guards
+    const path = url.pathname;
+
+    // owner-only: role management, audit log, trip creation/deletion
+    const ownerOnly = [
       '/admin/settings/roles',
       '/admin/audit',
       '/api/admin/roles',
+      '/api/admin/trips/create',
+      '/api/admin/trips/delete',
+      '/api/admin/trips/duplicate',
     ];
+    // trip_lead cannot access trips management or most write actions
     const ownerOrOpsOnly = [
       '/admin/trips',
       '/api/admin/trips',
     ];
 
-    const path = url.pathname;
-    if (ownerOnlyPages.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {
+    if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {
       return new Response('Access denied', { status: 403 });
     }
     if (ownerOrOpsOnly.some(p => path.startsWith(p)) && adminUser.role === 'trip_lead') {

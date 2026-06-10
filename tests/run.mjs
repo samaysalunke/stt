@@ -23,6 +23,7 @@ const TEST_FILES = [
   'tests/api/newsletter.test.mjs',
   'tests/api/auth.test.mjs',
   'tests/api/security.test.mjs',
+  'tests/api/rbac.test.mjs',
   'tests/api/admin-trips.test.mjs',
   ...(includeRateLimits ? ['tests/api/rate-limits.test.mjs'] : []),
 ];

@@ -88,16 +88,18 @@ function formatTs(unix: number) {
                   {row.targetId && <span class="ml-1 font-mono">#{row.targetId}</span>}
                 </td>
                 <td class="px-4 py-3 text-center">
-                  {(row.previousValue || row.newValue) && (
-                    <details class="text-left">
-                      <summary class="cursor-pointer text-xs font-medium" style="color: var(--color-coral);">view</summary>
-                      <div class="mt-2 p-3 rounded-xl text-xs font-mono whitespace-pre-wrap max-w-xs"
-                           style="background: var(--color-blush); color: var(--color-navy); max-height: 200px; overflow-y: auto;">
-                        {row.previousValue && <div><strong>Before:</strong>{'\n'}{JSON.stringify(JSON.parse(row.previousValue), null, 2)}</div>}
-                        {row.newValue && <div class="mt-2"><strong>After:</strong>{'\n'}{JSON.stringify(JSON.parse(row.newValue), null, 2)}</div>}
-                      </div>
-                    </details>
-                  )}
+                  {(row.previousValue || row.newValue) && (() => {
+                    const prev = row.previousValue ? JSON.stringify(JSON.parse(row.previousValue), null, 2) : null;
+                    const next = row.newValue      ? JSON.stringify(JSON.parse(row.newValue),      null, 2) : null;
+                    const text = [prev ? `Before:\n${prev}` : '', next ? `After:\n${next}` : ''].filter(Boolean).join('\n\n');
+                    return (
+                      <details>
+                        <summary class="cursor-pointer text-xs font-medium" style="color: var(--color-coral);">view</summary>
+                        <pre class="mt-2 p-3 rounded-xl text-xs whitespace-pre-wrap max-w-xs"
+                             style="background: var(--color-blush); color: var(--color-navy); max-height: 200px; overflow-y: auto; font-family: monospace;">{text}</pre>
+                      </details>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}
