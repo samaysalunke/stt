@@ -3,6 +3,7 @@ import { getDb } from '../../../lib/db';
 import { listTrips, readTrip, writeTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 import { logAction } from '../../../lib/audit';
+import { recalculateUserLeaderboard } from '../../../lib/stats';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
@@ -152,6 +153,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           trip_name: tripName,
         }).catch(err => console.error('[Email rejected]', err));
       }
+    }
+
+    // Recalculate leaderboard when a booking is confirmed or un-confirmed (non-blocking)
+    if (reg && newStatus !== prevStatus &&
+        (newStatus === 'confirmed' || prevStatus === 'confirmed')) {
+      recalculateUserLeaderboard(reg.email as string).catch(err =>
+        console.error('[leaderboard recalc]', err)
+      );
     }
 
     // Audit log (non-blocking)

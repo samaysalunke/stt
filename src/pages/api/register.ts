@@ -4,6 +4,7 @@ import { readTrip, readSiteSettings, resolveBooking } from '../../lib/content';
 import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
+import { geocodeCity } from '../../lib/geocode';
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (!rateLimit(clientAddress, 5, 60 * 60 * 1000)) {
@@ -123,12 +124,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const db = getDb();
     const stmt = db.prepare(`
       INSERT INTO registrations (
-        trip_name, trip_date, full_name, email, phone, gender,
+        trip_name, trip_slug, trip_date, full_name, email, phone, gender,
         age, city, instagram, emergency_name, emergency_phone,
         payment_screenshot_url, why_join,
         sharing_option, total_amount, batch_id, tier_id, consent_at, status
       ) VALUES (
-        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?,
         ?, ?, ?, ?, CURRENT_TIMESTAMP, ?
@@ -137,6 +138,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const insertResult = stmt.run(
       sanitizeInput(body.tripName),
+      tripSlug,
       tripDateStr,
       required.fullName,
       required.email,
@@ -203,6 +205,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       why_join:        required.whyJoin,
       screenshot_url:  sanitizeInput(body.paymentScreenshotUrl) || '—',
     }).catch(console.error);
+
+    // Warm geocode cache for this city (non-blocking — never delays response)
+    if (required.city) geocodeCity(required.city).catch(() => {});
 
     return new Response(JSON.stringify({ success: true, message: 'Registration successful!' }), {
       status: 200,

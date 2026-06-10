@@ -4,10 +4,30 @@ import { getDb } from '../lib/db';
 
 export const prerender = false;
 
-// Middleware guarantees user is set; redirect is handled there
 const user = Astro.locals.user!;
 
 const db = getDb();
+
+const userRow = db.prepare(`
+  SELECT username, usernameChangedAt, leaderboardOptOut, showTripsPublicly
+  FROM users WHERE id = ?
+`).get(user.id) as {
+  username: string | null;
+  usernameChangedAt: number | null;
+  leaderboardOptOut: number;
+  showTripsPublicly: number;
+} | undefined;
+
+const stats = db.prepare(`
+  SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount
+  FROM leaderboard_cache WHERE userId = ?
+`).get(user.id) as {
+  kmsFromHome: number;
+  daysOutdoors: number;
+  destinationsCount: number;
+  tripsCount: number;
+} | undefined;
+
 const bookings = db.prepare(`
   SELECT trip_name, trip_date, batch_id, status, created_at
   FROM registrations
@@ -29,6 +49,7 @@ const statusLabel: Record<string, { label: string; color: string }> = {
 };
 
 const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
+const canChangeUsername = !userRow?.usernameChangedAt;
 ---
 
 <BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." nav="back">
@@ -46,9 +67,28 @@ const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
       )}
       <div>
         <p class="font-semibold text-lg" style="color: var(--color-navy);">{user.displayName ?? firstName}</p>
+        {userRow?.username && (
+          <p class="text-sm font-mono" style="color: var(--color-coral);">@{userRow.username}</p>
+        )}
         <p class="text-sm" style="color: var(--color-gray-text);">{user.email}</p>
       </div>
     </div>
+
+    <!-- Stats (only shown when user has confirmed trips in leaderboard) -->
+    {stats && (
+      <div class="grid grid-cols-3 gap-3 mb-10">
+        {[
+          { value: `${stats.kmsFromHome.toLocaleString('en-IN')} km`, label: 'from home' },
+          { value: String(stats.daysOutdoors), label: 'days outdoors' },
+          { value: String(stats.destinationsCount), label: 'destinations' },
+        ].map((s) => (
+          <div class="rounded-xl p-4 text-center" style="background: var(--color-blush);">
+            <p class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">{s.value}</p>
+            <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    )}
 
     <!-- My Trips -->
     <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">My Trips</h2>
@@ -79,23 +119,86 @@ const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
       </div>
     )}
 
-    <!-- Settings (stubs — enabled in feature/gamification) -->
+    <!-- Username -->
+    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Username</h2>
+    <div class="rounded-xl p-4 mb-10" style="border: 1px solid var(--color-peach);">
+      {userRow?.username ? (
+        <div>
+          <p class="text-sm font-mono font-medium mb-1" style="color: var(--color-navy);">@{userRow.username}</p>
+          {canChangeUsername ? (
+            <p class="text-xs mb-3" style="color: var(--color-gray-text);">You can change your username once.</p>
+          ) : (
+            <p class="text-xs mb-3" style="color: var(--color-gray-text);">Your username is locked — it can only be changed once.</p>
+          )}
+        </div>
+      ) : (
+        <p class="text-xs mb-3" style="color: var(--color-gray-text);">No username set yet.</p>
+      )}
+
+      {canChangeUsername && (
+        <form id="username-form" class="flex gap-2">
+          <input
+            id="username-input"
+            type="text"
+            placeholder="new-username"
+            maxlength="30"
+            pattern="[a-z0-9][a-z0-9_\-]{1,28}[a-z0-9]"
+            class="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2"
+            style="border-color: var(--color-peach); font-family: monospace; --tw-ring-color: var(--color-coral);"
+          />
+          <button type="submit"
+                  class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-80"
+                  style="background: var(--color-coral);">
+            Save
+          </button>
+        </form>
+      )}
+      <p id="username-msg" class="text-xs mt-2 hidden"></p>
+    </div>
+
+    <!-- Settings -->
     <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Settings</h2>
     <div class="rounded-xl overflow-hidden mb-10" style="border: 1px solid var(--color-peach);">
-      {[
-        { label: 'Show me on the leaderboard', sub: 'Coming soon' },
-        { label: 'Show my trips publicly', sub: 'Coming soon' },
-      ].map((item, i) => (
-        <div class={`flex items-center justify-between px-4 py-4 ${i > 0 ? 'border-t' : ''}`}
-             style={i > 0 ? 'border-color: var(--color-peach);' : ''}>
-          <div>
-            <p class="text-sm font-medium" style="color: rgba(27,43,58,0.4);">{item.label}</p>
-            <p class="text-xs" style="color: rgba(27,43,58,0.3);">{item.sub}</p>
-          </div>
-          <div class="w-10 h-6 rounded-full" style="background: #e5e7eb;"></div>
+      <div class="flex items-center justify-between px-4 py-4">
+        <div>
+          <p class="text-sm font-medium" style="color: var(--color-navy);">Show me on the leaderboard</p>
+          <p class="text-xs" style="color: var(--color-gray-text);">Appear on the public km &amp; trips leaderboard</p>
         </div>
-      ))}
+        <button
+          type="button"
+          id="toggle-leaderboard"
+          data-on={userRow?.leaderboardOptOut ? 'false' : 'true'}
+          class="w-10 h-6 rounded-full transition-colors relative flex-shrink-0"
+          style={`background: ${userRow?.leaderboardOptOut ? '#e5e7eb' : 'var(--color-coral)'};`}
+          aria-label="Toggle leaderboard visibility">
+          <span class="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow"
+                style={`left: ${userRow?.leaderboardOptOut ? '2px' : '18px'};`}></span>
+        </button>
+      </div>
+      <div class="flex items-center justify-between px-4 py-4 border-t" style="border-color: var(--color-peach);">
+        <div>
+          <p class="text-sm font-medium" style="color: var(--color-navy);">Show my trips publicly</p>
+          <p class="text-xs" style="color: var(--color-gray-text);">Let others see your trip history on your profile</p>
+        </div>
+        <button
+          type="button"
+          id="toggle-show-trips"
+          data-on={userRow?.showTripsPublicly ? 'true' : 'false'}
+          class="w-10 h-6 rounded-full transition-colors relative flex-shrink-0"
+          style={`background: ${userRow?.showTripsPublicly ? 'var(--color-coral)' : '#e5e7eb'};`}
+          aria-label="Toggle trips visibility">
+          <span class="absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow"
+                style={`left: ${userRow?.showTripsPublicly ? '18px' : '2px'};`}></span>
+        </button>
+      </div>
     </div>
+
+    <!-- Leaderboard link -->
+    <a href="/leaderboard" class="flex items-center justify-between px-4 py-4 rounded-xl mb-6 transition-opacity hover:opacity-80"
+       style="background: var(--color-blush);">
+      <span class="text-sm font-medium" style="color: var(--color-navy);">View leaderboard</span>
+      <span style="color: var(--color-coral);">→</span>
+    </a>
 
     <!-- Sign out -->
     <form method="POST" action="/api/auth/logout">
@@ -107,3 +210,58 @@ const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
 
   </div>
 </BaseLayout>
+
+<script>
+  // Username form
+  const usernameForm = document.getElementById('username-form') as HTMLFormElement | null;
+  const usernameInput = document.getElementById('username-input') as HTMLInputElement | null;
+  const usernameMsg = document.getElementById('username-msg') as HTMLElement | null;
+
+  usernameForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = usernameInput?.value.trim().toLowerCase() ?? '';
+    if (!username) return;
+
+    const res = await fetch('/api/profile/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'setUsername', username }),
+    });
+    const data = await res.json();
+
+    if (usernameMsg) {
+      usernameMsg.textContent = data.error ?? 'Username saved!';
+      usernameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
+      usernameMsg.classList.remove('hidden');
+    }
+
+    if (data.success) setTimeout(() => location.reload(), 800);
+  });
+
+  // Toggle helper
+  function makeToggle(btnId: string, action: string) {
+    const btn = document.getElementById(btnId) as HTMLButtonElement | null;
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      const isOn = btn.dataset.on === 'true';
+      const newVal = !isOn;
+
+      const res = await fetch('/api/profile/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, value: newVal }),
+      });
+      if (!res.ok) return;
+
+      btn.dataset.on = String(newVal);
+      const coral = 'var(--color-coral)';
+      btn.style.background = newVal ? coral : '#e5e7eb';
+      const dot = btn.querySelector('span') as HTMLElement | null;
+      if (dot) dot.style.left = newVal ? '18px' : '2px';
+    });
+  }
+
+  makeToggle('toggle-leaderboard', 'setLeaderboard');
+  makeToggle('toggle-show-trips', 'setShowTrips');
+</script>

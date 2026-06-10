@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { getDb } from '../../../lib/db';
 import { createUserSession } from '../../../lib/session';
+import { assignAutoUsername } from '../../../lib/usernames';
 
 export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   const code = url.searchParams.get('code');
@@ -69,6 +70,8 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       VALUES (?, ?, ?, ?, ?, unixepoch())
     `).run(id, email, displayName, avatarUrl, googleId);
     user = { id };
+    // Auto-assign a username on first sign-in
+    assignAutoUsername(id, displayName);
   }
 
   // Create session

@@ -1,8 +1,12 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
+import { getDb } from './lib/db';
 
 export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirect }, next) => {
+  // Ensure DB is initialized on first request so schema migrations run early
+  getDb();
+
   // ── User session (all routes) ──────────────────────────────────────────────
   const userToken = cookies.get('user_session')?.value;
   locals.user = userToken ? (getUserBySession(userToken) ?? null) : null;

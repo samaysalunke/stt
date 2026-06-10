@@ -1,0 +1,224 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getDb } from '../lib/db';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+const db = getDb();
+
+type Tab = 'km' | 'days' | 'destinations';
+const rawTab = Astro.url.searchParams.get('tab') ?? 'km';
+const tab: Tab = (['km', 'days', 'destinations'] as const).includes(rawTab as Tab)
+  ? (rawTab as Tab)
+  : 'km';
+
+const orderCol = {
+  km:           'kmsFromHome',
+  days:         'daysOutdoors',
+  destinations: 'destinationsCount',
+}[tab];
+
+type LeaderRow = {
+  userId: string;
+  displayName: string | null;
+  username: string | null;
+  avatarUrl: string | null;
+  homeCityLatLng: string | null;
+  kmsFromHome: number;
+  daysOutdoors: number;
+  destinationsCount: number;
+  tripsCount: number;
+  rank: number;
+};
+
+const rows = db.prepare(`
+  SELECT userId, displayName, username, avatarUrl, homeCityLatLng,
+         kmsFromHome, daysOutdoors, destinationsCount, tripsCount,
+         ROW_NUMBER() OVER (ORDER BY ${orderCol} DESC, userId ASC) as rank
+  FROM leaderboard_cache
+  ORDER BY ${orderCol} DESC, userId ASC
+  LIMIT 20
+`).all() as LeaderRow[];
+
+// Logged-in user's own stats + rank (may be outside top 20)
+let myEntry: (LeaderRow & { rank: number }) | null = null;
+if (user) {
+  const myRankRow = db.prepare(`
+    SELECT COUNT(*) + 1 as rank FROM leaderboard_cache
+    WHERE ${orderCol} > (SELECT ${orderCol} FROM leaderboard_cache WHERE userId = ?)
+  `).get(user.id) as { rank: number } | undefined;
+
+  const myCache = db.prepare(
+    'SELECT userId, displayName, username, avatarUrl, homeCityLatLng, kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?'
+  ).get(user.id) as Omit<LeaderRow, 'rank'> | undefined;
+
+  if (myCache && myRankRow) {
+    myEntry = { ...myCache, rank: myRankRow.rank };
+  }
+}
+
+const myInTop20 = myEntry ? rows.some(r => r.userId === myEntry!.userId) : false;
+
+const tabMeta: Record<Tab, { label: string; valueKey: keyof LeaderRow; unit: string }> = {
+  km:           { label: 'km from home',  valueKey: 'kmsFromHome',        unit: 'km'  },
+  days:         { label: 'Days outdoors', valueKey: 'daysOutdoors',       unit: 'days' },
+  destinations: { label: 'Destinations',  valueKey: 'destinationsCount',  unit: ''    },
+};
+
+function getValue(row: LeaderRow, key: keyof LeaderRow): string {
+  const v = row[key] as number;
+  if (key === 'kmsFromHome') return v.toLocaleString('en-IN');
+  return String(v);
+}
+
+function homeCity(latLng: string | null): string {
+  if (!latLng) return '';
+  try { return (JSON.parse(latLng) as { city?: string }).city ?? ''; } catch { return ''; }
+}
+---
+
+<BaseLayout title="Leaderboard — Seek the Thrill" description="See who's explored the most km from home, spent the most days outdoors, and visited the most destinations." nav="back">
+  <div class="container-app py-10 max-w-2xl mx-auto">
+
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Leaderboard</h1>
+      <p class="text-sm" style="color: var(--color-gray-text);">Ranked by adventures taken with Seek the Thrill.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-8 flex-wrap">
+      {(['km', 'days', 'destinations'] as const).map((t) => (
+        <a href={`?tab=${t}`}
+           class={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tab === t ? 'text-white' : ''}`}
+           style={tab === t
+             ? 'background: var(--color-coral); color: white;'
+             : 'border: 1px solid var(--color-peach); color: var(--color-navy);'}>
+          {tabMeta[t].label}
+        </a>
+      ))}
+    </div>
+
+    {rows.length === 0 ? (
+      <div class="rounded-2xl p-12 text-center" style="background: var(--color-blush);">
+        <p class="text-lg font-semibold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">No data yet</p>
+        <p class="text-sm" style="color: var(--color-gray-text);">Stats appear once trip bookings are confirmed.</p>
+      </div>
+    ) : (
+      <div class="rounded-2xl overflow-hidden relative" style="border: 1px solid rgba(245,221,215,0.6);">
+
+        {rows.map((row, i) => {
+          const isMe = row.userId === user?.id;
+          const blurred = i >= 10 && !user;
+          const city = homeCity(row.homeCityLatLng);
+          const val = getValue(row, tabMeta[tab].valueKey);
+          const unit = tabMeta[tab].unit;
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+
+          return (
+            <div
+              class={`flex items-center gap-3 px-4 py-4 border-b transition-colors ${isMe ? 'ring-1 ring-inset' : ''}`}
+              style={`
+                border-color: rgba(245,221,215,0.6);
+                ${isMe ? 'background: rgba(245,221,215,0.25); ring-color: var(--color-coral);' : i % 2 === 0 ? 'background: white;' : 'background: rgba(245,221,215,0.08);'}
+                ${blurred ? 'filter: blur(5px); pointer-events: none; user-select: none;' : ''}
+              `}
+            >
+              <!-- Rank -->
+              <div class="w-8 text-center flex-shrink-0">
+                {medal ? (
+                  <span class="text-lg">{medal}</span>
+                ) : (
+                  <span class="text-sm font-bold" style="color: var(--color-gray-text);">{row.rank}</span>
+                )}
+              </div>
+
+              <!-- Avatar -->
+              {row.avatarUrl ? (
+                <img src={row.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
+              ) : (
+                <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                     style="background: var(--color-coral);">
+                  {(row.displayName ?? '?')[0].toUpperCase()}
+                </div>
+              )}
+
+              <!-- Name + city -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold truncate" style="color: var(--color-navy);">
+                  {row.displayName ?? 'Traveller'}
+                  {isMe && <span class="ml-1 text-xs font-normal" style="color: var(--color-coral);">(you)</span>}
+                </p>
+                <p class="text-xs truncate" style="color: var(--color-gray-text);">
+                  {row.username ? `@${row.username}` : ''}{city ? (row.username ? ' · ' : '') + city : ''}
+                </p>
+              </div>
+
+              <!-- Stat -->
+              <div class="text-right flex-shrink-0">
+                <p class="text-sm font-bold" style="color: var(--color-navy);">{val}{unit ? <span class="ml-0.5 text-xs font-normal" style="color: var(--color-gray-text);">{unit}</span> : ''}</p>
+                <p class="text-xs" style="color: var(--color-gray-text);">{row.tripsCount} trip{row.tripsCount !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+          );
+        })}
+
+        <!-- Blur CTA overlay for rows 11-20 when not logged in -->
+        {!user && rows.length > 10 && (
+          <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-6 pt-20"
+               style="background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.95) 40%, white 100%); pointer-events: none;">
+            <p class="text-sm font-semibold mb-3 pointer-events-auto" style="color: var(--color-navy);">Sign in to see the full leaderboard</p>
+            <a href="/login" class="pointer-events-auto px-6 py-2.5 rounded-full text-sm font-semibold text-white"
+               style="background: var(--color-coral);">
+              Sign in
+            </a>
+          </div>
+        )}
+      </div>
+    )}
+
+    <!-- Pinned: logged-in user outside top 20 -->
+    {myEntry && !myInTop20 && (
+      <div class="mt-4 rounded-2xl overflow-hidden" style="border: 2px solid var(--color-coral);">
+        <div class="flex items-center gap-3 px-4 py-4" style="background: rgba(245,221,215,0.25);">
+          <div class="w-8 text-center flex-shrink-0">
+            <span class="text-sm font-bold" style="color: var(--color-navy);">{myEntry.rank}</span>
+          </div>
+          {myEntry.avatarUrl ? (
+            <img src={myEntry.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
+          ) : (
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                 style="background: var(--color-coral);">
+              {(myEntry.displayName ?? '?')[0].toUpperCase()}
+            </div>
+          )}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold truncate" style="color: var(--color-navy);">
+              {myEntry.displayName ?? 'You'} <span class="text-xs font-normal" style="color: var(--color-coral);">(you)</span>
+            </p>
+            {myEntry.username && (
+              <p class="text-xs" style="color: var(--color-gray-text);">@{myEntry.username}</p>
+            )}
+          </div>
+          <div class="text-right flex-shrink-0">
+            <p class="text-sm font-bold" style="color: var(--color-navy);">
+              {getValue(myEntry, tabMeta[tab].valueKey)}
+              {tabMeta[tab].unit && <span class="ml-0.5 text-xs font-normal" style="color: var(--color-gray-text);">{tabMeta[tab].unit}</span>}
+            </p>
+            <p class="text-xs" style="color: var(--color-gray-text);">{myEntry.tripsCount} trip{myEntry.tripsCount !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <!-- CTA for users not on the leaderboard -->
+    {user && !myEntry && (
+      <div class="mt-8 rounded-2xl p-6 text-center" style="background: var(--color-blush);">
+        <p class="text-sm font-medium mb-1" style="color: var(--color-navy);">You're not on the leaderboard yet</p>
+        <p class="text-xs mb-4" style="color: var(--color-gray-text);">Stats appear once your trip booking is confirmed.</p>
+        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
+      </div>
+    )}
+
+  </div>
+</BaseLayout>

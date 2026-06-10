@@ -136,6 +136,40 @@ function initializeSchema(db: Database.Database) {
     );
   `);
 
+  // feature/gamification — usernames, leaderboard, geocoding
+  // Note: SQLite ALTER TABLE cannot add UNIQUE columns — add column then index separately
+  try { db.exec('ALTER TABLE users ADD COLUMN username TEXT'); } catch {}
+  try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users(username) WHERE username IS NOT NULL'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN usernameChangedAt INTEGER'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN leaderboardOptOut INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN showTripsPublicly INTEGER DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE users ADD COLUMN homeCityLatLng TEXT'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN trip_slug TEXT'); } catch {}
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS geocode_cache (
+      query TEXT PRIMARY KEY,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      displayName TEXT,
+      fetchedAt INTEGER DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS leaderboard_cache (
+      userId TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      displayName TEXT,
+      username TEXT,
+      avatarUrl TEXT,
+      homeCityLatLng TEXT,
+      kmsFromHome REAL DEFAULT 0,
+      daysOutdoors INTEGER DEFAULT 0,
+      destinationsCount INTEGER DEFAULT 0,
+      tripsCount INTEGER DEFAULT 0,
+      updatedAt INTEGER DEFAULT (unixepoch())
+    );
+  `);
+
   // feature/rbac — roles, admin sessions, audit log
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_roles (
