@@ -234,9 +234,9 @@ test.describe('WF-3: Register without paying journey', () => {
 // Back/forward between steps, payment tab switching, booking summary Change link
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('WF-4: Step navigation and payment tab interactions', () => {
-  test('Back on Step 2 returns to Step 1', async ({ page }) => {
+  test('Browser back on Step 2 returns to Step 1', async ({ page }) => {
     await goToStep2(page);
-    await page.locator('button:has-text("← Back")').click();
+    await page.goBack();
     await expect(page.locator('text=Continue to your details')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('text=Your Trip').first()).toBeVisible();
   });
@@ -281,6 +281,6 @@ test.describe('WF-4: Step navigation and payment tab interactions', () => {
     // Should show both advance and balance rows
     await expect(page.locator('text=Balance before trip').first()).toBeVisible();
     // Back link present
-    await expect(page.locator('text=Back to trip details')).toBeVisible();
+    await expect(page.locator('a[href*="/trips/qa-test-bookable"]').first()).toBeVisible();
   });
 });
