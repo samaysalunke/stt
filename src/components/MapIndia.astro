@@ -1,0 +1,97 @@
+---
+// Lightweight static India SVG map with destination pins.
+// No external tile provider, no API key, no Leaflet.
+// Simplified India outline path — equirectangular projection:
+//   x = (lng - 67.5) / 30 * 400
+//   y = (37.5 - lat) / 30 * 460
+
+interface Pin {
+  lat: number;
+  lng: number;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  label?: string;
+}
+
+interface Props {
+  pins?: Pin[];
+  class?: string;
+}
+
+const { pins = [], class: className = '' } = Astro.props;
+
+function project(lat: number, lng: number) {
+  const x = ((lng - 67.5) / 30) * 400;
+  const y = ((37.5 - lat) / 30) * 460;
+  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+}
+
+// Deduplicate pins to same destination
+const seen = new Map<string, Pin>();
+for (const p of pins) {
+  const key = `${Math.round(p.lat * 10)},${Math.round(p.lng * 10)}`;
+  if (!seen.has(key)) seen.set(key, p);
+}
+const uniquePins = Array.from(seen.values());
+---
+
+<svg
+  viewBox="0 0 400 460"
+  xmlns="http://www.w3.org/2000/svg"
+  class={className}
+  aria-label="Map of India showing trip destinations"
+  role="img"
+>
+  <!-- India outline (simplified, clockwise from NW) -->
+  <path
+    d="M93 20 L140 15 L153 39 L140 56 L160 80 L180 103 L170 120
+       L221 124 L272 133 L284 140 L299 147 L320 160 L333 167 L333 180
+       L327 187 L336 207 L331 213 L303 200 L280 200 L271 213 L260 220
+       L240 240 L231 260 L200 273 L173 293 L171 313 L169 340 L167 353
+       L164 360 L151 373 L135 387 L131 392
+       L120 380 L112 360 L105 347 L100 333 L96 320 L87 300 L80 280
+       L73 260 L67 233 L40 227 L40 213 L20 200 L13 191 L13 173
+       L13 133 L33 120 L53 100 L87 73 L93 53 L93 27 Z"
+    fill="rgba(245,221,215,0.25)"
+    stroke="rgba(245,221,215,0.8)"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+
+  <!-- Destination pins -->
+  {uniquePins.map((pin) => {
+    const pos = project(pin.lat, pin.lng);
+    const isCompleted = pin.status === 'completed';
+    return (
+      <>
+        {isCompleted ? (
+          <circle
+            cx={pos.x} cy={pos.y} r="6"
+            fill="var(--color-coral)"
+            stroke="white"
+            stroke-width="1.5"
+          >
+            {pin.label && <title>{pin.label}</title>}
+          </circle>
+        ) : (
+          <circle
+            cx={pos.x} cy={pos.y} r="5"
+            fill="white"
+            stroke="var(--color-coral)"
+            stroke-width="2"
+          >
+            {pin.label && <title>{pin.label}</title>}
+          </circle>
+        )}
+      </>
+    );
+  })}
+
+  {uniquePins.length === 0 && (
+    <text
+      x="200" y="240"
+      text-anchor="middle"
+      font-size="12"
+      fill="rgba(27,43,58,0.3)"
+    >No destinations yet</text>
+  )}
+</svg>

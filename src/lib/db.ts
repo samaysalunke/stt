@@ -136,6 +136,9 @@ function initializeSchema(db: Database.Database) {
     );
   `);
 
+  // feature/public-profile — share tracking on registrations
+  try { db.exec('ALTER TABLE registrations ADD COLUMN sharedAt TEXT'); } catch {}
+
   // feature/gamification — usernames, leaderboard, geocoding
   // Note: SQLite ALTER TABLE cannot add UNIQUE columns — add column then index separately
   try { db.exec('ALTER TABLE users ADD COLUMN username TEXT'); } catch {}

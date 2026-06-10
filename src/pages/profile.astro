@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getDb } from '../lib/db';
+import { readTrip } from '../lib/content';
 
 export const prerender = false;
 
@@ -28,6 +29,31 @@ const stats = db.prepare(`
   tripsCount: number;
 } | undefined;
 
+// Detect "newly completed" trips for share banner:
+// confirmed + sharedAt IS NULL + batch endDate has passed
+const shareCandidates = db.prepare(`
+  SELECT id, trip_name, trip_slug, batch_id
+  FROM registrations
+  WHERE email = ? AND status = 'confirmed' AND sharedAt IS NULL
+  ORDER BY created_at DESC
+`).all(user.email) as { id: number; trip_name: string; trip_slug: string | null; batch_id: string | null }[];
+
+interface ShareBannerTrip { id: number; tripName: string }
+let shareBannerTrip: ShareBannerTrip | null = null;
+
+const now = Date.now();
+for (const reg of shareCandidates) {
+  if (!reg.trip_slug || !reg.batch_id) continue;
+  try {
+    const trip = readTrip(reg.trip_slug);
+    const batch = (trip?.batches as any[])?.find((b: any) => b.id === reg.batch_id);
+    if (batch?.endDate && new Date(batch.endDate).getTime() < now) {
+      shareBannerTrip = { id: reg.id, tripName: reg.trip_name };
+      break;
+    }
+  } catch { /* skip if YAML can't be read */ }
+}
+
 const bookings = db.prepare(`
   SELECT trip_name, trip_date, batch_id, status, created_at
   FROM registrations
@@ -54,6 +80,32 @@ const canChangeUsername = !userRow?.usernameChangedAt;
 
 <BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." nav="back">
   <div class="container-app py-10 max-w-lg mx-auto">
+
+    <!-- Share banner: shown once after a trip completes -->
+    {shareBannerTrip && userRow?.username && (
+      <div id="share-banner" class="rounded-2xl p-4 mb-8 relative" style="background: var(--color-blush); border: 1px solid var(--color-peach);">
+        <button id="share-banner-dismiss" aria-label="Dismiss"
+                class="absolute top-3 right-3 text-lg leading-none hover:opacity-60"
+                style="color: var(--color-gray-text);">×</button>
+        <p class="text-sm font-semibold mb-0.5" style="color: var(--color-navy);">
+          {shareBannerTrip.tripName} just wrapped. Your profile is updated.
+        </p>
+        <div class="flex items-center gap-2 mt-3">
+          <code class="text-xs px-2 py-1 rounded-lg flex-1 truncate"
+                style="background: white; color: var(--color-navy); border: 1px solid var(--color-peach);">
+            seekthethrill.in/u/{userRow.username}
+          </code>
+          <button id="share-banner-copy"
+                  data-url={`https://seekthethrill.in/u/${userRow.username}`}
+                  data-reg-id={String(shareBannerTrip.id)}
+                  class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
+                  style="background: var(--color-coral);">
+            Copy link
+          </button>
+        </div>
+        <p id="share-banner-copied" class="text-xs mt-2 hidden" style="color: var(--color-coral);">Copied!</p>
+      </div>
+    )}
 
     <!-- User header -->
     <div class="flex items-center gap-4 mb-10">
@@ -212,6 +264,32 @@ const canChangeUsername = !userRow?.usernameChangedAt;
 </BaseLayout>
 
 <script>
+  // Share banner
+  async function markShareBanner(regId: string, action: 'share' | 'dismiss') {
+    await fetch('/api/profile/share-dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId: parseInt(regId), action }),
+    });
+  }
+
+  document.getElementById('share-banner-copy')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    const url = btn.dataset.url ?? '';
+    const regId = btn.dataset.regId ?? '';
+    try { await navigator.clipboard.writeText(url); } catch { /* fallback: select text */ }
+    const msg = document.getElementById('share-banner-copied');
+    if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2000); }
+    if (regId) markShareBanner(regId, 'share');
+  });
+
+  document.getElementById('share-banner-dismiss')?.addEventListener('click', () => {
+    const btn = document.getElementById('share-banner-copy') as HTMLButtonElement | null;
+    const regId = btn?.dataset.regId ?? '';
+    document.getElementById('share-banner')?.remove();
+    if (regId) markShareBanner(regId, 'dismiss');
+  });
+
   // Username form
   const usernameForm = document.getElementById('username-form') as HTMLFormElement | null;
   const usernameInput = document.getElementById('username-input') as HTMLInputElement | null;
