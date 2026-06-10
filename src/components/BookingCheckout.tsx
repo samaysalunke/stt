@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface Offer {
   tierId: string;
@@ -91,7 +91,7 @@ function Field({
   );
 }
 
-const inputCls = 'w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all focus:border-[#E8725A] focus:shadow-[0_0_0_3px_rgba(232,114,90,0.15)]';
+const inputCls = 'w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all focus:border-[#E8725A] focus:shadow-[0_0_0_3px_rgba(232,114,90,0.15)] bg-white';
 
 export default function BookingCheckout({
   slug, tripName, departure, offer, advanceAmount, balanceDueRule,
@@ -148,9 +148,26 @@ export default function BookingCheckout({
     return Object.keys(errs).length === 0;
   }
 
-  function goStep2() { setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  useEffect(() => {
+    history.replaceState({ step: 1 }, '');
+    function onPopState(e: PopStateEvent) {
+      const s = (e.state?.step as number) ?? 1;
+      setStep(s);
+      setSubmitted(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function goStep2() {
+    history.pushState({ step: 2 }, '');
+    setStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
   function goStep3() {
     if (!validateStep2()) return;
+    history.pushState({ step: 3 }, '');
     setStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -279,13 +296,6 @@ export default function BookingCheckout({
         </div>
       </div>
       <p className="text-xs mb-6 px-1" style={{ color: C.gray }}>Advance is non-refundable once paid.</p>
-      <a
-        href={`/trips/${slug}/`}
-        className="block text-center text-sm mb-3 py-2"
-        style={{ color: C.coral }}
-      >
-        ← Back to trip details
-      </a>
       <button
         onClick={goStep2}
         className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
@@ -364,17 +374,10 @@ export default function BookingCheckout({
         </Field>
       </div>
 
-      <div className="mt-6 flex gap-3">
-        <button
-          onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-          className="flex-1 py-4 rounded-full text-sm font-medium border transition-all"
-          style={{ borderColor: C.peach, color: C.navy, background: 'white' }}
-        >
-          ← Back
-        </button>
+      <div className="mt-6">
         <button
           onClick={goStep3}
-          className="flex-[3] font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
+          className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
           style={{ background: C.cta }}
         >
           Continue to payment →
@@ -467,7 +470,7 @@ export default function BookingCheckout({
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(27,43,58,0.4)' }}>Your booking</span>
           <button
             type="button"
-            onClick={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onClick={() => history.go(-2)}
             className="text-sm underline"
             style={{ color: C.coral }}
           >
@@ -683,17 +686,15 @@ export default function BookingCheckout({
       </button>
 
       {/* Secondary action */}
-      <p className="text-center text-sm">
-        <button
-          type="button"
-          onClick={() => handleSubmit(false)}
-          disabled={submitting}
-          className="underline"
-          style={{ color: 'rgba(27,43,58,0.5)' }}
-        >
-          Register without paying
-        </button>
-      </p>
+      <button
+        type="button"
+        onClick={() => handleSubmit(false)}
+        disabled={submitting}
+        className="w-full font-semibold py-4 rounded-full text-base transition-all hover:opacity-80 disabled:opacity-40"
+        style={{ color: C.coral, border: `2px solid ${C.coral}`, background: 'transparent' }}
+      >
+        Register without paying
+      </button>
     </div>
   );
 }
