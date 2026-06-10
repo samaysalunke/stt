@@ -13,9 +13,11 @@ interface Props {
   canonical?: string;
   // Navigation model (matches the prototype):
   //  'scroll' — homepage scroll-reveal hamburger header
+  //  'header' — sticky header with full hamburger (trips listing)
   //  'back'   — floating back arrow on inner pages (default)
+  //  'logo'   — sticky header with logo only, no hamburger (trip detail)
   //  'none'   — page provides its own top bar (about, album detail)
-  nav?: 'scroll' | 'back' | 'none';
+  nav?: 'scroll' | 'header' | 'back' | 'logo' | 'none';
 }
 
 const { title, description, image, canonical, nav = 'back' } = Astro.props;
@@ -100,6 +102,8 @@ const orgSchema = {
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
     {nav === 'scroll' && <Header hidden={true} user={user} />}
+    {nav === 'header' && <Header user={user} />}
+    {nav === 'logo' && <Header logoOnly={true} user={user} />}
     {nav === 'back' && <BackButton />}
     <main class="flex-1">
       <slot />

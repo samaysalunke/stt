@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { setUsername } from '../../../lib/usernames';
+import { recalculateUserLeaderboard } from '../../../lib/stats';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -37,6 +38,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (val === 1) {
       // opted out — remove from leaderboard cache
       db.prepare('DELETE FROM leaderboard_cache WHERE userId = ?').run(user.id);
+    } else {
+      // opted back in — repopulate cache from confirmed bookings (non-blocking)
+      recalculateUserLeaderboard(user.email).catch((err) =>
+        console.error('[leaderboard recalc on opt-in]', err)
+      );
     }
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

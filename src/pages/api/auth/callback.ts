@@ -63,6 +63,9 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       UPDATE users SET displayName = ?, avatarUrl = ?, lastLoginAt = unixepoch()
       WHERE googleId = ?
     `).run(displayName, avatarUrl, googleId);
+    // Backfill a username for any existing user that somehow lacks one
+    // (assignAutoUsername is a no-op if one is already set).
+    assignAutoUsername(user.id, displayName);
   } else {
     const id = crypto.randomUUID();
     db.prepare(`

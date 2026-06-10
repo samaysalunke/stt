@@ -133,6 +133,7 @@ const tripSchema: Record<string, any> = {
   title={`${tripName} — Seek the Thrill`}
   description={description || `Join ${tripName} — an offbeat group trip with Seek the Thrill.`}
   image={heroImg}
+  nav="logo"
 >
   <Fragment slot="head">
     <script type="application/ld+json" is:inline set:html={JSON.stringify(tripSchema)} />

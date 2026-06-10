@@ -111,7 +111,7 @@ export default function BookingCheckout({
   const [uploadName, setUploadName] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreeCancel, setAgreeCancel] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<null | 'payment' | 'lead'>(null);
   const [submitError, setSubmitError] = useState('');
   const [payTab, setPayTab] = useState<'upi' | 'bank'>('upi');
   const [uploadError, setUploadError] = useState('');
@@ -212,7 +212,7 @@ export default function BookingCheckout({
     }
     setSubmitError('');
     setUploadError('');
-    setSubmitting(true);
+    setSubmitting(withPayment ? 'payment' : 'lead');
     try {
       const res = await fetch('/api/register', {
         method: 'POST',
@@ -239,11 +239,11 @@ export default function BookingCheckout({
         setSubmitted(withPayment ? 'pending' : 'lead');
       } else {
         setSubmitError(data.error ?? 'Something went wrong. Please try again.');
-        setSubmitting(false);
+        setSubmitting(null);
       }
     } catch {
       setSubmitError('Network error. Please check your connection.');
-      setSubmitting(false);
+      setSubmitting(null);
     }
   }
 
@@ -698,22 +698,22 @@ export default function BookingCheckout({
       {/* Primary action */}
       <button
         onClick={() => handleSubmit(true)}
-        disabled={submitting || uploadStatus !== 'done'}
+        disabled={submitting !== null || uploadStatus !== 'done'}
         className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 disabled:opacity-40 mb-4"
         style={{ background: C.cta }}
       >
-        {submitting ? 'Submitting...' : 'Confirm my spot →'}
+        {submitting === 'payment' ? 'Submitting...' : 'Confirm my spot →'}
       </button>
 
       {/* Secondary action */}
       <button
         type="button"
         onClick={() => handleSubmit(false)}
-        disabled={submitting}
+        disabled={submitting !== null}
         className="w-full font-semibold py-4 rounded-full text-base transition-all hover:opacity-80 disabled:opacity-40"
         style={{ color: C.coral, border: `2px solid ${C.coral}`, background: 'transparent' }}
       >
-        Register without paying
+        {submitting === 'lead' ? 'Submitting...' : 'Register without paying'}
       </button>
     </div>
   );
