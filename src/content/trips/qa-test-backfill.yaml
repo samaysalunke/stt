@@ -1,0 +1,23 @@
+title: QA Test — Backfill (Past)
+slug: qa-test-backfill
+status: completed
+registrationEnabled: false
+duration: 2 Days
+description: Automated QA fixture — a past departure for historical back-fill
+  testing. Do not delete.
+paymentAmount: 500
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: ""
+batches:
+  - id: qa-backfill-2000
+    startDate: 2000-01-01
+    endDate: 2000-01-02
+    status: completed
+    offers:
+      - tierId: standard
+        price: 2000
+        cap: 1
+        booked: 0
+    bookedSpots: 0

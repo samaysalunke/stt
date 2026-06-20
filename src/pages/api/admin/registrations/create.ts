@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { readTrip, resolveBooking } from '../../../../lib/content';
+import { readTrip } from '../../../../lib/content';
+import { editableBooking } from '../../../../lib/tripEditor';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../../../lib/utils';
 import { logAction } from '../../../../lib/audit';
 import { createRegistration, type RegStatus } from '../../../../lib/registrationWrite';
@@ -15,35 +16,44 @@ const fail = (error: string, status = 400) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+export interface ResolvedSelection {
+  trip_name: string; trip_slug: string; trip_date: string;
+  batch_id: string; tier_id: string;
+  sharing_option: string | null; total_amount: number;
+  is_past: boolean;
+}
+
 /**
  * Resolve a trip + departure + occupancy selection into the fields a
- * registration row needs. Shared by single-create and bulk-import.
+ * registration row needs. Uses editableBooking (every departure, past included)
+ * so historical back-fill works; `is_past` lets callers skip capacity for it.
+ * Shared by single-create and bulk-import.
  */
 export function resolveSelection(tripSlug: string, batchId: string, tierId: string):
   | { error: string }
-  | {
-      trip_name: string; trip_slug: string; trip_date: string;
-      batch_id: string; tier_id: string;
-      sharing_option: string | null; total_amount: number;
-    } {
+  | ResolvedSelection {
   const trip = tripSlug ? readTrip(tripSlug) : null;
   if (!trip || trip.status === 'draft') return { error: 'Trip not found.' };
 
-  const booking = resolveBooking(trip);
-  const departure = booking.departures.find((d) => d.id === batchId);
+  const { editorCatalog, editorDepartures } = editableBooking(trip);
+  const departure = editorDepartures.find((d) => d.id === batchId);
   if (!departure) return { error: 'Departure not found for this trip.' };
 
   const offer = departure.offers.find((o) => o.tierId === tierId);
   if (!offer) return { error: 'Occupancy option not found for this departure.' };
 
+  const label = editorCatalog.find((c) => c.id === offer.tierId)?.label ?? offer.tierId;
+  const endMs = new Date(departure.endDate || departure.startDate).getTime();
+
   return {
     trip_name: (trip.title as string) || (trip.name as string) || tripSlug,
     trip_slug: tripSlug,
-    trip_date: `${fmtDate(departure.startDate)} – ${fmtDate(departure.endDate)}`,
+    trip_date: `${fmtDate(departure.startDate)} – ${fmtDate(departure.endDate || departure.startDate)}`,
     batch_id: departure.id,
     tier_id: offer.tierId,
-    sharing_option: booking.occupancyCatalog.length > 1 ? offer.label : null,
-    total_amount: offer.price,
+    sharing_option: editorCatalog.length > 1 ? label : null,
+    total_amount: offer.price ?? 0,
+    is_past: Number.isFinite(endMs) && endMs < Date.now(),
   };
 }
 
@@ -84,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status,
         admin_notes: sanitizeInput(body.admin_notes) || 'Added by admin',
       },
-      { sendEmail },
+      { sendEmail, skipCapacity: sel.is_past },
     );
 
     if (!result.ok) {

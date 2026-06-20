@@ -5,6 +5,7 @@ import { apiPost, adminLogin, BASE } from './helpers.mjs';
 
 const BOOKABLE = { tripSlug: 'qa-test-bookable', batchId: 'qa-bookable-2099', tierId: 'standard', tripTitle: 'QA Test — Bookable Trip' };
 const CAP = { tripSlug: 'qa-test-capacity', batchId: 'qa-cap-2099', tierId: 'solo', tripTitle: 'QA Test — Capacity Check' };
+const PAST = { tripSlug: 'qa-test-backfill', batchId: 'qa-backfill-2000', tierId: 'standard', tripTitle: 'QA Test — Backfill (Past)' };
 
 let cookie = '';
 
@@ -28,12 +29,14 @@ before(async () => {
   cookie = (await adminLogin()).cookie;
   await cleanup(BOOKABLE);
   await cleanup(CAP);
+  await cleanup(PAST);
 });
 
-// Restore the tracked YAML fixture: a confirmed create bumps qa-test-bookable's
-// bookedSpots (committed as 0); reset it so the working tree stays clean.
+// Restore tracked YAML fixtures: a confirmed create bumps bookedSpots (committed
+// as 0); reset so the working tree stays clean.
 after(async () => {
   await cleanup(BOOKABLE);
+  await cleanup(PAST);
 });
 
 // ── Auth gate ───────────────────────────────────────────────────────────────
@@ -143,4 +146,29 @@ test('TC-212 confirmed import respects tier capacity', async () => {
   assert.equal(status, 200, JSON.stringify(data));
   assert.equal(data.created, 1);       // only one fits
   assert.equal(data.counts.error, 1);  // the second is over capacity
+});
+
+// ── Historical back-fill (past departures) ───────────────────────────────────
+test('TC-213 confirmed back-fill onto a past departure succeeds', async () => {
+  const email = `qa-backfill-${Date.now()}@example.invalid`;
+  const { status, data } = await adminPost('/api/admin/registrations/create', {
+    tripSlug: PAST.tripSlug, batchId: PAST.batchId, tierId: PAST.tierId,
+    status: 'confirmed', full_name: 'Past Goer', email, phone: '9876543210', sendEmail: false,
+  });
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal((await getRegByEmail(email)).status, 'confirmed');
+});
+
+test('TC-214 capacity is NOT enforced for past departures (back-fill beyond cap)', async () => {
+  await cleanup(PAST); // cap = 1
+  const a = `qa-bf-a-${Date.now()}@example.invalid`;
+  const b = `qa-bf-b-${Date.now()}@example.invalid`;
+  const csv = ['full_name,email,phone', `BF A,${a},9876543210`, `BF B,${b},9876543210`].join('\n');
+  const { status, data } = await adminPost('/api/admin/registrations/import', {
+    tripSlug: PAST.tripSlug, batchId: PAST.batchId, tierId: PAST.tierId,
+    status: 'confirmed', csv, dryRun: false, sendEmail: false,
+  });
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal(data.created, 2);       // both recorded despite cap = 1
+  assert.equal(data.counts.error, 0);
 });

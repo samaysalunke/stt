@@ -47,8 +47,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (rows.length === 0) return fail('No data rows found. Include a header row plus at least one registrant.');
     if (rows.length > 500) return fail('Too many rows (max 500 per import).');
 
-    // Capacity budget for confirmed imports: how many more fit in this tier.
-    const cap = status === 'confirmed' ? tierCapFor(sel.trip_name, sel.batch_id, sel.tier_id) : null;
+    // Capacity budget for confirmed imports — not enforced for historical
+    // back-fill (past departures), where we're recording who actually went.
+    const cap = (status === 'confirmed' && !sel.is_past)
+      ? tierCapFor(sel.trip_name, sel.batch_id, sel.tier_id)
+      : null;
     let confirmedSoFar = status === 'confirmed' ? confirmedCountForTier(sel.batch_id, sel.tier_id) : 0;
 
     const seenEmails = new Set<string>();
@@ -102,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             status,
             admin_notes: 'Imported by admin',
           },
-          { sendEmail },
+          { sendEmail, skipCapacity: sel.is_past },
         );
         if (!result.ok) {
           preview.push({ ...base, action: 'error', reason: result.message ?? 'Insert failed' });

@@ -136,7 +136,7 @@ export interface CreateResult {
  */
 export function createRegistration(
   input: CreateRegistrationInput,
-  opts: { sendEmail?: boolean; extraConfirmedInTier?: number } = {},
+  opts: { sendEmail?: boolean; skipCapacity?: boolean } = {},
 ): CreateResult {
   const db = getDb();
 
@@ -144,7 +144,9 @@ export function createRegistration(
     return { ok: false, error: 'duplicate', message: 'Already has a registration for these dates.' };
   }
 
-  if (input.status === 'confirmed') {
+  // Capacity is enforced for live departures, but skipped for historical
+  // back-fill (the trip already happened — we're recording who actually went).
+  if (input.status === 'confirmed' && !opts.skipCapacity) {
     const cap = tierCapFor(input.trip_name, input.batch_id, input.tier_id);
     if (cap != null) {
       const count = confirmedCountForTier(input.batch_id, input.tier_id) + (opts.extraConfirmedInTier ?? 0);
