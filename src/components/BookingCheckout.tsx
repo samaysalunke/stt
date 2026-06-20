@@ -135,7 +135,6 @@ export default function BookingCheckout({
       ['phone', 'WhatsApp Number'],
       ['age', 'Age'],
       ['city', 'City'],
-      ['instagram', 'Instagram Handle'],
       ['emergencyName', 'Emergency Contact Name'],
       ['emergencyPhone', 'Emergency Contact Number'],
       ['whyJoin', 'Why do you want to join?'],
@@ -146,6 +145,10 @@ export default function BookingCheckout({
     }
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Enter a valid email address';
     if (form.phone && !/^[\+\d][\d\s\-]{5,}$/.test(form.phone)) errs.phone = 'Enter a valid phone number';
+    if (form.age) {
+      const ageNum = Number(form.age);
+      if (!Number.isInteger(ageNum) || ageNum < 16 || ageNum > 100) errs.age = 'Enter a valid age (16–100)';
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -328,7 +331,7 @@ export default function BookingCheckout({
               <input type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputCls} style={{ borderColor: errors.phone ? C.coral : C.peach }} />
             </Field>
             <Field label="How old are you?" required error={errors.age}>
-              <input type="text" placeholder="e.g. 24" value={form.age} onChange={(e) => set('age', e.target.value)} className={inputCls} style={{ borderColor: errors.age ? C.coral : C.peach }} />
+              <input type="text" inputMode="numeric" placeholder="e.g. 24" value={form.age} onChange={(e) => set('age', e.target.value)} className={inputCls} style={{ borderColor: errors.age ? C.coral : C.peach }} />
             </Field>
             <Field label="Gender">
               <select value={form.gender} onChange={(e) => set('gender', e.target.value)} className={inputCls + ' bg-white cursor-pointer'} style={{ borderColor: C.peach }}>
@@ -341,8 +344,8 @@ export default function BookingCheckout({
             <Field label="City" required error={errors.city}>
               <input type="text" value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls} style={{ borderColor: errors.city ? C.coral : C.peach }} />
             </Field>
-            <Field label="Instagram Handle" required error={errors.instagram}>
-              <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} className={inputCls} style={{ borderColor: errors.instagram ? C.coral : C.peach }} />
+            <Field label="Instagram Handle (optional)">
+              <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} className={inputCls} style={{ borderColor: C.peach }} />
             </Field>
           </div>
         </div>

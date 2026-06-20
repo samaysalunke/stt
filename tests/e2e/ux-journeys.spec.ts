@@ -72,7 +72,8 @@ test.describe('WF-1: Discovery journey — browsing to booking CTA', () => {
 
   test('trips listing cards link to /trips/[slug]/', async ({ page }) => {
     await page.goto('/trips/');
-    const card = page.locator('a[href^="/trips/"]').first();
+    // Scope to the card grid — page chrome (header drawer, footer) also links to /trips/.
+    const card = page.locator('article a[href^="/trips/"]').first();
     await expect(card).toBeVisible({ timeout: 10_000 });
     const href = await card.getAttribute('href');
     expect(href).toMatch(/^\/trips\/[a-z0-9-]+\/?$/);
@@ -142,9 +143,9 @@ test.describe('WF-2: Step 2 field-level validation', () => {
     await expect(page.locator('text=City is required')).toBeVisible({ timeout: 5_000 });
   });
 
-  test('blank Instagram shows "Instagram Handle is required"', async ({ page }) => {
+  test('blank Instagram is optional — proceeds to payment step', async ({ page }) => {
     await submitBlank(page, { instagram: '' });
-    await expect(page.locator('text=Instagram Handle is required')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('text=Pay & Confirm')).toBeVisible({ timeout: 5_000 });
   });
 
   test('blank Emergency Name shows "Emergency Contact Name is required"', async ({ page }) => {

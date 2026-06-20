@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     // Block booking for sold-out trips
     const tripSlug = sanitizeInput(body.tripSlug);
     const trip = tripSlug ? readTrip(tripSlug) : null;
-    if (trip?.status === 'sold-out') {
+    if (trip?.status === 'sold_out' || trip?.status === 'sold-out') {
       return new Response(JSON.stringify({ success: false, error: 'This trip is sold out.' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -42,7 +42,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       phone:          sanitizeInput(body.phone),
       age:            sanitizeInput(body.age),
       city:           sanitizeInput(body.city),
-      instagram:      sanitizeInput(body.instagram),
       emergencyName:  sanitizeInput(body.emergencyName),
       emergencyPhone: sanitizeInput(body.emergencyPhone),
       whyJoin:        sanitizeInput(body.whyJoin),
@@ -66,6 +65,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     if (!isValidPhone(required.phone)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid phone number.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Age is stored as free text but must be a sane whole number.
+    const ageNum = Number(required.age);
+    if (!Number.isInteger(ageNum) || ageNum < 16 || ageNum > 100) {
+      return new Response(JSON.stringify({ success: false, error: 'Please enter a valid age (16–100).' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -112,6 +120,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const sharingOption: string | null = booking.occupancyCatalog.length > 1 ? selectedOffer.label : null;
     const totalAmount: number = selectedOffer.price;
 
+    // Instagram handle is optional — store when provided, else null.
+    const instagram = sanitizeInput(body.instagram) || null;
+
     // Departure date string, derived from the resolved departure.
     const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     const tripDateStr = `${fmtDate(selectedDeparture.startDate)} – ${fmtDate(selectedDeparture.endDate)}`;
@@ -122,6 +133,22 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const registrationStatus = screenshotUrl ? 'pending' : 'lead';
 
     const db = getDb();
+
+    // Duplicate guard: block a second registration for the same departure once the
+    // traveller already has a paid-pending or confirmed seat. 'lead' rows (registered
+    // without paying) are intentionally not blocked, so the pay-after-lead flow still works.
+    const existing = db.prepare(
+      `SELECT id FROM registrations
+       WHERE email = ? AND trip_slug = ? AND batch_id = ? AND status IN ('pending','confirmed')
+       LIMIT 1`
+    ).get(required.email, tripSlug, batchId);
+    if (existing) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "You already have a registration for these dates. We'll be in touch on WhatsApp — message us if you need to change anything.",
+      }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const stmt = db.prepare(`
       INSERT INTO registrations (
         trip_name, trip_slug, trip_date, full_name, email, phone, gender,
@@ -146,7 +173,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       sanitizeInput(body.gender) || null,
       required.age,
       required.city,
-      required.instagram,
+      instagram,
       required.emergencyName,
       required.emergencyPhone,
       screenshotUrl,
