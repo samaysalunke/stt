@@ -108,7 +108,10 @@ const orgSchema = {
     <main class="flex-1">
       <slot />
     </main>
-    {isHome && <Footer />}
+    {/* Footer on every page except 'none' (checkout / about own their full chrome).
+        This keeps Terms / Privacy / Cancellation, the sitemap, and newsletter
+        reachable site-wide instead of only on the homepage. */}
+    {nav !== 'none' && <Footer />}
 
     <!-- WhatsApp Floating Button (not on the homepage, matching the prototype) -->
     {!isHome && (
