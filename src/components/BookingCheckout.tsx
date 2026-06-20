@@ -25,6 +25,11 @@ interface Props {
   bankIfsc: string;
   whatsappLink?: string;
   isLoggedIn?: boolean;
+  prefill?: Partial<Record<
+    'fullName' | 'email' | 'phone' | 'age' | 'gender' | 'city' | 'instagram' | 'emergencyName' | 'emergencyPhone',
+    string
+  >> | null;
+  prefilledFromHistory?: boolean;
 }
 
 const C = {
@@ -99,11 +104,15 @@ export default function BookingCheckout({
   upiId, bankAccountName, bankAccountNumber, bankBranch, bankIfsc,
   whatsappLink = 'https://wa.me/917975027491',
   isLoggedIn = false,
+  prefill = null,
+  prefilledFromHistory = false,
 }: Props) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', age: '', gender: '',
     city: '', instagram: '', emergencyName: '', emergencyPhone: '', whyJoin: '',
+    // Returning travellers get their details prefilled (whyJoin stays per-trip).
+    ...(prefill ?? {}),
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [screenshotUrl, setScreenshotUrl] = useState('');
@@ -316,6 +325,14 @@ export default function BookingCheckout({
     <div>
       <StepBar current={2} />
       <div className="space-y-5">
+        {prefilledFromHistory && (
+          <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm" style={{ background: C.blush, color: C.navy }}>
+            <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.coral }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Welcome back — we’ve filled in your details from last time. Give them a quick check and update anything that’s changed.</span>
+          </div>
+        )}
         <div>
           <h3 className="font-bold text-base mb-4" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

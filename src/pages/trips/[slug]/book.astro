@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import BookingCheckout from '../../../components/BookingCheckout';
 import { readTrip, readSiteSettings, resolveBooking } from '../../../lib/content';
+import { getDb } from '../../../lib/db';
 
 export const prerender = false;
 
@@ -39,6 +40,32 @@ const selectedOffer = (tierParam && availableOffers.find((o) => o.tierId === tie
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch {}
+
+// Prefill the form for a logged-in traveller. Reuse their most recent
+// registration (we already collected these details on a prior trip); fall back
+// to their account name/email when they have no booking history yet. whyJoin is
+// left blank — it's specific to each trip.
+const user = Astro.locals.user;
+let prefill: Record<string, string> | null = null;
+let prefilledFromHistory = false;
+if (user) {
+  const prev = getDb().prepare(`
+    SELECT full_name, phone, age, gender, city, instagram, emergency_name, emergency_phone
+    FROM registrations WHERE email = ? ORDER BY id DESC LIMIT 1
+  `).get(user.email) as Record<string, any> | undefined;
+  prefilledFromHistory = !!prev;
+  prefill = {
+    fullName:       prev?.full_name ?? user.displayName ?? '',
+    email:          user.email,
+    phone:          prev?.phone ?? '',
+    age:            prev?.age ?? '',
+    gender:         prev?.gender ?? '',
+    city:           prev?.city ?? '',
+    instagram:      prev?.instagram ?? '',
+    emergencyName:  prev?.emergency_name ?? '',
+    emergencyPhone: prev?.emergency_phone ?? '',
+  };
+}
 
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 ---
@@ -84,6 +111,8 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
         bankIfsc={settings.bankIfsc ?? ''}
         whatsappLink={settings.whatsappLink ?? 'https://wa.me/917975027491'}
         isLoggedIn={!!Astro.locals.user}
+        prefill={prefill}
+        prefilledFromHistory={prefilledFromHistory}
         client:load
       />
     </div>
