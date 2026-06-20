@@ -1,0 +1,197 @@
+import { getDb } from './db';
+import { listTrips, readTrip, writeTrip } from './content';
+import { recalculateUserLeaderboard } from './stats';
+import { sendRegistrationStatusConfirmed } from './email';
+
+export type RegStatus = 'lead' | 'pending' | 'confirmed' | 'rejected';
+
+/** The advance (paymentAmount) configured on the trip — the amount collected on confirm. */
+export function tripAdvanceAmount(tripName: string): number {
+  try {
+    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+    if (!matched) return 0;
+    const tripData = readTrip(matched.slug);
+    const advance = tripData?.paymentAmount;
+    return Number.isFinite(Number(advance)) ? Math.round(Number(advance)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Adjust the booked count on the specific departure (batch) a booking is for.
+ *
+ * `bookedSpots` is an admin-maintained counter (seeded/edited by hand to reflect
+ * offline bookings); confirm/un-confirm nudge it by ±1. When `tierId` is given
+ * and the batch uses the per-offer schema, also updates that `offer.booked`.
+ *
+ * ATOMICITY INVARIANT — keep this fully SYNCHRONOUS. Node is single-threaded, so
+ * a synchronous read-modify-write (readTrip → mutate → writeTrip) runs to
+ * completion in one tick and cannot interleave with another confirmation. Do NOT
+ * introduce `await` here — doing so reopens the race.
+ */
+export function adjustBookingCount(
+  tripName: string,
+  batchId: string | null,
+  delta: 1 | -1,
+  tierId?: string | null,
+) {
+  try {
+    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+    if (!matched) return;
+    const tripData = readTrip(matched.slug);
+    if (!tripData) return;
+
+    const batches = Array.isArray(tripData.batches) ? tripData.batches : [];
+    if (batches.length > 0 && batchId) {
+      const b = batches.find((x: any) => x.id === batchId);
+      if (b) {
+        const cur = typeof b.bookedSpots === 'number' ? b.bookedSpots : 0;
+        b.bookedSpots = Math.max(0, cur + delta);
+        if (tierId && Array.isArray(b.offers)) {
+          const offer = b.offers.find((o: any) => o.tierId === tierId);
+          if (offer) {
+            const curBooked = typeof offer.booked === 'number' ? offer.booked : 0;
+            offer.booked = Math.max(0, curBooked + delta);
+          }
+        }
+        writeTrip(matched.slug, tripData);
+        return;
+      }
+    }
+    // Legacy fallback: trip-level counter (old trips without departures).
+    const current = typeof tripData.currentBookings === 'number' ? tripData.currentBookings : 0;
+    tripData.currentBookings = Math.max(0, current + delta);
+    writeTrip(matched.slug, tripData);
+  } catch (err) {
+    console.error('[adjustBookingCount]', err);
+  }
+}
+
+/** Count of confirmed registrations on a given batch + tier. */
+export function confirmedCountForTier(batchId: string, tierId: string): number {
+  return (getDb()
+    .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
+    .get(batchId, tierId, 'confirmed') as { n: number }).n;
+}
+
+/** Tier cap from the trip YAML (null = unmetered). */
+export function tierCapFor(tripName: string, batchId: string, tierId: string): number | null {
+  try {
+    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+    if (!matched) return null;
+    const trip = readTrip(matched.slug);
+    const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);
+    const offer = (batch?.offers as any[])?.find((o: any) => o.tierId === tierId);
+    return offer?.cap != null ? Number(offer.cap) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Does an active (pending/confirmed) registration already exist for this person + departure? */
+export function hasActiveRegistration(email: string, tripSlug: string, batchId: string): boolean {
+  const row = getDb()
+    .prepare("SELECT id FROM registrations WHERE email=? AND trip_slug=? AND batch_id=? AND status IN ('pending','confirmed') LIMIT 1")
+    .get(email, tripSlug, batchId);
+  return !!row;
+}
+
+export interface CreateRegistrationInput {
+  trip_name: string;
+  trip_slug: string;
+  trip_date: string;
+  batch_id: string;
+  tier_id: string;
+  sharing_option: string | null;
+  total_amount: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  age?: string | null;
+  gender?: string | null;
+  city?: string | null;
+  instagram?: string | null;
+  emergency_name?: string | null;
+  emergency_phone?: string | null;
+  why_join?: string | null;
+  status: RegStatus;
+  admin_notes?: string | null;
+}
+
+export interface CreateResult {
+  ok: boolean;
+  id?: number;
+  error?: 'duplicate' | 'capacity_full' | 'db_error';
+  message?: string;
+}
+
+/**
+ * Insert an admin-created registration, applying the same confirm-time side
+ * effects as the status-update flow when status==='confirmed' (booked count,
+ * recorded advance, leaderboard recalc, optional email).
+ *
+ * `extraConfirmedInTier` lets a bulk import account for rows it has already
+ * committed for the same tier in this run, so the capacity check stays correct.
+ */
+export function createRegistration(
+  input: CreateRegistrationInput,
+  opts: { sendEmail?: boolean; extraConfirmedInTier?: number } = {},
+): CreateResult {
+  const db = getDb();
+
+  if (hasActiveRegistration(input.email, input.trip_slug, input.batch_id)) {
+    return { ok: false, error: 'duplicate', message: 'Already has a registration for these dates.' };
+  }
+
+  if (input.status === 'confirmed') {
+    const cap = tierCapFor(input.trip_name, input.batch_id, input.tier_id);
+    if (cap != null) {
+      const count = confirmedCountForTier(input.batch_id, input.tier_id) + (opts.extraConfirmedInTier ?? 0);
+      if (count >= cap) {
+        return { ok: false, error: 'capacity_full', message: `This tier is full (${count}/${cap} confirmed).` };
+      }
+    }
+  }
+
+  const advance = input.status === 'confirmed' ? tripAdvanceAmount(input.trip_name) : 0;
+
+  try {
+    const res = db.prepare(`
+      INSERT INTO registrations (
+        trip_name, trip_slug, trip_date, full_name, email, phone, gender,
+        age, city, instagram, emergency_name, emergency_phone,
+        why_join, sharing_option, total_amount, batch_id, tier_id,
+        amount_paid, status, admin_notes, source
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      input.trip_name, input.trip_slug, input.trip_date,
+      input.full_name, input.email, input.phone, input.gender ?? null,
+      input.age ?? null, input.city ?? null, input.instagram ?? null,
+      // emergency_name/phone are NOT NULL in the schema — admin rows may omit them.
+      input.emergency_name ?? '', input.emergency_phone ?? '',
+      input.why_join ?? null, input.sharing_option, input.total_amount,
+      input.batch_id, input.tier_id,
+      advance, input.status, input.admin_notes ?? null, 'admin',
+    );
+    const id = Number(res.lastInsertRowid);
+
+    if (input.status === 'confirmed') {
+      adjustBookingCount(input.trip_name, input.batch_id, 1, input.tier_id);
+      recalculateUserLeaderboard(input.email).catch((e) => console.error('[leaderboard recalc]', e));
+      if (opts.sendEmail) {
+        sendRegistrationStatusConfirmed({
+          full_name: input.full_name,
+          email: input.email,
+          trip_name: input.trip_name,
+          trip_date: input.trip_date,
+        }).catch((e) => console.error('[Email confirmed]', e));
+      }
+    }
+
+    return { ok: true, id };
+  } catch (e) {
+    console.error('[createRegistration]', e);
+    return { ok: false, error: 'db_error', message: 'Database error.' };
+  }
+}

@@ -1,75 +1,12 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
-import { listTrips, readTrip, writeTrip } from '../../../lib/content';
+import { listTrips, readTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
+import { tripAdvanceAmount, adjustBookingCount } from '../../../lib/registrationWrite';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
-
-/** The advance (paymentAmount) configured on the trip, used as the amount collected on confirm. */
-function tripAdvanceAmount(tripName: string): number {
-  try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
-    if (!matched) return 0;
-    const tripData = readTrip(matched.slug);
-    const advance = tripData?.paymentAmount;
-    return Number.isFinite(Number(advance)) ? Math.round(Number(advance)) : 0;
-  } catch {
-    return 0;
-  }
-}
-
-/**
- * Adjust the booked count on the specific departure (batch) the booking is for.
- *
- * `bookedSpots` is an admin-maintained counter, NOT a pure derived value: it's
- * seeded/edited by hand in the trip editor (e.g. to reflect offline/phone
- * bookings) and confirm/un-confirm nudge it by ±1. So it must stay a stored
- * field — do not replace it with a live DB count.
- *
- * When `tierId` is provided and the batch uses the new per-offer schema
- * (batches[].offers[]), also updates the matching `offer.booked` field so that
- * `resolveBooking` reflects the confirmed count accurately.
- *
- * ATOMICITY INVARIANT — keep this function fully SYNCHRONOUS. Node is
- * single-threaded, so a synchronous read-modify-write (readTrip → mutate →
- * writeTrip) runs to completion in one tick and cannot interleave with another
- * confirmation. Do NOT introduce `await` here — doing so reopens the race.
- */
-function adjustBookingCount(tripName: string, batchId: string | null, delta: 1 | -1, tierId?: string | null) {
-  try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
-    if (!matched) return;
-    const tripData = readTrip(matched.slug);
-    if (!tripData) return;
-
-    const batches = Array.isArray(tripData.batches) ? tripData.batches : [];
-    if (batches.length > 0 && batchId) {
-      const b = batches.find((x: any) => x.id === batchId);
-      if (b) {
-        const cur = typeof b.bookedSpots === 'number' ? b.bookedSpots : 0;
-        b.bookedSpots = Math.max(0, cur + delta);
-        // Also update per-tier offer.booked for new-schema trips.
-        if (tierId && Array.isArray(b.offers)) {
-          const offer = b.offers.find((o: any) => o.tierId === tierId);
-          if (offer) {
-            const curBooked = typeof offer.booked === 'number' ? offer.booked : 0;
-            offer.booked = Math.max(0, curBooked + delta);
-          }
-        }
-        writeTrip(matched.slug, tripData);
-        return;
-      }
-    }
-    // Legacy fallback: trip-level counter (only for old trips without departures).
-    const current = typeof tripData.currentBookings === 'number' ? tripData.currentBookings : 0;
-    tripData.currentBookings = Math.max(0, current + delta);
-    writeTrip(matched.slug, tripData);
-  } catch (err) {
-    console.error('[adjustBookingCount]', err);
-  }
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {

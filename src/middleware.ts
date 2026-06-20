@@ -58,6 +58,11 @@ export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirec
     const ownerOrOpsOnly = [
       '/admin/trips',
       '/api/admin/trips',
+      // Creating/importing registrations is a payment-data action — owner/ops only.
+      // (The bare /admin/registrations list stays viewable by trip_lead, scoped.)
+      '/admin/registrations/new',
+      '/admin/registrations/import',
+      '/api/admin/registrations',
     ];
 
     if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {

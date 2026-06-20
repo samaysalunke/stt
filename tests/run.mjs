@@ -19,6 +19,7 @@ const TEST_FILES = [
   'tests/api/register.test.mjs',
   'tests/api/register-v2.test.mjs',
   'tests/api/registration-status.test.mjs',
+  'tests/api/admin-registrations.test.mjs',
   'tests/api/contact.test.mjs',
   'tests/api/newsletter.test.mjs',
   'tests/api/auth.test.mjs',

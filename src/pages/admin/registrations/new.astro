@@ -1,0 +1,186 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listTrips, resolveBooking } from '../../../lib/content';
+export const prerender = false;
+
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+// Trip → departures → occupancy map for the cascading selects. resolveBooking()
+// returns only upcoming, bookable departures, which is what we want here.
+const tripsData = listTrips()
+  .filter((t: any) => t.status !== 'draft')
+  .map((t: any) => {
+    const booking = resolveBooking(t);
+    return {
+      slug: t.slug as string,
+      name: (t.title || t.name || t.slug) as string,
+      departures: booking.departures.map((d) => ({
+        id: d.id,
+        label: `${fmtDate(d.startDate)} – ${fmtDate(d.endDate)}${d.soldOut ? ' (sold out)' : ''}`,
+        offers: d.offers.map((o) => ({ tierId: o.tierId, label: o.label, price: o.price })),
+      })),
+    };
+  })
+  .filter((t) => t.departures.length > 0);
+
+const preselectTrip = Astro.url.searchParams.get('trip') ?? '';
+
+const inputStyle = 'width:100%;padding:0.55rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);box-sizing:border-box;';
+const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--color-text-secondary);margin:0 0 0.3rem;text-transform:uppercase;letter-spacing:0.03em;';
+---
+
+<AdminLayout title="Add Registration" page="registrations">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+    <p style="font-size:0.875rem;color:var(--color-text-secondary);margin:0;">Add a single registration manually (e.g. an offline or phone booking).</p>
+    <a href="/admin/registrations" style="font-size:0.875rem;font-weight:600;color:var(--color-coral);text-decoration:none;">← Back to registrations</a>
+  </div>
+
+  {tripsData.length === 0 ? (
+    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border-radius:0.75rem;border:1px solid var(--color-border);">No trips with upcoming departures to add registrations to.</p>
+  ) : (
+    <form id="reg-form" style="max-width:720px;background:white;border:1px solid var(--color-border);border-radius:0.9rem;padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;">
+
+      <!-- Trip / departure / occupancy -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div style="grid-column:1 / -1;">
+          <label style={labelStyle}>Trip *</label>
+          <select id="trip" style={inputStyle}>
+            <option value="">Select a trip…</option>
+            {tripsData.map((t) => (
+              <option value={t.slug} selected={t.slug === preselectTrip}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Departure *</label>
+          <select id="departure" style={inputStyle}><option value="">Select trip first…</option></select>
+        </div>
+        <div>
+          <label style={labelStyle}>Occupancy *</label>
+          <select id="tier" style={inputStyle}><option value="">—</option></select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <label style={labelStyle}>Status</label>
+          <select id="status" style={inputStyle}>
+            <option value="pending" selected>Pending (awaiting verification)</option>
+            <option value="lead">Lead (registered, unpaid)</option>
+            <option value="confirmed">Confirmed</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:0.5rem;">
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--color-text-primary);cursor:pointer;">
+            <input type="checkbox" id="sendEmail" checked /> Send notification email (on confirm)
+          </label>
+        </div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--color-border);margin:0.25rem 0;" />
+
+      <!-- Registrant -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div><label style={labelStyle}>Full name *</label><input id="full_name" type="text" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Email *</label><input id="email" type="email" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Phone *</label><input id="phone" type="tel" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Age</label><input id="age" type="text" inputmode="numeric" style={inputStyle} /></div>
+        <div>
+          <label style={labelStyle}>Gender</label>
+          <select id="gender" style={inputStyle}>
+            <option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
+          </select>
+        </div>
+        <div><label style={labelStyle}>City</label><input id="city" type="text" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Instagram</label><input id="instagram" type="text" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Emergency name</label><input id="emergency_name" type="text" style={inputStyle} /></div>
+        <div><label style={labelStyle}>Emergency phone</label><input id="emergency_phone" type="tel" style={inputStyle} /></div>
+        <div style="grid-column:1 / -1;"><label style={labelStyle}>Why joining / notes</label><textarea id="why_join" rows="2" style={inputStyle}></textarea></div>
+      </div>
+
+      <div id="form-msg" style="display:none;font-size:0.85rem;padding:0.6rem 0.85rem;border-radius:0.5rem;"></div>
+
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <button type="submit" id="submit-btn" style="padding:0.6rem 1.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);">Add registration</button>
+        <a href="/admin/registrations" style="font-size:0.85rem;color:var(--color-text-secondary);text-decoration:none;">Cancel</a>
+      </div>
+    </form>
+  )}
+
+  <script is:inline define:vars={{ tripsData, preselectTrip }}>
+    const tripSel = document.getElementById('trip');
+    const depSel = document.getElementById('departure');
+    const tierSel = document.getElementById('tier');
+    const bySlug = Object.fromEntries(tripsData.map((t) => [t.slug, t]));
+
+    function fillDepartures(slug) {
+      const t = bySlug[slug];
+      depSel.innerHTML = '<option value="">Select departure…</option>';
+      tierSel.innerHTML = '<option value="">—</option>';
+      if (!t) return;
+      for (const d of t.departures) {
+        const o = document.createElement('option');
+        o.value = d.id; o.textContent = d.label;
+        depSel.appendChild(o);
+      }
+      if (t.departures.length === 1) { depSel.value = t.departures[0].id; fillTiers(slug, t.departures[0].id); }
+    }
+    function fillTiers(slug, depId) {
+      const t = bySlug[slug];
+      const d = t && t.departures.find((x) => x.id === depId);
+      tierSel.innerHTML = '';
+      if (!d) { tierSel.innerHTML = '<option value="">—</option>'; return; }
+      for (const off of d.offers) {
+        const o = document.createElement('option');
+        o.value = off.tierId;
+        o.textContent = off.label + ' — ₹' + off.price.toLocaleString('en-IN');
+        tierSel.appendChild(o);
+      }
+    }
+
+    tripSel?.addEventListener('change', () => fillDepartures(tripSel.value));
+    depSel?.addEventListener('change', () => fillTiers(tripSel.value, depSel.value));
+    if (preselectTrip && bySlug[preselectTrip]) fillDepartures(preselectTrip);
+
+    const form = document.getElementById('reg-form');
+    const msg = document.getElementById('form-msg');
+    const btn = document.getElementById('submit-btn');
+    function showMsg(text, ok) {
+      msg.style.display = 'block';
+      msg.textContent = text;
+      msg.style.background = ok ? 'rgba(34,166,84,0.10)' : '#FEE2E2';
+      msg.style.color = ok ? 'var(--color-success)' : '#991B1B';
+    }
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const val = (id) => (document.getElementById(id)).value.trim();
+      if (!tripSel.value || !depSel.value || !tierSel.value) return showMsg('Pick a trip, departure, and occupancy.', false);
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const payload = {
+        tripSlug: tripSel.value, batchId: depSel.value, tierId: tierSel.value,
+        status: val('status'), sendEmail: document.getElementById('sendEmail').checked,
+        full_name: val('full_name'), email: val('email'), phone: val('phone'),
+        age: val('age'), gender: val('gender'), city: val('city'), instagram: val('instagram'),
+        emergency_name: val('emergency_name'), emergency_phone: val('emergency_phone'), why_join: val('why_join'),
+      };
+      try {
+        const res = await fetch('/api/admin/registrations/create', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+          showMsg('Registration added. Redirecting…', true);
+          setTimeout(() => { window.location.href = '/admin/registrations'; }, 900);
+        } else {
+          showMsg(data.error || 'Could not add registration.', false);
+          btn.disabled = false; btn.textContent = 'Add registration';
+        }
+      } catch {
+        showMsg('Network error. Try again.', false);
+        btn.disabled = false; btn.textContent = 'Add registration';
+      }
+    });
+  </script>
+</AdminLayout>

@@ -29,8 +29,10 @@ const totalRevenue = registrations
   .reduce((s, r) => s + (r.amount_paid ?? 0), 0);
 
 // Build trip status lookup from YAML content
-const allTrips = listTrips() as Array<{ name: string; status?: string; slug: string }>;
+const allTrips = listTrips() as Array<{ name: string; title?: string; status?: string; slug: string }>;
 const tripStatusMap = new Map(allTrips.map(t => [t.name as string, (t.status as string) || 'upcoming']));
+// Trip display-name → slug, for the per-group "Add / Import" deep links.
+const tripSlugMap = new Map(allTrips.map(t => [(t.title || t.name) as string, t.slug]));
 
 // Group registrations by trip_name
 const regsByTrip = new Map<string, typeof registrations>();
@@ -134,6 +136,12 @@ function fmtCurrency(n: number) {
       </select>
     </div>
     <div style="display:flex;gap:0.5rem;">
+      {!isTripLead && (
+        <>
+          <a href="/admin/registrations/new" style="padding:0.45rem 1rem;background:var(--color-coral);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">+ Add</a>
+          <a href="/admin/registrations/import" style="padding:0.45rem 1rem;background:white;color:var(--color-coral);border:1.5px solid var(--color-coral);border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">↑ Import</a>
+        </>
+      )}
       <a
         id="exportLink"
         href="/api/admin/export?type=registrations"
@@ -167,6 +175,12 @@ function fmtCurrency(n: number) {
                 <span style={`padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;${tripStatusBadgeStyle(tripStatus)}`}>
                   {tripStatus.replace(/-/g, ' ')}
                 </span>
+                {!isTripLead && tripSlugMap.get(tripName) && (
+                  <span style="display:inline-flex;gap:0.4rem;" onclick="event.stopPropagation()">
+                    <a href={`/admin/registrations/new?trip=${tripSlugMap.get(tripName)}`} style="font-size:0.72rem;font-weight:700;color:var(--color-coral);text-decoration:none;border:1px solid var(--color-coral);border-radius:0.4rem;padding:0.1rem 0.5rem;">+ Add</a>
+                    <a href={`/admin/registrations/import?trip=${tripSlugMap.get(tripName)}`} style="font-size:0.72rem;font-weight:700;color:var(--color-coral);text-decoration:none;border:1px solid var(--color-coral);border-radius:0.4rem;padding:0.1rem 0.5rem;">↑ Import</a>
+                  </span>
+                )}
               </div>
               <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
                 {stats.lead > 0 && (

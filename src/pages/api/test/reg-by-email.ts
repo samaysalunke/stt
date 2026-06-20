@@ -17,9 +17,9 @@ export const GET: APIRoute = async ({ url }) => {
     });
   }
   const row = getDb()
-    .prepare('SELECT id, status, tier_id, batch_id, trip_name FROM registrations WHERE email = ? ORDER BY id DESC LIMIT 1')
+    .prepare('SELECT id, status, tier_id, batch_id, trip_name, source, amount_paid FROM registrations WHERE email = ? ORDER BY id DESC LIMIT 1')
     .get(email) as Record<string, any> | null;
-  return new Response(JSON.stringify(row ?? null), {
+  return new Response(JSON.stringify(row ?? { found: false }), {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });
 };
