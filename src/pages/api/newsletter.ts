@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       VALUES (?, ?, 'active', ?, ?, 1)
     `).run(email, name, source, token);
 
-    sendNewsletterWelcome(email).catch(err => console.error('[Newsletter welcome email]', err));
+    sendNewsletterWelcome(email, token).catch(err => console.error('[Newsletter welcome email]', err));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

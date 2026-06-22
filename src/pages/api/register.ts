@@ -216,6 +216,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       })
       .catch((emailErr) => {
         console.error('[Register email error]', emailErr);
+        try {
+          db.prepare('UPDATE registrations SET email_error = ? WHERE id = ?')
+            .run(String(emailErr?.message ?? emailErr), registrationId);
+        } catch {}
       });
 
     sendAdminRegistrationNotification({

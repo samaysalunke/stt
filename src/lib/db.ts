@@ -114,6 +114,8 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN instagram TEXT'); } catch {}
   // Migration: tier_id for per-departure occupancy tracking (new schema)
   try { db.exec('ALTER TABLE registrations ADD COLUMN tier_id TEXT'); } catch {}
+  // Migration: store email send error for failed transactional emails so ops can follow up
+  try { db.exec('ALTER TABLE registrations ADD COLUMN email_error TEXT'); } catch {}
 
   // feature/auth — user accounts + sessions
   db.exec(`
