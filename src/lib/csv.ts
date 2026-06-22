@@ -55,6 +55,30 @@ export function parseCsvToObjects(input: string): Record<string, string>[] {
   return out;
 }
 
+const normalizeKey = (value: string) => normalizeHeader(value);
+
+const TIER_HEADER_HINTS = [
+  'tier_id',
+  'tier',
+  'occupancy',
+  'occupancy option',
+  'stay',
+  'stay option',
+  'sharing',
+  'sharing option',
+  'sharing tier',
+];
+
+export function inferTierIdFromRow(row: Record<string, string>): string {
+  for (const [key, value] of Object.entries(row)) {
+    const normalizedKey = normalizeKey(key);
+    if (!TIER_HEADER_HINTS.some((hint) => normalizedKey === normalizeKey(hint) || normalizedKey.includes(normalizeKey(hint)))) continue;
+    const tier = value.trim();
+    if (tier) return tier;
+  }
+  return '';
+}
+
 export const GOOGLE_FORM_ACCEPTANCE = 'I agree to the terms and conditions';
 
 const normalizeHeader = (value: string) => value

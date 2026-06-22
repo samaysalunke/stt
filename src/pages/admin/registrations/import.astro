@@ -27,13 +27,12 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       </label>
 
       <!-- Destination -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div style="grid-column:1 / -1;">
           <label style={labelStyle}>Trip *</label>
           <select id="trip" style={inputStyle}><option value="">Select a trip…</option></select>
         </div>
         <div><label style={labelStyle}>Departure *</label><select id="departure" style={inputStyle}><option value="">Select trip first…</option></select></div>
-        <div><label style={labelStyle}>Occupancy *</label><select id="tier" style={inputStyle}><option value="">—</option></select></div>
         <div><label style={labelStyle}>Status</label>
           <select id="status" style={inputStyle}>
             <option value="pending" selected>Pending</option><option value="lead">Lead</option><option value="confirmed">Confirmed</option>
@@ -60,9 +59,9 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
           </label>
         </div>
       </div>
-      <textarea id="csv-content" rows="8" placeholder="full_name,email,phone,age,gender,city,instagram,emergency_name,emergency_phone,why_join"
+      <textarea id="csv-content" rows="8" placeholder="full_name,email,phone,tier_id,age,gender,city,instagram,emergency_name,emergency_phone,why_join"
         style="width:100%;padding:0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:monospace;box-sizing:border-box;line-height:1.5;"></textarea>
-      <p style="font-size:0.75rem;color:var(--color-text-secondary);margin:0;">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, instagram, emergency_name, emergency_phone, why_join.</p>
+      <p style="font-size:0.75rem;color:var(--color-text-secondary);margin:0;">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, instagram, emergency_name, emergency_phone, why_join. Generic CSVs should also include a tier column such as <strong>tier_id</strong> or <strong>occupancy</strong>; Google Forms CSVs can use their stay option column directly.</p>
 
       <div style="display:flex;gap:0.75rem;align-items:center;">
         <button id="preview-btn" type="button" style="padding:0.55rem 1.25rem;background:var(--color-navy);color:white;border:none;border-radius:0.5rem;font-size:0.875rem;font-weight:700;cursor:pointer;">Preview</button>
@@ -86,7 +85,6 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
   <script is:inline define:vars={{ tripsData, preselectTrip, preselectDeparture }}>
     const tripSel = document.getElementById('trip');
     const depSel = document.getElementById('departure');
-    const tierSel = document.getElementById('tier');
     const backfill = document.getElementById('backfill');
     const bySlug = Object.fromEntries(tripsData.map((t) => [t.slug, t]));
 
@@ -98,27 +96,18 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       tripSel.innerHTML = '<option value="">Select a trip…</option>';
       for (const t of visibleTrips()) { const o = document.createElement('option'); o.value = t.slug; o.textContent = t.name; tripSel.appendChild(o); }
       if (cur && visibleTrips().some((t) => t.slug === cur)) { tripSel.value = cur; fillDepartures(cur); }
-      else { depSel.innerHTML = '<option value="">Select trip first…</option>'; tierSel.innerHTML = '<option value="">—</option>'; }
+      else { depSel.innerHTML = '<option value="">Select trip first…</option>'; }
     }
     function fillDepartures(slug, preferredDeparture) {
       const t = bySlug[slug];
       const deps = visibleDeps(t);
       depSel.innerHTML = '<option value="">Select departure…</option>';
-      tierSel.innerHTML = '<option value="">—</option>';
       for (const d of deps) { const o = document.createElement('option'); o.value = d.id; o.textContent = d.label; depSel.appendChild(o); }
       const selected = preferredDeparture && deps.some((d) => d.id === preferredDeparture)
         ? preferredDeparture : deps.length === 1 ? deps[0].id : '';
-      if (selected) { depSel.value = selected; fillTiers(slug, selected); }
-    }
-    function fillTiers(slug, depId) {
-      const t = bySlug[slug];
-      const d = t && t.departures.find((x) => x.id === depId);
-      tierSel.innerHTML = '';
-      if (!d) { tierSel.innerHTML = '<option value="">—</option>'; return; }
-      for (const off of d.offers) { const o = document.createElement('option'); o.value = off.tierId; o.textContent = off.label + ' — ₹' + off.price.toLocaleString('en-IN'); tierSel.appendChild(o); }
+      if (selected) { depSel.value = selected; }
     }
     tripSel?.addEventListener('change', () => fillDepartures(tripSel.value));
-    depSel?.addEventListener('change', () => fillTiers(tripSel.value, depSel.value));
     backfill?.addEventListener('change', () => refreshTrips());
     if (preselectTrip && bySlug[preselectTrip] && (
       !bySlug[preselectTrip].hasUpcoming || bySlug[preselectTrip].departures.some((d) => d.id === preselectDeparture && d.past)
@@ -136,9 +125,9 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
     });
 
     // Template download
-    const HEADERS = 'full_name,email,phone,age,gender,city,instagram,emergency_name,emergency_phone,why_join';
+    const HEADERS = 'full_name,email,phone,tier_id,age,gender,city,instagram,emergency_name,emergency_phone,why_join';
     document.getElementById('template-btn')?.addEventListener('click', () => {
-      const sample = HEADERS + '\n' + 'Asha Rao,asha@example.com,+91 9000000001,28,female,Pune,@asharao,Mom,+91 9000000002,Excited for the trek';
+      const sample = HEADERS + '\n' + 'Asha Rao,asha@example.com,+91 9000000001,double,28,female,Pune,@asharao,Mom,+91 9000000002,Excited for the trek';
       const blob = new Blob([sample], { type: 'text/csv' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = 'registrations-template.csv'; a.click();
@@ -154,7 +143,7 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
 
     function selectionPayload(dryRun) {
       return {
-        tripSlug: tripSel.value, batchId: depSel.value, tierId: tierSel.value,
+        tripSlug: tripSel.value, batchId: depSel.value,
         status: document.getElementById('status').value,
         sendEmail: document.getElementById('sendEmail').checked,
         capacityOverride: document.getElementById('capacityOverride').checked,
@@ -162,7 +151,7 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       };
     }
     function validSelection() {
-      if (!tripSel.value || !depSel.value || !tierSel.value) { msg.textContent = 'Pick a trip, departure, and occupancy.'; return false; }
+      if (!tripSel.value || !depSel.value) { msg.textContent = 'Pick a trip and departure.'; return false; }
       if (!textarea.value.trim()) { msg.textContent = 'Upload or paste a CSV first.'; return false; }
       return true;
     }

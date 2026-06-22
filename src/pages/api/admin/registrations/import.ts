@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../../../lib/utils';
 import { logAction } from '../../../../lib/audit';
-import { parseCsvToObjects, parseGoogleFormsRegistrations } from '../../../../lib/csv';
+import { inferTierIdFromRow, parseCsvToObjects, parseGoogleFormsRegistrations } from '../../../../lib/csv';
 import { createRegistration, hasActiveRegistration, confirmedCountForTier, tierCapFor, type RegStatus } from '../../../../lib/registrationWrite';
 import { resolveSelection, type ResolvedSelection } from './create';
 
@@ -18,7 +18,8 @@ function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:strin
   const raw = google ?? parseCsvToObjects(csv).map((r, i) => ({
     row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
     emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
-    city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join), tier_id:fallbackTier, status:fallbackStatus,
+    city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
+    tier_id: inferTierIdFromRow(r) || fallbackTier, status:fallbackStatus,
   }));
 
   for (const r of raw) {

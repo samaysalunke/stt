@@ -121,6 +121,18 @@ test('TC-210 import dry-run classifies create / skip / error without inserting',
   assert.equal(reg.found, false);
 });
 
+test('TC-210a import dry-run can infer occupancy from the CSV tier column', async () => {
+  const email = `qa-import-tier-${Date.now()}@example.invalid`;
+  const csv = ['full_name,email,phone,tier_id', `Tier Row,${email},9876543210,standard`].join('\n');
+  const { status, data } = await adminPost('/api/admin/registrations/import', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId,
+    status: 'pending', csv, dryRun: true,
+  });
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal(data.counts.create, 1);
+  assert.equal(data.preview[0].tierId, 'standard');
+});
+
 test('TC-211 import commit inserts only the valid new rows', async () => {
   const a = `qa-commit-a-${Date.now()}@example.invalid`;
   const b = `qa-commit-b-${Date.now()}@example.invalid`;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
-import { parseCsv, parseCsvToObjects, parseGoogleFormsRegistrations, parseIndiaFormsTimestamp } from '../../src/lib/csv';
+import { inferTierIdFromRow, parseCsv, parseCsvToObjects, parseGoogleFormsRegistrations, parseIndiaFormsTimestamp } from '../../src/lib/csv';
 
 describe('parseCsv', () => {
   it('parses simple rows', () => {
@@ -83,5 +83,17 @@ describe('parseCsvToObjects', () => {
 
   it('fills missing trailing cells with empty strings', () => {
     expect(parseCsvToObjects('a,b,c\n1,2')).toEqual([{ a: '1', b: '2', c: '' }]);
+  });
+});
+
+describe('inferTierIdFromRow', () => {
+  it('reads the tier from common CSV column names', () => {
+    expect(inferTierIdFromRow({ tier_id: 'double' })).toBe('double');
+    expect(inferTierIdFromRow({ occupancy: 'triple' })).toBe('triple');
+    expect(inferTierIdFromRow({ 'What stay option do you prefer?': 'double' })).toBe('double');
+  });
+
+  it('returns an empty string when no tier column is present', () => {
+    expect(inferTierIdFromRow({ full_name: 'Asha' })).toBe('');
   });
 });
