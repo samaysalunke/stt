@@ -1,463 +1,103 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import RegistrationCard from '../../components/admin/RegistrationCard.astro';
 import { getDb } from '../../lib/db';
+import { editableBooking } from '../../lib/tripEditor';
 import { listTrips } from '../../lib/content';
 export const prerender = false;
 
+type Reg = Record<string, any>;
+type DepartureModel = { id:string; startDate:string; endDate:string; status:string; regs:Reg[]; cap:number|null; booked:number; soldOut:boolean; historical:boolean };
+type TripModel = { slug:string; name:string; active:boolean; nextDate:string; departures:DepartureModel[]; historical:boolean };
 const adminUser = Astro.locals.adminUser;
-
-// trip_lead: scoped to their assigned trips only; no payment actions
 const isTripLead = adminUser?.role === 'trip_lead';
-const allowedBatchIds = isTripLead ? (adminUser?.tripIds ?? []) : null;
+const allowedBatchIds: string[] | null = isTripLead ? (adminUser?.tripIds ?? []) : null;
+const registrations = (allowedBatchIds === null
+  ? getDb().prepare('SELECT * FROM registrations ORDER BY id DESC').all()
+  : allowedBatchIds.length ? getDb().prepare(`SELECT * FROM registrations WHERE batch_id IN (${allowedBatchIds.map(() => '?').join(',')}) ORDER BY id DESC`).all(...allowedBatchIds) : []) as Reg[];
 
-const registrations = (allowedBatchIds !== null
-  ? getDb()
-      .prepare(`SELECT * FROM registrations WHERE batch_id IN (${allowedBatchIds.map(() => '?').join(',') || "''"}) ORDER BY id DESC`)
-      .all(...allowedBatchIds)
-  : getDb()
-      .prepare('SELECT * FROM registrations ORDER BY id DESC')
-      .all()
-) as Record<string, any>[];
+const today = new Date(); today.setHours(0,0,0,0);
+const trips = listTrips();
+const knownBatchIds = new Set<string>();
+const regsByBatch = new Map<string, Reg[]>();
+for (const r of registrations) if (r.batch_id) { const a=regsByBatch.get(r.batch_id) ?? []; a.push(r); regsByBatch.set(r.batch_id,a); }
 
-const total = registrations.length;
-const leads = registrations.filter(r => r.status === 'lead').length;
-const pending = registrations.filter(r => r.status === 'pending').length;
-const confirmed = registrations.filter(r => r.status === 'confirmed').length;
-const rejected = registrations.filter(r => r.status === 'rejected').length;
-const totalRevenue = registrations
-  .filter(r => r.status !== 'rejected')
-  .reduce((s, r) => s + (r.amount_paid ?? 0), 0);
+const tripModels: TripModel[] = trips.map((trip:any) => {
+  const name = String(trip.title || trip.name || trip.slug);
+  const { editorDepartures } = editableBooking(trip);
+  const departures: DepartureModel[] = editorDepartures
+    .filter((d:any) => d.id && (!isTripLead || allowedBatchIds!.includes(String(d.id))))
+    .map((d:any) => {
+      const id=String(d.id); knownBatchIds.add(id);
+      const offers=Array.isArray(d.offers)?d.offers:[];
+      const metered=offers.length>0 && offers.every((o:any)=>o.cap != null);
+      const cap=metered?offers.reduce((n:number,o:any)=>n+Number(o.cap||0),0):null;
+      const booked=offers.reduce((n:number,o:any)=>n+Number(o.booked||0),0);
+      const soldOut=d.status==='sold-out'||d.status==='sold_out'||(cap!==null&&booked>=cap);
+      const start=new Date(d.startDate); start.setHours(0,0,0,0);
+      const historical=!d.startDate||start<today||d.status==='completed'||d.status==='draft'||soldOut;
+      return { id, startDate:String(d.startDate||''), endDate:String(d.endDate||d.startDate||''), status:String(d.status||'booking-open'), regs:regsByBatch.get(id)??[], cap, booked, soldOut, historical };
+    }).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  const activeDeps=departures.filter(d=>trip.registrationEnabled!==false && !d.historical && ['booking-open','booking_open','filling-fast','filling_fast','upcoming'].includes(d.status) && !d.soldOut && (d.cap===null||d.booked<d.cap));
+  return { slug:String(trip.slug), name, active:activeDeps.length>0, nextDate:activeDeps[0]?.startDate ?? departures[0]?.startDate ?? '9999', departures, historical:activeDeps.length===0 };
+}).filter(t=>t.departures.length>0).sort((a,b)=>Number(b.active)-Number(a.active)||a.nextDate.localeCompare(b.nextDate)||a.name.localeCompare(b.name));
 
-// Build trip status lookup from YAML content
-const allTrips = listTrips() as Array<{ name: string; title?: string; status?: string; slug: string }>;
-const tripStatusMap = new Map(allTrips.map(t => [t.name as string, (t.status as string) || 'upcoming']));
-// Trip display-name → slug, for the per-group "Add / Import" deep links.
-const tripSlugMap = new Map(allTrips.map(t => [(t.title || t.name) as string, t.slug]));
-
-// Group registrations by trip_name
-const regsByTrip = new Map<string, typeof registrations>();
-for (const reg of registrations) {
-  const tn = reg.trip_name as string;
-  if (!regsByTrip.has(tn)) regsByTrip.set(tn, []);
-  regsByTrip.get(tn)!.push(reg);
-}
-
-// Sort groups: booking-open → upcoming → sold-out → completed → draft → unknown
-const STATUS_ORDER = ['booking-open', 'upcoming', 'sold-out', 'completed', 'draft'];
-const tripGroups = [...regsByTrip.entries()].sort(([aName], [bName]) => {
-  const aIdx = STATUS_ORDER.indexOf(tripStatusMap.get(aName) ?? '');
-  const bIdx = STATUS_ORDER.indexOf(tripStatusMap.get(bName) ?? '');
-  return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-});
-
-function groupStats(regs: typeof registrations) {
-  return {
-    lead:      regs.filter(r => r.status === 'lead').length,
-    pending:   regs.filter(r => r.status === 'pending').length,
-    confirmed: regs.filter(r => r.status === 'confirmed').length,
-    rejected:  regs.filter(r => r.status === 'rejected').length,
-  };
-}
-
-function statusStyle(status: string) {
-  if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
-  if (status === 'rejected')  return 'background:#FEE2E2;color:#991B1B;';
-  if (status === 'lead')      return 'background:#FEF9C3;color:#78350F;';
-  return 'background:#FEF3C7;color:#92400E;';
-}
-
-function tripStatusBadgeStyle(status: string) {
-  if (status === 'booking-open') return 'background:#D1FAE5;color:#065F46;';
-  if (status === 'upcoming')     return 'background:#FEF3C7;color:#92400E;';
-  if (status === 'sold-out')     return 'background:#FEE2E2;color:#991B1B;';
-  if (status === 'completed')    return 'background:#E5E7EB;color:#374151;';
-  return 'background:#F3F4F6;color:#6B7280;';
-}
-
-function tripGroupHeaderStyle(status: string) {
-  if (status === 'booking-open') return 'border-left:4px solid var(--color-coral);background:var(--color-blush);';
-  if (status === 'upcoming')     return 'border-left:4px solid var(--color-peach);background:#FBF6F4;';
-  return 'border-left:4px solid var(--color-border);background:white;';
-}
-
-function fmt(date: string) {
-  if (!date) return '—';
-  return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function fmtCurrency(n: number) {
-  return '₹' + (n ?? 0).toLocaleString('en-IN');
-}
+const legacyRegs = registrations.filter(r=>!r.batch_id || !knownBatchIds.has(String(r.batch_id)));
+const stats=(rs:Reg[])=>({lead:rs.filter(r=>r.status==='lead').length,pending:rs.filter(r=>r.status==='pending').length,confirmed:rs.filter(r=>r.status==='confirmed').length,rejected:rs.filter(r=>r.status==='rejected').length});
+const total=registrations.length, totals=stats(registrations);
+const revenue=registrations.filter(r=>r.status!=='rejected').reduce((n,r)=>n+Number(r.amount_paid||0),0);
+const fmt=(d:string)=>d?new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'—';
+const money=(n:number)=>'₹'+n.toLocaleString('en-IN');
+const historyCount=tripModels.reduce((n,t)=>n+t.departures.filter(d=>d.historical).length,0)+(legacyRegs.length?1:0);
 ---
-
 <AdminLayout title="Registrations" page="registrations">
-  <!-- Stats row -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
-    {[
-      { label: 'Total', value: total, color: 'var(--color-primary)' },
-      { label: 'Leads', value: leads, color: '#78350F' },
-      { label: 'Pending', value: pending, color: '#D97706' },
-      { label: 'Confirmed', value: confirmed, color: 'var(--color-success)' },
-      { label: 'Rejected', value: rejected, color: 'var(--color-danger)' },
-      { label: 'Revenue', value: fmtCurrency(totalRevenue), color: 'var(--color-primary)' },
-    ].map(s => (
-      <div style="background:white;border:1px solid var(--color-border);border-radius:0.75rem;padding:1rem 1.25rem;">
-        <p style="margin:0 0 0.25rem;font-size:0.75rem;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">{s.label}</p>
-        <p style={`margin:0;font-size:1.5rem;font-weight:800;font-family:var(--font-display);color:${s.color};`}>{s.value}</p>
-      </div>
-    ))}
+  <div class="stats-grid">{[
+    ['Total',total,'var(--color-primary)'],['Leads',totals.lead,'#78350F'],['Pending',totals.pending,'#D97706'],['Confirmed',totals.confirmed,'var(--color-success)'],['Rejected',totals.rejected,'var(--color-danger)'],['Revenue',money(revenue),'var(--color-primary)']
+  ].map(([label,value,color])=><div class="stat-card"><p>{label}</p><strong style={`color:${color}`}>{value}</strong></div>)}</div>
+
+  <div class="toolbar">
+    <div class="filters"><input id="search" type="search" placeholder="Search name, email, trip…"/><select id="statusFilter"><option value="">All statuses</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option></select><select id="tripFilter"><option value="">All trips</option>{tripModels.map(t=><option value={t.name}>{t.name}</option>)}</select></div>
+    <div class="actions">{!isTripLead&&<><a class="primary" href="/admin/registrations/new">+ Add</a><a href="/admin/registrations/import">↑ Import</a></>}<a class="export" id="exportLink" href="/api/admin/export?type=registrations">↓ Export CSV</a></div>
   </div>
+  <div class="history-control"><label><input id="show-history" type="checkbox"/> Show history</label><span>{historyCount} historical/closed {historyCount===1?'group':'groups'}</span></div>
 
-  <!-- Toolbar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-      <input
-        type="text"
-        id="search"
-        placeholder="Search name, email, trip…"
-        style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);width:220px;"
-      />
-      <select id="statusFilter" style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);">
-        <option value="">All statuses</option>
-        <option value="lead">Lead</option>
-        <option value="pending">Pending</option>
-        <option value="confirmed">Confirmed</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      <select id="tripFilter" style="padding:0.45rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);min-width:180px;">
-        <option value="">All trips</option>
-        {allTrips.sort((a, b) => {
-          const aIdx = STATUS_ORDER.indexOf((tripStatusMap.get(a.name as string) ?? ''));
-          const bIdx = STATUS_ORDER.indexOf((tripStatusMap.get(b.name as string) ?? ''));
-          return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-        }).map(t => (
-          <option value={t.name}>{t.name}</option>
-        ))}
-      </select>
-    </div>
-    <div style="display:flex;gap:0.5rem;">
-      {!isTripLead && (
-        <>
-          <a href="/admin/registrations/new" style="padding:0.45rem 1rem;background:var(--color-coral);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">+ Add</a>
-          <a href="/admin/registrations/import" style="padding:0.45rem 1rem;background:white;color:var(--color-coral);border:1.5px solid var(--color-coral);border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">↑ Import</a>
-        </>
-      )}
-      <a
-        id="exportLink"
-        href="/api/admin/export?type=registrations"
-        style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
-      >
-        ↓ Export CSV
-      </a>
-    </div>
-  </div>
+  {!isTripLead&&<div class="bulk-bar"><label><input id="select-all-visible" type="checkbox"/> Select all matching</label><div><strong id="selected-count">0 selected</strong><select id="bulk-status"><option value="">Choose new status…</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option></select><button id="apply-bulk-status" disabled>Update status</button><button id="clear-selection">Clear</button></div></div>}
 
-  <!-- Grouped registrations -->
-  {registrations.length === 0 ? (
-    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border-radius:0.75rem;border:1px solid var(--color-border);">No registrations yet.</p>
-  ) : (
-    <div id="trip-groups-container">
-      {tripGroups.map(([tripName, regs], groupIdx) => {
-        const tripStatus = tripStatusMap.get(tripName) ?? 'upcoming';
-        const stats = groupStats(regs);
-        const groupId = `group-${groupIdx}`;
-        return (
-          <div class="trip-group" data-group-id={groupId} style="margin-bottom:1.25rem;">
-
-            <!-- Group header -->
-            <div
-              class={`trip-group-header ${tripStatus.replace('-', '_')}`}
-              onclick={`toggleGroup('${groupId}')`}
-              style={`display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1.25rem;cursor:pointer;border-radius:0.75rem 0.75rem 0 0;flex-wrap:wrap;gap:0.5rem;user-select:none;${tripGroupHeaderStyle(tripStatus)}`}
-            >
-              <div style="display:flex;align-items:center;gap:0.65rem;flex-wrap:wrap;">
-                <span style="font-weight:700;font-size:0.95rem;color:var(--color-text-primary);">{tripName}</span>
-                <span style={`padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;${tripStatusBadgeStyle(tripStatus)}`}>
-                  {tripStatus.replace(/-/g, ' ')}
-                </span>
-                {!isTripLead && tripSlugMap.get(tripName) && (
-                  <span style="display:inline-flex;gap:0.4rem;" onclick="event.stopPropagation()">
-                    <a href={`/admin/registrations/new?trip=${tripSlugMap.get(tripName)}`} style="font-size:0.72rem;font-weight:700;color:var(--color-coral);text-decoration:none;border:1px solid var(--color-coral);border-radius:0.4rem;padding:0.1rem 0.5rem;">+ Add</a>
-                    <a href={`/admin/registrations/import?trip=${tripSlugMap.get(tripName)}`} style="font-size:0.72rem;font-weight:700;color:var(--color-coral);text-decoration:none;border:1px solid var(--color-coral);border-radius:0.4rem;padding:0.1rem 0.5rem;">↑ Import</a>
-                  </span>
-                )}
-              </div>
-              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
-                {stats.lead > 0 && (
-                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEF9C3;color:#78350F;">{stats.lead} lead</span>
-                )}
-                {stats.pending > 0 && (
-                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEF3C7;color:#92400E;">{stats.pending} pending</span>
-                )}
-                {stats.confirmed > 0 && (
-                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#D1FAE5;color:#065F46;">{stats.confirmed} confirmed</span>
-                )}
-                {stats.rejected > 0 && (
-                  <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;background:#FEE2E2;color:#991B1B;">{stats.rejected} rejected</span>
-                )}
-                <span class="trip-chevron" style="font-size:0.9rem;color:var(--color-text-secondary);margin-left:0.25rem;">▾</span>
-              </div>
-            </div>
-
-            <!-- Registrations cards for this trip -->
-            <div class="trip-group-table" id={groupId}>
-              <div style="background:var(--color-gray-soft);border:1px solid var(--color-border);border-top:none;border-radius:0 0 0.75rem 0.75rem;padding:0.75rem;display:flex;flex-direction:column;gap:0.6rem;">
-                {regs.map((r) => (
-                  <div
-                    class="reg-row"
-                    data-name={(r.full_name as string).toLowerCase()}
-                    data-email={(r.email as string).toLowerCase()}
-                    data-trip={(r.trip_name as string ?? '').toLowerCase()}
-                    data-status={r.status}
-                    style="background:white;border:1px solid var(--color-border);border-radius:0.9rem;padding:0.85rem 1rem;"
-                  >
-                    <!-- Summary -->
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
-                      <div style="min-width:0;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                          <span style="font-weight:700;color:var(--color-navy);">{r.full_name}</span>
-                          <span class="status-badge" data-id={r.id} style={`padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.72rem;font-weight:700;${statusStyle(r.status)}`}>
-                            {r.status}
-                          </span>
-                        </div>
-                        <div style="font-size:0.8rem;color:var(--color-text-secondary);word-break:break-all;margin-top:0.15rem;">#{r.id} · {r.email} · {r.phone}</div>
-                      </div>
-                      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;flex:none;">
-                        <span style="font-weight:700;color:var(--color-navy);font-size:0.9rem;">{fmtCurrency(r.amount_paid)}</span>
-                        <span style="font-size:0.72rem;color:var(--color-text-secondary);white-space:nowrap;">{fmt(r.created_at as string)}</span>
-                        <button
-                          onclick={`toggleDetail(${r.id})`}
-                          style="font-size:0.72rem;color:var(--color-coral);background:none;border:1px solid var(--color-coral);border-radius:0.5rem;padding:0.18rem 0.65rem;cursor:pointer;"
-                        >
-                          Details
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Expandable detail -->
-                    <div id={`detail-${r.id}`} class="detail-row" style="display:none;margin-top:0.9rem;padding-top:0.9rem;border-top:1px solid var(--color-border);">
-                      <div class="detail-panel-grid" style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
-
-                        <!-- Left: fields -->
-                        <div>
-                          <h3 style="margin:0 0 0.75rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);text-transform:uppercase;letter-spacing:0.05em;">Registration Details</h3>
-                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1rem;font-size:0.82rem;">
-                            {[
-                              ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone],
-                              ['Age', r.age ?? '—'], ['Gender', r.gender ?? '—'], ['City', r.city],
-                              ['Instagram', r.instagram ?? '—'],
-                              ['Emergency Name', r.emergency_name], ['Emergency Phone', r.emergency_phone],
-                              ['No. Travelers', r.num_travelers], ['Others', r.other_travelers ?? '—'],
-                              ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
-                              ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'],
-                              ['Special Requests', r.special_requests ?? '—'],
-                              ['Why Joining', r.why_join ?? '—'],
-                              ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'],
-                              ['Occupancy', r.sharing_option ?? '—'],
-                              ['Total (selected)', r.total_amount ? fmtCurrency(r.total_amount) : '—'],
-                              ['Amount Paid', fmtCurrency(r.amount_paid)],
-                            ].map(([label, val]) => (
-                              <div>
-                                <span style="color:var(--color-text-secondary);font-weight:600;">{label}:</span>{' '}
-                                <span>{val}</span>
-                              </div>
-                            ))}
-                          </div>
-                          {r.payment_screenshot_url && (
-                            <div style="margin-top:0.75rem;">
-                              <a
-                                href={r.payment_screenshot_url}
-                                target="_blank"
-                                style="font-size:0.82rem;color:var(--color-accent);font-weight:600;"
-                              >
-                                View Payment Screenshot →
-                              </a>
-                            </div>
-                          )}
-                        </div>
-
-                        <!-- Right: status update + admin notes -->
-                        <div style="background:var(--color-gray-soft);border-radius:0.75rem;padding:1.25rem;border:1px solid var(--color-border);">
-                          <h3 style="margin:0 0 1rem;font-size:0.875rem;font-weight:700;color:var(--color-primary-dark);">Admin Actions</h3>
-                          <div id={`status-section-${r.id}`}>
-                            <p style="font-size:0.8rem;margin:0 0 0.5rem;color:var(--color-text-secondary);font-weight:600;">Update Status</p>
-                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-                              {(['lead', 'pending', 'confirmed', 'rejected'] as const).map(s => (
-                                <button
-                                  onclick={`updateStatus(${r.id}, '${s}')`}
-                                  style={`padding:0.35rem 0.75rem;border-radius:0.4rem;font-size:0.8rem;font-weight:700;cursor:pointer;border:2px solid transparent;${
-                                    r.status === s
-                                      ? (s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;border-color:#6EE7B7;'
-                                        : s === 'rejected'  ? 'background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;'
-                                        : s === 'lead'      ? 'background:#FEF9C3;color:#78350F;border-color:#FDE68A;'
-                                        : 'background:#FEF3C7;color:#92400E;border-color:#FDE68A;')
-                                      : 'background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);'
-                                  }`}
-                                >
-                                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                                </button>
-                              ))}
-                            </div>
-                            <p style="font-size:0.8rem;margin:0 0 0.4rem;color:var(--color-text-secondary);font-weight:600;">Admin Notes</p>
-                            <textarea
-                              id={`notes-${r.id}`}
-                              rows={3}
-                              placeholder="Add internal notes…"
-                              style="width:100%;padding:0.5rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.82rem;font-family:var(--font-sans);resize:vertical;box-sizing:border-box;"
-                            >{r.admin_notes ?? ''}</textarea>
-                            <button
-                              onclick={`saveNotes(${r.id})`}
-                              style="margin-top:0.5rem;width:100%;padding:0.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);"
-                            >
-                              Save Notes
-                            </button>
-                            <p id={`msg-${r.id}`} style="font-size:0.75rem;text-align:center;margin:0.4rem 0 0;color:var(--color-success);display:none;">Saved!</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
+  <div id="trip-groups-container">
+    {tripModels.map((trip,ti)=><section class={`trip-group ${trip.historical?'history-item':''}`} data-trip={trip.name.toLowerCase()}>
+      <header><div><h2>{trip.name}</h2><span class={trip.active?'active':'closed'}>{trip.active?'active':'closed / history'}</span></div><span>{trip.departures.length} departure{trip.departures.length===1?'':'s'}</span></header>
+      <div class="departures">
+        {trip.departures.map((dep,di)=>{const s=stats(dep.regs),gid=`dep-${ti}-${di}`;return <article class={`departure ${dep.historical?'history-item':''}`} data-departure-id={dep.id}>
+          <div class="departure-head">
+            <div class="departure-title">{!isTripLead&&dep.regs.length>0&&<label title="Select this departure"><input class="departure-select-checkbox" data-group-id={gid} type="checkbox"/></label>}<div><strong>{fmt(dep.startDate)} – {fmt(dep.endDate)}</strong><small>{dep.status.replace(/[-_]/g,' ')} · {dep.id}</small></div></div>
+            <div class="departure-summary"><span>{dep.regs.length} registration{dep.regs.length===1?'':'s'}</span>{s.lead>0&&<b class="lead">{s.lead} lead</b>}{s.pending>0&&<b class="pending">{s.pending} pending</b>}{s.confirmed>0&&<b class="confirmed">{s.confirmed} confirmed</b>}{s.rejected>0&&<b class="rejected">{s.rejected} rejected</b>}{dep.cap!==null&&<span>{dep.booked}/{dep.cap} occupied</span>}{!isTripLead&&<span class="dep-actions"><a href={`/admin/registrations/new?trip=${encodeURIComponent(trip.slug)}&departure=${encodeURIComponent(dep.id)}`}>+ Add</a><a href={`/admin/registrations/import?trip=${encodeURIComponent(trip.slug)}&departure=${encodeURIComponent(dep.id)}`}>↑ Import</a></span>}</div>
           </div>
-        );
-      })}
-    </div>
-  )}
-
-  <p id="noResults" style="display:none;text-align:center;padding:2rem;color:var(--color-text-secondary);">No matching registrations.</p>
+          {dep.regs.length>0&&<div class="registration-list" id={gid}>{dep.regs.map(r=><RegistrationCard registration={r} readOnly={isTripLead}/>)}</div>}
+        </article>})}
+      </div>
+    </section>)}
+    {legacyRegs.length>0&&<section class="trip-group history-item legacy" data-trip="unassigned legacy registrations"><header><div><h2>Unassigned / legacy registrations</h2><span class="closed">history</span></div><span>{legacyRegs.length} registration{legacyRegs.length===1?'':'s'}</span></header><div class="registration-list">{legacyRegs.map(r=><RegistrationCard registration={r} readOnly={isTripLead}/>)}</div></section>}
+  </div>
+  <p id="noResults">No matching registrations or departures.</p>
 </AdminLayout>
 
+<style>
+  .stats-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem;margin-bottom:1.25rem}.stat-card{background:#fff;border:1px solid var(--color-border);border-radius:.85rem;padding:.8rem 1rem}.stat-card p{margin:0 0 .25rem;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--color-text-secondary)}.stat-card strong{font:800 1.45rem var(--font-display)}.toolbar{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:.75rem;margin-bottom:.75rem}.filters,.actions{display:flex;gap:.5rem;flex-wrap:wrap}.toolbar input,.toolbar select,.bulk-bar select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy)}.toolbar input{width:220px}.actions a,.dep-actions a{padding:.45rem .8rem;border:1px solid var(--color-coral);border-radius:.5rem;color:var(--color-coral);font-size:.8rem;font-weight:700;text-decoration:none}.actions .primary{background:var(--color-coral);color:#fff}.actions .export{background:var(--color-primary);border-color:var(--color-primary);color:#fff}.history-control,.bulk-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;padding:.65rem .85rem;border:1px solid var(--color-border);border-radius:.8rem;background:#fff;font-size:.8rem}.history-control label,.bulk-bar label{font-weight:700}.history-control span{color:var(--color-text-secondary)}.bulk-bar{background:var(--color-blush)}.bulk-bar>div{display:flex;align-items:center;gap:.5rem}.bulk-bar button{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-weight:700}.bulk-bar #apply-bulk-status{background:var(--color-navy);color:#fff}.bulk-bar button:disabled{opacity:.4}.trip-group{overflow:hidden;margin-bottom:1rem;background:#fff;border:1px solid var(--color-border);border-radius:1rem}.trip-group>header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.15rem;background:var(--color-blush);border-left:4px solid var(--color-coral)}.trip-group header>div{display:flex;align-items:center;gap:.6rem}.trip-group h2{margin:0;font:700 1.05rem var(--font-display);color:var(--color-navy)}.trip-group header span,.departure-summary>span{font-size:.74rem;color:var(--color-text-secondary)}.trip-group header .active,.trip-group header .closed{padding:.15rem .5rem;border-radius:999px;font-weight:700;text-transform:uppercase}.trip-group header .active{background:#D1FAE5;color:#065F46}.trip-group header .closed{background:#E5E7EB;color:#374151}.departures{padding:.75rem;background:#FCFAF9}.departure{border:1px solid var(--color-border);border-radius:.75rem;background:#fff;margin-bottom:.65rem;overflow:hidden}.departure:last-child{margin-bottom:0}.departure-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .9rem}.departure-title,.departure-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}.departure-title small{display:block;margin-top:.15rem;color:var(--color-text-secondary);font-size:.7rem}.departure-select-checkbox{width:1rem;height:1rem;accent-color:var(--color-coral)}.departure-summary b{padding:.15rem .5rem;border-radius:999px;font-size:.7rem}.lead{background:#FEF9C3;color:#78350F}.pending{background:#FEF3C7;color:#92400E}.confirmed{background:#D1FAE5;color:#065F46}.rejected{background:#FEE2E2;color:#991B1B}.dep-actions a{padding:.2rem .45rem;font-size:.7rem}.registration-list{display:flex;flex-direction:column;gap:.6rem;padding:.7rem;border-top:1px solid var(--color-border);background:#FCFAF9}.history-item{display:none}.show-history .history-item{display:block}.show-history article.history-item{display:block}.trip-group.history-item .history-item{display:block}.legacy>.registration-list{border-top:1px solid var(--color-border)}#noResults{display:none;text-align:center;padding:2rem;color:var(--color-text-secondary)}@media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr)}.departure-head{align-items:flex-start;flex-direction:column}.bulk-bar,.bulk-bar>div{align-items:stretch;flex-direction:column}}@media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.filters,.filters>*{width:100%!important}.trip-group>header{align-items:flex-start;flex-direction:column}}
+</style>
+
 <script>
-  function toggleGroup(groupId: string) {
-    const tableEl = document.getElementById(groupId);
-    const groupEl = tableEl?.closest('.trip-group') as HTMLElement | null;
-    if (!tableEl || !groupEl) return;
-    const isCollapsed = groupEl.classList.contains('collapsed');
-    groupEl.classList.toggle('collapsed', !isCollapsed);
-    tableEl.style.display = isCollapsed ? '' : 'none';
-  }
-
-  function toggleDetail(id: number) {
-    const row = document.getElementById('detail-' + id);
-    if (!row) return;
-    row.style.display = row.style.display === 'none' ? 'block' : 'none';
-  }
-
-  async function updateStatus(id: number, status: string) {
-    const label = status.charAt(0).toUpperCase() + status.slice(1);
-    if (!confirm(`Mark this registration as "${label}"?\n\nThis will send a notification email to the registrant.`)) return;
-    const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
-    const adminNotes = notesEl?.value ?? '';
-    const res = await fetch('/api/admin/update-registration', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, admin_notes: adminNotes }),
-    });
-    if (res.ok) {
-      // Update badge
-      const badge = document.querySelector(`.status-badge[data-id="${id}"]`) as HTMLElement | null;
-      if (badge) {
-        badge.textContent = status;
-        badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${
-          status === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' :
-          status === 'rejected'  ? 'background:#FEE2E2;color:#991B1B;' :
-          status === 'lead'      ? 'background:#FEF9C3;color:#78350F;' :
-                                   'background:#FEF3C7;color:#92400E;'
-        }`;
-      }
-      // Update row data-status for filtering
-      const rows = document.querySelectorAll('.reg-row');
-      rows.forEach(row => {
-        const btn = row.querySelector(`button[onclick*="toggleDetail(${id})"]`);
-        if (btn) (row as HTMLElement).dataset.status = status;
-      });
-      const msgEl = document.getElementById('msg-' + id);
-      if (msgEl) { msgEl.style.display = 'block'; setTimeout(() => msgEl.style.display = 'none', 2000); }
-    }
-  }
-
-  async function saveNotes(id: number) {
-    const notesEl = document.getElementById('notes-' + id) as HTMLTextAreaElement | null;
-    const adminNotes = notesEl?.value ?? '';
-    const badge = document.querySelector(`.status-badge[data-id="${id}"]`) as HTMLElement | null;
-    const status = badge?.textContent?.trim() ?? 'pending';
-    const res = await fetch('/api/admin/update-registration', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status, admin_notes: adminNotes }),
-    });
-    if (res.ok) {
-      const msgEl = document.getElementById('msg-' + id);
-      if (msgEl) { msgEl.style.display = 'block'; setTimeout(() => msgEl.style.display = 'none', 2000); }
-    }
-  }
-
-  // Search + filter
-  const searchEl = document.getElementById('search') as HTMLInputElement | null;
-  const filterEl = document.getElementById('statusFilter') as HTMLSelectElement | null;
-  const tripFilterEl = document.getElementById('tripFilter') as HTMLSelectElement | null;
-  const exportLink = document.getElementById('exportLink') as HTMLAnchorElement | null;
-
-  function applyFilters() {
-    const q = searchEl?.value.toLowerCase() ?? '';
-    const s = filterEl?.value ?? '';
-    const t = tripFilterEl?.value ?? '';
-    const rows = document.querySelectorAll<HTMLTableRowElement>('.reg-row');
-    let totalVisible = 0;
-
-    rows.forEach(row => {
-      const matchQ = !q || row.dataset.name?.includes(q) || row.dataset.email?.includes(q) || row.dataset.trip?.includes(q);
-      const matchS = !s || row.dataset.status === s;
-      const matchT = !t || row.dataset.trip === t.toLowerCase();
-      const show = !!(matchQ && matchS && matchT);
-      row.style.display = show ? '' : 'none';
-      // Hide open detail row when parent is hidden
-      const id = row.querySelector('button[onclick*="toggleDetail"]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
-      const detailRow = id ? document.getElementById('detail-' + id) : null;
-      if (!show && detailRow) detailRow.style.display = 'none';
-      if (show) totalVisible++;
-    });
-
-    // Hide trip groups with no visible rows
-    document.querySelectorAll<HTMLElement>('.trip-group').forEach(group => {
-      const groupTable = group.querySelector<HTMLElement>('.trip-group-table');
-      if (groupTable && groupTable.style.display === 'none') {
-        const anyMatch = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
-          row => row.style.display !== 'none'
-        );
-        group.style.display = anyMatch ? '' : 'none';
-        return;
-      }
-      const visibleRows = group.querySelectorAll<HTMLElement>('.reg-row:not([style*="display: none"])');
-      const anyVisible = [...group.querySelectorAll<HTMLElement>('.reg-row')].some(
-        row => row.style.display !== 'none'
-      );
-      group.style.display = anyVisible ? '' : 'none';
-    });
-
-    const noResults = document.getElementById('noResults');
-    if (noResults) noResults.style.display = totalVisible === 0 ? 'block' : 'none';
-
-    // Update export link if trip filter is active
-    if (exportLink) {
-      if (t) {
-        exportLink.href = `/api/admin/export?type=registrations&trip_name=${encodeURIComponent(t)}`;
-      } else {
-        exportLink.href = '/api/admin/export?type=registrations';
-      }
-    }
-  }
-
-  searchEl?.addEventListener('input', applyFilters);
-  filterEl?.addEventListener('change', applyFilters);
-  tripFilterEl?.addEventListener('change', applyFilters);
-
-  // Expose to onclick handlers
-  (window as any).toggleGroup = toggleGroup;
-  (window as any).toggleDetail = toggleDetail;
-  (window as any).updateStatus = updateStatus;
-  (window as any).saveNotes = saveNotes;
+  function toggleDetail(id:number){const el=document.getElementById('detail-'+id);if(!el)return;const open=getComputedStyle(el).display==='none';el.style.display=open?'block':'none';const b=el.parentElement?.querySelector<HTMLButtonElement>('.details-btn');if(b){b.textContent=open?'Hide details':'View details';b.setAttribute('aria-expanded',String(open))}}
+  const badgeStyle=(s:string)=>s==='confirmed'?'background:#D1FAE5;color:#065F46;':s==='rejected'?'background:#FEE2E2;color:#991B1B;':s==='lead'?'background:#FEF9C3;color:#78350F;':'background:#FEF3C7;color:#92400E;';
+  async function requestStatusUpdate(id:number,status:string,admin_notes=''){const res=await fetch('/api/admin/update-registration',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status,admin_notes})});if(res.ok){const badge=document.querySelector<HTMLElement>(`.status-badge[data-id="${id}"]`);if(badge){badge.textContent=status;badge.style.cssText=badgeStyle(status)}const row=badge?.closest<HTMLElement>('.reg-row');if(row)row.dataset.status=status;return{ok:true}}const data=await res.json().catch(()=>null);return{ok:false,error:data?.error||'Status update failed.'}}
+  async function updateStatus(id:number,status:string){if(!confirm(`Mark this registration as "${status}"?`))return;const notes=(document.getElementById('notes-'+id)as HTMLTextAreaElement|null)?.value??'';const result=await requestStatusUpdate(id,status,notes);if(!result.ok)alert(result.error)}
+  async function saveNotes(id:number){const badge=document.querySelector<HTMLElement>(`.status-badge[data-id="${id}"]`);const notes=(document.getElementById('notes-'+id)as HTMLTextAreaElement|null)?.value??'';const result=await requestStatusUpdate(id,badge?.textContent?.trim()||'pending',notes);if(result.ok){const msg=document.getElementById('msg-'+id);if(msg){msg.style.setProperty('display','block','important');setTimeout(()=>msg.style.removeProperty('display'),1500)}}}
+  const search=document.getElementById('search')as HTMLInputElement, statusFilter=document.getElementById('statusFilter')as HTMLSelectElement, tripFilter=document.getElementById('tripFilter')as HTMLSelectElement, history=document.getElementById('show-history')as HTMLInputElement;
+  const boxes=()=>[...document.querySelectorAll<HTMLInputElement>('.registration-checkbox')];
+  const visibleBoxes=()=>boxes().filter(b=>{const row=b.closest<HTMLElement>('.reg-row'),trip=b.closest<HTMLElement>('.trip-group'),dep=b.closest<HTMLElement>('.departure');return row?.style.display!=='none'&&trip?.style.display!=='none'&&dep?.style.display!=='none'});
+  function selectionUI(){const selected=boxes().filter(b=>b.checked), matching=visibleBoxes(), all=document.getElementById('select-all-visible')as HTMLInputElement|null, apply=document.getElementById('apply-bulk-status')as HTMLButtonElement|null, bulk=document.getElementById('bulk-status')as HTMLSelectElement|null, count=document.getElementById('selected-count');if(count)count.textContent=`${selected.length} selected`;if(apply)apply.disabled=!selected.length||!bulk?.value;if(all){const n=matching.filter(b=>b.checked).length;all.checked=matching.length>0&&n===matching.length;all.indeterminate=n>0&&n<matching.length}document.querySelectorAll<HTMLInputElement>('.departure-select-checkbox').forEach(g=>{const dep=g.closest('.departure'),bs=[...(dep?.querySelectorAll<HTMLInputElement>('.registration-checkbox')??[])].filter(b=>b.closest<HTMLElement>('.reg-row')?.style.display!=='none'),n=bs.filter(b=>b.checked).length;g.checked=bs.length>0&&n===bs.length;g.indeterminate=n>0&&n<bs.length})}
+  function applyFilters(){const q=search?.value.toLowerCase()??'',s=statusFilter?.value??'',t=tripFilter?.value.toLowerCase()??'';let visible=0;document.querySelectorAll<HTMLElement>('.trip-group').forEach(trip=>{const historyHidden=trip.classList.contains('history-item')&&!history.checked;if(historyHidden){trip.style.display='none';return}let tripVisible=0;trip.querySelectorAll<HTMLElement>('.departure').forEach(dep=>{if(dep.classList.contains('history-item')&&!history.checked){dep.style.display='none';return}let depVisible=0;dep.querySelectorAll<HTMLElement>('.reg-row').forEach(row=>{const show=(!q||row.dataset.name?.includes(q)||row.dataset.email?.includes(q)||row.dataset.trip?.includes(q))&&(!s||row.dataset.status===s)&&(!t||row.dataset.trip===t);row.style.display=show?'':'none';if(show)depVisible++;else{const b=row.querySelector<HTMLInputElement>('.registration-checkbox');if(b)b.checked=false}});const tripMatch=!t||trip.dataset.trip===t;const show=tripMatch&&(depVisible>0||(!q&&!s));dep.style.display=show?'':'none';if(show)tripVisible++});if(trip.classList.contains('legacy')){const rows=[...trip.querySelectorAll<HTMLElement>('.reg-row')];tripVisible=rows.filter(r=>r.style.display!=='none').length}trip.style.display=tripVisible>0?'':'none';visible+=tripVisible});document.documentElement.classList.toggle('show-history',history.checked);const nr=document.getElementById('noResults');if(nr)nr.style.display=visible?'none':'block';selectionUI();const exportLink=document.getElementById('exportLink')as HTMLAnchorElement|null;if(exportLink)exportLink.href=t?`/api/admin/export?type=registrations&trip_name=${encodeURIComponent(tripFilter.value)}`:'/api/admin/export?type=registrations'}
+  boxes().forEach(b=>b.addEventListener('change',selectionUI));document.querySelectorAll<HTMLInputElement>('.departure-select-checkbox').forEach(g=>g.addEventListener('change',()=>{g.closest('.departure')?.querySelectorAll<HTMLInputElement>('.registration-checkbox').forEach(b=>{if(b.closest<HTMLElement>('.reg-row')?.style.display!=='none')b.checked=g.checked});selectionUI()}));
+  document.getElementById('select-all-visible')?.addEventListener('change',e=>{visibleBoxes().forEach(b=>b.checked=(e.target as HTMLInputElement).checked);selectionUI()});document.getElementById('clear-selection')?.addEventListener('click',()=>{boxes().forEach(b=>b.checked=false);selectionUI()});document.getElementById('bulk-status')?.addEventListener('change',selectionUI);
+  document.getElementById('apply-bulk-status')?.addEventListener('click',async()=>{const selected=boxes().filter(b=>b.checked),status=(document.getElementById('bulk-status')as HTMLSelectElement).value;if(!selected.length||!status||!confirm(`Change ${selected.length} registration(s) to ${status}?`))return;const failures=[];for(const b of selected){const id=Number(b.dataset.registrationId),r=await requestStatusUpdate(id,status);if(!r.ok)failures.push(`#${id}: ${r.error}`)}if(failures.length)alert(failures.join('\n'));else location.reload()});
+  search?.addEventListener('input',applyFilters);statusFilter?.addEventListener('change',applyFilters);tripFilter?.addEventListener('change',applyFilters);history?.addEventListener('change',applyFilters);applyFilters();
 </script>

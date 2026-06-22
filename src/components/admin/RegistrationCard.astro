@@ -1,0 +1,50 @@
+---
+interface Props { registration: Record<string, any>; readOnly?: boolean }
+const { registration: r, readOnly = false } = Astro.props;
+const fmt = (date: string) => date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const money = (n: number) => '₹' + (n ?? 0).toLocaleString('en-IN');
+const statusStyle = (status: string) => status === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' : status === 'rejected' ? 'background:#FEE2E2;color:#991B1B;' : status === 'lead' ? 'background:#FEF9C3;color:#78350F;' : 'background:#FEF3C7;color:#92400E;';
+---
+<div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-status={r.status}>
+  <div class="reg-summary">
+    {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} /></label>}
+    <div class="reg-primary">
+      <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={statusStyle(r.status)}>{r.status}</span></div>
+      <div class="reg-contact">#{r.id} · {r.email}</div><div class="reg-contact">{r.phone}</div>
+    </div>
+    <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong><span>Applied {fmt(r.created_at)}</span></div>
+    <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong>{money(r.amount_paid)}</strong><span>{r.trip_date ?? '—'}</span></div>
+    <div class="reg-actions"><button onclick={`toggleDetail(${r.id})`} aria-expanded="false" class="details-btn">View details</button></div>
+  </div>
+  <div id={`detail-${r.id}`} class="detail-row">
+    <div class="detail-grid">
+      <div>
+        <h3>Registration details</h3>
+        <div class="fields">
+          {[
+            ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone], ['Age', r.age ?? '—'], ['Gender', r.gender ?? '—'], ['City', r.city ?? '—'],
+            ['Instagram', r.instagram ?? '—'], ['Emergency Name', r.emergency_name ?? '—'], ['Emergency Phone', r.emergency_phone ?? '—'],
+            ['No. Travelers', r.num_travelers ?? '—'], ['Others', r.other_travelers ?? '—'], ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
+            ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'], ['Special Requests', r.special_requests ?? '—'],
+            ['Why Joining', r.why_join ?? '—'], ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'], ['Occupancy', r.sharing_option ?? '—'],
+            ['Total (selected)', r.total_amount ? money(r.total_amount) : '—'], ['Amount Paid', money(r.amount_paid)], ['Batch ID', r.batch_id ?? '—'],
+          ].map(([label, value]) => <div><span>{label}:</span> {value}</div>)}
+        </div>
+        {r.payment_screenshot_url && <p><a href={r.payment_screenshot_url} target="_blank">View Payment Screenshot →</a></p>}
+      </div>
+      <div class="admin-actions">
+        <h3>Admin actions</h3>
+        {!readOnly ? <>
+          <p>Update Status</p>
+          <div class="status-actions">{['lead', 'pending', 'confirmed', 'rejected'].map(s => <button onclick={`updateStatus(${r.id}, '${s}')`} class={r.status === s ? 'current' : ''}>{s}</button>)}</div>
+          <p>Admin Notes</p><textarea id={`notes-${r.id}`} rows={3} placeholder="Add internal notes…">{r.admin_notes ?? ''}</textarea>
+          <button class="save-notes" onclick={`saveNotes(${r.id})`}>Save Notes</button><p id={`msg-${r.id}`} class="saved">Saved!</p>
+        </> : <p class="read-only-note">Trip leads have read-only access.</p>}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .reg-row{background:#fff;border:1px solid var(--color-border);border-radius:.75rem;padding:.9rem 1rem}.reg-summary{display:grid;grid-template-columns:auto minmax(220px,1.6fr) minmax(150px,1fr) minmax(130px,.8fr) auto;gap:1.25rem;align-items:center}.name-line{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}.name-line strong{color:var(--color-navy)}.status-badge{padding:.2rem .6rem;border-radius:9999px;font-size:.72rem;font-weight:700}.reg-contact{overflow:hidden;margin-top:.15rem;color:var(--color-text-secondary);font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}.reg-meta{display:flex;min-width:0;flex-direction:column;gap:.15rem;color:var(--color-text-secondary);font-size:.76rem}.reg-meta strong{color:var(--color-navy);font-size:.86rem}.reg-meta-label{font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.row-select{display:inline-flex;align-items:center;justify-content:center}.row-select input{width:1rem;height:1rem;accent-color:var(--color-coral)}.details-btn{border:1px solid var(--color-coral);border-radius:999px;background:#fff;color:var(--color-coral);cursor:pointer;font-weight:700;padding:.4rem .8rem;white-space:nowrap}.detail-row{display:none;margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--color-border)}.detail-grid{display:grid;grid-template-columns:1fr 320px;gap:1.5rem}.detail-grid h3{margin:0 0 .75rem;font-size:.8rem;text-transform:uppercase}.fields{display:grid;grid-template-columns:1fr 1fr;gap:.4rem 1rem;font-size:.82rem}.fields span,.admin-actions p{color:var(--color-text-secondary);font-weight:600}.admin-actions{background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:.75rem;padding:1.25rem}.admin-actions p{font-size:.8rem;margin:.6rem 0 .4rem}.status-actions{display:flex;gap:.35rem;flex-wrap:wrap}.status-actions button{padding:.35rem .55rem;border:1px solid var(--color-border);border-radius:.4rem;background:#fff;text-transform:capitalize}.status-actions .current{border-color:var(--color-coral);color:var(--color-coral)}textarea{width:100%;box-sizing:border-box;padding:.5rem;border:1px solid var(--color-border);border-radius:.5rem}.save-notes{margin-top:.5rem;width:100%;padding:.5rem;background:var(--color-primary);color:#fff;border:0;border-radius:.5rem;font-weight:700}.saved{display:none!important;color:var(--color-success)!important;text-align:center}.read-only-note{font-weight:400!important}.reg-actions{justify-self:end}@media(max-width:900px){.reg-summary{grid-template-columns:auto 1fr 1fr}.reg-primary{grid-column:2/-1}.reg-actions{grid-column:2/-1;justify-self:start}.detail-grid{grid-template-columns:1fr}}@media(max-width:600px){.reg-summary{grid-template-columns:auto 1fr}.reg-meta{grid-column:2}.fields{grid-template-columns:1fr}}
+</style>

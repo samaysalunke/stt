@@ -5,6 +5,7 @@ export const prerender = false;
 
 const tripsData = buildTripOptions();
 const preselectTrip = Astro.url.searchParams.get('trip') ?? '';
+const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 
 const inputStyle = 'width:100%;padding:0.55rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);box-sizing:border-box;';
 const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--color-text-secondary);margin:0 0 0.3rem;text-transform:uppercase;letter-spacing:0.03em;';
@@ -79,7 +80,7 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
     </div>
   )}
 
-  <script is:inline define:vars={{ tripsData, preselectTrip }}>
+  <script is:inline define:vars={{ tripsData, preselectTrip, preselectDeparture }}>
     const tripSel = document.getElementById('trip');
     const depSel = document.getElementById('departure');
     const tierSel = document.getElementById('tier');
@@ -96,13 +97,15 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       if (cur && visibleTrips().some((t) => t.slug === cur)) { tripSel.value = cur; fillDepartures(cur); }
       else { depSel.innerHTML = '<option value="">Select trip first…</option>'; tierSel.innerHTML = '<option value="">—</option>'; }
     }
-    function fillDepartures(slug) {
+    function fillDepartures(slug, preferredDeparture) {
       const t = bySlug[slug];
       const deps = visibleDeps(t);
       depSel.innerHTML = '<option value="">Select departure…</option>';
       tierSel.innerHTML = '<option value="">—</option>';
       for (const d of deps) { const o = document.createElement('option'); o.value = d.id; o.textContent = d.label; depSel.appendChild(o); }
-      if (deps.length === 1) { depSel.value = deps[0].id; fillTiers(slug, deps[0].id); }
+      const selected = preferredDeparture && deps.some((d) => d.id === preferredDeparture)
+        ? preferredDeparture : deps.length === 1 ? deps[0].id : '';
+      if (selected) { depSel.value = selected; fillTiers(slug, selected); }
     }
     function fillTiers(slug, depId) {
       const t = bySlug[slug];
@@ -114,8 +117,11 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
     tripSel?.addEventListener('change', () => fillDepartures(tripSel.value));
     depSel?.addEventListener('change', () => fillTiers(tripSel.value, depSel.value));
     backfill?.addEventListener('change', () => refreshTrips());
-    if (preselectTrip && bySlug[preselectTrip] && !bySlug[preselectTrip].hasUpcoming) backfill.checked = true;
+    if (preselectTrip && bySlug[preselectTrip] && (
+      !bySlug[preselectTrip].hasUpcoming || bySlug[preselectTrip].departures.some((d) => d.id === preselectDeparture && d.past)
+    )) backfill.checked = true;
     refreshTrips(preselectTrip);
+    if (preselectTrip && tripSel.value === preselectTrip) fillDepartures(preselectTrip, preselectDeparture);
 
     // CSV file → textarea
     const fileInput = document.getElementById('csv-file');
