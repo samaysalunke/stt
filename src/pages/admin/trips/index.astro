@@ -8,19 +8,25 @@ const trips = listTrips().map((t) => {
   const allBatches = Array.isArray(t.batches) ? t.batches : [];
   const upcoming = upcomingBatches(t);
   const lead = upcoming[0] ?? allBatches[0] ?? null;
+  const summary = tripCardSummary(t);
   // Trip-level status is gone — derive a display state from departures.
-  const _derivedStatus = upcoming.length === 0 ? 'hidden' : (tripCardSummary(t).soldOut ? 'sold-out' : 'booking-open');
-  const sharing = (Array.isArray(t.sharingOptions) ? t.sharingOptions : [])
-    .map((o: any) => Number(o?.price)).filter((p: number) => Number.isFinite(p) && p > 0);
-  const fromPrice = sharing.length ? Math.min(...sharing) : (lead?.price ?? null);
+  const _derivedStatus = upcoming.length === 0 ? 'hidden' : (summary.soldOut ? 'sold-out' : 'booking-open');
+  const offers = Array.isArray(lead?.offers) ? lead.offers : [];
+  const meteredOffers = offers.length > 0 && offers.every((o: any) => Number.isFinite(Number(o?.cap)));
+  const leadTotal = meteredOffers
+    ? offers.reduce((sum: number, o: any) => sum + Math.max(0, Number(o.cap)), 0)
+    : (lead?.totalSpots ?? null);
+  const leadBooked = offers.length > 0
+    ? offers.reduce((sum: number, o: any) => sum + Math.max(0, Number(o?.booked) || 0), 0)
+    : (lead?.bookedSpots ?? null);
   return {
     ...t,
     _derivedStatus,
-    _fromPrice: fromPrice,
-    _hasSharing: sharing.length > 0,
+    _fromPrice: summary.fromPrice,
+    _hasSharing: summary.multiPrice,
     _leadStart: lead?.startDate ?? null,
-    _leadBooked: lead?.bookedSpots ?? null,
-    _leadTotal: lead?.totalSpots ?? null,
+    _leadBooked: leadBooked,
+    _leadTotal: leadTotal,
     _departureCount: allBatches.length,
     _upcomingCount: upcoming.length,
   };
