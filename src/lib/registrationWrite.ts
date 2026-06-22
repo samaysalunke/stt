@@ -6,16 +6,19 @@ import { sendRegistrationStatusConfirmed } from './email';
 export type RegStatus = 'lead' | 'pending' | 'confirmed' | 'rejected';
 
 /** The advance (paymentAmount) configured on the trip — the amount collected on confirm. */
-export function tripAdvanceAmount(tripName: string): number {
+export function tripAdvanceAmountBySlug(tripSlug: string): number {
   try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
-    if (!matched) return 0;
-    const tripData = readTrip(matched.slug);
+    const tripData = readTrip(tripSlug);
     const advance = tripData?.paymentAmount;
     return Number.isFinite(Number(advance)) ? Math.round(Number(advance)) : 0;
   } catch {
     return 0;
   }
+}
+
+export function tripAdvanceAmount(tripName: string): number {
+  const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+  return matched ? tripAdvanceAmountBySlug(matched.slug) : 0;
 }
 
 /**
@@ -92,7 +95,7 @@ export function tierCapFor(tripName: string, batchId: string, tierId: string): n
 /** Does an active (pending/confirmed) registration already exist for this person + departure? */
 export function hasActiveRegistration(email: string, tripSlug: string, batchId: string): boolean {
   const row = getDb()
-    .prepare("SELECT id FROM registrations WHERE email=? AND trip_slug=? AND batch_id=? AND status IN ('pending','confirmed') LIMIT 1")
+    .prepare("SELECT id FROM registrations WHERE lower(trim(email))=? AND trip_slug=? AND batch_id=? LIMIT 1")
     .get(email, tripSlug, batchId);
   return !!row;
 }
@@ -117,6 +120,8 @@ export interface CreateRegistrationInput {
   why_join?: string | null;
   status: RegStatus;
   admin_notes?: string | null;
+  created_at?: string | null;
+  consent_at?: string | null;
 }
 
 export interface CreateResult {
@@ -136,7 +141,7 @@ export interface CreateResult {
  */
 export function createRegistration(
   input: CreateRegistrationInput,
-  opts: { sendEmail?: boolean; skipCapacity?: boolean } = {},
+  opts: { sendEmail?: boolean; skipCapacity?: boolean; extraConfirmedInTier?: number } = {},
 ): CreateResult {
   const db = getDb();
 
@@ -156,7 +161,8 @@ export function createRegistration(
     }
   }
 
-  const advance = input.status === 'confirmed' ? tripAdvanceAmount(input.trip_name) : 0;
+  const configuredAdvance = input.status === 'confirmed' ? tripAdvanceAmountBySlug(input.trip_slug) : 0;
+  const advance = input.total_amount > 0 ? Math.min(configuredAdvance, input.total_amount) : configuredAdvance;
 
   try {
     const res = db.prepare(`
@@ -164,8 +170,8 @@ export function createRegistration(
         trip_name, trip_slug, trip_date, full_name, email, phone, gender,
         age, city, instagram, emergency_name, emergency_phone,
         why_join, sharing_option, total_amount, batch_id, tier_id,
-        amount_paid, status, admin_notes, source
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        amount_paid, payment_date, status, admin_notes, source, created_at, consent_at
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       input.trip_name, input.trip_slug, input.trip_date,
       input.full_name, input.email, input.phone, input.gender ?? null,
@@ -174,7 +180,8 @@ export function createRegistration(
       input.emergency_name ?? '', input.emergency_phone ?? '',
       input.why_join ?? null, input.sharing_option, input.total_amount,
       input.batch_id, input.tier_id,
-      advance, input.status, input.admin_notes ?? null, 'admin',
+      advance, advance > 0 ? (input.created_at ?? new Date().toISOString()) : null,
+      input.status, input.admin_notes ?? null, 'admin', input.created_at ?? new Date().toISOString(), input.consent_at ?? null,
     );
     const id = Number(res.lastInsertRowid);
 

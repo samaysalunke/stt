@@ -54,3 +54,115 @@ export function parseCsvToObjects(input: string): Record<string, string>[] {
   }
   return out;
 }
+
+export const GOOGLE_FORM_ACCEPTANCE = 'I agree to the terms and conditions';
+
+const normalizeHeader = (value: string) => value
+  .normalize('NFKC')
+  .replace(/[\u2018\u2019]/g, "'")
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+
+const GOOGLE_HEADERS = {
+  timestamp: 'timestamp',
+  name: 'what do we call you?',
+  email: 'email id',
+  phone: 'whatsapp no.',
+  emergencyPhone: 'emergency contact',
+  gender: 'gender',
+  age: 'how old are you?',
+  city: 'which city are you based out of currently?',
+  instagram: "what's your instagram handle?",
+  reason: 'why are you joining this trip?',
+  stay: 'what stay option do you prefer?',
+  status: 'status',
+} as const;
+
+export interface GoogleRegistrationRow {
+  row: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  emergency_phone: string;
+  gender: string;
+  age: string;
+  city: string;
+  instagram: string;
+  why_join: string;
+  tier_id: string;
+  status: 'lead' | 'confirmed' | '';
+  created_at: string | null;
+  consent_at: string | null;
+  error?: string;
+  superseded?: boolean;
+  supersededByRow?: number;
+}
+
+/** Strictly parse a Forms timestamp as Asia/Kolkata and return SQLite UTC time. */
+export function parseIndiaFormsTimestamp(value: string): string | null {
+  const m = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const [, month, day, year, hour, minute, second] = m.map(Number);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59) return null;
+  // IST has no daylight-saving transitions and is always UTC+05:30.
+  const utc = Date.UTC(year, month - 1, day, hour - 5, minute - 30, second);
+  const d = new Date(utc);
+  const check = new Date(utc + 330 * 60_000);
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day ||
+      check.getUTCHours() !== hour || check.getUTCMinutes() !== minute || check.getUTCSeconds() !== second) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/** Returns null when the CSV is not the supported Google Forms export. */
+export function parseGoogleFormsRegistrations(input: string): GoogleRegistrationRow[] | null {
+  const rows = parseCsv(input);
+  if (!rows.length) return null;
+  const headers = rows[0].map(normalizeHeader);
+  const index = (expected: string) => headers.indexOf(normalizeHeader(expected));
+  const required = Object.fromEntries(Object.entries(GOOGLE_HEADERS).map(([key, value]) => [key, index(value)])) as Record<keyof typeof GOOGLE_HEADERS, number>;
+  if (Object.values(required).some((i) => i < 0)) return null;
+  const consentIndex = headers.findIndex((h) => h.startsWith('by signing up for this trip, i acknowledge'));
+  if (consentIndex < 0) return null;
+
+  const result: GoogleRegistrationRow[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cells = rows[i];
+    if (cells.every((c) => !c.trim())) continue;
+    const get = (key: keyof typeof GOOGLE_HEADERS) => (cells[required[key]] ?? '').trim();
+    const timestamp = parseIndiaFormsTimestamp(get('timestamp'));
+    const stay = get('stay');
+    const sourceStatus = get('status');
+    const tier_id = stay === 'Double Sharing' ? 'double' : stay === 'Triple Sharing' ? 'triple' : '';
+    const status = sourceStatus === 'Confirmed' ? 'confirmed' : sourceStatus === '' ? 'lead' : '';
+    const errors: string[] = [];
+    if (!timestamp) errors.push('Invalid timestamp');
+    if (!tier_id) errors.push(`Unknown stay option: ${stay || '(blank)'}`);
+    if (!status) errors.push(`Unknown status: ${sourceStatus}`);
+    result.push({
+      row: i,
+      full_name: get('name'), email: get('email').toLowerCase(), phone: get('phone'),
+      emergency_phone: get('emergencyPhone'), gender: get('gender'), age: get('age'),
+      city: get('city'), instagram: get('instagram'), why_join: get('reason'),
+      tier_id, status, created_at: timestamp,
+      consent_at: timestamp && (cells[consentIndex] ?? '').trim() === GOOGLE_FORM_ACCEPTANCE ? timestamp : null,
+      error: errors.length ? errors.join('; ') : undefined,
+    });
+  }
+
+  // Latest valid timestamp wins. Invalid-timestamp rows cannot supersede valid data.
+  const winner = new Map<string, GoogleRegistrationRow>();
+  for (const row of result) {
+    if (!row.email || !row.created_at) continue;
+    const current = winner.get(row.email);
+    if (!current || row.created_at > current.created_at!) winner.set(row.email, row);
+  }
+  for (const row of result) {
+    const latest = row.email ? winner.get(row.email) : undefined;
+    if (latest && latest !== row) {
+      row.superseded = true;
+      row.supersededByRow = latest.row;
+    }
+  }
+  return result;
+}

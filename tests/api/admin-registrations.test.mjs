@@ -36,6 +36,7 @@ before(async () => {
 // as 0); reset so the working tree stays clean.
 after(async () => {
   await cleanup(BOOKABLE);
+  await cleanup(CAP);
   await cleanup(PAST);
 });
 
@@ -134,18 +135,25 @@ test('TC-211 import commit inserts only the valid new rows', async () => {
   assert.equal((await getRegByEmail(b)).status, 'pending');
 });
 
-test('TC-212 confirmed import respects tier capacity', async () => {
+test('TC-212 capacity mismatch rejects all writes unless explicitly overridden', async () => {
   await cleanup(CAP); // cap = 1, booked reset to 0
   const a = `qa-cap-a-${Date.now()}@example.invalid`;
   const b = `qa-cap-b-${Date.now()}@example.invalid`;
   const csv = ['full_name,email,phone', `Cap A,${a},9876543210`, `Cap B,${b},9876543210`].join('\n');
-  const { status, data } = await adminPost('/api/admin/registrations/import', {
+  const rejected = await adminPost('/api/admin/registrations/import', {
     tripSlug: CAP.tripSlug, batchId: CAP.batchId, tierId: CAP.tierId,
     status: 'confirmed', csv, dryRun: false, sendEmail: false,
   });
-  assert.equal(status, 200, JSON.stringify(data));
-  assert.equal(data.created, 1);       // only one fits
-  assert.equal(data.counts.error, 1);  // the second is over capacity
+  assert.equal(rejected.status, 409, JSON.stringify(rejected.data));
+  assert.equal((await getRegByEmail(a)).found, false);
+  assert.equal((await getRegByEmail(b)).found, false);
+
+  const overridden = await adminPost('/api/admin/registrations/import', {
+    tripSlug: CAP.tripSlug, batchId: CAP.batchId, tierId: CAP.tierId,
+    status: 'confirmed', csv, dryRun: false, sendEmail: false, capacityOverride: true,
+  });
+  assert.equal(overridden.status, 200, JSON.stringify(overridden.data));
+  assert.equal(overridden.data.created, 2);
 });
 
 // ── Historical back-fill (past departures) ───────────────────────────────────
@@ -171,4 +179,33 @@ test('TC-214 capacity is NOT enforced for past departures (back-fill beyond cap)
   assert.equal(status, 200, JSON.stringify(data));
   assert.equal(data.created, 2);       // both recorded despite cap = 1
   assert.equal(data.counts.error, 0);
+});
+
+test('TC-215 payment actions do not change status and status changes preserve payment', async () => {
+  const email = `qa-payment-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'pending', full_name: 'Payment User', email, phone: '9876543210',
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const id = made.data.id;
+  const full = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'full' });
+  assert.equal(full.status, 200, JSON.stringify(full.data));
+  assert.equal(full.data.results[0].state, 'full');
+  let reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'pending');
+  assert.equal(reg.amount_paid, 5000);
+
+  assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'confirmed' })).status, 200);
+  reg = await getRegByEmail(email);
+  assert.equal(reg.amount_paid, 5000, 'confirming must not reduce full payment to advance');
+  assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 200);
+  reg = await getRegByEmail(email);
+  assert.equal(reg.amount_paid, 5000, 'unconfirming must not clear payment');
+
+  const unpaid = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'unpaid' });
+  assert.equal(unpaid.status, 200);
+  reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'lead');
+  assert.equal(reg.amount_paid, 0);
 });

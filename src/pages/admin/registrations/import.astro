@@ -44,6 +44,9 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--color-text-primary);cursor:pointer;">
         <input type="checkbox" id="sendEmail" /> Send notification emails (off by default for imports)
       </label>
+      <label id="capacity-override-row" style="display:none;align-items:center;gap:0.5rem;font-size:0.85rem;color:#991B1B;cursor:pointer;">
+        <input type="checkbox" id="capacityOverride" /> Import despite capacity mismatch
+      </label>
 
       <hr style="border:none;border-top:1px solid var(--color-border);margin:0;" />
 
@@ -154,6 +157,7 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
         tripSlug: tripSel.value, batchId: depSel.value, tierId: tierSel.value,
         status: document.getElementById('status').value,
         sendEmail: document.getElementById('sendEmail').checked,
+        capacityOverride: document.getElementById('capacityOverride').checked,
         csv: textarea.value, dryRun,
       };
     }
@@ -170,11 +174,17 @@ const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--
       previewSummary.innerHTML =
         badge(data.counts.create, 'create', 'background:#D1FAE5;color:#065F46;') +
         badge(data.counts.skip, 'skip', 'background:#FEF3C7;color:#92400E;') +
-        badge(data.counts.error, 'error', 'background:#FEE2E2;color:#991B1B;');
+        badge(data.counts.error, 'error', 'background:#FEE2E2;color:#991B1B;') +
+        badge(data.counts.superseded || 0, 'superseded', 'background:#E5E7EB;color:#374151;') +
+        (data.totals || []).map(t => badge(t.lead + t.pending + t.confirmed, `${t.tierId}: ${t.confirmed} confirmed`, 'background:#DBEAFE;color:#1E40AF;')).join('') +
+        (data.capacity || []).filter(c => c.conflict).map(c => badge(c.totalConfirmed, `${c.tierId} over cap ${c.cap} (${c.existingConfirmed} existing + ${c.proposedConfirmed} proposed)`, 'background:#FEE2E2;color:#991B1B;')).join('');
+      const overrideRow = document.getElementById('capacity-override-row');
+      overrideRow.style.display = data.hasCapacityConflict ? 'flex' : 'none';
+      if (!data.hasCapacityConflict) document.getElementById('capacityOverride').checked = false;
       previewList.innerHTML = data.preview.map((p) => `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.5rem 0.75rem;border-bottom:1px solid var(--color-border);font-size:0.82rem;">
           <div style="min-width:0;"><span style="font-weight:600;color:var(--color-navy);">#${p.row} ${p.name}</span> <span style="color:var(--color-text-secondary);">${p.email}</span></div>
-          <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;white-space:nowrap;${actionStyle(p.action)}">${p.action}${p.reason ? ' · ' + p.reason : ''}</span>
+          <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;white-space:nowrap;${actionStyle(p.action)}">${p.tierId} · ${p.status} · ${p.action}${p.reason ? ' · ' + p.reason : ''}</span>
         </div>`).join('');
     }
 

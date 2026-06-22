@@ -4,7 +4,7 @@ import { listTrips, readTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
-import { tripAdvanceAmount, adjustBookingCount } from '../../../lib/registrationWrite';
+import { tripAdvanceAmountBySlug, adjustBookingCount } from '../../../lib/registrationWrite';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
@@ -67,12 +67,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (newStatus === 'confirmed' && prevStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, 1, tierId);
         // Revenue: record the advance collected when the booking is confirmed.
-        const advance = tripAdvanceAmount(tripName);
-        getDb().prepare('UPDATE registrations SET amount_paid=? WHERE id=?').run(advance, id);
+        const configuredAdvance = tripAdvanceAmountBySlug(String(reg.trip_slug || ''));
+        const total = Number(reg.total_amount);
+        const advance = Number.isFinite(total) && total > 0 ? Math.min(configuredAdvance, total) : configuredAdvance;
+        const currentPaid = Number(reg.amount_paid) || 0;
+        if (currentPaid <= 0 && advance > 0) {
+          getDb().prepare('UPDATE registrations SET amount_paid=?, payment_date=COALESCE(payment_date, CURRENT_TIMESTAMP) WHERE id=?').run(advance, id);
+        }
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, -1, tierId);
-        // Reverse the recorded revenue when a confirmation is undone.
-        getDb().prepare('UPDATE registrations SET amount_paid=0 WHERE id=?').run(id);
       }
 
       // ── Email notifications ───────────────────────────────────────────────
