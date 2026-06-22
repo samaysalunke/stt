@@ -13,7 +13,13 @@ export const POST: APIRoute = async ({ request, redirect }) => {
       const album = readAlbum(slug);
       if (!album) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
       if (photosOnly && Array.isArray(photos)) {
-        writeAlbum(slug, { ...album, photos });
+        // The captions form only posts { image, caption }. Merge back the stored
+        // width/height (keyed by image URL) so dimensions aren't lost on save.
+        const dims = new Map<string, { width?: number; height?: number }>(
+          (Array.isArray(album.photos) ? album.photos : []).map((p: any) => [p.image, { width: p.width, height: p.height }]),
+        );
+        const merged = photos.map((p: any) => ({ ...dims.get(p.image), image: p.image, caption: p.caption }));
+        writeAlbum(slug, { ...album, photos: merged });
       }
       return new Response(JSON.stringify({ ok: true }));
     } catch {

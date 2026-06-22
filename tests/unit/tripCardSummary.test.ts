@@ -105,7 +105,9 @@ test('spotsLeft is null when cap is null (unmetered)', () => {
 });
 
 describe('soldOut detection', () => {
-  test('trip-level status sold-out → soldOut = true', () => {
+  test('trip-level status is ignored — soldOut derives only from departures', () => {
+    // Trip-level status was removed; a stray top-level status must NOT override
+    // an open departure with available spots.
     const trip = makeTrip(
       [
         {
@@ -118,7 +120,7 @@ describe('soldOut detection', () => {
       ],
       { status: 'sold-out' },
     );
-    expect(tripCardSummary(trip).soldOut).toBe(true);
+    expect(tripCardSummary(trip).soldOut).toBe(false);
   });
 
   test('all departures sold out → soldOut = true', () => {

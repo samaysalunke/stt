@@ -9,17 +9,16 @@ export const prerender = false;
 const { slug } = Astro.params;
 const trip = readTrip(slug!);
 
-if (!trip || trip.status === 'draft') return Astro.redirect('/trips/');
+if (!trip) return Astro.redirect('/trips/');
 
 const booking = resolveBooking(trip);
 const departures = booking.departures;
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 
-// No bookable dates → back to trip page
+// No bookable dates (unpublished/hidden, all draft/past) → back to trip page
 if (departures.length === 0) return Astro.redirect(`/trips/${slug}/`);
 
-const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out'
-  || (departures.length > 0 && departures.every((d) => d.soldOut));
+const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
 if (isSoldOut || !trip.registrationEnabled) return Astro.redirect(`/trips/${slug}/`);
 
 // Validate ?batch and ?tier params

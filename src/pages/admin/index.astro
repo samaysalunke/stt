@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { listTrips } from '../../lib/content';
+import { listTrips, tripHasUpcomingDates, tripCardSummary } from '../../lib/content';
 import { getDb } from '../../lib/db';
 export const prerender = false;
 
@@ -36,8 +36,9 @@ for (let i = 6; i >= 0; i--) {
 const maxCount = Math.max(1, ...week.map(d => d.count));
 
 const trips = listTrips();
-const activeTrips = trips.filter(t => t.status && t.status !== 'draft').length;
-const soldOut = trips.filter(t => t.status === 'sold-out');
+// Trip-level status removed — derive these from departures.
+const activeTrips = trips.filter(t => tripHasUpcomingDates(t) && !tripCardSummary(t).soldOut).length;
+const soldOut = trips.filter(t => tripHasUpcomingDates(t) && tripCardSummary(t).soldOut);
 
 function inr(n: number) {
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;

@@ -73,6 +73,7 @@ const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
                 src={p.image}
                 alt={p.caption ?? `${name} photo ${i + 1}`}
                 class="block h-auto w-full transition-transform duration-300 group-hover:scale-105"
+                style={p.width && p.height ? `aspect-ratio:${p.width}/${p.height};` : ''}
                 loading="lazy"
               />
             </a>

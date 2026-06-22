@@ -89,9 +89,12 @@ test('TC-033 phone too short (5 digits) → 400', async () => {
 });
 
 test('TC-034 sold-out trip → 400', async () => {
+  // Sold-out is now enforced per-departure (trip-level status was removed), so
+  // target the fully-booked departure on the sold-out fixture.
   const { status, data } = await reg({
     tripSlug: 'qa-test-sold-out',
     tripName: 'QA Test — Sold Out Trip',
+    batchId: 'qa-sold-out-2099',
   });
   assert.equal(status, 400);
   assert.equal(data.success, false);

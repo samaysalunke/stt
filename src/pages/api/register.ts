@@ -17,15 +17,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   try {
     const body = await request.json();
 
-    // Block booking for sold-out trips
+    // Trip + departure resolution. Sold-out is enforced per-departure below
+    // (selectedDeparture.soldOut), so there's no trip-level sold-out gate.
     const tripSlug = sanitizeInput(body.tripSlug);
     const trip = tripSlug ? readTrip(tripSlug) : null;
-    if (trip?.status === 'sold_out' || trip?.status === 'sold-out') {
-      return new Response(JSON.stringify({ success: false, error: 'This trip is sold out.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
 
     // Honeypot check
     if (body._honey) {
@@ -101,11 +96,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     if (booking.departures.length === 0) return fail('This trip has no bookable dates right now.');
 
     const wantedDeparture = sanitizeInput(body.batchId) || null;
+    // Auto-select the first bookable departure; fall back to the first one so a
+    // fully sold-out trip yields a clear "sold out" message rather than "no dates".
     const selectedDeparture = wantedDeparture
       ? booking.departures.find((d) => d.id === wantedDeparture)
-      : booking.departures.find((d) => !d.soldOut);
+      : (booking.departures.find((d) => !d.soldOut) ?? booking.departures[0]);
     if (!selectedDeparture) return fail('That departure date is no longer available. Please pick another.');
-    if (selectedDeparture.soldOut) return fail('That departure date is sold out. Please pick another.');
+    if (selectedDeparture.soldOut) return fail('This trip is sold out. Please pick another departure.');
 
     const batchId: string = selectedDeparture.id;
 

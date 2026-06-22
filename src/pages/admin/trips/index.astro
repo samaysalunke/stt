@@ -1,18 +1,21 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { listTrips, upcomingBatches } from '../../../lib/content';
+import { listTrips, upcomingBatches, tripCardSummary } from '../../../lib/content';
 
 // Derive an at-a-glance summary from each trip's departures (the source of truth).
 const trips = listTrips().map((t) => {
   const allBatches = Array.isArray(t.batches) ? t.batches : [];
   const upcoming = upcomingBatches(t);
   const lead = upcoming[0] ?? allBatches[0] ?? null;
+  // Trip-level status is gone — derive a display state from departures.
+  const _derivedStatus = upcoming.length === 0 ? 'hidden' : (tripCardSummary(t).soldOut ? 'sold-out' : 'booking-open');
   const sharing = (Array.isArray(t.sharingOptions) ? t.sharingOptions : [])
     .map((o: any) => Number(o?.price)).filter((p: number) => Number.isFinite(p) && p > 0);
   const fromPrice = sharing.length ? Math.min(...sharing) : (lead?.price ?? null);
   return {
     ...t,
+    _derivedStatus,
     _fromPrice: fromPrice,
     _hasSharing: sharing.length > 0,
     _leadStart: lead?.startDate ?? null,
@@ -29,17 +32,15 @@ function fmtDay(d: string | null) {
   return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Trip-level status vocabulary is just these three (departure-level statuses like
-// filling_fast / completed live on individual batches, not the trip). The `?? '#6b7280'`
-// / `?? trip.status` fallbacks at the call sites still render any legacy value.
+// Display vocabulary for the derived trip state (computed from departures).
 const statusColors: Record<string, string> = {
   'booking-open': '#16a34a',
-  'draft':        '#6b7280',
+  'hidden':       '#6b7280',
   'sold-out':     '#dc2626',
 };
 const statusLabels: Record<string, string> = {
   'booking-open': 'Booking Open',
-  'draft':        'Draft',
+  'hidden':       'No upcoming dates',
   'sold-out':     'Sold Out',
 };
 ---
@@ -68,8 +69,8 @@ const statusLabels: Record<string, string> = {
               <p class="text-[11px] truncate" style="color: rgba(27,43,58,0.45);">{trip.slug}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                  style={`background:${statusColors[trip.status] ?? '#6b7280'}22; color:${statusColors[trip.status] ?? '#6b7280'};`}>
-              {statusLabels[trip.status] ?? trip.status}
+                  style={`background:${statusColors[trip._derivedStatus]}22; color:${statusColors[trip._derivedStatus]};`}>
+              {statusLabels[trip._derivedStatus]}
             </span>
           </div>
 
@@ -88,16 +89,6 @@ const statusLabels: Record<string, string> = {
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="text-[10px] font-semibold uppercase tracking-widest" style="color: rgba(27,43,58,0.45);">Quick status</label>
-            <select class="status-select w-full mt-1 rounded-xl px-3 py-2 text-sm" data-slug={trip.slug}
-                    style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white); color: var(--color-navy);">
-              {['booking-open','draft','sold-out'].map(s => (
-                <option value={s} selected={s === trip.status}>{statusLabels[s]}</option>
-              ))}
-            </select>
-          </div>
-
           <div class="mt-auto flex items-center gap-2 pt-1">
             <a href={`/admin/trips/${trip.slug}`} class="flex-1 text-center text-sm font-semibold rounded-full py-2 text-white" style="background-color: var(--color-cta);">Edit</a>
             <button class="duplicate-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug}
@@ -113,26 +104,6 @@ const statusLabels: Record<string, string> = {
 </AdminLayout>
 
 <script>
-// Quick status toggle
-document.querySelectorAll('.status-select').forEach(sel => {
-  sel.addEventListener('change', async (e) => {
-    const target = e.target as HTMLSelectElement;
-    const slug = target.dataset.slug!;
-    const status = target.value;
-    try {
-      const res = await fetch('/api/admin/trips/update-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, status }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      window.location.reload();
-    } catch {
-      alert('Failed to update status. Try again.');
-    }
-  });
-});
-
 // Duplicate trip
 document.querySelectorAll('.duplicate-trip-btn').forEach(btn => {
   btn.addEventListener('click', async (e) => {

@@ -1,13 +1,16 @@
 import type { APIRoute } from 'astro';
-import { writeAlbum, saveImageFile } from '../../../../lib/content';
+import { writeAlbum, readAlbum, saveImageFile } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
 
   const name = sanitizeInput(body.get('name'));
-  const slug = slugify(sanitizeInput(body.get('slug') as string) || name);
-  if (!slug) return redirect('/admin/photo-vault/new?error=slug');
+  // Slug is always derived from the name; uniqueness is ensured with a -2/-3 suffix.
+  const base = slugify(name);
+  if (!base) return redirect('/admin/photo-vault/new?error=slug');
+  let slug = base;
+  for (let n = 2; readAlbum(slug) !== null; n++) slug = `${base}-${n}`;
 
   let coverImage: string | null = null;
   const coverFile = body.get('coverImage') as File | null;

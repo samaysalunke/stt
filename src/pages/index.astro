@@ -4,9 +4,10 @@ import TripCard from '../components/TripCard.astro';
 import { listTrips, listTestimonials, readSiteSettings, tripHasUpcomingDates, tripCardSummary } from '../lib/content';
 
 const allTrips = listTrips();
+// Visibility derives from departures: feature trips that have an upcoming,
+// not-fully-sold-out departure (trip-level status was removed).
 const featuredTrips = allTrips
-  .filter((t) => t.status !== 'draft' && t.status !== 'sold_out' && t.status !== 'sold-out')
-  .filter((t) => tripHasUpcomingDates(t))
+  .filter((t) => tripHasUpcomingDates(t) && !tripCardSummary(t).soldOut)
   .slice(0, 3);
 
 const allTestimonials = listTestimonials().slice(0, 4);
@@ -128,7 +129,6 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
                 slug={trip.slug}
                 title={trip.title}
                 name={trip.name}
-                status={trip.status}
                 coverImage={trip.coverImage}
                 featuredImage={trip.featuredImage}
                 description={trip.description}

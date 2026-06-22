@@ -1,5 +1,4 @@
 name: ""
-status: booking-open
 duration: null
 shortDescription: null
 description: null
@@ -14,10 +13,9 @@ meetingTime: null
 importantNotes: null
 cancellationPolicy: null
 featuredImage: null
-paymentQrCode: null
+gallery: []
 paymentAmount: 1000
 paymentInstructions: null
-linkedAlbumSlug: null
 balanceDueRule: 15 days before trip
 occupancyCatalog:
   - id: economy

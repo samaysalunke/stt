@@ -27,7 +27,12 @@ export function buildTripOptions(): TripOption[] {
   const now = Date.now();
 
   return listTrips()
-    .filter((t: any) => t.status !== 'draft')
+    // Published trips only — trip-level status is gone, so "published" means the
+    // trip has at least one non-draft departure (legacy single-date trips always).
+    .filter((t: any) => {
+      const bs = Array.isArray(t.batches) ? t.batches : [];
+      return bs.length === 0 || bs.some((b: any) => b.status !== 'draft');
+    })
     .map((t: any) => {
       const { editorCatalog, editorDepartures } = editableBooking(t);
       const labelByTier = Object.fromEntries(editorCatalog.map((c) => [c.id, c.label]));

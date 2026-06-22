@@ -139,3 +139,41 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
 
   return { occupancyCatalog, batches };
 }
+
+export interface GalleryImage {
+  image: string;
+  width: number | null;
+  height: number | null;
+  source: 'album' | 'trip';
+}
+
+// Parse the trip editor's serialized gallery (album-picked + trip-only uploads).
+// Validates each entry has an image URL; coerces dims to numbers or null. Caps
+// album-sourced images at 10 (trip-only uploads are unlimited). Shared by the
+// create + update API routes.
+export function parseGallery(galleryJson: unknown): GalleryImage[] {
+  let raw: any[] = [];
+  try { raw = JSON.parse(typeof galleryJson === 'string' ? galleryJson : '[]'); } catch { /* ignore */ }
+  if (!Array.isArray(raw)) return [];
+
+  let albumCount = 0;
+  const out: GalleryImage[] = [];
+  for (const g of raw) {
+    const image = String(g?.image ?? '').trim();
+    if (!image) continue;
+    const source: 'album' | 'trip' = g?.source === 'trip' ? 'trip' : 'album';
+    if (source === 'album') {
+      if (albumCount >= 10) continue;
+      albumCount++;
+    }
+    const w = Number(g?.width);
+    const h = Number(g?.height);
+    out.push({
+      image,
+      width: Number.isFinite(w) && w > 0 ? w : null,
+      height: Number.isFinite(h) && h > 0 ? h : null,
+      source,
+    });
+  }
+  return out;
+}

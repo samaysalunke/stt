@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { writeTrip, saveImageFile } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
-import { parseEditorBooking } from '../../../../lib/tripEditor';
+import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -37,15 +37,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     featuredImage = await saveImageFile(featuredFile, 'images/trips', `${slug}-featured`);
   }
 
-  let paymentQrCode = '';
-  const qrFile = body.get('paymentQrCode') as File | null;
-  if (qrFile && qrFile.size > 0) {
-    paymentQrCode = await saveImageFile(qrFile, 'images/qr');
-  }
+  const gallery = parseGallery(body.get('gallery_json'));
 
   const data: Record<string, any> = {
     name,
-    status: sanitizeInput(body.get('status')) || 'draft',
     duration: sanitizeInput(body.get('duration')) || null,
     registrationEnabled: body.get('registrationEnabled') === 'true',
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
@@ -61,10 +56,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     importantNotes: sanitizeInput(body.get('importantNotes')) || null,
     cancellationPolicy: sanitizeInput(body.get('cancellationPolicy')) || null,
     featuredImage: featuredImage || null,
-    paymentQrCode: paymentQrCode || null,
+    gallery,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,
     paymentInstructions: sanitizeInput(body.get('paymentInstructions')) || null,
-    linkedAlbumSlug: sanitizeInput(body.get('linkedAlbumSlug')) || null,
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,
     batches,

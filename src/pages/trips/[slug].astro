@@ -11,12 +11,15 @@ const trip = readTrip(slug!);
 
 if (!trip) return Astro.redirect('/trips/');
 
-// Draft trips are not publicly viewable — redirect to listings. (Published trips
-// with no upcoming departures still render a friendly "new dates soon" state below;
-// they're dropped from listings and the sitemap but aren't a privacy leak.)
-if (trip.status === 'draft') {
-  return Astro.redirect('/trips/');
-}
+// Visibility derives from departures (trip-level status removed): a trip is
+// "published" if it has at least one non-draft departure (past or upcoming).
+// Trips with only draft departures (or none) are work-in-progress → redirect.
+// Legacy single-date trips (no batches array) are always viewable. Published
+// trips whose dates have all passed still render a friendly "new dates soon"
+// state below — dropped from listings but not a privacy leak.
+const _batches = Array.isArray(trip.batches) ? trip.batches : [];
+const _isPublished = _batches.length === 0 || _batches.some((b: any) => b.status !== 'draft');
+if (!_isPublished) return Astro.redirect('/trips/');
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -28,20 +31,26 @@ const description = (trip.description as string) || (trip.shortDescription as st
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 
 // ── Photos strip ──────────────────────────────────────────────────────────
-// Photos come from the album linked in the admin trip editor (linkedAlbumSlug).
-// Album photo objects use the `image` field. Falls back to stock when unlinked.
+// Photos come from the trip's curated `gallery` (album-picked + trip-only
+// uploads). Falls back to a legacy linked album, then to stock photos.
 const FALLBACK_PHOTOS = [
   'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
   'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80',
   'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80',
 ];
-const linkedAlbum = trip.linkedAlbumSlug
-  ? listAlbums().find((a: any) => a.slug === trip.linkedAlbumSlug && a.published)
-  : null;
-const tripPhotos: string[] = linkedAlbum?.photos?.length
-  ? linkedAlbum.photos.slice(0, 5).map((p: any) => p.image).filter(Boolean)
-  : FALLBACK_PHOTOS.slice(0, 5);
+// Primary source: the curated per-trip gallery (album-picked + trip-only uploads).
+let tripPhotos: string[] = (Array.isArray(trip.gallery) ? trip.gallery : [])
+  .map((g: any) => g.image)
+  .filter(Boolean);
+// Legacy fallback: trips still on the old linkedAlbumSlug field.
+if (tripPhotos.length === 0 && trip.linkedAlbumSlug) {
+  const linkedAlbum = listAlbums().find((a: any) => a.slug === trip.linkedAlbumSlug && a.published);
+  if (linkedAlbum?.photos?.length) {
+    tripPhotos = linkedAlbum.photos.slice(0, 10).map((p: any) => p.image).filter(Boolean);
+  }
+}
+if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5);
 
 // ── Per-trip testimonials ─────────────────────────────────────────────────
 // Testimonial YAMLs carry a `tripName` matching the trip title. Fall back to
@@ -74,8 +83,7 @@ const initialOffer = firstDeparture
   : null;
 const initialPerPerson = initialOffer?.price ?? 0;
 
-const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-const isSoldOut = trip.status === 'sold_out' || trip.status === 'sold-out' || allSoldOut;
+const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
 const isOpen = trip.registrationEnabled && !isSoldOut && departures.length > 0;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
@@ -161,10 +169,10 @@ const tripSchema: Record<string, any> = {
           <svg class="h-3.5 w-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
           <span class="font-medium text-white">{tripName}</span>
         </nav>
-        <!-- Status badge -->
-        {trip.status && (
-          <span class="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3" style={`background-color: ${isSoldOut ? '#9CA3AF' : trip.status === 'filling_fast' ? '#F59E0B' : '#E8725A'}; color: white;`}>
-            {isSoldOut ? 'Sold Out' : trip.status === 'filling_fast' ? 'Filling Fast' : 'Upcoming'}
+        <!-- Status badge (derived from departures) -->
+        {departures.length > 0 && (
+          <span class="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3" style={`background-color: ${isSoldOut ? '#9CA3AF' : '#E8725A'}; color: white;`}>
+            {isSoldOut ? 'Sold Out' : 'Upcoming'}
           </span>
         )}
         <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4" style="font-family: var(--font-display);">

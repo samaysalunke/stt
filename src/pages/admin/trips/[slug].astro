@@ -21,6 +21,27 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
 // so saving never silently drops past/draft ones, and synthesizes offers from
 // legacy sharingOptions/flat-price so opening an old trip auto-migrates it.
 const { editorCatalog, editorDepartures } = editableBooking(trip);
+
+// ── Trip photo gallery ──────────────────────────────────────────────────────
+// Albums (with per-photo dimensions) the admin can pick images from.
+const galleryAlbums = publishedAlbums.map(a => ({
+  slug: a.slug,
+  name: a.name,
+  photos: (Array.isArray(a.photos) ? a.photos : []).map((p: any) => ({
+    image: p.image, width: p.width ?? null, height: p.height ?? null,
+  })),
+}));
+// Current gallery — migrate legacy `linkedAlbumSlug` trips by seeding the
+// selection from the linked album's first 10 photos so saving converts them.
+const existingGallery = Array.isArray(trip.gallery) ? trip.gallery : [];
+let initialGallery = existingGallery;
+if (existingGallery.length === 0 && trip.linkedAlbumSlug) {
+  const linked = galleryAlbums.find(a => a.slug === trip.linkedAlbumSlug);
+  if (linked) {
+    initialGallery = linked.photos.slice(0, 10).map(p => ({ ...p, source: 'album' }));
+  }
+}
+const tripSlug = slug;
 ---
 
 <AdminLayout title={`Edit: ${trip.name ?? slug}`} page="trips">
@@ -58,18 +79,6 @@ const { editorCatalog, editorDepartures } = editableBooking(trip);
         <div class="field full">
           <label class="flabel">Trip Name *</label>
           <input type="text" name="name" required class="finput" value={trip.name ?? ''} />
-        </div>
-
-        <div class="field">
-          <label class="flabel">Status *</label>
-          <select name="status" required class="finput">
-            {['draft','booking-open','sold-out'].map(s => (
-              <option value={s} selected={s === trip.status}>
-                {s === 'draft' ? 'Draft' : s === 'booking-open' ? 'Booking Open' : 'Sold Out'}
-              </option>
-            ))}
-          </select>
-          <span class="fhint">Booking Open = live & accepting registrations</span>
         </div>
 
         <div class="field">
@@ -253,17 +262,6 @@ const { editorCatalog, editorDepartures } = editableBooking(trip);
           <textarea name="paymentInstructions" class="finput" rows="3">{trip.paymentInstructions ?? ''}</textarea>
         </div>
 
-        <div class="field full">
-          <label class="flabel">Link Photo Album</label>
-          <select name="linkedAlbumSlug" class="finput">
-            <option value="">— None (trip page uses fallback photos) —</option>
-            {publishedAlbums.map(a => (
-              <option value={a.slug} selected={trip.linkedAlbumSlug === a.slug}>{a.name}</option>
-            ))}
-          </select>
-          <span class="fhint">Photos from this album appear in the trip page's inline photo strip.</span>
-        </div>
-
         <div class="field">
           <label class="flabel">Featured Image</label>
           {trip.featuredImage && (
@@ -276,16 +274,27 @@ const { editorCatalog, editorDepartures } = editableBooking(trip);
           <span class="fhint">1200×675px · 16:9 · JPG/PNG · max 10 MB</span>
         </div>
 
-        <div class="field">
-          <label class="flabel">Payment QR Code</label>
-          {trip.paymentQrCode && (
-            <img src={trip.paymentQrCode} alt="Current QR" class="img-preview qr" />
-          )}
-          <input type="file" name="paymentQrCode" accept="image/*" class="finput file-input"
-            data-preview="qr-preview" />
-          <img id="qr-preview" src="" alt="" class="img-preview hidden" />
-          <input type="hidden" name="existingPaymentQrCode" value={trip.paymentQrCode ?? ''} />
-          <span class="fhint">400×400px · square · PNG preferred · max 2 MB</span>
+        <div class="field full gallery-editor">
+          <label class="flabel">Trip Photos</label>
+          <span class="fhint">Pick up to 10 images from a photo album, and/or upload trip-only photos. Trip-only uploads stay on this trip and are <strong>not</strong> added to the Photo Vault.</span>
+
+          <select id="gallery-album-select" class="finput" style="margin-top:0.5rem;">
+            <option value="">— Choose an album to pick photos —</option>
+            {publishedAlbums.map(a => (<option value={a.slug}>{a.name}</option>))}
+          </select>
+
+          <div id="gallery-album-grid" class="gallery-grid hidden"></div>
+
+          <div style="margin-top:0.85rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <input type="file" id="gallery-upload-input" accept="image/*" multiple style="display:none;" />
+            <label for="gallery-upload-input" class="gallery-upload-btn">📷 Upload trip-only photos</label>
+            <span id="gallery-upload-status" class="fhint"></span>
+          </div>
+
+          <p class="flabel" style="margin:1rem 0 0.5rem;">Selected (<span id="gallery-count">0</span>) <span class="fhint" id="gallery-album-count"></span></p>
+          <div id="gallery-selected" class="gallery-grid"></div>
+
+          <input type="hidden" name="gallery_json" id="gallery_json" />
         </div>
 
       </div>
@@ -663,6 +672,50 @@ select.finput { cursor: pointer; }
 .img-preview.qr { object-fit: contain; }
 .img-preview.hidden { display: none; }
 
+/* ── Trip photo gallery editor ───────────────── */
+.gallery-editor .gallery-grid {
+  columns: 5;
+  column-gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+.gallery-editor .gallery-grid.hidden { display: none; }
+.gallery-editor #gallery-album-grid {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
+}
+.gallery-thumb {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 0.6rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.gallery-thumb img { display: block; width: 100%; height: auto; }
+.gallery-thumb.is-selected { outline: 3px solid var(--color-coral); outline-offset: -3px; }
+.gallery-thumb-btn {
+  position: absolute; top: 0.3rem; right: 0.3rem;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 0.8rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(27,43,58,0.78); color: #fff;
+}
+.gallery-thumb.is-selected .gallery-thumb-btn { background: var(--color-coral); }
+.gallery-upload-btn {
+  display: inline-block;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary, var(--color-navy));
+  padding: 0.5rem 1.1rem; border-radius: 0.5rem;
+  cursor: pointer; font-size: 0.85rem;
+}
+@media (max-width: 1024px) { .gallery-editor .gallery-grid { columns: 4; } }
+@media (max-width: 768px)  { .gallery-editor .gallery-grid { columns: 3; } }
+
 /* ── Bottom save bar ─────────────────────────── */
 .save-bar {
   display: flex;
@@ -771,14 +824,18 @@ function createDayCard(data, open = false) {
   const div = document.createElement('div');
   div.className = 'day-card' + (open ? ' open' : '');
 
-  const title = (data?.dayTitle ?? '').replace(/"/g, '&quot;');
-  const accom = (data?.accom ?? data?.accommodation ?? '').replace(/"/g, '&quot;');
+  // Accept both the editor's internal schema (dayTitle/activities/accommodation/
+  // specialNotes + boolean meals) and the canonical YAML/import schema
+  // (title/description/stay/note + meals array), so imported trips populate here.
+  const title = (data?.dayTitle ?? data?.title ?? '').replace(/"/g, '&quot;');
+  const accom = (data?.accom ?? data?.accommodation ?? data?.stay ?? '').replace(/"/g, '&quot;');
   const transport = (data?.transport ?? '').replace(/"/g, '&quot;');
-  const notes = (data?.specialNotes ?? '').replace(/"/g, '&quot;');
-  const activities = (data?.activities ?? '').replace(/</g, '&lt;');
-  const b = data?.breakfast ? 'checked' : '';
-  const l = data?.lunch ? 'checked' : '';
-  const d = data?.dinner ? 'checked' : '';
+  const notes = (data?.specialNotes ?? data?.note ?? '').replace(/"/g, '&quot;');
+  const activities = (data?.activities ?? data?.description ?? '').replace(/</g, '&lt;');
+  const meals = Array.isArray(data?.meals) ? data.meals.map(m => String(m).toUpperCase()) : null;
+  const b = (meals ? meals.includes('B') : data?.breakfast) ? 'checked' : '';
+  const l = (meals ? meals.includes('L') : data?.lunch) ? 'checked' : '';
+  const d = (meals ? meals.includes('D') : data?.dinner) ? 'checked' : '';
 
   div.innerHTML = `
     <div class="day-header">
@@ -909,6 +966,114 @@ document.querySelectorAll('.add-btn[data-list]').forEach(btn => {
 document.querySelectorAll('.file-input[data-preview]').forEach(input => {
   input.addEventListener('change', () => previewImage(input, input.dataset.preview));
 });
+</script>
+
+<!-- ── Trip photo gallery editor ──────────────────────────────────────────── -->
+<script define:vars={{ galleryAlbums, initialGallery, tripSlug }}>
+(function () {
+  const MAX_ALBUM = 10;
+  const albums = galleryAlbums || [];
+  let gallery = JSON.parse(JSON.stringify(initialGallery || []));
+
+  const albumSelect = document.getElementById('gallery-album-select');
+  const albumGrid = document.getElementById('gallery-album-grid');
+  const selectedWrap = document.getElementById('gallery-selected');
+  const countEl = document.getElementById('gallery-count');
+  const albumCountEl = document.getElementById('gallery-album-count');
+  const uploadInput = document.getElementById('gallery-upload-input');
+  const uploadStatus = document.getElementById('gallery-upload-status');
+  const hidden = document.getElementById('gallery_json');
+
+  const nameInput = document.querySelector('#trip-form [name="name"]');
+  const effSlug = () => tripSlug || (nameInput ? nameInput.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '');
+  const albumCount = () => gallery.filter(g => g.source === 'album').length;
+  const isSelected = (url) => gallery.some(g => g.image === url);
+  const aspect = (p) => (p.width && p.height) ? `aspect-ratio:${p.width}/${p.height};` : '';
+
+  function tile(p, opts) {
+    const div = document.createElement('div');
+    div.className = 'gallery-thumb' + (opts.selected ? ' is-selected' : '');
+    div.style.cssText = aspect(p);
+    div.innerHTML =
+      `<img src="${p.image}" loading="lazy" alt="" />` +
+      `<button type="button" class="gallery-thumb-btn" title="${opts.removable ? 'Remove' : 'Toggle'}">${opts.removable ? '✕' : (opts.selected ? '✓' : '+')}</button>`;
+    div.querySelector('button').addEventListener('click', opts.onClick);
+    return div;
+  }
+
+  function renderSelected() {
+    selectedWrap.innerHTML = '';
+    gallery.forEach((p) => {
+      selectedWrap.appendChild(tile(p, {
+        removable: true, selected: true,
+        onClick: () => { gallery = gallery.filter(g => g.image !== p.image); sync(); },
+      }));
+    });
+    countEl.textContent = gallery.length;
+    const ac = albumCount();
+    albumCountEl.textContent = ac >= MAX_ALBUM ? `· album limit reached (${MAX_ALBUM})` : (ac ? `· ${ac}/${MAX_ALBUM} from album` : '');
+    hidden.value = JSON.stringify(gallery);
+  }
+
+  function renderAlbumGrid() {
+    const album = albums.find(a => a.slug === albumSelect.value);
+    albumGrid.innerHTML = '';
+    if (!album) { albumGrid.classList.add('hidden'); return; }
+    albumGrid.classList.remove('hidden');
+    album.photos.forEach((p) => {
+      const sel = isSelected(p.image);
+      albumGrid.appendChild(tile(p, {
+        removable: false, selected: sel,
+        onClick: () => {
+          if (isSelected(p.image)) {
+            gallery = gallery.filter(g => g.image !== p.image);
+          } else {
+            if (albumCount() >= MAX_ALBUM) { alert(`You can pick at most ${MAX_ALBUM} images from albums.`); return; }
+            gallery.push({ image: p.image, width: p.width, height: p.height, source: 'album' });
+          }
+          sync();
+        },
+      }));
+    });
+  }
+
+  function sync() { renderSelected(); renderAlbumGrid(); }
+
+  albumSelect.addEventListener('change', renderAlbumGrid);
+
+  uploadInput.addEventListener('change', async () => {
+    const files = Array.from(uploadInput.files || []);
+    if (!files.length) return;
+    const slug = effSlug();
+    if (!slug) { alert('Enter the trip name first, then upload trip-only photos.'); return; }
+    let done = 0;
+    uploadStatus.textContent = `Uploading 0 / ${files.length}...`;
+    for (const file of files) {
+      const fd = new FormData();
+      fd.append('slug', slug);
+      fd.append('photo', file);
+      try {
+        const res = await fetch('/api/admin/trips/upload-photo', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          gallery.push({ image: data.url, width: data.width, height: data.height, source: 'trip' });
+          done++;
+          renderSelected();
+        }
+      } catch { /* skip */ }
+      uploadStatus.textContent = `Uploading ${done} / ${files.length}...`;
+    }
+    uploadStatus.textContent = `✓ Uploaded ${done} photo${done !== 1 ? 's' : ''}.`;
+    uploadInput.value = '';
+    setTimeout(() => { uploadStatus.textContent = ''; }, 2500);
+  });
+
+  document.getElementById('trip-form').addEventListener('submit', () => {
+    hidden.value = JSON.stringify(gallery);
+  });
+
+  sync();
+})();
 </script>
 
 <!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { readAlbum, writeAlbum, saveImageFile } from '../../../../lib/content';
+import { readAlbum, writeAlbum, saveImageFileWithMeta } from '../../../../lib/content';
 import { sanitizeInput } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -16,11 +16,11 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: 'No photo provided' }), { status: 400 });
     }
 
-    const imageUrl = await saveImageFile(photoFile, 'images/albums/photos');
+    const { url: imageUrl, width, height } = await saveImageFileWithMeta(photoFile, 'images/albums/photos');
     const caption = sanitizeInput(body.get('caption')) || '';
 
     const photos = Array.isArray(album.photos) ? album.photos : [];
-    photos.push({ image: imageUrl, caption });
+    photos.push({ image: imageUrl, caption, width, height });
     writeAlbum(slug, { ...album, photos });
 
     return new Response(JSON.stringify({ ok: true, image: imageUrl }), { status: 200 });

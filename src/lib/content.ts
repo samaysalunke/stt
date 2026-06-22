@@ -2,6 +2,7 @@ import YAML from 'yaml';
 import fs from 'node:fs';
 import path from 'node:path';
 import { v4 as uuid } from 'uuid';
+import sharp from 'sharp';
 
 const CWD = process.cwd();
 const CONTENT_BASE = process.env.CONTENT_DIR ?? path.join(CWD, 'src', 'content');
@@ -27,7 +28,7 @@ function assertSafeSlug(slug: string): void {
 
 export function listTrips(): Array<Record<string, any>> {
   ensureDir(TRIPS_DIR);
-  return fs
+  const trips = fs
     .readdirSync(TRIPS_DIR)
     .filter(f => f.endsWith('.yaml'))
     .map(f => {
@@ -35,12 +36,16 @@ export function listTrips(): Array<Record<string, any>> {
       const raw = fs.readFileSync(path.join(TRIPS_DIR, f), 'utf-8');
       const data = YAML.parse(raw) ?? {};
       return { slug, ...data };
-    })
-    .sort((a, b) => {
-      const order = ['booking-open', 'sold-out', 'draft'];
-      const ai = order.indexOf(a.status); const bi = order.indexOf(b.status);
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
     });
+  // Sort by state derived from departures (trip-level status is gone): trips with
+  // bookable upcoming departures first, then fully sold-out, then those with no
+  // upcoming dates. Rank is precomputed so resolveBooking runs once per trip.
+  const ranked = trips.map((t) => ({
+    t,
+    rank: !tripHasUpcomingDates(t) ? 2 : (tripCardSummary(t).soldOut ? 1 : 0),
+  }));
+  ranked.sort((a, b) => a.rank - b.rank);
+  return ranked.map((r) => r.t);
 }
 
 export function readTrip(slug: string): Record<string, any> | null {
@@ -251,7 +256,7 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
         price: trip.pricePerPerson ?? 0,
         totalSpots: trip.maxGroupSize ?? null,
         bookedSpots: trip.currentBookings ?? 0,
-        status: trip.status ?? 'booking-open',
+        status: 'booking-open',
       }]
     : [];
 
@@ -316,13 +321,12 @@ export function tripCardSummary(trip: Record<string, any>): {
   const prices = new Set<number>();
   for (const d of booking.departures) for (const o of d.offers) prices.add(o.price);
   const soonest = booking.departures.find((d) => !d.soldOut) ?? booking.departures[0] ?? null;
-  const statusSoldOut = trip?.status === 'sold_out' || trip?.status === 'sold-out';
   const allSoldOut = booking.departures.length > 0 && booking.departures.every((d) => d.soldOut);
   return {
     fromPrice: booking.fromPrice,
     multiPrice: prices.size > 1,
     spotsLeft: soonest?.spotsLeft ?? null,
-    soldOut: statusSoldOut || allSoldOut,
+    soldOut: allSoldOut,
   };
 }
 
@@ -500,6 +504,30 @@ export async function saveImageFile(
   fs.writeFileSync(path.join(destDir, filename), buffer);
 
   return `/${destSubDir}/${filename}`; // public URL via /images/[...path].ts
+}
+
+// Same as saveImageFile, but also returns the image's pixel dimensions (read via
+// sharp) so galleries can lay out portrait + landscape images without cropping or
+// layout shift. Dimension read is best-effort: returns null w/h if it fails.
+export async function saveImageFileWithMeta(
+  file: File,
+  destSubDir: string,
+  namePart?: string,
+): Promise<{ url: string; width: number | null; height: number | null }> {
+  const url = await saveImageFile(file, destSubDir, namePart);
+  let width: number | null = null;
+  let height: number | null = null;
+  try {
+    const rel = url.replace(/^\/images\//, '');
+    const meta = await sharp(path.join(IMAGES_BASE, rel)).metadata();
+    // Respect EXIF orientation: swap dims for rotated portraits.
+    const rotated = meta.orientation && meta.orientation >= 5;
+    width = (rotated ? meta.height : meta.width) ?? null;
+    height = (rotated ? meta.width : meta.height) ?? null;
+  } catch {
+    /* dimensions unavailable — gallery falls back to natural sizing */
+  }
+  return { url, width, height };
 }
 
 // Delete a single uploaded image by its public URL (e.g. "/images/albums/photos/x.jpg").

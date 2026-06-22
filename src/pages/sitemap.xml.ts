@@ -13,10 +13,11 @@ function url(path: string, priority: string, changefreq: string, lastmod?: strin
 }
 
 export const GET: APIRoute = () => {
-  // Live trips only: published (not draft) and with at least one upcoming departure.
+  // Live trips only: at least one upcoming, non-draft departure (trip-level status
+  // was removed — tripHasUpcomingDates already excludes draft/past departures).
   // Reads via listTrips() so production reflects the volume (CONTENT_DIR), not seed data.
   const tripPages = listTrips()
-    .filter((t) => t.status !== 'draft' && tripHasUpcomingDates(t))
+    .filter((t) => tripHasUpcomingDates(t))
     .map((t) => url(`/trips/${t.slug}`, '0.8', 'weekly', contentLastmod('trips', t.slug)));
 
   // Published albums only.

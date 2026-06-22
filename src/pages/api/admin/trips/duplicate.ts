@@ -25,18 +25,21 @@ export const POST: APIRoute = async ({ request }) => {
 
     // A copy is a fresh trip — reset booked counts on every departure, both the
     // legacy per-batch count and the new per-offer counts.
+    // Copy departures as drafts (and reset bookings) so the duplicate stays
+    // hidden until the admin reviews it — trip-level status no longer exists.
     const copiedBatches = (Array.isArray(source.batches) ? source.batches : []).map((b: any) => ({
       ...b,
+      status: 'draft',
       bookedSpots: 0,
       ...(Array.isArray(b.offers) ? { offers: b.offers.map((o: any) => ({ ...o, booked: 0 })) } : {}),
     }));
 
-    const newData = {
+    const newData: Record<string, any> = {
       ...source,
       name: `${source.name ?? slug} (Copy)`,
-      status: 'draft',
       batches: copiedBatches,
     };
+    delete newData.status; // strip any legacy trip-level status
 
     writeTrip(newSlug, newData);
 

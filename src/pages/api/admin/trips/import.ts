@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import YAML from 'yaml';
-import { readTrip, writeTrip } from '../../../../lib/content';
+import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary } from '../../../../lib/content';
 import { slugify } from '../../../../lib/utils';
 
 // Bulk import trips from a YAML or JSON document. The `yaml` parser accepts
@@ -65,10 +65,17 @@ export const POST: APIRoute = async ({ request }) => {
     // schema, including nested arrays (batches, itinerary, highlights, …).
     // Ensure slug + title are present and consistent.
     const data: Record<string, any> = { ...item, slug, title };
-    if (item.status === undefined) data.status = 'draft';
+    // Trip-level status was removed — visibility/sold-out derive from departures.
+    // Strip any legacy top-level status carried in the YAML.
+    delete data.status;
+
+    // Preview state is derived from the departures, same as the live site.
+    const derivedStatus = !tripHasUpcomingDates(data)
+      ? 'no upcoming dates'
+      : (tripCardSummary(data).soldOut ? 'sold-out' : 'booking-open');
 
     const exists = readTrip(slug) !== null;
-    preview.push({ slug, title, status: data.status, action: exists ? 'overwrite' : 'create' });
+    preview.push({ slug, title, status: derivedStatus, action: exists ? 'overwrite' : 'create' });
     toWrite.push({ slug, data });
   });
 
