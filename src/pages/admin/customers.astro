@@ -1,0 +1,490 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+export const prerender = false;
+
+const adminUser = Astro.locals.adminUser;
+if (!adminUser) return Astro.redirect('/admin/login');
+
+const isTripLead = adminUser.role === 'trip_lead';
+const allowedBatchIds: string[] | null = isTripLead ? (adminUser.tripIds ?? []) : null;
+
+const db = getDb();
+
+// Build batch_id WHERE clause for trip_lead scoping (mirrors registrations.astro)
+const batchWhere = allowedBatchIds === null
+  ? ''
+  : allowedBatchIds.length > 0
+    ? `WHERE r.batch_id IN (${allowedBatchIds.map(() => '?').join(',')})`
+    : 'WHERE 1=0';
+const batchParams: string[] = allowedBatchIds?.length ? allowedBatchIds : [];
+
+// Customer aggregation — identity fields from most recent registration per email
+const customerSQL = `
+  SELECT
+    lower(trim(r.email))                                                                         AS email,
+    (SELECT full_name FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS full_name,
+    (SELECT phone     FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS phone,
+    (SELECT city      FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS city,
+    COUNT(*)                                                                                     AS total_regs,
+    SUM(CASE WHEN r.status = 'confirmed' THEN 1 ELSE 0 END)                                     AS confirmed,
+    SUM(CASE WHEN r.status = 'pending'   THEN 1 ELSE 0 END)                                     AS pending,
+    SUM(CASE WHEN r.status = 'lead'      THEN 1 ELSE 0 END)                                     AS lead,
+    SUM(CASE WHEN r.status = 'rejected'  THEN 1 ELSE 0 END)                                     AS rejected,
+    SUM(COALESCE(r.amount_paid, 0))                                                              AS total_paid,
+    max(r.payment_date)                                                                          AS last_payment_date,
+    max(r.created_at)                                                                            AS last_reg_at,
+    (SELECT COALESCE(trip_slug, trip_name) FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS latest_trip,
+    u.id                                                                                         AS user_id,
+    u.displayName,
+    u.avatarUrl,
+    u.username,
+    u.leaderboardOptOut,
+    u.showTripsPublicly,
+    u.createdAt                                                                                  AS account_created_at,
+    u.lastLoginAt,
+    CASE max(CASE ur.role WHEN 'owner' THEN 3 WHEN 'ops' THEN 2 WHEN 'trip_lead' THEN 1 ELSE 0 END)
+      WHEN 3 THEN 'owner' WHEN 2 THEN 'ops' WHEN 1 THEN 'trip_lead' ELSE NULL
+    END                                                                                          AS role
+  FROM registrations r
+  LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(r.email))
+  LEFT JOIN user_roles ur ON ur.userId = u.id
+  ${batchWhere}
+  GROUP BY lower(trim(r.email))
+  ORDER BY last_reg_at DESC
+  LIMIT 1001
+`;
+
+type Customer = {
+  email: string; full_name: string | null; phone: string | null; city: string | null;
+  total_regs: number; confirmed: number; pending: number; lead: number; rejected: number;
+  total_paid: number; last_payment_date: string | null; last_reg_at: string;
+  latest_trip: string | null; user_id: string | null; displayName: string | null;
+  avatarUrl: string | null; username: string | null; leaderboardOptOut: number;
+  showTripsPublicly: number; account_created_at: number | null; lastLoginAt: number | null;
+  role: string | null;
+};
+
+const rawCustomers = (batchParams.length > 0
+  ? db.prepare(customerSQL).all(...batchParams)
+  : db.prepare(customerSQL).all()) as Customer[];
+
+const capped = rawCustomers.length > 1000;
+const customers = capped ? rawCustomers.slice(0, 1000) : rawCustomers;
+
+// Stat chips
+const totalCustomers = customers.length;
+const confirmedCustomers = customers.filter(c => c.confirmed > 0).length;
+const pendingCustomers = customers.filter(c => c.pending > 0).length;
+const unpaidCustomers = customers.filter(c => Number(c.total_paid) === 0 && (c.confirmed + c.pending) > 0).length;
+const repeatCustomers = customers.filter(c => c.total_regs >= 2).length;
+
+// Registrations for detail drawers (grouped by normalised email)
+const customerEmails = customers.map(c => c.email);
+const regsByEmail = new Map<string, Record<string, any>[]>();
+if (customerEmails.length > 0) {
+  const ph = customerEmails.map(() => '?').join(',');
+  const regsWithEmail = db.prepare(
+    `SELECT id, lower(trim(email)) AS email_key, trip_name, trip_slug, trip_date, batch_id,
+            tier_id, sharing_option, status, amount_paid, total_amount, payment_date,
+            instagram, why_join, age, gender, created_at
+     FROM registrations
+     WHERE lower(trim(email)) IN (${ph})
+     ORDER BY created_at DESC`
+  ).all(...customerEmails) as Record<string, any>[];
+  for (const r of regsWithEmail) {
+    const key = String(r.email_key);
+    if (!regsByEmail.has(key)) regsByEmail.set(key, []);
+    regsByEmail.get(key)!.push(r);
+  }
+}
+
+// Leaderboard stats for users who have data
+const leaderboardByUserId = new Map<string, Record<string, any>>();
+const userIds = customers.filter(c => c.user_id).map(c => c.user_id as string);
+if (userIds.length > 0) {
+  const ph = userIds.map(() => '?').join(',');
+  const lbRows = db.prepare(
+    `SELECT userId, kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId IN (${ph})`
+  ).all(...userIds) as Record<string, any>[];
+  for (const row of lbRows) leaderboardByUserId.set(row.userId, row);
+}
+
+// Audit timeline entries per customer email (last 8 audit entries for their registrations)
+const auditByEmail = new Map<string, Record<string, any>[]>();
+if (!isTripLead && customerEmails.length > 0) {
+  // Get registration IDs per email in one shot
+  const ph = customerEmails.map(() => '?').join(',');
+  const regIdRows = db.prepare(
+    `SELECT lower(trim(email)) AS email_key, CAST(id AS TEXT) AS reg_id
+     FROM registrations WHERE lower(trim(email)) IN (${ph})`
+  ).all(...customerEmails) as { email_key: string; reg_id: string }[];
+  const regIdsByEmail = new Map<string, string[]>();
+  for (const row of regIdRows) {
+    if (!regIdsByEmail.has(row.email_key)) regIdsByEmail.set(row.email_key, []);
+    regIdsByEmail.get(row.email_key)!.push(row.reg_id);
+  }
+  // Bulk-fetch audit entries for all reg IDs
+  const allRegIds = regIdRows.map(r => r.reg_id);
+  if (allRegIds.length > 0) {
+    const aph = allRegIds.map(() => '?').join(',');
+    const auditRows = db.prepare(
+      `SELECT targetId, action, actorEmail, createdAt FROM audit_log
+       WHERE targetType = 'registration' AND targetId IN (${aph})
+       ORDER BY createdAt DESC`
+    ).all(...allRegIds) as { targetId: string; action: string; actorEmail: string | null; createdAt: number }[];
+    // Build a reverse map: reg_id → email
+    const emailByRegId = new Map<string, string>();
+    for (const [email, ids] of regIdsByEmail) for (const id of ids) emailByRegId.set(id, email);
+    // Group audit rows by customer email, keep last 8 per customer
+    for (const row of auditRows) {
+      const email = emailByRegId.get(row.targetId);
+      if (!email) continue;
+      if (!auditByEmail.has(email)) auditByEmail.set(email, []);
+      const entries = auditByEmail.get(email)!;
+      if (entries.length < 8) entries.push(row);
+    }
+  }
+}
+
+const fmt = (d: string | null) => d ? new Date((d.includes('T') ? d : d + 'T00:00:00')).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const fmtTs = (unix: number | null) => unix ? new Date(unix * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+const fmtAudit = (unix: number) => new Date(unix * 1000).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+const money = (n: number) => '₹' + Math.round(n ?? 0).toLocaleString('en-IN');
+const statusStyle = (s: string) => s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;' : s === 'lead' ? 'background:#FEF9C3;color:#78350F;' : 'background:#FEF3C7;color:#92400E;';
+const payStyle = (paid: number) => paid <= 0 ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
+const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : (total && total > 0 && paid >= total) ? 'Fully paid' : paid > 0 ? 'Part paid' : 'Unpaid';
+---
+
+<AdminLayout title="Customers" page="customers">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+    <div>
+      <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-navy);margin:0 0 0.2rem;">Customers</h1>
+      <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{totalCustomers} customer{totalCustomers !== 1 ? 's' : ''} · read-only{capped ? ' · showing first 1 000' : ''}</p>
+    </div>
+    {!isTripLead && (
+      <a href="/api/admin/export?type=customers"
+         style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">
+        ↓ Export CSV
+      </a>
+    )}
+  </div>
+
+  {capped && (
+    <div style="background:#FEF9C3;border:1px solid #FCD34D;border-radius:0.75rem;padding:0.6rem 1rem;font-size:0.82rem;color:#78350F;margin-bottom:1rem;">
+      More than 1 000 customers found — showing the 1 000 most recent. Use Export CSV to get the full list.
+    </div>
+  )}
+
+  <!-- Stat chips -->
+  <div class="stat-chips">
+    {[
+      ['Total', totalCustomers, 'var(--color-primary)'],
+      ['Confirmed', confirmedCustomers, 'var(--color-success)'],
+      ['Pending', pendingCustomers, '#D97706'],
+      ['Unpaid confirmed/pending', unpaidCustomers, 'var(--color-danger)'],
+      ['Repeat (2+ trips)', repeatCustomers, '#7C3AED'],
+    ].map(([label, value, color]) => (
+      <div class="stat-chip"><span>{label}</span><strong style={`color:${color}`}>{value}</strong></div>
+    ))}
+  </div>
+
+  <!-- Search toolbar -->
+  <div style="display:flex;gap:0.5rem;margin:1rem 0;flex-wrap:wrap;align-items:center;">
+    <input id="cust-search" type="search" placeholder="Search name, email, phone, username, city…"
+           style="flex:1;min-width:200px;padding:0.5rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;" />
+    <select id="cust-type-filter"
+            style="padding:0.5rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;">
+      <option value="">All customers</option>
+      <option value="has-account">Has account</option>
+      <option value="no-account">No account</option>
+      <option value="repeat">Repeat (2+ trips)</option>
+      <option value="confirmed">Has confirmed</option>
+      <option value="pending">Has pending</option>
+      <option value="unpaid">Unpaid</option>
+    </select>
+  </div>
+
+  <!-- Customer table -->
+  {customers.length === 0 ? (
+    <div style="background:white;border:1px solid var(--color-border);border-radius:1.25rem;padding:3rem;text-align:center;color:var(--color-text-secondary);">
+      No customers found.
+    </div>
+  ) : (
+    <div id="cust-list" style="display:flex;flex-direction:column;gap:0.6rem;">
+      {customers.map((c, i) => {
+        const regs = regsByEmail.get(c.email) ?? [];
+        const lb = c.user_id ? leaderboardByUserId.get(c.user_id) : null;
+        const auditEntries = auditByEmail.get(c.email) ?? [];
+        const displayName = c.full_name ?? c.displayName ?? c.email;
+        const payState = Number(c.total_paid) === 0 ? 'Unpaid' : payLabel(Number(c.total_paid), null);
+        return (
+          <div class="cust-row"
+               data-name={String(c.full_name ?? c.displayName ?? '').toLowerCase()}
+               data-email={c.email}
+               data-phone={String(c.phone ?? '').toLowerCase()}
+               data-username={String(c.username ?? '').toLowerCase()}
+               data-city={String(c.city ?? '').toLowerCase()}
+               data-confirmed={c.confirmed > 0 ? '1' : '0'}
+               data-pending={c.pending > 0 ? '1' : '0'}
+               data-unpaid={Number(c.total_paid) === 0 && (c.confirmed + c.pending) > 0 ? '1' : '0'}
+               data-repeat={c.total_regs >= 2 ? '1' : '0'}
+               data-has-account={c.user_id ? '1' : '0'}>
+
+            <!-- Summary row -->
+            <div class="cust-summary">
+              <div class="cust-primary">
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                  <strong style="color:var(--color-navy);">{displayName}</strong>
+                  {c.username && <span style="font-size:0.72rem;background:var(--color-blush);color:var(--color-coral);padding:0.15rem 0.45rem;border-radius:9999px;font-weight:600;">@{c.username}</span>}
+                  {c.role && <span style="font-size:0.72rem;background:#F3F4F6;color:#374151;padding:0.15rem 0.45rem;border-radius:9999px;font-weight:600;">{c.role}</span>}
+                </div>
+                <div style="font-size:0.78rem;color:var(--color-text-secondary);margin-top:0.1rem;">{c.email}</div>
+                {c.phone && <div style="font-size:0.78rem;color:var(--color-text-secondary);">{c.phone}</div>}
+              </div>
+
+              <div class="cust-meta">
+                <span class="meta-label">Bookings</span>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
+                  {c.confirmed > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#D1FAE5;color:#065F46;">{c.confirmed} conf</span>}
+                  {c.pending > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#FEF3C7;color:#92400E;">{c.pending} pend</span>}
+                  {c.lead > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#FEF9C3;color:#78350F;">{c.lead} lead</span>}
+                  {c.confirmed === 0 && c.pending === 0 && c.lead === 0 && <span style="font-size:0.75rem;color:var(--color-text-secondary);">{c.total_regs} reg{c.total_regs !== 1 ? 's' : ''}</span>}
+                </div>
+              </div>
+
+              <div class="cust-meta">
+                <span class="meta-label">Latest trip</span>
+                <strong style="font-size:0.82rem;color:var(--color-navy);">{c.latest_trip ?? '—'}</strong>
+              </div>
+
+              <div class="cust-meta">
+                <span class="meta-label">Payment</span>
+                <span style={`padding:0.15rem 0.5rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(c.total_paid))}`}>
+                  {money(Number(c.total_paid))}
+                </span>
+              </div>
+
+              <div class="cust-meta" style="display:none;" data-desktop-only>
+                <span class="meta-label">City</span>
+                <span style="font-size:0.82rem;">{c.city ?? '—'}</span>
+              </div>
+
+              <div class="cust-meta" style="display:none;" data-desktop-only>
+                <span class="meta-label">Last activity</span>
+                <span style="font-size:0.78rem;color:var(--color-text-secondary);">{fmt(c.last_reg_at)}</span>
+              </div>
+
+              <button onclick={`toggleCustomer(${i})`} aria-expanded="false" class="cust-toggle-btn">
+                Details ▾
+              </button>
+            </div>
+
+            <!-- Detail drawer -->
+            <div id={`cust-detail-${i}`} class="cust-detail" style="display:none;">
+              <div class="cust-detail-grid">
+
+                <!-- Identity + account block -->
+                <div>
+                  <h3 class="detail-heading">Identity</h3>
+                  <div class="detail-fields">
+                    <div><span>Email</span>
+                      <span>{c.email}
+                        <button onclick={`copyText('${c.email}')`} class="copy-btn" title="Copy email">⧉</button>
+                      </span>
+                    </div>
+                    {c.phone && <div><span>Phone</span><span>{c.phone} <button onclick={`copyText('${c.phone}')`} class="copy-btn" title="Copy phone">⧉</button></span></div>}
+                    {c.city && <div><span>City</span><span>{c.city}</span></div>}
+                  </div>
+
+                  {c.user_id && (
+                    <>
+                      <h3 class="detail-heading" style="margin-top:1rem;">Account</h3>
+                      <div class="detail-fields">
+                        {c.displayName && <div><span>Name</span><span>{c.displayName}</span></div>}
+                        {c.username && <div><span>Username</span><span>@{c.username} <button onclick={`copyText('@${c.username}')`} class="copy-btn" title="Copy username">⧉</button></span></div>}
+                        <div><span>Joined</span><span>{fmtTs(c.account_created_at)}</span></div>
+                        {c.lastLoginAt && <div><span>Last login</span><span>{fmtTs(c.lastLoginAt)}</span></div>}
+                        {c.role && <div><span>Admin role</span><span>{c.role}</span></div>}
+                        <div><span>Show trips</span><span>{c.showTripsPublicly ? 'Public' : 'Private'}</span></div>
+                        <div><span>Leaderboard</span><span>{c.leaderboardOptOut ? 'Opted out' : 'Active'}</span></div>
+                      </div>
+                    </>
+                  )}
+
+                  {lb && (
+                    <>
+                      <h3 class="detail-heading" style="margin-top:1rem;">Adventure stats</h3>
+                      <div class="detail-fields">
+                        <div><span>Km from home</span><span>{Math.round(lb.kmsFromHome).toLocaleString('en-IN')} km</span></div>
+                        <div><span>Days outdoors</span><span>{lb.daysOutdoors}</span></div>
+                        <div><span>Destinations</span><span>{lb.destinationsCount}</span></div>
+                      </div>
+                    </>
+                  )}
+
+                  <!-- Links -->
+                  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1rem;">
+                    <a href={`/admin/registrations/?search=${encodeURIComponent(c.email)}`}
+                       style="padding:0.35rem 0.7rem;border:1px solid var(--color-coral);color:var(--color-coral);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                      View registrations →
+                    </a>
+                    {c.username && c.showTripsPublicly && (
+                      <a href={`/u/${c.username}`} target="_blank"
+                         style="padding:0.35rem 0.7rem;border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                        Public profile ↗
+                      </a>
+                    )}
+                    {!isTripLead && (
+                      <a href={`/admin/audit?email=${encodeURIComponent(c.email)}`}
+                         style="padding:0.35rem 0.7rem;border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                        Audit log →
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <!-- Booking history -->
+                <div>
+                  <h3 class="detail-heading">Booking history ({regs.length})</h3>
+                  {regs.length === 0 ? (
+                    <p style="font-size:0.82rem;color:var(--color-text-secondary);">No registrations found.</p>
+                  ) : (
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                      {regs.map((r) => (
+                        <div style="background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:0.6rem;padding:0.6rem 0.8rem;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+                            <strong style="font-size:0.84rem;color:var(--color-navy);">{r.trip_name ?? r.trip_slug ?? '—'}</strong>
+                            <div style="display:flex;gap:0.3rem;">
+                              <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${statusStyle(r.status)}`}>{r.status}</span>
+                              {r.amount_paid != null && <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(r.amount_paid))}`}>{money(Number(r.amount_paid))}</span>}
+                            </div>
+                          </div>
+                          <div style="font-size:0.76rem;color:var(--color-text-secondary);margin-top:0.2rem;">
+                            {r.sharing_option ?? r.tier_id ?? '—'} · Applied {fmt(r.created_at)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <!-- Audit timeline (owner/ops only) -->
+                  {!isTripLead && auditEntries.length > 0 && (
+                    <>
+                      <h3 class="detail-heading" style="margin-top:1rem;">Recent activity</h3>
+                      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                        {auditEntries.map((a) => (
+                          <div style="font-size:0.76rem;color:var(--color-text-secondary);display:flex;gap:0.4rem;align-items:baseline;">
+                            <span style="white-space:nowrap;">{fmtAudit(a.createdAt)}</span>
+                            <code style="background:rgba(245,221,215,0.4);color:var(--color-navy);padding:0.1rem 0.3rem;border-radius:0.25rem;">{a.action}</code>
+                            {a.actorEmail && <span>by {a.actorEmail}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+
+  <div id="cust-empty" style="display:none;background:white;border:1px solid var(--color-border);border-radius:1.25rem;padding:3rem;text-align:center;color:var(--color-text-secondary);">
+    No customers match your search.
+  </div>
+</AdminLayout>
+
+<style>
+  .stat-chips { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.25rem; }
+  .stat-chip { background:white; border:1px solid var(--color-border); border-radius:0.75rem; padding:0.55rem 0.85rem; display:flex; flex-direction:column; gap:0.15rem; min-width:100px; }
+  .stat-chip span { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-secondary); }
+  .stat-chip strong { font-size:1.15rem; }
+  .cust-row { background:white; border:1px solid var(--color-border); border-radius:0.75rem; padding:0.85rem 1rem; }
+  .cust-summary { display:grid; grid-template-columns:minmax(200px,2fr) minmax(120px,1fr) minmax(130px,1.2fr) minmax(100px,0.8fr) auto; gap:1rem; align-items:center; }
+  .cust-primary { min-width:0; }
+  .cust-meta { display:flex; flex-direction:column; gap:0.15rem; font-size:0.76rem; color:var(--color-text-secondary); }
+  .meta-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-secondary); }
+  .cust-toggle-btn { border:1px solid var(--color-coral); border-radius:999px; background:#fff; color:var(--color-coral); cursor:pointer; font-size:0.78rem; font-weight:700; padding:0.35rem 0.7rem; white-space:nowrap; justify-self:end; }
+  .cust-detail { margin-top:0.85rem; padding-top:0.85rem; border-top:1px solid var(--color-border); }
+  .cust-detail-grid { display:grid; grid-template-columns:1fr 1.4fr; gap:1.5rem; }
+  .detail-heading { margin:0 0 0.6rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-secondary); font-weight:700; }
+  .detail-fields { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem 1rem; font-size:0.82rem; }
+  .detail-fields > div { display:contents; }
+  .detail-fields span:first-child { color:var(--color-text-secondary); font-weight:600; }
+  .copy-btn { border:none; background:none; cursor:pointer; color:var(--color-coral); font-size:0.75rem; padding:0 0.2rem; }
+  @media(max-width:900px) {
+    .cust-summary { grid-template-columns:1fr auto; }
+    .cust-meta:nth-child(n+3) { display:none; }
+    .cust-detail-grid { grid-template-columns:1fr; }
+  }
+  @media(max-width:600px) {
+    .detail-fields { grid-template-columns:1fr; }
+    .stat-chips { gap:0.35rem; }
+    .stat-chip { min-width:80px; }
+  }
+</style>
+
+<script>
+  function toggleCustomer(i: number) {
+    const detail = document.getElementById(`cust-detail-${i}`);
+    const rows = document.querySelectorAll('.cust-row');
+    const btn = rows[i]?.querySelector('.cust-toggle-btn') as HTMLButtonElement | null;
+    if (!detail) return;
+    const open = detail.style.display !== 'none';
+    detail.style.display = open ? 'none' : 'block';
+    if (btn) {
+      btn.textContent = open ? 'Details ▾' : 'Close ▴';
+      btn.setAttribute('aria-expanded', String(!open));
+    }
+  }
+
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      el.remove();
+    });
+  }
+
+  (window as any).toggleCustomer = toggleCustomer;
+  (window as any).copyText = copyText;
+
+  // Client-side search + filter
+  const searchInput = document.getElementById('cust-search') as HTMLInputElement | null;
+  const typeFilter = document.getElementById('cust-type-filter') as HTMLSelectElement | null;
+  const list = document.getElementById('cust-list');
+  const emptyMsg = document.getElementById('cust-empty');
+
+  function applyFilters() {
+    const q = searchInput?.value.toLowerCase().trim() ?? '';
+    const type = typeFilter?.value ?? '';
+    const rows = document.querySelectorAll<HTMLElement>('.cust-row');
+    let visible = 0;
+    rows.forEach(row => {
+      const matchSearch = !q || ['data-name','data-email','data-phone','data-username','data-city'].some(
+        attr => (row.getAttribute(attr) ?? '').includes(q)
+      );
+      const matchType = !type ||
+        (type === 'has-account' && row.dataset.hasAccount === '1') ||
+        (type === 'no-account' && row.dataset.hasAccount === '0') ||
+        (type === 'repeat' && row.dataset.repeat === '1') ||
+        (type === 'confirmed' && row.dataset.confirmed === '1') ||
+        (type === 'pending' && row.dataset.pending === '1') ||
+        (type === 'unpaid' && row.dataset.unpaid === '1');
+      const show = matchSearch && matchType;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (list) list.style.display = visible === 0 ? 'none' : '';
+    if (emptyMsg) emptyMsg.style.display = visible === 0 ? '' : 'none';
+  }
+
+  searchInput?.addEventListener('input', applyFilters);
+  typeFilter?.addEventListener('change', applyFilters);
+</script>

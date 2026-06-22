@@ -150,6 +150,9 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE users ADD COLUMN showTripsPublicly INTEGER DEFAULT 0'); } catch {}
   try { db.exec('ALTER TABLE users ADD COLUMN homeCityLatLng TEXT'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN trip_slug TEXT'); } catch {}
+  // Indices for customer directory aggregation
+  try { db.exec('CREATE INDEX IF NOT EXISTS registrations_email_lower ON registrations(lower(trim(email)))'); } catch {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS registrations_batch_id ON registrations(batch_id)'); } catch {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS geocode_cache (
