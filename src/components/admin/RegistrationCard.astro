@@ -9,7 +9,7 @@ const statusStyle = (status: string) => status === 'confirmed' ? 'background:#D1
 const payState = paymentState(r.amount_paid, r.total_amount, tripAdvanceAmountBySlug(String(r.trip_slug || '')));
 const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : payState === 'unpaid' ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
 ---
-<div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-status={r.status}>
+<div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status}>
   <div class="reg-summary">
     {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} /></label>}
     <div class="reg-primary">
