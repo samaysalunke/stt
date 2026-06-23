@@ -4,6 +4,22 @@ import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
 
 export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirect }, next) => {
+  // One canonical public origin and path shape. Keep local/preview hosts untouched.
+  if (import.meta.env.PROD && (url.hostname === 'www.seekthethrill.in' || (url.hostname === 'seekthethrill.in' && url.protocol === 'http:'))) {
+    const target = new URL(url);
+    target.protocol = 'https:';
+    target.hostname = 'seekthethrill.in';
+    return redirect(target.toString(), 308);
+  }
+  const nonIndexablePrefix = ['/admin', '/api', '/keystatic', '/profile', '/login', '/unsubscribe', '/leaderboard', '/u/'];
+  const canonicalizable = !nonIndexablePrefix.some((prefix) => url.pathname.startsWith(prefix)) && !url.pathname.endsWith('/book');
+  const isGetPage = canonicalizable && url.pathname !== '/' && !url.pathname.endsWith('/') && !url.pathname.split('/').pop()?.includes('.');
+  if (isGetPage) {
+    const target = new URL(url);
+    target.pathname = `${url.pathname}/`;
+    return redirect(`${target.pathname}${target.search}`, 308);
+  }
+
   // Ensure DB is initialized on first request so schema migrations run early
   getDb();
 
@@ -75,5 +91,13 @@ export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirec
     locals.adminUser = null;
   }
 
-  return next();
+  const response = await next();
+  const privateRoute =
+    url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/keystatic/') || url.pathname.startsWith('/profile/') ||
+    url.pathname.startsWith('/login/') || url.pathname.startsWith('/unsubscribe/');
+  if (!privateRoute) return response;
+  const headers = new Headers(response.headers);
+  headers.set('X-Robots-Tag', 'noindex, nofollow');
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 });

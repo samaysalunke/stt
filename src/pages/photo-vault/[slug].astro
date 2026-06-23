@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { readAlbum } from '../../lib/content';
+import { readAlbum, isAlbumPublic } from '../../lib/content';
 import 'glightbox/dist/css/glightbox.css';
 
 export const prerender = false;
@@ -8,10 +8,7 @@ export const prerender = false;
 const { slug } = Astro.params;
 const album = readAlbum(slug!);
 
-if (!album) return Astro.redirect('/photo-vault/');
-
-// Unpublished albums are not publicly viewable.
-if (!album.published) return Astro.redirect('/photo-vault/');
+if (!album || !isAlbumPublic({ slug, ...album })) return new Response('Not Found', { status: 404 });
 
 const name = (album.name as string) || slug;
 const photos = (album.photos ?? []) as any[];
@@ -24,15 +21,38 @@ const subtitle = (album.description as string) || [album.location, formatDate(al
 const year = album.date ? new Date(album.date).getFullYear() : new Date().getFullYear();
 // Richer social share: use the album cover (or first photo) as the OG image.
 const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
+const canonicalUrl = `https://seekthethrill.in/photo-vault/${slug}/`;
+const albumSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://seekthethrill.in/' },
+        { '@type': 'ListItem', position: 2, name: 'Photo Vault', item: 'https://seekthethrill.in/photo-vault/' },
+        { '@type': 'ListItem', position: 3, name, item: canonicalUrl },
+      ],
+    },
+    {
+      '@type': 'ImageGallery', name, url: canonicalUrl,
+      description: album.seoDescription || album.description || `Photos from our ${name} adventure.`,
+      image: photos.slice(0, 20).map((photo) => photo.image),
+      creator: { '@id': 'https://seekthethrill.in/#organization' },
+    },
+  ],
+};
 ---
 
 <BaseLayout
-  title={`${name} — The Vault | Seek the Thrill`}
-  description={album.description ?? `Photos from our ${name} adventure.`}
-  image={ogImage}
+  title={album.seoTitle || `${name} — The Vault | Seek the Thrill`}
+  description={album.seoDescription || album.description || `Photos from our ${name} adventure.`}
+  image={album.socialImage || ogImage}
+  imageAlt={album.socialImageAlt || `${name} group trip photo album`}
+  type="article"
   nav="none"
 >
-  <main style="background-color: var(--color-blush);">
+  <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(albumSchema)} /></Fragment>
+  <div style="background-color: var(--color-blush);">
     <!-- Top bar -->
     <header class="mx-auto flex max-w-2xl items-center justify-between px-5 pt-5">
       <a href="/photo-vault/" id="album-back" aria-label="Back" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
@@ -72,6 +92,8 @@ const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
               <img
                 src={p.image}
                 alt={p.caption ?? `${name} photo ${i + 1}`}
+                width={p.width || undefined}
+                height={p.height || undefined}
                 class="block h-auto w-full transition-transform duration-300 group-hover:scale-105"
                 style={p.width && p.height ? `aspect-ratio:${p.width}/${p.height};` : ''}
                 loading="lazy"
@@ -97,7 +119,7 @@ const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
     <footer class="mx-auto max-w-2xl px-5 pb-10 text-center">
       <p class="text-[10px] uppercase tracking-[0.25em]" style="color: rgba(27,43,58,0.45);">Curated by Zahra © {year}</p>
     </footer>
-  </main>
+  </div>
 </BaseLayout>
 
 <script>

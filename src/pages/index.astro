@@ -1,13 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { listTrips, listTestimonials, readSiteSettings, tripHasUpcomingDates, tripCardSummary } from '../lib/content';
+import { listTrips, listTestimonials, readSiteSettings, isTripListable, tripCardSummary } from '../lib/content';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature trips that have an upcoming,
 // not-fully-sold-out departure (trip-level status was removed).
 const featuredTrips = allTrips
-  .filter((t) => tripHasUpcomingDates(t) && !tripCardSummary(t).soldOut)
+  .filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut)
   .slice(0, 3);
 
 const allTestimonials = listTestimonials().slice(0, 4);
@@ -38,15 +38,15 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
   <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
     class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
-    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80'); background-size: cover; background-position: center;"
   >
+    <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80" alt="Mountain landscape on an offbeat group trip in India" width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(8,12,24,0.6) 0%, rgba(8,12,24,0.4) 40%, rgba(8,12,24,0.75) 100%);"></div>
 
     <div class="relative z-10 w-full max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto px-6 flex flex-col items-center text-center">
 
       <!-- Brand mark -->
-      <img src="/logo.jpg" alt="Seek the Thrill" class="anim-fade-up w-20 h-20 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl mb-4" />
-      <h1 class="anim-fade-up font-display text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</h1>
+      <img src="/logo.jpg" alt="Seek the Thrill" width="96" height="96" class="anim-fade-up w-20 h-20 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl mb-4" />
+      <p class="anim-fade-up font-display text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</p>
       <p class="anim-fade-up font-display italic text-sm text-white/70 mb-10">by Zahra Shakir</p>
 
       <!-- Badge pill -->
@@ -55,10 +55,10 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </span>
 
       <!-- Headline -->
-      <h2 class="anim-fade-up anim-delay-1 text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
-        Go where the<br />
-        <span style="color: var(--color-coral); font-style: italic;">crowds don't.</span>
-      </h2>
+      <h1 class="anim-fade-up anim-delay-1 text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
+        Offbeat group trips<br />
+        <span style="color: var(--color-coral); font-style: italic;">away from the crowds.</span>
+      </h1>
 
       <!-- Subtext -->
       <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-7 leading-relaxed">

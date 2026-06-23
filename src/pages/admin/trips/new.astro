@@ -40,6 +40,14 @@ const tripSlug = '';
           <label class="form-label">Duration</label>
           <input type="text" name="duration" class="form-input" placeholder="e.g. 7 Days / 6 Nights" />
         </div>
+        <div class="form-group">
+          <label class="form-label">Publication</label>
+          <select name="publicationStatus" class="form-input"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option><option value="test">Test only</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <input type="text" name="location" class="form-input" placeholder="e.g. Meghalaya" />
+        </div>
         <div class="form-group full">
           <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
             <input type="checkbox" name="registrationEnabled" value="true" checked style="width:1rem; height:1rem;" />
@@ -75,6 +83,18 @@ const tripSlug = '';
         <div class="form-group full">
           <label class="form-label">Full Description</label>
           <textarea name="description" class="form-input" rows="8" placeholder="Detailed trip description..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">SEO Title</label>
+          <input name="seoTitle" class="form-input" maxlength="70" placeholder="Optional; falls back to trip name" />
+        </div>
+        <div class="form-group full">
+          <label class="form-label">SEO Description</label>
+          <textarea name="seoDescription" class="form-input" rows="3" maxlength="170" placeholder="Search result summary"></textarea>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Featured Image Alt Text</label>
+          <input name="imageAlt" class="form-input" maxlength="180" placeholder="Describe the destination and scene" />
         </div>
         <div class="form-group full">
           <label class="form-label">Who Should Join</label>

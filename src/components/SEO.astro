@@ -5,6 +5,8 @@ interface Props {
   image?: string;
   type?: 'website' | 'article';
   canonical?: string;
+  imageAlt?: string;
+  robots?: string;
 }
 
 const {
@@ -13,11 +15,14 @@ const {
   image = '/images/og-default.jpg',
   type = 'website',
   canonical,
+  imageAlt = 'Seek the Thrill — offbeat group trips across India',
+  robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
 } = Astro.props;
 
 const siteUrl = 'https://seekthethrill.in';
 const fullTitle = title.includes('Seek the Thrill') ? title : `${title} | Seek the Thrill`;
-const canonicalUrl = canonical ?? new URL(Astro.url.pathname, siteUrl).href;
+const path = Astro.url.pathname === '/' ? '/' : `${Astro.url.pathname.replace(/\/+$/, '')}/`;
+const canonicalUrl = canonical ?? new URL(path, siteUrl).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, siteUrl).href;
 ---
 
@@ -26,7 +31,7 @@ const imageUrl = image.startsWith('http') ? image : new URL(image, siteUrl).href
 <link rel="canonical" href={canonicalUrl} />
 
 <!-- Robots -->
-<meta name="robots" content="index, follow" />
+<meta name="robots" content={robots} />
 
 <!-- Open Graph -->
 <meta property="og:type" content={type} />
@@ -34,12 +39,15 @@ const imageUrl = image.startsWith('http') ? image : new URL(image, siteUrl).href
 <meta property="og:description" content={description} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:image" content={imageUrl} />
+<meta property="og:image:alt" content={imageAlt} />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:site_name" content="Seek the Thrill" />
+<meta property="og:locale" content="en_IN" />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content={fullTitle} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
+<meta name="twitter:image:alt" content={imageAlt} />

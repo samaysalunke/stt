@@ -1,7 +1,12 @@
 name: ""
+publicationStatus: test
+location: null
 duration: null
 shortDescription: null
 description: null
+seoTitle: null
+seoDescription: null
+imageAlt: null
 whoShouldJoin: null
 highlights: []
 included: []

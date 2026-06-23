@@ -44,11 +44,15 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const updated = {
     ...album,
     name: sanitizeInput(body.get('name')) || album.name,
+    publicationStatus: sanitizeInput(body.get('publicationStatus')) || album.publicationStatus || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     date: sanitizeInput(body.get('date')) || null,
     description: sanitizeInput(body.get('description')) || null,
+    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
+    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
+    socialImageAlt: sanitizeInput(body.get('socialImageAlt')) || null,
     coverImage,
-    published: body.get('published') === 'true',
+    published: body.get('publicationStatus') === 'published',
   };
 
   writeAlbum(slug, updated);

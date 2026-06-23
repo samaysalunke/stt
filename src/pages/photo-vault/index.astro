@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { listAlbums } from '../../lib/content';
+import { listAlbums, isAlbumPublic } from '../../lib/content';
 
 const allAlbums = listAlbums();
 const albums = allAlbums
-  .filter((a) => a.published)
+  .filter(isAlbumPublic)
   .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
 
 function formatDate(d: string | null | undefined) {

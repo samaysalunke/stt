@@ -13,6 +13,12 @@ export function listAlbums(): Array<Record<string, any>> {
     });
 }
 
+export function isAlbumPublic(album: Record<string, any>): boolean {
+  const status = String(album?.publicationStatus ?? '').toLowerCase();
+  if (status) return status === 'published' || status === 'archived';
+  return album?.published === true;
+}
+
 export function readAlbum(slug: string): Record<string, any> | null {
   assertSafeSlug(slug);
   const filePath = path.join(ALBUMS_DIR, `${slug}.yaml`);

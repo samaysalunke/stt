@@ -49,7 +49,7 @@ const ctaLabel = pick(s.aboutCtaLabel, DEFAULTS.ctaLabel);
   description="I'm Zahra. I built Seek the Thrill from one scary yes."
   nav="none"
 >
-  <main style="background-color: var(--color-blush);">
+  <div style="background-color: var(--color-blush);">
     <!-- Top bar -->
     <header class="mx-auto flex max-w-2xl items-center justify-between px-5 pt-5">
       <a href="/" id="about-back" aria-label="Back" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
@@ -72,7 +72,7 @@ const ctaLabel = pick(s.aboutCtaLabel, DEFAULTS.ctaLabel);
       <div class="relative">
         <img src={founderImg} alt={bylineName} class="aspect-[4/5] w-full rounded-sm object-cover" loading="lazy" />
         <div class="absolute -bottom-6 left-1/2 w-[88%] -translate-x-1/2 rounded-md bg-white px-5 py-4 text-center" style="box-shadow: 0 10px 30px -12px rgba(15,23,42,0.25);">
-          <p class="font-display text-xl leading-snug" style="color: var(--color-navy);">{caption}</p>
+          <h1 class="font-display text-xl leading-snug" style="color: var(--color-navy);">{caption}</h1>
         </div>
       </div>
     </section>
@@ -123,7 +123,7 @@ const ctaLabel = pick(s.aboutCtaLabel, DEFAULTS.ctaLabel);
         </svg>
       </a>
     </section>
-  </main>
+  </div>
 </BaseLayout>
 
 <script>

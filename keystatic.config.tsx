@@ -14,6 +14,14 @@ export default config({
       format: { data: 'yaml' },
       schema: {
         name: fields.slug({ name: { label: 'Trip Name' } }),
+        publicationStatus: fields.select({
+          label: 'Publication Status',
+          options: [
+            { label: 'Draft', value: 'draft' }, { label: 'Published', value: 'published' },
+            { label: 'Archived', value: 'archived' }, { label: 'Test only', value: 'test' },
+          ],
+          defaultValue: 'draft',
+        }),
         status: fields.select({
           label: 'Status',
           options: [
@@ -34,6 +42,9 @@ export default config({
           label: 'Short Description (for listing cards)',
           validation: { length: { max: 200 } },
         }),
+        seoTitle: fields.text({ label: 'SEO Title', validation: { length: { max: 70 } } }),
+        seoDescription: fields.text({ label: 'SEO Description', multiline: true, validation: { length: { max: 170 } } }),
+        imageAlt: fields.text({ label: 'Featured Image Alt Text', validation: { length: { max: 180 } } }),
         startDate: fields.date({ label: 'Start Date' }),
         endDate: fields.date({ label: 'End Date' }),
         duration: fields.text({ label: 'Duration', description: 'e.g., "7 Days, 6 Nights"' }),
@@ -119,9 +130,20 @@ export default config({
       format: { data: 'yaml' },
       schema: {
         name: fields.slug({ name: { label: 'Album Name (Trip Name)' } }),
+        publicationStatus: fields.select({
+          label: 'Publication Status',
+          options: [
+            { label: 'Draft', value: 'draft' }, { label: 'Published', value: 'published' },
+            { label: 'Archived', value: 'archived' }, { label: 'Test only', value: 'test' },
+          ],
+          defaultValue: 'draft',
+        }),
         location: fields.text({ label: 'Location' }),
         date: fields.date({ label: 'Trip Date' }),
         description: fields.text({ label: 'Description (optional)' }),
+        seoTitle: fields.text({ label: 'SEO Title', validation: { length: { max: 70 } } }),
+        seoDescription: fields.text({ label: 'SEO Description', multiline: true, validation: { length: { max: 170 } } }),
+        socialImageAlt: fields.text({ label: 'Social Image Alt Text', validation: { length: { max: 180 } } }),
         coverImage: fields.image({
           label: 'Cover Image',
           directory: 'public/images/albums',
@@ -138,7 +160,6 @@ export default config({
           }),
           { label: 'Photos' }
         ),
-        published: fields.checkbox({ label: 'Published', defaultValue: true }),
       },
     }),
 

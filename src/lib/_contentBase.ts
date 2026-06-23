@@ -41,13 +41,23 @@ export async function saveImageFile(
     throw new Error('Image too large (max 10 MB)');
   }
   const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
-  const ext = ALLOWED_IMAGE_EXTS.includes(rawExt) ? rawExt : 'jpg';
+  const optimizeForWeb = !destSubDir.includes('/qr');
+  const ext = optimizeForWeb ? 'webp' : (ALLOWED_IMAGE_EXTS.includes(rawExt) ? rawExt : 'jpg');
   const filename = namePart ? `${namePart}.${ext}` : `${uuid()}.${ext}`;
   const subPath = destSubDir.replace(/^images\//, '');
   const destDir = path.join(IMAGES_BASE, subPath);
   ensureDir(destDir);
   const buffer = Buffer.from(await file.arrayBuffer());
-  fs.writeFileSync(path.join(destDir, filename), buffer);
+  const destination = path.join(destDir, filename);
+  if (optimizeForWeb) {
+    await sharp(buffer)
+      .rotate()
+      .resize({ width: 1920, height: 1920, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82, effort: 4 })
+      .toFile(destination);
+  } else {
+    fs.writeFileSync(destination, buffer);
+  }
   return `/${destSubDir}/${filename}`;
 }
 

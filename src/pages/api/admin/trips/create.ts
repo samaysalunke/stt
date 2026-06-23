@@ -41,10 +41,15 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const data: Record<string, any> = {
     name,
+    publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
+    location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
     registrationEnabled: body.get('registrationEnabled') === 'true',
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
     description: sanitizeInput(body.get('description')) || null,
+    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
+    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
+    imageAlt: sanitizeInput(body.get('imageAlt')) || null,
     whoShouldJoin: sanitizeInput(body.get('whoShouldJoin')) || null,
     highlights,
     included,

@@ -78,7 +78,7 @@ const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
 const canChangeUsername = !userRow?.usernameChangedAt;
 ---
 
-<BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." nav="back">
+<BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." robots="noindex, follow" nav="back">
   <div class="container-app py-10 max-w-lg mx-auto">
 
     <!-- Share banner: shown once after a trip completes -->

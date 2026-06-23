@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import BookingCheckout from '../../../components/BookingCheckout';
-import { readTrip, readSiteSettings, resolveBooking } from '../../../lib/content';
+import { readTrip, readSiteSettings, resolveBooking, isTripPublic } from '../../../lib/content';
 import { getDb } from '../../../lib/db';
 
 export const prerender = false;
@@ -9,7 +9,7 @@ export const prerender = false;
 const { slug } = Astro.params;
 const trip = readTrip(slug!);
 
-if (!trip) return Astro.redirect('/trips/');
+if (!trip || !isTripPublic({ slug, ...trip })) return new Response('Not Found', { status: 404 });
 
 const booking = resolveBooking(trip);
 const departures = booking.departures;
@@ -73,6 +73,7 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
   title={`Book — ${tripName} — Seek the Thrill`}
   description={`Complete your booking for ${tripName}.`}
   image={heroImg}
+  robots="noindex, follow"
   nav="none"
 >
   <!-- Slim trip header -->
