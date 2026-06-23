@@ -145,9 +145,10 @@ export function parseGoogleFormsRegistrations(input: string): GoogleRegistration
   const headers = rows[0].map(normalizeHeader);
   const index = (expected: string) => headers.indexOf(normalizeHeader(expected));
   const required = Object.fromEntries(Object.entries(GOOGLE_HEADERS).map(([key, value]) => [key, index(value)])) as Record<keyof typeof GOOGLE_HEADERS, number>;
-  // "Accommodation preference" is used by some forms instead of "What stay option do you prefer?"
+  // "Accommodation preference" is an alias used by some forms; stay column is optional for single-tier trips.
   if (required.stay < 0) required.stay = index('accommodation preference');
-  if (Object.values(required).some((i) => i < 0)) return null;
+  const { stay: _stayIdx, ...requiredCore } = required;
+  if (Object.values(requiredCore).some((i) => i < 0)) return null;
   const consentIndex = headers.findIndex((h) => h.startsWith('by signing up for this trip, i acknowledge'));
   if (consentIndex < 0) return null;
 
@@ -157,14 +158,14 @@ export function parseGoogleFormsRegistrations(input: string): GoogleRegistration
     if (cells.every((c) => !c.trim())) continue;
     const get = (key: keyof typeof GOOGLE_HEADERS) => (cells[required[key]] ?? '').trim();
     const timestamp = parseIndiaFormsTimestamp(get('timestamp'));
-    const stay = get('stay');
+    const stay = required.stay >= 0 ? get('stay') : '';
     const sourceStatus = get('status');
     const stayLower = stay.toLowerCase();
     const tier_id = stayLower === 'double sharing' ? 'double' : stayLower === 'triple sharing' ? 'triple' : stayLower === 'dorm' ? 'dorm' : '';
     const status = sourceStatus === 'Confirmed' ? 'confirmed' : sourceStatus === '' ? 'lead' : '';
     const errors: string[] = [];
     if (!timestamp) errors.push('Invalid timestamp');
-    if (!tier_id) errors.push(`Unknown stay option: ${stay || '(blank)'}`);
+    if (required.stay >= 0 && !tier_id) errors.push(`Unknown stay option: ${stay || '(blank)'}`);
     if (!status) errors.push(`Unknown status: ${sourceStatus}`);
     result.push({
       row: i,

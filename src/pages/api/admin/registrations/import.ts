@@ -13,12 +13,14 @@ interface PreviewRow { row:number; name:string; email:string; tierId:string; sta
 function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:string, fallbackStatus:RegStatus) {
   const google = parseGoogleFormsRegistrations(csv);
   const preview: PreviewRow[] = [];
-  const raw = google ?? parseCsvToObjects(csv).map((r, i) => ({
-    row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
-    emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
-    city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
-    tier_id: inferTierIdFromRow(r) || fallbackTier, status:fallbackStatus,
-  }));
+  const raw = google
+    ? google.map((r) => ({ ...r, tier_id: r.tier_id || fallbackTier }))
+    : parseCsvToObjects(csv).map((r, i) => ({
+        row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
+        emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
+        city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
+        tier_id: inferTierIdFromRow(r) || fallbackTier, status:fallbackStatus,
+      }));
 
   for (const r of raw) {
     const base:PreviewRow = { row:r.row, name:r.full_name || '—', email:r.email || '—', tierId:r.tier_id || '—', status:r.status || '—', action:'create' };
