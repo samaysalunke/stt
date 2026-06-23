@@ -1,0 +1,98 @@
+title: The Eastern Frontier — Arunachal Pradesh
+slug: eastern-frontier-arunachal
+publicationStatus: archived          # past trip, kept as an archived report
+registrationEnabled: false           # registrations closed
+location: Arunachal Pradesh
+duration: 7 Days, 6 Nights
+seoTitle: The Eastern Frontier — Arunachal Pradesh | 6N/7D
+seoDescription: A 6N/7D small-group journey across Arunachal's eastern frontier — Dirang, Chug Valley, Sela Pass, Tawang and Bumla — hosted by Seek the Thrill.
+imageAlt: Snow-draped monastery and high passes on Arunachal's eastern frontier
+shortDescription: Monasteries, snow passes and the Chug Valley — 6N/7D through Arunachal's far east with Zahra and Ankit.
+description: >-
+  A 6 night, 7 day ride through Arunachal Pradesh's eastern frontier — from the apple-and-kiwi
+  valleys of Dirang and the hidden hamlet of Chug, over the 13,700 ft Sela Pass into Tawang, and
+  up to the Indo-China frontier at Bumla and the frozen Madhuri Lake. Hosted by Zahra (Founder,
+  Seek the Thrill) and Ankit.
+whoShouldJoin: >-
+  Travellers chasing high-altitude landscapes, Buddhist monasteries and slow mountain culture.
+  Comfortable with long drives and cold, thin-air days. Beginners welcome.
+occupancyCatalog:
+  - id: triple
+    label: Triple Sharing
+    helperText: Room shared with two others.
+  - id: double
+    label: Double Sharing
+    helperText: Room shared with one other traveller. Limited.
+batches:
+  - id: eastern-frontier-arunachal-2026-05-03
+    startDate: 2026-05-03
+    endDate: 2026-05-09
+    status: completed
+    offers:
+      - { tierId: triple, price: 31000, cap: 12, booked: 12 }
+      - { tierId: double, price: 33000, cap: 3,  booked: 3 }
+highlights:
+  - Cross the 13,700 ft Sela Pass and its frozen high-altitude lakes
+  - Tawang Monastery — India's largest, perched above the valley
+  - Bumla Pass and Madhuri (Shonga-tser) Lake near the Indo-China frontier
+  - The hidden hamlet of Chug Valley and the meadows of Sangti
+included:
+  - Pick-up and drop from Guwahati
+  - All internal travel by mountain vehicle
+  - 6N accommodation as per itinerary (homestays/hotels)
+  - Daily breakfast and dinner
+  - Inner Line Permits for Arunachal Pradesh
+  - Trip host(s) throughout
+notIncluded:
+  - Flights/trains to and from Guwahati
+  - Lunches
+  - Entry/camera fees at monuments and monasteries
+  - Optional Chug Valley fine-dining experience (₹1,500 per person)
+  - Anything not listed under Inclusions
+paymentAmount: 10000          # advance — REVIEW: confirm actual booking amount
+balanceDueRule: 15 days before trip
+meetingPoint: >-
+  Guwahati — group departs early morning. Arrive in Guwahati the night before.
+importantNotes: >-
+  High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights.
+  Carry warm layers and any personal medication. Itinerary may flex with weather and road/permit
+  conditions. The Chug Valley fine-dining experience is an optional ₹1,500/person add-on.
+itinerary:
+  - day: 1
+    title: Guwahati to Dirang
+    description: Depart Guwahati early. Drive through Bhalukpong and Bomdila into the Dirang valley.
+    stay: Dirang
+    meals: [D]
+    transport: Mountain vehicle from Guwahati
+  - day: 2
+    title: Dirang & Chug Valley
+    description: Explore Dirang — Sangti Valley, hot springs, the old dzong and the hidden hamlet of Chug. Optional fine-dining evening in Chug Valley.
+    stay: Dirang
+    meals: [B, D]
+  - day: 3
+    title: Dirang to Tawang over Sela Pass
+    description: Climb to the 13,700 ft Sela Pass and its frozen lakes, pay respects at Jaswant Garh, then descend into Tawang.
+    stay: Tawang
+    meals: [B, D]
+    transport: Mountain vehicle
+  - day: 4
+    title: Tawang Monastery & town
+    description: Visit Tawang Monastery, the War Memorial and local markets. Time to slow down at altitude.
+    stay: Tawang
+    meals: [B, D]
+  - day: 5
+    title: Bumla Pass & Madhuri Lake
+    description: Day excursion to the Indo-China frontier at Bumla Pass, PTSo Lake and the frozen Madhuri (Shonga-tser) Lake. Permit-dependent.
+    stay: Tawang
+    meals: [B, D]
+  - day: 6
+    title: Tawang to Dirang/Bomdila
+    description: Retrace the high passes back down to the lower valleys for a final mountain night.
+    stay: Bomdila / Dirang
+    meals: [B, D]
+  - day: 7
+    title: Drive back to Guwahati
+    description: Descend to the plains and transfer to Guwahati for onward journeys.
+    stay: ''
+    meals: [B]
+    transport: Mountain vehicle to Guwahati

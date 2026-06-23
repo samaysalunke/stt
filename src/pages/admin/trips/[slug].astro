@@ -45,7 +45,7 @@ const tripSlug = slug;
 const saved = Astro.url.searchParams.get('saved') === '1';
 ---
 
-<AdminLayout title={`Edit: ${trip.name ?? slug}`} page="trips">
+<AdminLayout title={`Edit: ${trip.title ?? trip.name ?? slug}`} page="trips">
 
   {saved && (
     <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2"
@@ -60,7 +60,7 @@ const saved = Astro.url.searchParams.get('saved') === '1';
   <!-- Header -->
   <div class="edit-header">
     <a href="/admin/trips" class="back-link">← Trips</a>
-    <h1 class="edit-title">{trip.name ?? slug}</h1>
+    <h1 class="edit-title">{trip.title ?? trip.name ?? slug}</h1>
     <div class="header-actions">
       <a href={`/trips/${slug}/`} target="_blank" class="preview-btn">Preview ↗</a>
       <button type="submit" form="trip-form" class="save-btn">Save Changes</button>
@@ -89,7 +89,7 @@ const saved = Astro.url.searchParams.get('saved') === '1';
 
         <div class="field full">
           <label class="flabel">Trip Name *</label>
-          <input type="text" name="name" required class="finput" value={trip.name ?? ''} />
+          <input type="text" name="name" required class="finput" value={trip.title ?? trip.name ?? ''} />
         </div>
 
         <div class="field">

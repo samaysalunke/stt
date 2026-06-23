@@ -64,7 +64,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Write the trip object largely as-is — it already matches the trip YAML
     // schema, including nested arrays (batches, itinerary, highlights, …).
     // Ensure slug + title are present and consistent.
-    const data: Record<string, any> = { ...item, slug, title };
+    // The editor/create/update layer keys off `name`; content/import uses
+    // `title`. Write both (identical) so imported trips show their name in admin.
+    const data: Record<string, any> = { ...item, slug, title, name: title };
     // Trip-level status was removed — visibility/sold-out derive from departures.
     // Strip any legacy top-level status carried in the YAML.
     delete data.status;

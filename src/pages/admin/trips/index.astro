@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { listTrips, upcomingBatches, tripCardSummary } from '../../../lib/content';
+import { listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch } from '../../../lib/content';
 
 // Derive an at-a-glance summary from each trip's departures (the source of truth).
 const trips = listTrips().map((t) => {
@@ -9,6 +9,8 @@ const trips = listTrips().map((t) => {
   const upcoming = upcomingBatches(t);
   const lead = upcoming[0] ?? allBatches[0] ?? null;
   const summary = tripCardSummary(t);
+  // Card price falls back to past batches so expired trips show a number, not "—".
+  const cardPrice = tripCardSummaryAnyBatch(t);
   // Trip-level status is gone — derive a display state from departures.
   const _derivedStatus = upcoming.length === 0 ? 'hidden' : (summary.soldOut ? 'sold-out' : 'booking-open');
   const offers = Array.isArray(lead?.offers) ? lead.offers : [];
@@ -22,8 +24,8 @@ const trips = listTrips().map((t) => {
   return {
     ...t,
     _derivedStatus,
-    _fromPrice: summary.fromPrice,
-    _hasSharing: summary.multiPrice,
+    _fromPrice: cardPrice.fromPrice,
+    _hasSharing: cardPrice.multiPrice,
     _leadStart: lead?.startDate ?? null,
     _leadBooked: leadBooked,
     _leadTotal: leadTotal,

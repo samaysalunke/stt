@@ -41,7 +41,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const gallery = parseGallery(body.get('gallery_json'));
 
   const data: Record<string, any> = {
+    // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name,
+    title: name,
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,

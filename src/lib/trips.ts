@@ -288,6 +288,27 @@ export function tripCardSummary(trip: Record<string, any>): {
   };
 }
 
+// Admin-only: a "from" price even when every departure is in the past.
+// resolveBooking() deliberately ignores past batches (public site hides them),
+// but the admin trip list still wants a number instead of "—".
+export function tripCardSummaryAnyBatch(trip: Record<string, any>): {
+  fromPrice: number | null;
+  multiPrice: boolean;
+} {
+  const all = Array.isArray(trip?.batches) ? trip.batches : [];
+  if (all.length === 0) {
+    const s = tripCardSummary(trip);
+    return { fromPrice: s.fromPrice, multiPrice: s.multiPrice };
+  }
+  const catalog = resolveCatalog(trip);
+  const prices = new Set<number>();
+  for (const b of all) for (const o of resolveOffers(b, trip, catalog)) prices.add(o.price);
+  return {
+    fromPrice: prices.size > 0 ? Math.min(...prices) : null,
+    multiPrice: prices.size > 1,
+  };
+}
+
 export function findTripByName(tripName: string) {
   return listTrips().find((t: any) => (t.title || t.name) === tripName) ?? null;
 }
