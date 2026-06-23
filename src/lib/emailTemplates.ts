@@ -87,20 +87,6 @@ export async function sendRegistrationStatusRejected(data: {
   await sendEmail(data.email, `Booking Update — ${data.trip_name} | Seek the Thrill`, html);
 }
 
-export async function sendContactConfirmation(name: string, email: string, message: string) {
-  const html = wrapEmail(`
-    <p style="margin: 0 0 16px;">Hi <strong>${escapeHtml(name)}</strong>,</p>
-    <p style="margin: 0 0 16px;">Thank you for reaching out! We've received your message and will get back to you within <strong>24–48 hours</strong>.</p>
-    <div style="background: #FDF0EC; border-radius: 8px; padding: 16px; margin: 0 0 16px;">
-      <p style="color: #6B7280; margin: 0 0 8px; font-size: 13px;">Your message:</p>
-      <p style="margin: 0; font-style: italic; color: #1B2B3A;">"${escapeHtml(message)}"</p>
-    </div>
-    <p style="color: #6B7280; font-size: 14px; margin: 0;">In the meantime, browse our <a href="https://seekthethrill.in/trips/" style="color: #E8725A;">upcoming trips</a> or follow us on Instagram <strong>@seekthethrill_</strong>.</p>
-  `);
-
-  await sendEmail(email, 'We received your message | Seek the Thrill', html);
-}
-
 export async function sendRegistrationPaymentReceived(data: {
   firstName: string;
   email: string;
@@ -199,29 +185,4 @@ export async function sendBroadcastToSubscriber(params: {
   `);
 
   await sendEmail(params.email, params.subject, html);
-}
-
-export async function sendAdminContactNotification(data: Record<string, any>) {
-  const html = `
-<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #1B2B3A; padding: 20px; border-radius: 8px 8px 0 0;">
-    <h2 style="color: white; margin: 0;">New Contact Form Submission</h2>
-  </div>
-  <div style="background: white; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #F5DDD7;">
-    <p><strong>Subject:</strong> ${escapeHtml(data.subject)}</p>
-    <p><strong>Name:</strong> ${escapeHtml(data.full_name)}</p>
-    <p><strong>Email:</strong> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>
-    <p><strong>Phone:</strong> ${escapeHtml(data.phone || '—')}</p>
-    <p><strong>Source:</strong> ${escapeHtml(data.source || '—')}</p>
-    <p><strong>Message:</strong></p>
-    <div style="background: #FDF0EC; padding: 16px; border-radius: 8px;">
-      <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(data.message)}</p>
-    </div>
-  </div>
-</body>
-</html>`;
-
-  await sendEmail(ADMIN_EMAIL, `New Contact Form: ${data.subject}`, html);
 }

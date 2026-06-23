@@ -8,7 +8,6 @@ try {
 } catch (e) {}
 
 const email = settings.email ?? 'zahra@seekthethrill.in';
-const phone = settings.phone ?? '+91 79750 27491';
 const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 const instagram = settings.instagram ?? 'https://instagram.com/seekthethrill_';
 
@@ -17,12 +16,8 @@ const heroImg = 'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=
 const methods = [
   { t: 'Email', v: email, n: 'Reply within 24–48 hours', href: `mailto:${email}`,
     icon: 'M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75' },
-  { t: 'Call', v: phone, n: 'Mon–Sat, 9 AM – 7 PM IST', href: `tel:${phone.replace(/[^0-9+]/g, '')}`,
-    icon: 'M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z' },
   { t: 'WhatsApp', v: 'Chat instantly', n: 'Fastest response channel', href: whatsapp,
     icon: 'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
-  { t: 'Response time', v: 'Within 24 hrs', n: 'Usually much faster on WhatsApp', href: null,
-    icon: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z' },
 ];
 ---
 
@@ -41,7 +36,7 @@ const methods = [
   </section>
 
   <section class="py-16" style="background-color: var(--color-gray-soft);">
-    <div class="mx-auto grid max-w-6xl gap-12 px-4 lg:grid-cols-[1fr_1.4fr]">
+    <div class="mx-auto max-w-2xl px-4">
       <!-- Contact methods -->
       <div class="space-y-4">
         {methods.map((m) => {
@@ -71,100 +66,6 @@ const methods = [
           @seekthethrill_
         </a>
       </div>
-
-      <!-- Form -->
-      <div class="rounded-2xl bg-white p-8 shadow-sm lg:p-10">
-        <form id="contact-form" class="space-y-5">
-          <!-- Honeypot -->
-          <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off" />
-          <h2 class="font-display text-3xl" style="color: var(--color-navy);">Send a message</h2>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label class="mb-1.5 block text-xs uppercase tracking-widest" style="color: rgba(27,43,58,0.6);">Full name</label>
-              <input type="text" name="fullName" required class="w-full rounded-lg border px-4 py-3 text-sm outline-none" style="border-color: var(--color-peach);" />
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs uppercase tracking-widest" style="color: rgba(27,43,58,0.6);">Email</label>
-              <input type="email" name="email" required class="w-full rounded-lg border px-4 py-3 text-sm outline-none" style="border-color: var(--color-peach);" />
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs uppercase tracking-widest" style="color: rgba(27,43,58,0.6);">Phone</label>
-              <input type="tel" name="phone" class="w-full rounded-lg border px-4 py-3 text-sm outline-none" style="border-color: var(--color-peach);" />
-            </div>
-            <div>
-              <label class="mb-1.5 block text-xs uppercase tracking-widest" style="color: rgba(27,43,58,0.6);">Subject</label>
-              <select name="subject" required class="w-full rounded-lg border bg-white px-4 py-3 text-sm outline-none" style="border-color: var(--color-peach);">
-                <option>Trip inquiry</option>
-                <option>Booking issue</option>
-                <option>Group booking</option>
-                <option>Cancellation / refund</option>
-                <option>General question</option>
-                <option>Feedback</option>
-                <option>Partnership</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="mb-1.5 block text-xs uppercase tracking-widest" style="color: rgba(27,43,58,0.6);">Message</label>
-            <textarea name="message" required rows="5" class="w-full rounded-lg border px-4 py-3 text-sm outline-none" style="border-color: var(--color-peach);"></textarea>
-          </div>
-
-          <div id="contact-error" class="hidden rounded-lg p-4 text-sm" style="background-color: #fee2e2; color: #991b1b;"></div>
-
-          <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90" style="background-color: var(--color-coral);">Send it</button>
-        </form>
-
-        <div id="contact-sent" class="hidden py-12 text-center">
-          <p class="font-display text-3xl" style="color: var(--color-navy);">Sent.</p>
-          <p class="mt-2" style="color: var(--color-gray-text);">We'll get back to you soon.</p>
-        </div>
-      </div>
     </div>
   </section>
 </BaseLayout>
-
-<script>
-  const form = document.getElementById('contact-form') as HTMLFormElement;
-  const errorDiv = document.getElementById('contact-error') as HTMLElement;
-  const sentDiv = document.getElementById('contact-sent') as HTMLElement;
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorDiv.classList.add('hidden');
-
-    const fd = new FormData(form);
-    const body: Record<string, string> = {};
-    fd.forEach((v, k) => { body[k] = v.toString(); });
-
-    if (body._honey) return;
-
-    const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = 'Sending...';
-
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        form.classList.add('hidden');
-        sentDiv.classList.remove('hidden');
-      } else {
-        errorDiv.textContent = data.error ?? 'Something went wrong. Please try again.';
-        errorDiv.classList.remove('hidden');
-      }
-    } catch {
-      errorDiv.textContent = 'Network error. Please try again.';
-      errorDiv.classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Send it';
-    }
-  });
-</script>

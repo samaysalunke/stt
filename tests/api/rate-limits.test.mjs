@@ -1,4 +1,4 @@
-// TC-036, TC-044, TC-073 — Rate limiting
+// TC-036, TC-073 — Rate limiting
 //
 // IMPORTANT: Run on a freshly started dev server.
 // The rate limiter is in-memory; running other test files first may exhaust
@@ -29,30 +29,6 @@ test('TC-036 registration rate limit: 6th request from same IP → 429', async (
   assert.equal(status, 429, `6th request should be rate-limited (429), got ${status}`);
   assert.equal(data.success, false);
   assert.match(data.error, /too many/i);
-});
-
-// TC-044: /api/contact allows 10 per IP per hour
-// NOTE: run on a fresh server — register tests above share the same IP bucket.
-// On a fresh server, re-run this file standalone to test contact independently.
-test('TC-044 contact rate limit: 11th request → 429', async () => {
-  for (let i = 0; i < 10; i++) {
-    const { status } = await apiPost('/api/contact', {
-      fullName: 'QA Rate',
-      email:    `qa-ratelimit-contact-${i}@example.invalid`,
-      subject:  'rate limit test',
-      message:  'automated rate limit test message',
-    });
-    // May fail if register tests already used the budget — noted in file header
-    assert.ok(status < 429, `Request ${i + 1}/10 should not be rate-limited yet, got ${status}`);
-  }
-  const { status, data } = await apiPost('/api/contact', {
-    fullName: 'QA Rate',
-    email:    'qa-ratelimit-contact-11@example.invalid',
-    subject:  'rate limit test',
-    message:  'automated rate limit test message',
-  });
-  assert.equal(status, 429, `11th request should be rate-limited (429), got ${status}`);
-  assert.equal(data.success, false);
 });
 
 // TC-073: /api/admin/login allows 10 per IP per hour (separate key: login:<ip>)
