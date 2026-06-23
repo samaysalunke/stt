@@ -145,6 +145,8 @@ export function parseGoogleFormsRegistrations(input: string): GoogleRegistration
   const headers = rows[0].map(normalizeHeader);
   const index = (expected: string) => headers.indexOf(normalizeHeader(expected));
   const required = Object.fromEntries(Object.entries(GOOGLE_HEADERS).map(([key, value]) => [key, index(value)])) as Record<keyof typeof GOOGLE_HEADERS, number>;
+  // "Accommodation preference" is used by some forms instead of "What stay option do you prefer?"
+  if (required.stay < 0) required.stay = index('accommodation preference');
   if (Object.values(required).some((i) => i < 0)) return null;
   const consentIndex = headers.findIndex((h) => h.startsWith('by signing up for this trip, i acknowledge'));
   if (consentIndex < 0) return null;
@@ -157,7 +159,8 @@ export function parseGoogleFormsRegistrations(input: string): GoogleRegistration
     const timestamp = parseIndiaFormsTimestamp(get('timestamp'));
     const stay = get('stay');
     const sourceStatus = get('status');
-    const tier_id = stay === 'Double Sharing' ? 'double' : stay === 'Triple Sharing' ? 'triple' : '';
+    const stayLower = stay.toLowerCase();
+    const tier_id = stayLower === 'double sharing' ? 'double' : stayLower === 'triple sharing' ? 'triple' : stayLower === 'dorm' ? 'dorm' : '';
     const status = sourceStatus === 'Confirmed' ? 'confirmed' : sourceStatus === '' ? 'lead' : '';
     const errors: string[] = [];
     if (!timestamp) errors.push('Invalid timestamp');
