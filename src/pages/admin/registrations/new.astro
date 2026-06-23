@@ -1,14 +1,12 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
+import { ADMIN_REG_INPUT_STYLE as inputStyle, ADMIN_REG_LABEL_STYLE as labelStyle } from '../../../lib/adminStyles';
 export const prerender = false;
 
 const tripsData = buildTripOptions();
 const preselectTrip = Astro.url.searchParams.get('trip') ?? '';
 const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
-
-const inputStyle = 'width:100%;padding:0.55rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;font-family:var(--font-sans);box-sizing:border-box;';
-const labelStyle = 'display:block;font-size:0.78rem;font-weight:700;color:var(--color-text-secondary);margin:0 0 0.3rem;text-transform:uppercase;letter-spacing:0.03em;';
 ---
 
 <AdminLayout title="Add Registration" page="registrations">

@@ -47,3 +47,31 @@ export function slugify(str: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+export function formatDateIN(d: string | null | undefined): string {
+  if (!d) return '—';
+  const str = d.includes('T') ? d : d + 'T00:00:00';
+  return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function formatDateFromUnix(unix: number | null | undefined): string {
+  if (!unix) return '—';
+  return new Date(unix * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function formatDateTimeFromUnix(unix: number): string {
+  return new Date(unix * 1000).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+export function formatINR(n: number): string {
+  return '₹' + Math.round(n ?? 0).toLocaleString('en-IN');
+}
+
+export function regStatusStyle(status: string): string {
+  if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
+  if (status === 'rejected')  return 'background:#FEE2E2;color:#991B1B;';
+  if (status === 'lead')      return 'background:#FEF9C3;color:#78350F;';
+  return 'background:#FEF3C7;color:#92400E;';
+}

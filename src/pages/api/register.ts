@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
 import { readTrip, readSiteSettings, resolveBooking } from '../../lib/content';
 import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
-import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
+import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
 
@@ -121,8 +121,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const instagram = sanitizeInput(body.instagram) || null;
 
     // Departure date string, derived from the resolved departure.
-    const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const tripDateStr = `${fmtDate(selectedDeparture.startDate)} – ${fmtDate(selectedDeparture.endDate)}`;
+    const tripDateStr = `${formatDateIN(selectedDeparture.startDate)} – ${formatDateIN(selectedDeparture.endDate)}`;
 
     // Status: 'pending' when screenshot uploaded (awaiting ops verification);
     // 'lead' when no screenshot (registered but unpaid — holds no seat).
@@ -186,9 +185,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     // Resolve trip data for email from the booked departure.
     const tripName = sanitizeInput(body.tripName);
-    const fmt = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-    const startDate = fmt(selectedDeparture.startDate);
-    const endDate   = fmt(selectedDeparture.endDate);
+    const startDate = formatDateIN(selectedDeparture.startDate);
+    const endDate   = formatDateIN(selectedDeparture.endDate);
     const advanceAmount = booking.advanceAmount;
 
     let whatsappLink = 'https://wa.me/917975027491';

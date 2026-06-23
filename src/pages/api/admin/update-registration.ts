@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
-import { listTrips, readTrip } from '../../../lib/content';
+import { findTripByName, readTrip } from '../../../lib/content';
 import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
         .get(batchId, tierId, 'confirmed') as { n: number }).n;
       try {
-        const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+        const matched = findTripByName(tripName);
         if (matched) {
           const tripData = readTrip(matched.slug);
           const batch = (tripData?.batches as any[])?.find((b: any) => b.id === batchId);

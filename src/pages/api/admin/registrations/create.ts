@@ -1,20 +1,12 @@
 import type { APIRoute } from 'astro';
 import { readTrip } from '../../../../lib/content';
 import { editableBooking } from '../../../../lib/tripEditor';
-import { sanitizeInput, isValidEmail, isValidPhone } from '../../../../lib/utils';
+import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../../../lib/utils';
 import { logAction } from '../../../../lib/audit';
 import { createRegistration, type RegStatus } from '../../../../lib/registrationWrite';
+import { jsonOk, jsonFail as fail } from '../../../../lib/apiResponse';
 
 const CREATE_STATUSES: RegStatus[] = ['lead', 'pending', 'confirmed'];
-
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-
-const fail = (error: string, status = 400) =>
-  new Response(JSON.stringify({ success: false, error }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 
 export interface ResolvedSelection {
   trip_name: string; trip_slug: string; trip_date: string;
@@ -48,7 +40,7 @@ export function resolveSelection(tripSlug: string, batchId: string, tierId: stri
   return {
     trip_name: (trip.title as string) || (trip.name as string) || tripSlug,
     trip_slug: tripSlug,
-    trip_date: `${fmtDate(departure.startDate)} – ${fmtDate(departure.endDate || departure.startDate)}`,
+    trip_date: `${formatDateIN(departure.startDate)} – ${formatDateIN(departure.endDate || departure.startDate)}`,
     batch_id: departure.id,
     tier_id: offer.tierId,
     sharing_option: editorCatalog.length > 1 ? label : null,
@@ -112,10 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       newValue: { trip: sel.trip_name, status, source: 'admin-single' },
     });
 
-    return new Response(JSON.stringify({ success: true, id: result.id }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return jsonOk({ success: true, id: result.id });
   } catch (err) {
     console.error('[registrations/create]', err);
     return fail('Server error.', 500);

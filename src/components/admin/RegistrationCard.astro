@@ -1,11 +1,9 @@
 ---
 import { tripAdvanceAmountBySlug } from '../../lib/registrationWrite';
 import { paymentState, paymentStateLabel } from '../../lib/payment';
+import { formatDateIN, formatINR, regStatusStyle } from '../../lib/utils';
 interface Props { registration: Record<string, any>; readOnly?: boolean }
 const { registration: r, readOnly = false } = Astro.props;
-const fmt = (date: string) => date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-const money = (n: number) => '₹' + (n ?? 0).toLocaleString('en-IN');
-const statusStyle = (status: string) => status === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' : status === 'rejected' ? 'background:#FEE2E2;color:#991B1B;' : status === 'lead' ? 'background:#FEF9C3;color:#78350F;' : 'background:#FEF3C7;color:#92400E;';
 const payState = paymentState(r.amount_paid, r.total_amount, tripAdvanceAmountBySlug(String(r.trip_slug || '')));
 const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : payState === 'unpaid' ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
 ---
@@ -13,11 +11,11 @@ const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : pay
   <div class="reg-summary">
     {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} /></label>}
     <div class="reg-primary">
-      <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={statusStyle(r.status)}>{r.status}</span></div>
+      <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={regStatusStyle(r.status)}>{r.status}</span></div>
       <div class="reg-contact">#{r.id} · {r.email}</div><div class="reg-contact">{r.phone}</div>
     </div>
-    <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong><span>Applied {fmt(r.created_at)}</span></div>
-    <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong>{money(r.amount_paid)}</strong><span class="payment-badge" data-id={r.id} style={payStyle}>{paymentStateLabel(payState)}</span></div>
+    <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong><span>Applied {formatDateIN(r.created_at)}</span></div>
+    <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong>{formatINR(r.amount_paid)}</strong><span class="payment-badge" data-id={r.id} style={payStyle}>{paymentStateLabel(payState)}</span></div>
     <div class="reg-actions"><button onclick={`toggleDetail(${r.id})`} aria-expanded="false" class="details-btn">View details</button></div>
   </div>
   <div id={`detail-${r.id}`} class="detail-row">
@@ -31,7 +29,7 @@ const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : pay
             ['No. Travelers', r.num_travelers ?? '—'], ['Others', r.other_travelers ?? '—'], ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
             ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'], ['Special Requests', r.special_requests ?? '—'],
             ['Why Joining', r.why_join ?? '—'], ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'], ['Occupancy', r.sharing_option ?? '—'],
-            ['Total (selected)', r.total_amount ? money(r.total_amount) : '—'], ['Amount Paid', money(r.amount_paid)], ['Batch ID', r.batch_id ?? '—'],
+            ['Total (selected)', r.total_amount ? formatINR(r.total_amount) : '—'], ['Amount Paid', formatINR(r.amount_paid)], ['Batch ID', r.batch_id ?? '—'],
           ].map(([label, value]) => <div><span>{label}:</span> {value}</div>)}
         </div>
         {r.payment_screenshot_url && <p><a href={r.payment_screenshot_url} target="_blank">View Payment Screenshot →</a></p>}

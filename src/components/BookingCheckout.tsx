@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { formatDateIN, formatINR } from '../lib/utils';
 
 interface Offer {
   tierId: string;
@@ -42,9 +43,6 @@ const C = {
   border: '#e5e7eb',
 };
 
-const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const STEPS = ['Your Trip', 'Your Details', 'Pay & Confirm'];
 
@@ -130,7 +128,7 @@ export default function BookingCheckout({
   const perPerson = offer.price;
   const advanceDue = Math.min(advanceAmount, perPerson || advanceAmount);
   const balance = Math.max(0, perPerson - advanceDue);
-  const dateStr = `${fmtDate(departure.startDate)} – ${fmtDate(departure.endDate)}`;
+  const dateStr = `${formatDateIN(departure.startDate)} – ${formatDateIN(departure.endDate)}`;
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -291,21 +289,21 @@ export default function BookingCheckout({
         <div className="divide-y" style={{ borderColor: C.peach }}>
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-sm" style={{ color: C.gray }}>Per person</span>
-            <span className="font-semibold text-sm" style={{ color: C.navy }}>{inr(perPerson)}</span>
+            <span className="font-semibold text-sm" style={{ color: C.navy }}>{formatINR(perPerson)}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-3" style={{ background: C.blush }}>
             <div>
               <span className="text-sm font-semibold" style={{ color: C.coral }}>Advance now</span>
               <span className="text-xs block" style={{ color: C.gray }}>Pay today to confirm your spot</span>
             </div>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{inr(advanceDue)}</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-3">
             <div>
               <span className="text-sm" style={{ color: C.gray }}>Balance before trip</span>
               <span className="text-xs block" style={{ color: C.gray }}>due {balanceDueRule}</span>
             </div>
-            <span className="font-semibold text-sm" style={{ color: C.navy }}>{inr(balance)}</span>
+            <span className="font-semibold text-sm" style={{ color: C.navy }}>{formatINR(balance)}</span>
           </div>
         </div>
       </div>
@@ -464,7 +462,7 @@ export default function BookingCheckout({
           Spots are confirmed on payment only, first come.
         </p>
         <p className="text-sm leading-relaxed mb-6" style={{ color: C.gray }}>
-          Pay the {inr(advanceDue)} advance to hold your place.
+          Pay the {formatINR(advanceDue)} advance to hold your place.
         </p>
         <button
           onClick={() => { setSubmitted(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -524,7 +522,7 @@ export default function BookingCheckout({
           {[
             { label: 'Departure', value: dateStr },
             { label: 'Room type', value: offer.label },
-            { label: 'Per person', value: inr(perPerson) },
+            { label: 'Per person', value: formatINR(perPerson) },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between px-4 py-2.5 border-b last:border-0" style={{ borderColor: C.peach }}>
               <span className="text-xs" style={{ color: C.gray }}>{label}</span>
@@ -539,7 +537,7 @@ export default function BookingCheckout({
         <div className="mb-5">
           <h3 className="text-sm font-semibold mb-1" style={{ color: C.navy }}>How to pay</h3>
           <p className="text-sm mb-3" style={{ color: C.gray }}>
-            Pay {inr(advanceDue)} advance via {hasBoth ? 'UPI or bank transfer' : upiId ? 'UPI' : 'bank transfer'}
+            Pay {formatINR(advanceDue)} advance via {hasBoth ? 'UPI or bank transfer' : upiId ? 'UPI' : 'bank transfer'}
           </p>
 
           {hasBoth && (
@@ -579,7 +577,7 @@ export default function BookingCheckout({
                 {[
                   'Open GPay, PhonePe, Paytm or any UPI app',
                   'Send to the UPI ID above',
-                  `Pay exactly ${inr(advanceDue)} — the advance amount`,
+                  `Pay exactly ${formatINR(advanceDue)} — the advance amount`,
                   'Screenshot the confirmation and upload below',
                 ].map((s, i) => (
                   <div key={i} className="flex gap-2.5 items-start">

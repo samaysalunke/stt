@@ -1,5 +1,6 @@
 import { listTrips } from './content';
 import { editableBooking } from './tripEditor';
+import { formatDateIN } from './utils';
 
 // Trip → departure → occupancy options for the admin "add registration" screens.
 // Built from editableBooking (not resolveBooking) so EVERY departure is included,
@@ -19,9 +20,6 @@ export interface TripOption {
   hasUpcoming: boolean;
   departures: TripOptionDeparture[];
 }
-
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
 export function buildTripOptions(): TripOption[] {
   const now = Date.now();
@@ -44,7 +42,7 @@ export function buildTripOptions(): TripOption[] {
           const past = Number.isFinite(endMs) && endMs < now;
           return {
             id: d.id,
-            label: `${fmtDate(d.startDate)} – ${fmtDate(d.endDate || d.startDate)}${past ? ' (past)' : ''}`,
+            label: `${formatDateIN(d.startDate)} – ${formatDateIN(d.endDate || d.startDate)}${past ? ' (past)' : ''}`,
             past,
             offers: d.offers.map((o) => ({
               tierId: o.tierId,

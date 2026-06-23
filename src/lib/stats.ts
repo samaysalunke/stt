@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import { geocodeCity, haversine } from './geocode';
-import { listTrips, readTrip } from './content';
+import { findTripByName, readTrip } from './content';
 
 interface RegRow {
   city: string;
@@ -11,8 +11,7 @@ interface RegRow {
 
 function findTripSlug(tripName: string): string | null {
   try {
-    const trips = listTrips();
-    return trips.find((t: any) => (t.title || t.name) === tripName)?.slug ?? null;
+    return findTripByName(tripName)?.slug ?? null;
   } catch {
     return null;
   }

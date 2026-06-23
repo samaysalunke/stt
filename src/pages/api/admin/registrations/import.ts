@@ -4,13 +4,11 @@ import { logAction } from '../../../../lib/audit';
 import { inferTierIdFromRow, parseCsvToObjects, parseGoogleFormsRegistrations } from '../../../../lib/csv';
 import { createRegistration, hasActiveRegistration, confirmedCountForTier, tierCapFor, type RegStatus } from '../../../../lib/registrationWrite';
 import { resolveSelection, type ResolvedSelection } from './create';
+import { jsonOk as json, jsonFail as fail } from '../../../../lib/apiResponse';
 
 const IMPORT_STATUSES: RegStatus[] = ['lead', 'pending', 'confirmed'];
 type RowAction = 'create' | 'skip' | 'error' | 'superseded';
 interface PreviewRow { row:number; name:string; email:string; tierId:string; status:string; action:RowAction; reason?:string; input?:Record<string, any>; selection?:ResolvedSelection }
-
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-const fail = (error: string, status = 400, extra: Record<string, unknown> = {}) => json({ success:false, error, ...extra }, status);
 
 function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:string, fallbackStatus:RegStatus) {
   const google = parseGoogleFormsRegistrations(csv);
@@ -63,7 +61,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!IMPORT_STATUSES.includes(status)) return fail('Pick a valid status (lead, pending, or confirmed).');
     if (!csv.trim()) return fail('Upload or paste a CSV first.');
     if (!tripSlug || !batchId) return fail('Pick a trip and departure.');
-    const rows=parseCsvToObjects(csv); if (!rows.length) return fail('No data rows found.'); if (rows.length>500) return fail('Too many rows (max 500 per import).');
+    const rows = parseCsvToObjects(csv);
+    if (!rows.length) return fail('No data rows found.');
+    if (rows.length > 500) return fail('Too many rows (max 500 per import).');
 
     // Analysis is deliberately performed for both preview and commit.
     const result=analyze(csv, tripSlug, batchId, tierId, status);

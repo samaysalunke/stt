@@ -2,7 +2,7 @@
 // Only active when DISABLE_RATE_LIMIT=true (test env).
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
-import { listTrips, readTrip, writeTrip } from '../../../lib/content';
+import { findTripByName, readTrip, writeTrip } from '../../../lib/content';
 
 export const POST: APIRoute = async ({ request }) => {
   if (process.env.DISABLE_RATE_LIMIT !== 'true') {
@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Also reset offer.booked in YAML to 0
   try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripTitle);
+    const matched = findTripByName(tripTitle);
     if (matched) {
       const tripData = readTrip(matched.slug);
       if (tripData) {

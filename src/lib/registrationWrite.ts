@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { listTrips, readTrip, writeTrip } from './content';
+import { listTrips, readTrip, writeTrip, findTripByName } from './content';
 import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationStatusConfirmed } from './email';
 
@@ -17,7 +17,7 @@ export function tripAdvanceAmountBySlug(tripSlug: string): number {
 }
 
 export function tripAdvanceAmount(tripName: string): number {
-  const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+  const matched = findTripByName(tripName);
   return matched ? tripAdvanceAmountBySlug(matched.slug) : 0;
 }
 
@@ -40,7 +40,7 @@ export function adjustBookingCount(
   tierId?: string | null,
 ) {
   try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+    const matched = findTripByName(tripName);
     if (!matched) return;
     const tripData = readTrip(matched.slug);
     if (!tripData) return;
@@ -81,7 +81,7 @@ export function confirmedCountForTier(batchId: string, tierId: string): number {
 /** Tier cap from the trip YAML (null = unmetered). */
 export function tierCapFor(tripName: string, batchId: string, tierId: string): number | null {
   try {
-    const matched = listTrips().find((t: any) => (t.title || t.name) === tripName);
+    const matched = findTripByName(tripName);
     if (!matched) return null;
     const trip = readTrip(matched.slug);
     const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);

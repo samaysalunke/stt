@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getDb } from '../../lib/db';
+import { formatDateIN, formatDateFromUnix, formatDateTimeFromUnix, formatINR, regStatusStyle } from '../../lib/utils';
 export const prerender = false;
 
 const adminUser = Astro.locals.adminUser;
@@ -147,11 +148,6 @@ if (!isTripLead && customerEmails.length > 0) {
   }
 }
 
-const fmt = (d: string | null) => d ? new Date((d.includes('T') ? d : d + 'T00:00:00')).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-const fmtTs = (unix: number | null) => unix ? new Date(unix * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-const fmtAudit = (unix: number) => new Date(unix * 1000).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-const money = (n: number) => '₹' + Math.round(n ?? 0).toLocaleString('en-IN');
-const statusStyle = (s: string) => s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;' : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;' : s === 'lead' ? 'background:#FEF9C3;color:#78350F;' : 'background:#FEF3C7;color:#92400E;';
 const payStyle = (paid: number) => paid <= 0 ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
 const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : (total && total > 0 && paid >= total) ? 'Fully paid' : paid > 0 ? 'Part paid' : 'Unpaid';
 ---
@@ -261,7 +257,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
               <div class="cust-meta">
                 <span class="meta-label">Payment</span>
                 <span style={`padding:0.15rem 0.5rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(c.total_paid))}`}>
-                  {money(Number(c.total_paid))}
+                  {formatINR(Number(c.total_paid))}
                 </span>
               </div>
 
@@ -272,7 +268,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
               <div class="cust-meta" style="display:none;" data-desktop-only>
                 <span class="meta-label">Last activity</span>
-                <span style="font-size:0.78rem;color:var(--color-text-secondary);">{fmt(c.last_reg_at)}</span>
+                <span style="font-size:0.78rem;color:var(--color-text-secondary);">{formatDateIN(c.last_reg_at)}</span>
               </div>
 
               <button onclick={`toggleCustomer(${i})`} aria-expanded="false" class="cust-toggle-btn">
@@ -303,8 +299,8 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                       <div class="detail-fields">
                         {c.displayName && <div><span>Name</span><span>{c.displayName}</span></div>}
                         {c.username && <div><span>Username</span><span>@{c.username} <button onclick={`copyText('@${c.username}')`} class="copy-btn" title="Copy username">⧉</button></span></div>}
-                        <div><span>Joined</span><span>{fmtTs(c.account_created_at)}</span></div>
-                        {c.lastLoginAt && <div><span>Last login</span><span>{fmtTs(c.lastLoginAt)}</span></div>}
+                        <div><span>Joined</span><span>{formatDateFromUnix(c.account_created_at)}</span></div>
+                        {c.lastLoginAt && <div><span>Last login</span><span>{formatDateFromUnix(c.lastLoginAt)}</span></div>}
                         {c.role && <div><span>Admin role</span><span>{c.role}</span></div>}
                         <div><span>Show trips</span><span>{c.showTripsPublicly ? 'Public' : 'Private'}</span></div>
                         <div><span>Leaderboard</span><span>{c.leaderboardOptOut ? 'Opted out' : 'Active'}</span></div>
@@ -356,12 +352,12 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                           <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
                             <strong style="font-size:0.84rem;color:var(--color-navy);">{r.trip_name ?? r.trip_slug ?? '—'}</strong>
                             <div style="display:flex;gap:0.3rem;">
-                              <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${statusStyle(r.status)}`}>{r.status}</span>
-                              {r.amount_paid != null && <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(r.amount_paid))}`}>{money(Number(r.amount_paid))}</span>}
+                              <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${regStatusStyle(r.status)}`}>{r.status}</span>
+                              {r.amount_paid != null && <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(r.amount_paid))}`}>{formatINR(Number(r.amount_paid))}</span>}
                             </div>
                           </div>
                           <div style="font-size:0.76rem;color:var(--color-text-secondary);margin-top:0.2rem;">
-                            {r.sharing_option ?? r.tier_id ?? '—'} · Applied {fmt(r.created_at)}
+                            {r.sharing_option ?? r.tier_id ?? '—'} · Applied {formatDateIN(r.created_at)}
                           </div>
                         </div>
                       ))}
@@ -375,7 +371,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                       <div style="display:flex;flex-direction:column;gap:0.3rem;">
                         {auditEntries.map((a) => (
                           <div style="font-size:0.76rem;color:var(--color-text-secondary);display:flex;gap:0.4rem;align-items:baseline;">
-                            <span style="white-space:nowrap;">{fmtAudit(a.createdAt)}</span>
+                            <span style="white-space:nowrap;">{formatDateTimeFromUnix(a.createdAt)}</span>
                             <code style="background:rgba(245,221,215,0.4);color:var(--color-navy);padding:0.1rem 0.3rem;border-radius:0.25rem;">{a.action}</code>
                             {a.actorEmail && <span>by {a.actorEmail}</span>}
                           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { formatDateIN, formatINR } from '../lib/utils';
 
 // Mirrors the ResolvedBooking shape from src/lib/content.ts. Re-declared here
 // (not imported) so this client island never pulls node `fs` into the bundle.
@@ -41,12 +42,8 @@ const C = {
   cta: '#D95F3B',
 };
 
-const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 function dateRange(d: Departure) {
-  return `${fmtDate(d.startDate)} – ${fmtDate(d.endDate)}`;
+  return `${formatDateIN(d.startDate)} – ${formatDateIN(d.endDate)}`;
 }
 
 // Cheapest available offer for a departure (or null when none available).
@@ -180,7 +177,7 @@ export default function BookingPanel({
         <div className="mb-5">
           <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
           <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
-            {inr(fromPrice)}
+            {formatINR(fromPrice)}
           </span>
           <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
         </div>
@@ -329,7 +326,7 @@ export default function BookingPanel({
                       </span>
                     </span>
                     <span className="text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
-                      {inr(offer.price)}
+                      {formatINR(offer.price)}
                     </span>
                   </label>
                 );
@@ -351,16 +348,16 @@ export default function BookingPanel({
         <div className="mb-5 rounded-xl overflow-hidden border text-sm" style={{ borderColor: C.peach }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <span style={{ color: C.gray }}>Per person</span>
-            <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>{inr(perPerson)}</span>
+            <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>{formatINR(perPerson)}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-3" style={{ background: C.blush, borderBottom: `1px solid ${C.peach}` }}>
             <span className="font-semibold" style={{ color: C.coral }}>Advance now</span>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{inr(advanceDue)}</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <div className="flex items-center justify-between">
               <span style={{ color: C.gray }}>Balance before trip</span>
-              <span className="font-semibold" style={{ color: C.navy }}>{inr(balance)}</span>
+              <span className="font-semibold" style={{ color: C.navy }}>{formatINR(balance)}</span>
             </div>
             <div className="text-xs mt-0.5" style={{ color: C.gray }}>due {balanceDueRule}</div>
           </div>
