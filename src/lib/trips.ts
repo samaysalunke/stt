@@ -19,6 +19,32 @@ export function listTrips(): Array<Record<string, any>> {
   return ranked.map((r) => r.t);
 }
 
+export type PublicationStatus = 'draft' | 'published' | 'archived' | 'test';
+
+/** Public detail pages may include useful archived trips; listings only use published trips. */
+export function tripPublicationStatus(trip: Record<string, any>): PublicationStatus {
+  const explicit = String(trip?.publicationStatus ?? '').toLowerCase();
+  if (['draft', 'published', 'archived', 'test'].includes(explicit)) {
+    return explicit as PublicationStatus;
+  }
+  // Safe legacy fallback: QA fixtures must never leak into production SEO surfaces.
+  const slug = String(trip?.slug ?? '');
+  if (slug.startsWith('qa-test-')) return 'test';
+  return 'published';
+}
+
+export function isTripPublic(trip: Record<string, any>): boolean {
+  const status = tripPublicationStatus(trip);
+  if (status === 'test' && process.env.ALLOW_TEST_CONTENT === 'true') return true;
+  return status === 'published' || status === 'archived';
+}
+
+export function isTripListable(trip: Record<string, any>): boolean {
+  const status = tripPublicationStatus(trip);
+  const publishable = status === 'published' || (status === 'test' && process.env.ALLOW_TEST_CONTENT === 'true');
+  return publishable && tripHasUpcomingDates(trip);
+}
+
 export function readTrip(slug: string): Record<string, any> | null {
   assertSafeSlug(slug);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);

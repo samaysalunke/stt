@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, deleteTrip, saveImageFile } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
 
@@ -49,9 +50,14 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const data: Record<string, any> = {
     name: sanitizeInput(body.get('name')),
+    publicationStatus: sanitizeInput(body.get('publicationStatus')) || existing.publicationStatus || 'draft',
+    location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
     description: sanitizeInput(body.get('description')) || null,
+    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
+    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
+    imageAlt: sanitizeInput(body.get('imageAlt')) || null,
     whoShouldJoin: sanitizeInput(body.get('whoShouldJoin')) || null,
     highlights,
     included,
@@ -75,5 +81,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     deleteTrip(oldSlug);
   }
   writeTrip(newSlug, data);
+  // Ping the new URL; on a slug change also ping the old one so engines drop it.
+  await submitToIndexNow([`/trips/${newSlug}/`, ...(newSlug !== oldSlug ? [`/trips/${oldSlug}/`] : [])]);
   return redirect(`/admin/trips/${newSlug}?saved=1`);
 };

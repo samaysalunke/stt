@@ -11,6 +11,9 @@ interface Props {
   description: string;
   image?: string;
   canonical?: string;
+  imageAlt?: string;
+  robots?: string;
+  type?: 'website' | 'article';
   // Navigation model (matches the prototype):
   //  'scroll' — homepage scroll-reveal hamburger header
   //  'header' — sticky header with full hamburger (trips listing)
@@ -20,7 +23,7 @@ interface Props {
   nav?: 'scroll' | 'header' | 'back' | 'logo' | 'none';
 }
 
-const { title, description, image, canonical, nav = 'back' } = Astro.props;
+const { title, description, image, imageAlt, canonical, robots, type = 'website', nav = 'back' } = Astro.props;
 const isHome = nav === 'scroll';
 const user = Astro.locals.user ?? null;
 
@@ -37,18 +40,29 @@ const analyticsEnabled = import.meta.env.PROD && !isAdminRoute;
 const gaId = settings.googleAnalyticsId || '';
 const clarityId = 'x2ms8bxixr';
 
+const siteId = 'https://seekthethrill.in/#website';
+const orgId = 'https://seekthethrill.in/#organization';
+const founderId = 'https://seekthethrill.in/about/#zahra-shakir';
 const orgSchema = {
   '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'Seek the Thrill',
-  url: 'https://seekthethrill.in',
-  logo: 'https://seekthethrill.in/logo.jpg',
-  contactPoint: {
-    '@type': 'ContactPoint',
-    telephone: settings.phone ?? '+91-7975027491',
-    contactType: 'customer service',
-  },
-  sameAs: [settings.instagram].filter(Boolean),
+  '@graph': [
+    {
+      '@type': 'WebSite', '@id': siteId, name: 'Seek the Thrill',
+      url: 'https://seekthethrill.in/', publisher: { '@id': orgId }, inLanguage: 'en-IN',
+    },
+    {
+      '@type': 'Organization', '@id': orgId, name: 'Seek the Thrill',
+      url: 'https://seekthethrill.in/', logo: 'https://seekthethrill.in/logo.jpg',
+      email: settings.email ?? 'zahra@seekthethrill.in',
+      founder: { '@id': founderId },
+      contactPoint: {
+        '@type': 'ContactPoint', telephone: settings.phone ?? '+91-7975027491',
+        contactType: 'customer service', areaServed: 'IN', availableLanguage: ['en'],
+      },
+      sameAs: [settings.instagram, settings.facebook, settings.youtube, settings.linkedin].filter(Boolean),
+    },
+    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: 'https://seekthethrill.in/about/' },
+  ],
 };
 ---
 
@@ -69,8 +83,9 @@ const orgSchema = {
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="alternate" type="application/atom+xml" title="Seek the Thrill — Upcoming Trips" href="/feed.xml" />
 
-    <SEO {title} {description} {image} {canonical} />
+    <SEO {title} {description} {image} {imageAlt} {canonical} {robots} {type} />
 
     <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} />
 

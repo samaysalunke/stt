@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { writeAlbum, readAlbum, saveImageFile } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -20,14 +21,19 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const data: Record<string, any> = {
     name,
+    publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     date: sanitizeInput(body.get('date')) || null,
     description: sanitizeInput(body.get('description')) || null,
+    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
+    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
+    socialImageAlt: sanitizeInput(body.get('socialImageAlt')) || null,
     coverImage,
-    published: body.get('published') === 'true',
+    published: body.get('publicationStatus') === 'published',
     photos: [],
   };
 
   writeAlbum(slug, data);
+  await submitToIndexNow([`/photo-vault/${slug}/`]);
   return redirect(`/admin/photo-vault/${slug}`);
 };

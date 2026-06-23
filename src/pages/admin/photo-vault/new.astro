@@ -29,18 +29,16 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
           <label class="form-label">Description</label>
           <textarea name="description" class="form-input" rows="4" placeholder="A brief description of this album..."></textarea>
         </div>
+        <div class="form-group full"><label class="form-label">SEO Title</label><input name="seoTitle" maxlength="70" class="form-input" /></div>
+        <div class="form-group full"><label class="form-label">SEO Description</label><textarea name="seoDescription" maxlength="170" rows="3" class="form-input"></textarea></div>
+        <div class="form-group full"><label class="form-label">Social Image Alt Text</label><input name="socialImageAlt" maxlength="180" class="form-input" /></div>
         <div class="form-group">
           <label class="form-label">Cover Image</label>
           <input type="file" name="coverImage" accept="image/*" class="form-input" onchange="previewImage(this,'cover-preview')" />
           <img id="cover-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:200px; border-radius:0.5rem; object-fit:cover;" />
           <p class="img-hint"><strong>Recommended:</strong> 800 × 600 px · 4:3 ratio · JPG or PNG · Max 10 MB. Shown as the album cover card on the Photo Vault listing page.</p>
         </div>
-        <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
-          <label class="form-label" style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-            <input type="checkbox" name="published" value="true" style="width:1rem; height:1rem;" />
-            Published (visible on site)
-          </label>
-        </div>
+        <div class="form-group"><label class="form-label">Publication</label><select name="publicationStatus" class="form-input"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option><option value="test">Test only</option></select></div>
       </div>
     </div>
 

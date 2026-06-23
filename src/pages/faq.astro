@@ -16,14 +16,22 @@ const categories = categoryOrder.map((name) => ({ name, questions: grouped[name]
 // ── FAQPage structured data for rich results ──────────────────────────────
 const faqSchema = faqs.length > 0 ? {
   '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs
-    .filter((f: any) => f.question && f.answer)
-    .map((f: any) => ({
-      '@type': 'Question',
-      name: String(f.question),
-      acceptedAnswer: { '@type': 'Answer', text: String(f.answer) },
-    })),
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://seekthethrill.in/' },
+        { '@type': 'ListItem', position: 2, name: 'FAQ', item: 'https://seekthethrill.in/faq/' },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.filter((f: any) => f.question && f.answer).map((f: any) => ({
+        '@type': 'Question', name: String(f.question),
+        acceptedAnswer: { '@type': 'Answer', text: String(f.answer) },
+      })),
+    },
+  ],
 } : null;
 ---
 

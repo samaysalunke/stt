@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
-import { listTrips, tripHasUpcomingDates, tripCardSummary } from '../../lib/content';
+import { listTrips, isTripListable, tripCardSummary } from '../../lib/content';
 
 // Visibility derives from departures (trip-level status removed): list trips
 // that have at least one upcoming, non-draft departure.
-const allTrips = listTrips().filter((t) => tripHasUpcomingDates(t));
+const allTrips = listTrips().filter(isTripListable);
 
 // Separate available from sold out (derived from departures) — sold out goes last.
 const available = allTrips.filter((t) => !tripCardSummary(t).soldOut);

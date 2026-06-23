@@ -1,12 +1,15 @@
 import type { APIRoute } from 'astro';
-import { listTrips, listAlbums, tripHasUpcomingDates, contentLastmod } from '../lib/content';
+import { listTrips, listAlbums, isTripListable, isAlbumPublic, contentLastmod } from '../lib/content';
 
 const SITE = 'https://seekthethrill.in';
+const escapeXml = (value: string): string => value
+  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;').replaceAll("'", '&apos;');
 
 function url(path: string, priority: string, changefreq: string, lastmod?: string): string {
   return `
   <url>
-    <loc>${SITE}${path}</loc>
+    <loc>${escapeXml(`${SITE}${path}`)}</loc>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>${lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ''}
   </url>`;
@@ -17,23 +20,24 @@ export const GET: APIRoute = () => {
   // was removed — tripHasUpcomingDates already excludes draft/past departures).
   // Reads via listTrips() so production reflects the volume (CONTENT_DIR), not seed data.
   const tripPages = listTrips()
-    .filter((t) => tripHasUpcomingDates(t))
-    .map((t) => url(`/trips/${t.slug}`, '0.8', 'weekly', contentLastmod('trips', t.slug)));
+    .filter(isTripListable)
+    .map((t) => url(`/trips/${encodeURIComponent(t.slug)}/`, '0.8', 'weekly', contentLastmod('trips', t.slug)));
 
   // Published albums only.
   const albumPages = listAlbums()
-    .filter((a) => a.published)
-    .map((a) => url(`/photo-vault/${a.slug}`, '0.5', 'monthly', contentLastmod('albums', a.slug)));
+    .filter(isAlbumPublic)
+    .map((a) => url(`/photo-vault/${encodeURIComponent(a.slug)}/`, '0.5', 'monthly', contentLastmod('albums', a.slug)));
 
   const staticPages = [
     url('/', '1.0', 'weekly'),
-    url('/trips', '0.9', 'daily'),
-    url('/about', '0.6', 'monthly'),
-    url('/contact', '0.6', 'monthly'),
-    url('/faq', '0.6', 'monthly'),
-    url('/photo-vault', '0.5', 'monthly'),
-    url('/privacy', '0.3', 'yearly'),
-    url('/terms', '0.3', 'yearly'),
+    url('/trips/', '0.9', 'daily'),
+    url('/about/', '0.6', 'monthly'),
+    url('/contact/', '0.6', 'monthly'),
+    url('/faq/', '0.6', 'monthly'),
+    url('/photo-vault/', '0.5', 'monthly'),
+    url('/privacy/', '0.3', 'yearly'),
+    url('/terms/', '0.3', 'yearly'),
+    url('/cancellation/', '0.3', 'yearly'),
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

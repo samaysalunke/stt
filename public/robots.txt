@@ -6,4 +6,15 @@ Disallow: /keystatic/
 Disallow: /admin/
 Disallow: /api/
 
+# AI search, retrieval, and training crawlers follow the same public-only policy.
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: GPTBot
+User-agent: ClaudeBot
+Allow: /
+Disallow: /keystatic/
+Disallow: /admin/
+Disallow: /api/
+
 Sitemap: https://seekthethrill.in/sitemap.xml

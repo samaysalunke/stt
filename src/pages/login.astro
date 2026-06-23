@@ -10,7 +10,7 @@ const next = Astro.url.searchParams.get('next') ?? '/profile';
 const loginUrl = `/api/auth/google?next=${encodeURIComponent(next)}`;
 ---
 
-<BaseLayout title="Sign in — Seek the Thrill" description="Sign in to track your adventures with Seek the Thrill." nav="back">
+<BaseLayout title="Sign in — Seek the Thrill" description="Sign in to track your adventures with Seek the Thrill." robots="noindex, follow" nav="back">
   <div class="container-app py-16 flex flex-col items-center">
     <div class="w-full max-w-sm">
       <h1 class="text-2xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">
