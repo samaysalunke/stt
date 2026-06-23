@@ -284,7 +284,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
   const visibleBoxes = () => boxes().filter(isVisible);
 
   function selectionUI() {
-    const selected = boxes().filter((b) => b.checked);
+    const selected = visibleBoxes().filter((b) => b.checked);
     const matching = visibleBoxes();
     const all = document.getElementById('select-all-visible');
     const apply = document.getElementById('apply-bulk-status');
@@ -298,7 +298,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
     if (all) { const n = matching.filter((b) => b.checked).length; all.checked = matching.length > 0 && n === matching.length; all.indeterminate = n > 0 && n < matching.length; }
     document.querySelectorAll('.departure-select-checkbox').forEach((g) => {
       const dep = g.closest('.departure');
-      const bs = [...(dep?.querySelectorAll('.registration-checkbox') ?? [])];
+      const bs = [...(dep?.querySelectorAll('.registration-checkbox') ?? [])].filter(isVisible);
       const n = bs.filter((b) => b.checked).length;
       g.checked = bs.length > 0 && n === bs.length;
       g.indeterminate = n > 0 && n < bs.length;
@@ -372,7 +372,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
   boxes().forEach((b) => b.addEventListener('change', selectionUI));
   document.querySelectorAll('.departure-select-checkbox').forEach((g) =>
     g.addEventListener('change', () => {
-      g.closest('.departure')?.querySelectorAll('.registration-checkbox').forEach((b) => { b.checked = g.checked; });
+      g.closest('.departure')?.querySelectorAll('.registration-checkbox').forEach((b) => { if (isVisible(b)) b.checked = g.checked; });
       selectionUI();
     }),
   );
@@ -382,7 +382,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
   document.getElementById('bulk-payment')?.addEventListener('change', selectionUI);
 
   document.getElementById('apply-bulk-status')?.addEventListener('click', async () => {
-    const selected = boxes().filter((b) => b.checked);
+    const selected = visibleBoxes().filter((b) => b.checked);
     const status = document.getElementById('bulk-status').value;
     if (!selected.length || !status || !confirm(`Change ${selected.length} registration(s) to ${status}?`)) return;
     const failures = [];
@@ -390,7 +390,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
     if (failures.length) alert(failures.join('\n')); else reloadWithFilters();
   });
   document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {
-    const selected = boxes().filter((b) => b.checked);
+    const selected = visibleBoxes().filter((b) => b.checked);
     const action = document.getElementById('bulk-payment').value;
     if (!selected.length || !action || !confirm(`Apply payment action "${action}" to ${selected.length} registration(s)?`)) return;
     const data = await requestPaymentUpdate(selected.map((b) => Number(b.dataset.registrationId)), action);
