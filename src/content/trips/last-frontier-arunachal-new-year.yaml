@@ -1,0 +1,104 @@
+title: "The Last Frontier: New Year's in Arunachal"
+slug: last-frontier-arunachal-new-year
+publicationStatus: archived          # past trip (Dec 2025 – Jan 2026), kept as an archived record
+registrationEnabled: false           # registrations closed
+location: Arunachal Pradesh
+duration: 7 Days, 6 Nights
+seoTitle: "The Last Frontier: New Year's in Arunachal | 6N/7D"
+seoDescription: A 6N/7D New Year's journey across Arunachal — Dirang, Sela Pass, Tawang, Bumla and Sangti Valley — ringing in the new year by the river. Hosted by Seek the Thrill.
+imageAlt: High passes and monasteries of Arunachal on a New Year's small-group trip
+shortDescription: Sela Pass, Tawang, Bumla and a New Year's Eve bonfire in Sangti Valley — 6N/7D through Arunachal with Zahra and Ankit.
+description: >-
+  A 6 night, 7 day New Year's journey through Arunachal Pradesh — from the Dirang valley over
+  the 13,700 ft Sela Pass into Tawang, up to the Indo-China frontier at Bumla and Sangetsar Lake,
+  past Jang Falls, and into the Sangti Valley to ring in the new year by the river. Hosted by
+  Zahra (Founder, Seek the Thrill) and Ankit. Only 13 curated slots.
+whoShouldJoin: >-
+  Travellers chasing high-altitude landscapes, Buddhist monasteries and a small-group New Year's
+  away from the crowds. Comfortable with long mountain drives and cold, thin-air days. Beginners welcome.
+occupancyCatalog:
+  - id: triple
+    label: Triple Sharing
+    helperText: Room shared with two others.
+  - id: double
+    label: Double Sharing
+    helperText: Room shared with one other traveller. Limited.
+batches:
+  - id: last-frontier-arunachal-new-year-2025-12-26
+    startDate: 2025-12-26
+    endDate: 2026-01-01
+    status: completed
+    # REVIEW: per-tier cap split of the 13 slots is an estimate; adjust to actuals.
+    # booked left at 0 — set to the real number of travellers if you want it on record.
+    offers:
+      - { tierId: triple, price: 30500, cap: 9, booked: 0 }
+      - { tierId: double, price: 32500, cap: 4, booked: 0 }
+highlights:
+  - Cross the 13,700 ft Sela Pass and Sela Lake
+  - Tawang Monastery and the giant Buddha statue
+  - Bumla Pass and Sangetsar Lake near the Indo-China frontier
+  - Jang Falls on the road to Tawang
+  - New Year's Eve bonfire by the river in Sangti Valley
+included:
+  - 6 nights accommodation (homestays) as per itinerary
+  - Daily breakfast
+  - Private Tempo Traveller transport throughout
+  - Sightseeing as per itinerary
+  - Bumla Pass permits and Inner Line Permits
+  - Trip host(s) throughout
+notIncluded:
+  - Flights/trains to and from Guwahati
+  - Meals beyond breakfast
+  - Personal expenses
+  - Optional Day 5 "Borderlands" road trip (₹2,500 per person)
+  - Anything not listed under Inclusions
+paymentAmount: 10000          # advance — REVIEW: form did not state the booking amount
+balanceDueRule: 15 days before trip
+meetingPoint: >-
+  Guwahati — group departs from Guwahati. Arrive in Guwahati the night before (Guwahati to Guwahati route).
+importantNotes: >-
+  High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights. Carry warm layers and
+  any personal medication. Day 3 (Bumla) and Day 5 (Borderlands) are weather- and permit-dependent, with
+  alternative routes such as Mago and Zithang Valley. The Day 5 high-altitude road trip is an optional
+  ₹2,500/person add-on. Contact: WhatsApp 7975027491.
+itinerary:
+  - day: 1
+    title: Guwahati to Dirang
+    description: Depart Guwahati and drive into the Dirang valley. Introductions and a first taste of the mountains.
+    stay: Dirang
+    meals: []
+    transport: Private Tempo Traveller from Guwahati
+  - day: 2
+    title: Dirang to Tawang over Sela Top
+    description: Climb to the 13,700 ft Sela Pass and Sela Lake, then descend into Tawang.
+    stay: Tawang
+    meals: [B]
+    transport: Private Tempo Traveller
+  - day: 3
+    title: Bumla Border Ride
+    description: Day excursion to Bumla Pass and Sangetsar Lake near the Indo-China frontier. Weather- and permit-dependent.
+    stay: Tawang
+    meals: [B]
+  - day: 4
+    title: Tawang to Jang
+    description: Visit Tawang Monastery and the giant Buddha statue, then drive to Jang via Jang Falls.
+    stay: Jang
+    meals: [B]
+    transport: Private Tempo Traveller
+  - day: 5
+    title: A Day Near the Borderlands
+    description: Optional high-altitude road trip to a hidden lake near the borderlands. Weather-dependent; optional ₹2,500/person add-on.
+    stay: Jang
+    meals: [B]
+  - day: 6
+    title: Jang to Sangti Valley
+    description: Drive to the Sangti Valley for riverside views and a New Year's Eve bonfire.
+    stay: Sangti Valley
+    meals: [B]
+    transport: Private Tempo Traveller
+  - day: 7
+    title: Sangti Valley to Guwahati
+    description: Final return journey down to Guwahati for onward travel.
+    stay: ''
+    meals: [B]
+    transport: Private Tempo Traveller to Guwahati
