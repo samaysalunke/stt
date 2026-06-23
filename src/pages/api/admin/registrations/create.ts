@@ -31,8 +31,14 @@ export function resolveSelection(tripSlug: string, batchId: string, tierId: stri
   const departure = editorDepartures.find((d) => d.id === batchId);
   if (!departure) return { error: 'Departure not found for this trip.' };
 
-  const offer = departure.offers.find((o) => o.tierId === tierId);
-  if (!offer) return { error: 'Occupancy option not found for this departure.' };
+  const offer = tierId
+    ? departure.offers.find((o) => o.tierId === tierId)
+    : departure.offers.length === 1 ? departure.offers[0] : undefined;
+  if (!offer) return {
+    error: tierId
+      ? 'Occupancy option not found for this departure.'
+      : 'Multiple occupancy options — please specify a tier.',
+  };
 
   const label = editorCatalog.find((c) => c.id === offer.tierId)?.label ?? offer.tierId;
   const endMs = new Date(departure.endDate || departure.startDate).getTime();
