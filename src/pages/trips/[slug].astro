@@ -111,6 +111,8 @@ const slugJson = JSON.stringify(slug);
 
 // ── Structured data (Event + Offer) for rich results ──────────────────────
 const canonicalUrl = `https://seekthethrill.in/trips/${slug}/`;
+// schema.org image URLs must be absolute; heroImg may be a site-relative path.
+const heroImgAbs = heroImg.startsWith('http') ? heroImg : `https://seekthethrill.in${heroImg}`;
 const breadcrumbSchema = {
   '@type': 'BreadcrumbList',
   '@id': `${canonicalUrl}#breadcrumb`,
@@ -126,9 +128,9 @@ const eventSchemas = departures.map((departure) => {
     '@type': 'Event',
     '@id': `${canonicalUrl}#departure-${encodeURIComponent(departure.id)}`,
     name: `${tripName} — ${departure.startDate}`,
-    ...(description ? { description } : {}), image: [heroImg], url: canonicalUrl,
+    ...(description ? { description } : {}), image: [heroImgAbs], url: canonicalUrl,
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    eventStatus: departure.soldOut ? 'https://schema.org/EventScheduled' : 'https://schema.org/EventScheduled',
+    eventStatus: 'https://schema.org/EventScheduled',
     startDate: departure.startDate, ...(departure.endDate ? { endDate: departure.endDate } : {}),
     organizer: { '@id': 'https://seekthethrill.in/#organization' },
     ...(trip.location ? { location: { '@type': 'Place', name: trip.location, address: { '@type': 'PostalAddress', addressRegion: trip.location, addressCountry: 'IN' } } } : {}),

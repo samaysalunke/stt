@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { writeAlbum, readAlbum, saveImageFile } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -33,5 +34,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   };
 
   writeAlbum(slug, data);
+  await submitToIndexNow([`/photo-vault/${slug}/`]);
   return redirect(`/admin/photo-vault/${slug}`);
 };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import { isTripListable, isTripPublic, listTrips, tripPublicationStatus } from '../../src/lib/trips';
 import { isAlbumPublic } from '../../src/lib/albums';
+import { indexNowUrls } from '../../src/lib/indexnow';
 
 describe('SEO publication controls', () => {
   it('keeps admin surfaces out of search and AI indexes', () => {
@@ -32,5 +33,28 @@ describe('SEO publication controls', () => {
     expect(isAlbumPublic({ publicationStatus: 'published' })).toBe(true);
     expect(isAlbumPublic({ publicationStatus: 'archived' })).toBe(true);
     expect(isAlbumPublic({ publicationStatus: 'test', published: true })).toBe(false);
+  });
+
+  it('canonicalizes host, protocol, case, and trailing slash in one hop', () => {
+    const middleware = fs.readFileSync('src/middleware.ts', 'utf8');
+    // Only GET/HEAD navigations get the path-shape redirect (never form posts).
+    expect(middleware).toContain("request.method === 'GET' || request.method === 'HEAD'");
+    expect(middleware).toContain('toLowerCase()');
+    // Single redirect emitted only when the normalized target actually differs.
+    expect(middleware).toContain('if (target.href !== url.href) return redirect(target.toString(), 308)');
+  });
+
+  it('emits valid absolute JSON-LD on trip pages', () => {
+    const tripPage = fs.readFileSync('src/pages/trips/[slug].astro', 'utf8');
+    expect(tripPage).toContain('const heroImgAbs =');
+    expect(tripPage).toContain('image: [heroImgAbs]');
+    // The dead soldOut ? EventScheduled : EventScheduled ternary must be gone.
+    expect(tripPage).not.toContain("departure.soldOut ? 'https://schema.org/EventScheduled'");
+  });
+
+  it('builds absolute, de-duplicated IndexNow URL lists', () => {
+    expect(indexNowUrls(['/trips/ladakh-high-passes/'])).toEqual(['https://seekthethrill.in/trips/ladakh-high-passes/']);
+    expect(indexNowUrls(['/trips/a/', '/trips/a/'])).toEqual(['https://seekthethrill.in/trips/a/']);
+    expect(indexNowUrls(['https://seekthethrill.in/trips/a/', ''])).toEqual(['https://seekthethrill.in/trips/a/']);
   });
 });

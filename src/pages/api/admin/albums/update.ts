@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { readAlbum, writeAlbum, saveImageFile } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -20,6 +21,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
         );
         const merged = photos.map((p: any) => ({ ...dims.get(p.image), image: p.image, caption: p.caption }));
         writeAlbum(slug, { ...album, photos: merged });
+        await submitToIndexNow([`/photo-vault/${slug}/`]);
       }
       return new Response(JSON.stringify({ ok: true }));
     } catch {
@@ -56,5 +58,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   };
 
   writeAlbum(slug, updated);
+  await submitToIndexNow([`/photo-vault/${slug}/`]);
   return redirect(`/admin/photo-vault/${slug}`);
 };

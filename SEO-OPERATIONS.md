@@ -1,17 +1,45 @@
 # SEO operations
 
-The repository enforces publication, canonical, sitemap, metadata, schema, and crawler controls. The remaining work requires production and third-party account access.
+The repository enforces publication, canonical, sitemap, metadata, schema, crawler, and
+IndexNow controls. Everything below this line **cannot be done from code** — it needs
+production environment access or third-party accounts. This is your checklist.
 
-## Launch checklist
+## Already handled in code (no action needed)
 
-1. Verify `https://seekthethrill.in/` in Google Search Console and Bing Webmaster Tools.
-2. Submit `https://seekthethrill.in/sitemap.xml` and monitor canonical/indexing errors.
-3. Confirm the production proxy redirects HTTP, `www`, non-trailing-slash page URLs, and mixed-case URLs in one hop.
-4. Run URL Inspection on the homepage, trips listing, one trip, FAQ, and one album.
-5. Validate Event, Breadcrumb, Organization, and ImageGallery JSON-LD against visible content.
-6. Record mobile field CWV targets: LCP <= 2.5s, INP <= 200ms, CLS <= 0.1 at p75.
-7. Configure IndexNow only after creating and hosting a production key. Submit publish, update, redirect, and delete events; do not send unchanged URLs.
-8. Do not use Google's Indexing API for these travel pages.
+- Canonical redirects: HTTP→HTTPS, `www`→apex, lowercase, and trailing slash are folded
+  into one 308 hop in `src/middleware.ts`.
+- Structured data: Organization/WebSite/Person, Breadcrumb, and per-departure Event/Offer
+  JSON-LD with absolute URLs.
+- Sitemap, Atom feed, robots.txt (incl. AI crawlers), `llms.txt`, `noindex` on private routes.
+- IndexNow submission wiring (publish/update/delete for trips + albums). **Dormant until you
+  set the key — see action 1.**
+
+## Actions you must take
+
+### 1. Activate IndexNow (one config step)
+- Generate an IndexNow key (any 8–128 hex chars; e.g. a UUID without dashes).
+- Set `INDEXNOW_KEY=<key>` in the production environment (Railway variables).
+- Confirm `https://seekthethrill.in/<key>.txt` returns the key (the route auto-serves it).
+- After that, admin publish/update/delete actions auto-submit changed URLs. No code change.
+- Do **not** put the key in the repo — it is a production secret.
+
+### 2. Search engine accounts (one-time)
+- Verify `https://seekthethrill.in/` in Google Search Console and Bing Webmaster Tools.
+- Submit `https://seekthethrill.in/sitemap.xml` in both. Monitor canonical/indexing errors.
+- In Bing Webmaster Tools, confirm the IndexNow key is recognized.
+
+### 3. Post-deploy verification (manual checks)
+- Confirm the production proxy (Railway) does not add a second redirect hop on top of the
+  app's single 308 — test HTTP, `www`, no-slash, and mixed-case URLs each resolve in one hop.
+- Run URL Inspection (GSC) on: homepage, trips listing, one trip, FAQ, one album.
+- Validate Event, Breadcrumb, and Organization JSON-LD against visible content using
+  Google's Rich Results Test.
+- Record mobile field CWV at p75: LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1.
+
+### 4. Do not
+- Do not use Google's Indexing API for these travel pages (Event/booking pages are not
+  eligible; misuse risks manual action).
+- Do not buy links or mass-submit to directories (see cadence below).
 
 ## Search-intent workflow
 

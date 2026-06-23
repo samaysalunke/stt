@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { writeTrip, saveImageFile } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
 
@@ -70,5 +71,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   };
 
   writeTrip(slug, data);
+  await submitToIndexNow([`/trips/${slug}/`]);
   return redirect(`/admin/trips/${slug}`);
 };

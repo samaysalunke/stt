@@ -3,22 +3,26 @@ import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
 
-export const onRequest = defineMiddleware(async ({ url, cookies, locals, redirect }, next) => {
-  // One canonical public origin and path shape. Keep local/preview hosts untouched.
-  if (import.meta.env.PROD && (url.hostname === 'www.seekthethrill.in' || (url.hostname === 'seekthethrill.in' && url.protocol === 'http:'))) {
-    const target = new URL(url);
-    target.protocol = 'https:';
-    target.hostname = 'seekthethrill.in';
-    return redirect(target.toString(), 308);
+export const onRequest = defineMiddleware(async ({ url, request, cookies, locals, redirect }, next) => {
+  // One canonical public origin and path shape, resolved in a SINGLE hop:
+  // host (www→apex) + protocol (http→https) + lowercase + trailing slash are
+  // all folded into one target before redirecting. Keep local/preview hosts
+  // untouched; never redirect non-GET requests (form posts) or asset paths.
+  const target = new URL(url);
+  if (import.meta.env.PROD) {
+    if (target.hostname === 'www.seekthethrill.in') target.hostname = 'seekthethrill.in';
+    if (target.protocol === 'http:') target.protocol = 'https:';
   }
-  const nonIndexablePrefix = ['/admin', '/api', '/keystatic', '/profile', '/login', '/unsubscribe', '/leaderboard', '/u/'];
-  const canonicalizable = !nonIndexablePrefix.some((prefix) => url.pathname.startsWith(prefix)) && !url.pathname.endsWith('/book');
-  const isGetPage = canonicalizable && url.pathname !== '/' && !url.pathname.endsWith('/') && !url.pathname.split('/').pop()?.includes('.');
-  if (isGetPage) {
-    const target = new URL(url);
-    target.pathname = `${url.pathname}/`;
-    return redirect(`${target.pathname}${target.search}`, 308);
+  if (request.method === 'GET' || request.method === 'HEAD') {
+    const nonIndexablePrefix = ['/admin', '/api', '/keystatic', '/profile', '/login', '/unsubscribe', '/leaderboard', '/u/'];
+    const canonicalizable = !nonIndexablePrefix.some((prefix) => url.pathname.startsWith(prefix)) && !url.pathname.endsWith('/book');
+    const isFile = !!url.pathname.split('/').pop()?.includes('.');
+    if (canonicalizable && !isFile) {
+      target.pathname = target.pathname.toLowerCase();
+      if (target.pathname !== '/' && !target.pathname.endsWith('/')) target.pathname = `${target.pathname}/`;
+    }
   }
+  if (target.href !== url.href) return redirect(target.toString(), 308);
 
   // Ensure DB is initialized on first request so schema migrations run early
   getDb();
