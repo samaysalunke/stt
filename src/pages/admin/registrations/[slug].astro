@@ -37,6 +37,16 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
 const exportHref = trip.slug === '__legacy'
   ? '/api/admin/export?type=registrations'
   : `/api/admin/export?type=registrations&trip_name=${encodeURIComponent(trip.name)}`;
+
+// Per-departure stats for client-side switching
+const depStatsMap = Object.fromEntries(
+  trip.departures.map((dep) => {
+    const ds = regStats(dep.regs);
+    const rev = dep.regs.filter((r: any) => r.status !== 'rejected').reduce((n: number, r: any) => n + Number(r.amount_paid || 0), 0);
+    return [dep.id || '__none__', { count: dep.regs.length, lead: ds.lead, pending: ds.pending, confirmed: ds.confirmed, rejected: ds.rejected, revenue: rev }];
+  })
+);
+const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, confirmed: s.confirmed, rejected: s.rejected, revenue: tripRevenue };
 ---
 <AdminLayout title={trip.name} page="registrations">
   <a class="back-link" href="/admin/registrations">← All trips</a>
@@ -59,17 +69,44 @@ const exportHref = trip.slug === '__legacy'
   </header>
 
   <div class="stats-grid">{[
-    ['Registrations', trip.regCount, 'var(--color-primary)'], ['Leads', s.lead, '#78350F'], ['Pending', s.pending, '#D97706'], ['Confirmed', s.confirmed, 'var(--color-success)'], ['Rejected', s.rejected, 'var(--color-danger)'], ['Revenue', formatINR(tripRevenue), 'var(--color-primary)']
-  ].map(([label, value, color]) => <div class="stat-card"><p>{label}</p><strong style={`color:${color}`}>{value}</strong></div>)}</div>
-
-  <div class="toolbar">
-    <div class="filters">
-      <input id="search" type="search" placeholder="Search name, email…" />
-      <select id="statusFilter"><option value="">All statuses</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option></select>
-      {historyCount > 0 && <label class="history-toggle"><input id="show-history" type="checkbox" /> Show past departures <span class="history-count">({historyCount})</span></label>}
+    ['Registrations', trip.regCount, 'var(--color-primary)'],
+    ['Leads', s.lead, '#78350F'],
+    ['Pending', s.pending, '#D97706'],
+    ['Confirmed', s.confirmed, 'var(--color-success)'],
+    ['Rejected', s.rejected, 'var(--color-danger)'],
+    ['Revenue', formatINR(tripRevenue), 'var(--color-primary)'],
+  ].map(([label, value, color]) => (
+    <div class="stat-card" data-stat-label={label}>
+      <p>{label}</p>
+      <strong style={`color:${color}`}>{value}</strong>
     </div>
-  </div>
-  <p id="filterStatus" class="filter-status"></p>
+  ))}</div>
+
+  {(trip.departures.length > 1 || historyCount > 0) && (
+    <div class="dep-selector">
+      {trip.departures.length > 1 && (
+        <div class="dep-selector-left">
+          <span class="dep-label">Departure</span>
+          <select id="departure-select" class="dep-select">
+            <option value="">All departures</option>
+            {trip.departures.map((dep) => (
+              <option value={dep.id} data-historical={dep.historical ? 'true' : 'false'}>
+                {dep.id ? `${fmt(dep.startDate)} – ${fmt(dep.endDate)}` : 'No departure assigned'}
+                {dep.historical ? ' (past)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {historyCount > 0 && (
+        <label class="history-toggle">
+          <input id="show-history" type="checkbox" />
+          Show past departures
+          <span class="history-count">({historyCount})</span>
+        </label>
+      )}
+    </div>
+  )}
 
   {!isTripLead && (
     <div class="bulk-bar">
@@ -126,40 +163,40 @@ const exportHref = trip.slug === '__legacy'
   .trip-header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}.trip-header h1{margin:0;font:800 1.5rem var(--font-display);color:var(--color-navy)}.trip-sub{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin:.35rem 0 0;font-size:.8rem;color:var(--color-text-secondary)}.trip-sub .active,.trip-sub .closed{padding:.15rem .5rem;border-radius:999px;font-weight:700;text-transform:uppercase;font-size:.7rem}.trip-sub .active{background:#D1FAE5;color:#065F46}.trip-sub .closed{background:#E5E7EB;color:#374151}
   .header-actions{display:flex;gap:.5rem;flex-wrap:wrap}.header-actions a{padding:.45rem .8rem;border:1px solid var(--color-coral);border-radius:.5rem;color:var(--color-coral);font-size:.8rem;font-weight:700;text-decoration:none}.header-actions .primary{background:var(--color-coral);color:#fff}.header-actions .export{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
   .stats-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.7rem;margin-bottom:1.25rem}.stat-card{background:#fff;border:1px solid var(--color-border);border-radius:.85rem;padding:.8rem 1rem}.stat-card p{margin:0 0 .25rem;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--color-text-secondary)}.stat-card strong{font:800 1.45rem var(--font-display)}
-  .toolbar{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:.75rem;margin-bottom:.75rem}.filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}.toolbar input,.toolbar select,.bulk-bar select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy)}.toolbar input{width:240px}
-  .history-toggle{display:flex;align-items:center;gap:.4rem;font-weight:700;cursor:pointer;font-size:.85rem;white-space:nowrap}.history-count{color:var(--color-text-secondary);font-weight:400}.filter-status{display:none;margin:-.25rem 0 .6rem;font-size:.78rem;color:var(--color-text-secondary)}
-  .bulk-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;padding:.65rem .85rem;border:1px solid var(--color-border);border-radius:.8rem;background:var(--color-blush);font-size:.8rem}.bulk-bar label{font-weight:700}.bulk-bar>div{display:flex;align-items:center;gap:.5rem}.bulk-bar button{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-weight:700}.bulk-bar #apply-bulk-status{background:var(--color-navy);color:#fff}.bulk-bar button:disabled{opacity:.4}
+  .dep-selector{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:.75rem 1rem;margin-bottom:.75rem}.dep-selector-left{display:flex;align-items:center;gap:.6rem}.dep-label{font-size:.82rem;font-weight:700;color:var(--color-text-secondary);white-space:nowrap}.dep-select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy);font-size:.875rem;min-width:260px;cursor:pointer}
+  .history-toggle{display:flex;align-items:center;gap:.4rem;font-weight:700;cursor:pointer;font-size:.85rem;white-space:nowrap}.history-count{color:var(--color-text-secondary);font-weight:400}
+  .bulk-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;padding:.65rem .85rem;border:1px solid var(--color-border);border-radius:.8rem;background:var(--color-blush);font-size:.8rem}.bulk-bar label{font-weight:700}.bulk-bar>div{display:flex;align-items:center;gap:.5rem}.bulk-bar select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy)}.bulk-bar button{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-weight:700}.bulk-bar #apply-bulk-status{background:var(--color-navy);color:#fff}.bulk-bar button:disabled{opacity:.4}
   .departure{border:1px solid var(--color-border);border-radius:.75rem;background:#fff;margin-bottom:.65rem;overflow:hidden}.departure-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .9rem;background:#FCFAF9}.departure-title,.departure-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}.departure-title small{display:block;margin-top:.15rem;color:var(--color-text-secondary);font-size:.7rem}.departure-select-checkbox{width:1rem;height:1rem;accent-color:var(--color-coral)}.departure-summary>span{font-size:.74rem;color:var(--color-text-secondary)}.departure-summary b{padding:.15rem .5rem;border-radius:999px;font-size:.7rem}.lead{background:#FEF9C3;color:#78350F}.pending{background:#FEF3C7;color:#92400E}.confirmed{background:#D1FAE5;color:#065F46}.rejected{background:#FEE2E2;color:#991B1B}.dep-actions a{padding:.2rem .45rem;font-size:.7rem;border:1px solid var(--color-coral);border-radius:.4rem;color:var(--color-coral);text-decoration:none;font-weight:700}
   .registration-list{display:flex;flex-direction:column;gap:.6rem;padding:.7rem;border-top:1px solid var(--color-border);background:#FCFAF9}.history-item{display:none}#noResults{display:none;text-align:center;padding:2rem;color:var(--color-text-secondary)}
-  @media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr)}.departure-head{align-items:flex-start;flex-direction:column}.bulk-bar,.bulk-bar>div{align-items:stretch;flex-direction:column}}
-  @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.filters,.filters>*{width:100%!important}}
+  @media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr)}.departure-head{align-items:flex-start;flex-direction:column}.bulk-bar,.bulk-bar>div{align-items:stretch;flex-direction:column}.dep-select{min-width:0;width:100%}}
+  @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.dep-selector{flex-direction:column;align-items:stretch}}
 </style>
 
-<script>
-  const badgeStyle = (s: string) =>
+<script define:vars={{ depStatsMap, allDepStats }}>
+  const badgeStyle = (s) =>
     s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;'
     : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;'
     : s === 'lead' ? 'background:#FEF9C3;color:#78350F;'
     : 'background:#FEF3C7;color:#92400E;';
 
-  function toggleDetail(id: string) {
+  function toggleDetail(id) {
     const el = document.getElementById('detail-' + id);
     if (!el) return;
     const open = getComputedStyle(el).display === 'none';
     el.style.display = open ? 'block' : 'none';
-    const btn = el.parentElement?.querySelector<HTMLButtonElement>('.details-btn');
+    const btn = el.parentElement?.querySelector('.details-btn');
     if (btn) { btn.textContent = open ? 'Hide details' : 'View details'; btn.setAttribute('aria-expanded', String(open)); }
   }
 
-  async function requestStatusUpdate(id: number, status: string, admin_notes = '') {
+  async function requestStatusUpdate(id, status, admin_notes = '') {
     const res = await fetch('/api/admin/update-registration', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status, admin_notes }),
     });
     if (res.ok) {
-      const badge = document.querySelector<HTMLElement>(`.status-badge[data-id="${id}"]`);
+      const badge = document.querySelector(`.status-badge[data-id="${id}"]`);
       if (badge) { badge.textContent = status; badge.style.cssText = badgeStyle(status); }
-      const row = badge?.closest<HTMLElement>('.reg-row');
+      const row = badge?.closest('.reg-row');
       if (row) row.dataset.status = status;
       return { ok: true, error: '' };
     }
@@ -167,7 +204,7 @@ const exportHref = trip.slug === '__legacy'
     return { ok: false, error: data?.error || 'Status update failed.' };
   }
 
-  async function requestPaymentUpdate(ids: number[], action: string) {
+  async function requestPaymentUpdate(ids, action) {
     const res = await fetch('/api/admin/registrations/payment', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids, action }),
@@ -176,16 +213,16 @@ const exportHref = trip.slug === '__legacy'
     return res.ok ? data : { success: false, error: data?.error || 'Payment update failed.' };
   }
 
-  // ── Per-row actions via event delegation (no inline onclick → works as a module) ──
+  // ── Per-row actions ──
   document.getElementById('departures-container')?.addEventListener('click', async (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+    const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.dataset.id || '';
     const value = btn.dataset.value || '';
     if (btn.dataset.action === 'toggle-detail') { toggleDetail(id); return; }
     if (btn.dataset.action === 'update-status') {
       if (!confirm(`Mark this registration as "${value}"?`)) return;
-      const notes = (document.getElementById('notes-' + id) as HTMLTextAreaElement | null)?.value ?? '';
+      const notes = document.getElementById('notes-' + id)?.value ?? '';
       const result = await requestStatusUpdate(Number(id), value, notes);
       if (!result.ok) alert(result.error);
       return;
@@ -193,13 +230,13 @@ const exportHref = trip.slug === '__legacy'
     if (btn.dataset.action === 'update-payment') {
       if (!confirm(`Set payment for registration #${id} to "${value}"?`)) return;
       const data = await requestPaymentUpdate([Number(id)], value);
-      if (!data.success || data.failed) alert(data.error || data.results?.find((r: any) => !r.success)?.error || 'Payment update failed.');
+      if (!data.success || data.failed) alert(data.error || data.results?.find((r) => !r.success)?.error || 'Payment update failed.');
       else location.reload();
       return;
     }
     if (btn.dataset.action === 'save-notes') {
-      const badge = document.querySelector<HTMLElement>(`.status-badge[data-id="${id}"]`);
-      const notes = (document.getElementById('notes-' + id) as HTMLTextAreaElement | null)?.value ?? '';
+      const badge = document.querySelector(`.status-badge[data-id="${id}"]`);
+      const notes = document.getElementById('notes-' + id)?.value ?? '';
       const result = await requestStatusUpdate(Number(id), badge?.textContent?.trim() || 'pending', notes);
       if (result.ok) {
         const msg = document.getElementById('msg-' + id);
@@ -208,95 +245,106 @@ const exportHref = trip.slug === '__legacy'
     }
   });
 
-  // ── Filtering ──
-  const search = document.getElementById('search') as HTMLInputElement | null;
-  const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement | null;
-  const history = document.getElementById('show-history') as HTMLInputElement | null;
-  const boxes = () => [...document.querySelectorAll<HTMLInputElement>('.registration-checkbox')];
-  const rowOf = (b: HTMLInputElement) => b.closest<HTMLElement>('.reg-row');
-  const depOf = (b: HTMLInputElement) => b.closest<HTMLElement>('.departure');
-  const isVisible = (b: HTMLInputElement) => rowOf(b)?.style.display !== 'none' && depOf(b)?.style.display !== 'none';
+  // ── Selection ──
+  const boxes = () => [...document.querySelectorAll('.registration-checkbox')];
+  const rowOf = (b) => b.closest('.reg-row');
+  const depOf = (b) => b.closest('.departure');
+  const isVisible = (b) => depOf(b)?.style.display !== 'none';
   const visibleBoxes = () => boxes().filter(isVisible);
 
   function selectionUI() {
     const selected = boxes().filter((b) => b.checked);
     const matching = visibleBoxes();
-    const all = document.getElementById('select-all-visible') as HTMLInputElement | null;
-    const apply = document.getElementById('apply-bulk-status') as HTMLButtonElement | null;
-    const bulk = document.getElementById('bulk-status') as HTMLSelectElement | null;
-    const payApply = document.getElementById('apply-bulk-payment') as HTMLButtonElement | null;
-    const payBulk = document.getElementById('bulk-payment') as HTMLSelectElement | null;
+    const all = document.getElementById('select-all-visible');
+    const apply = document.getElementById('apply-bulk-status');
+    const bulk = document.getElementById('bulk-status');
+    const payApply = document.getElementById('apply-bulk-payment');
+    const payBulk = document.getElementById('bulk-payment');
     const count = document.getElementById('selected-count');
     if (count) count.textContent = `${selected.length} selected`;
     if (apply) apply.disabled = !selected.length || !bulk?.value;
     if (payApply) payApply.disabled = !selected.length || !payBulk?.value;
     if (all) { const n = matching.filter((b) => b.checked).length; all.checked = matching.length > 0 && n === matching.length; all.indeterminate = n > 0 && n < matching.length; }
-    document.querySelectorAll<HTMLInputElement>('.departure-select-checkbox').forEach((g) => {
+    document.querySelectorAll('.departure-select-checkbox').forEach((g) => {
       const dep = g.closest('.departure');
-      const bs = [...(dep?.querySelectorAll<HTMLInputElement>('.registration-checkbox') ?? [])].filter((b) => rowOf(b)?.style.display !== 'none');
+      const bs = [...(dep?.querySelectorAll('.registration-checkbox') ?? [])];
       const n = bs.filter((b) => b.checked).length;
       g.checked = bs.length > 0 && n === bs.length;
       g.indeterminate = n > 0 && n < bs.length;
     });
   }
 
+  // ── Stats update ──
+  const fmtINR = (n) => '₹' + Math.round(n ?? 0).toLocaleString('en-IN');
+  const statColors = { Registrations: 'var(--color-primary)', Leads: '#78350F', Pending: '#D97706', Confirmed: 'var(--color-success)', Rejected: 'var(--color-danger)', Revenue: 'var(--color-primary)' };
+
+  function updateStats(data) {
+    const vals = { Registrations: data.count, Leads: data.lead, Pending: data.pending, Confirmed: data.confirmed, Rejected: data.rejected, Revenue: fmtINR(data.revenue) };
+    document.querySelectorAll('.stat-card').forEach((card) => {
+      const label = card.dataset.statLabel ?? '';
+      const strong = card.querySelector('strong');
+      if (strong && label in vals) strong.textContent = String(vals[label]);
+    });
+  }
+
+  // ── Departure filter ──
+  const depSelect = document.getElementById('departure-select');
+  const histCheckbox = document.getElementById('show-history');
+
   function applyFilters() {
-    const q = search?.value.toLowerCase() ?? '';
-    const st = statusFilter?.value ?? '';
-    let visibleRegs = 0, visibleDeps = 0;
-    document.querySelectorAll<HTMLElement>('.departure').forEach((dep) => {
-      if (dep.classList.contains('history-item') && !history?.checked) { dep.style.display = 'none'; return; }
-      dep.style.display = 'block';
-      let depVisible = 0;
-      dep.querySelectorAll<HTMLElement>('.reg-row').forEach((row) => {
-        const show = (!q || row.dataset.name?.includes(q) || row.dataset.email?.includes(q)) && (!st || row.dataset.status === st);
-        row.style.display = show ? 'block' : 'none';
-        if (show) { depVisible++; visibleRegs++; }
-        else { const b = row.querySelector<HTMLInputElement>('.registration-checkbox'); if (b) b.checked = false; }
-      });
-      const show = depVisible > 0 || (!q && !st);
+    const selectedId = depSelect?.value ?? '';
+    const showHist = !!histCheckbox?.checked;
+    let visibleDeps = 0;
+
+    document.querySelectorAll('.departure').forEach((dep) => {
+      const depId = dep.dataset.departureId ?? '';
+      const isHist = dep.classList.contains('history-item');
+      const show = selectedId === '' ? (!isHist || showHist) : depId === selectedId;
       dep.style.display = show ? 'block' : 'none';
       if (show) visibleDeps++;
     });
-    const fs = document.getElementById('filterStatus');
-    if (fs) { const active = !!(q || st || history?.checked); fs.style.display = active && visibleDeps ? 'block' : 'none'; if (active) fs.textContent = `Showing ${visibleRegs} registration${visibleRegs === 1 ? '' : 's'} across ${visibleDeps} departure${visibleDeps === 1 ? '' : 's'}`; }
+
+    // Update stat cards
+    const statsForId = selectedId && depStatsMap[selectedId] ? depStatsMap[selectedId] : allDepStats;
+    updateStats(statsForId);
+
     const nr = document.getElementById('noResults');
     if (nr) nr.style.display = visibleDeps ? 'none' : 'block';
+
     selectionUI();
   }
 
   boxes().forEach((b) => b.addEventListener('change', selectionUI));
-  document.querySelectorAll<HTMLInputElement>('.departure-select-checkbox').forEach((g) =>
+  document.querySelectorAll('.departure-select-checkbox').forEach((g) =>
     g.addEventListener('change', () => {
-      g.closest('.departure')?.querySelectorAll<HTMLInputElement>('.registration-checkbox').forEach((b) => { if (rowOf(b)?.style.display !== 'none') b.checked = g.checked; });
+      g.closest('.departure')?.querySelectorAll('.registration-checkbox').forEach((b) => { b.checked = g.checked; });
       selectionUI();
     }),
   );
-  document.getElementById('select-all-visible')?.addEventListener('change', (e) => { visibleBoxes().forEach((b) => (b.checked = (e.target as HTMLInputElement).checked)); selectionUI(); });
+  document.getElementById('select-all-visible')?.addEventListener('change', (e) => { visibleBoxes().forEach((b) => (b.checked = e.target.checked)); selectionUI(); });
   document.getElementById('clear-selection')?.addEventListener('click', () => { boxes().forEach((b) => (b.checked = false)); selectionUI(); });
   document.getElementById('bulk-status')?.addEventListener('change', selectionUI);
   document.getElementById('bulk-payment')?.addEventListener('change', selectionUI);
 
   document.getElementById('apply-bulk-status')?.addEventListener('click', async () => {
     const selected = boxes().filter((b) => b.checked);
-    const status = (document.getElementById('bulk-status') as HTMLSelectElement).value;
+    const status = document.getElementById('bulk-status').value;
     if (!selected.length || !status || !confirm(`Change ${selected.length} registration(s) to ${status}?`)) return;
-    const failures: string[] = [];
+    const failures = [];
     for (const b of selected) { const id = Number(b.dataset.registrationId); const r = await requestStatusUpdate(id, status); if (!r.ok) failures.push(`#${id}: ${r.error}`); }
     if (failures.length) alert(failures.join('\n')); else location.reload();
   });
   document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {
     const selected = boxes().filter((b) => b.checked);
-    const action = (document.getElementById('bulk-payment') as HTMLSelectElement).value;
+    const action = document.getElementById('bulk-payment').value;
     if (!selected.length || !action || !confirm(`Apply payment action "${action}" to ${selected.length} registration(s)?`)) return;
     const data = await requestPaymentUpdate(selected.map((b) => Number(b.dataset.registrationId)), action);
     if (!data.success) alert(data.error);
-    else if (data.failed) alert(data.results.filter((r: any) => !r.success).map((r: any) => `#${r.id}: ${r.error}`).join('\n'));
+    else if (data.failed) alert(data.results.filter((r) => !r.success).map((r) => `#${r.id}: ${r.error}`).join('\n'));
     else location.reload();
   });
 
-  search?.addEventListener('input', applyFilters);
-  statusFilter?.addEventListener('change', applyFilters);
-  history?.addEventListener('change', applyFilters);
+  depSelect?.addEventListener('change', applyFilters);
+  histCheckbox?.addEventListener('change', applyFilters);
   applyFilters();
 </script>
