@@ -75,5 +75,5 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     deleteTrip(oldSlug);
   }
   writeTrip(newSlug, data);
-  return redirect(`/admin/trips/${newSlug}`);
+  return redirect(`/admin/trips/${newSlug}?saved=1`);
 };

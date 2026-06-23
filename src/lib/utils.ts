@@ -50,8 +50,11 @@ export function slugify(str: string): string {
 
 export function formatDateIN(d: string | null | undefined): string {
   if (!d) return '—';
-  const str = d.includes('T') ? d : d + 'T00:00:00';
-  return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  // SQLite DATETIME values are space-separated ("2026-06-23 10:30:00"); slice the
+  // YYYY-MM-DD prefix so both timestamps and date-only strings parse cleanly.
+  const date = new Date(d.slice(0, 10) + 'T00:00:00');
+  if (isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 export function formatDateFromUnix(unix: number | null | undefined): string {

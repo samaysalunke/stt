@@ -26,8 +26,6 @@ const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : pay
           {[
             ['Full Name', r.full_name], ['Email', r.email], ['Phone', r.phone], ['Age', r.age ?? '—'], ['Gender', r.gender ?? '—'], ['City', r.city ?? '—'],
             ['Instagram', r.instagram ?? '—'], ['Emergency Name', r.emergency_name ?? '—'], ['Emergency Phone', r.emergency_phone ?? '—'],
-            ['No. Travelers', r.num_travelers ?? '—'], ['Others', r.other_travelers ?? '—'], ['Dietary', r.dietary ?? '—'], ['Food Allergies', r.food_allergies ?? '—'],
-            ['Medical Conditions', r.medical_conditions ?? '—'], ['Medications', r.medications ?? '—'], ['Special Requests', r.special_requests ?? '—'],
             ['Why Joining', r.why_join ?? '—'], ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'], ['Occupancy', r.sharing_option ?? '—'],
             ['Total (selected)', r.total_amount ? formatINR(r.total_amount) : '—'], ['Amount Paid', formatINR(r.amount_paid)], ['Batch ID', r.batch_id ?? '—'],
           ].map(([label, value]) => <div><span>{label}:</span> {value}</div>)}

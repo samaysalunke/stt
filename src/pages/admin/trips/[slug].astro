@@ -42,9 +42,20 @@ if (existingGallery.length === 0 && trip.linkedAlbumSlug) {
   }
 }
 const tripSlug = slug;
+const saved = Astro.url.searchParams.get('saved') === '1';
 ---
 
 <AdminLayout title={`Edit: ${trip.name ?? slug}`} page="trips">
+
+  {saved && (
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2"
+         style="background: rgba(34,166,84,0.10); color: var(--color-success);">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+      </svg>
+      Changes saved.
+    </div>
+  )}
 
   <!-- Header -->
   <div class="edit-header">

@@ -39,13 +39,7 @@ function initializeSchema(db: Database.Database) {
       emergency_name TEXT NOT NULL,
       emergency_phone TEXT NOT NULL,
       emergency_relationship TEXT,
-      num_travelers INTEGER DEFAULT 1,
-      other_travelers TEXT,
-      dietary TEXT,
       dietary_notes TEXT,
-      food_allergies TEXT,
-      medical_conditions TEXT,
-      medications TEXT,
       experience_level TEXT,
       tshirt_size TEXT,
       payment_screenshot_url TEXT,
@@ -55,7 +49,6 @@ function initializeSchema(db: Database.Database) {
       payment_method TEXT,
       source TEXT,
       source_detail TEXT,
-      special_requests TEXT,
       photo_consent INTEGER DEFAULT 0,
       why_join TEXT,
       status TEXT DEFAULT 'pending',
@@ -116,6 +109,10 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN tier_id TEXT'); } catch {}
   // Migration: store email send error for failed transactional emails so ops can follow up
   try { db.exec('ALTER TABLE registrations ADD COLUMN email_error TEXT'); } catch {}
+  // Migration: drop deprecated registration fields no longer collected by the booking form
+  for (const col of ['num_travelers', 'other_travelers', 'dietary', 'food_allergies', 'medical_conditions', 'medications', 'special_requests']) {
+    try { db.exec(`ALTER TABLE registrations DROP COLUMN ${col}`); } catch {}
+  }
 
   // feature/auth — user accounts + sessions
   db.exec(`

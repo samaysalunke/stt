@@ -282,16 +282,32 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
                 <!-- Identity + account block -->
                 <div>
-                  <h3 class="detail-heading">Identity</h3>
-                  <div class="detail-fields">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                    <h3 class="detail-heading" style="margin:0;">Identity</h3>
+                    {!isTripLead && <button type="button" onclick={`toggleCustEdit(${i})`} class="cust-edit-btn">Edit</button>}
+                  </div>
+                  <div class="detail-fields" id={`cust-view-${i}`} style="margin-top:0.5rem;">
                     <div><span>Email</span>
                       <span>{c.email}
                         <button onclick={`copyText('${c.email}')`} class="copy-btn" title="Copy email">⧉</button>
                       </span>
                     </div>
-                    {c.phone && <div><span>Phone</span><span>{c.phone} <button onclick={`copyText('${c.phone}')`} class="copy-btn" title="Copy phone">⧉</button></span></div>}
-                    {c.city && <div><span>City</span><span>{c.city}</span></div>}
+                    <div><span>Name</span><span data-field="full_name">{c.full_name ?? '—'}</span></div>
+                    {c.phone && <div><span>Phone</span><span data-field="phone">{c.phone} <button onclick={`copyText('${c.phone}')`} class="copy-btn" title="Copy phone">⧉</button></span></div>}
+                    {c.city && <div><span>City</span><span data-field="city">{c.city}</span></div>}
                   </div>
+
+                  {!isTripLead && (
+                    <form id={`cust-edit-${i}`} class="cust-edit-form" data-email={c.email} style="display:none;margin-top:0.5rem;">
+                      <label>Full name<input type="text" name="full_name" value={c.full_name ?? ''} required /></label>
+                      <label>Phone<input type="text" name="phone" value={c.phone ?? ''} required /></label>
+                      <label>City<input type="text" name="city" value={c.city ?? ''} /></label>
+                      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                        <button type="submit" class="cust-edit-save">Save</button>
+                        <button type="button" onclick={`toggleCustEdit(${i})`} class="cust-edit-cancel">Cancel</button>
+                      </div>
+                    </form>
+                  )}
 
                   {c.user_id && (
                     <>
@@ -411,6 +427,11 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   .detail-fields > div { display:contents; }
   .detail-fields span:first-child { color:var(--color-text-secondary); font-weight:600; }
   .copy-btn { border:none; background:none; cursor:pointer; color:var(--color-coral); font-size:0.75rem; padding:0 0.2rem; }
+  .cust-edit-btn { border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-text-secondary); cursor:pointer; font-size:0.74rem; font-weight:700; padding:0.2rem 0.55rem; }
+  .cust-edit-form label { display:block; font-size:0.74rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.4rem; }
+  .cust-edit-form input { display:block; width:100%; box-sizing:border-box; margin-top:0.15rem; padding:0.4rem 0.55rem; border:1px solid var(--color-border); border-radius:0.4rem; font-size:0.82rem; color:var(--color-navy); }
+  .cust-edit-save { padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background:var(--color-navy); color:#fff; font-weight:700; font-size:0.78rem; cursor:pointer; }
+  .cust-edit-cancel { padding:0.4rem 0.9rem; border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-text-secondary); font-weight:700; font-size:0.78rem; cursor:pointer; }
   @media(max-width:900px) {
     .cust-summary { grid-template-columns:1fr auto; }
     .cust-meta:nth-child(n+3) { display:none; }
@@ -448,8 +469,57 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     });
   }
 
+  function toggleCustEdit(i: number) {
+    const view = document.getElementById(`cust-view-${i}`);
+    const form = document.getElementById(`cust-edit-${i}`);
+    if (!view || !form) return;
+    const editing = form.style.display !== 'none';
+    form.style.display = editing ? 'none' : 'block';
+    view.style.display = editing ? '' : 'none';
+  }
+
   (window as any).toggleCustomer = toggleCustomer;
   (window as any).copyText = copyText;
+  (window as any).toggleCustEdit = toggleCustEdit;
+
+  // Save inline customer edits
+  document.querySelectorAll<HTMLFormElement>('.cust-edit-form').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        email: form.dataset.email,
+        full_name: String(fd.get('full_name') ?? '').trim(),
+        phone: String(fd.get('phone') ?? '').trim(),
+        city: String(fd.get('city') ?? '').trim(),
+      };
+      const btn = form.querySelector<HTMLButtonElement>('.cust-edit-save');
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+      try {
+        const res = await fetch('/api/admin/customers/update', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) { alert(data?.error || 'Update failed.'); return; }
+        // Reflect changes in the view block + summary without a reload.
+        const row = form.closest('.cust-row') as HTMLElement | null;
+        const setField = (field: string, value: string) => {
+          const el = row?.querySelector(`[data-field="${field}"]`);
+          if (el) el.childNodes[0].textContent = value || '—';
+        };
+        setField('full_name', payload.full_name);
+        setField('phone', payload.phone);
+        setField('city', payload.city);
+        const nameEl = row?.querySelector('.cust-primary strong');
+        if (nameEl) nameEl.textContent = payload.full_name || payload.email || '';
+        const i = Number(form.id.replace('cust-edit-', ''));
+        toggleCustEdit(i);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      }
+    });
+  });
 
   // Client-side search + filter
   const searchInput = document.getElementById('cust-search') as HTMLInputElement | null;

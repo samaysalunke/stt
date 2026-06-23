@@ -190,6 +190,20 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
 </style>
 
 <script define:vars={{ depStatsMap, allDepStats }}>
+  // Reload after a bulk action while preserving the active filters in the URL,
+  // so search/status/departure/history selections survive the round-trip.
+  function reloadWithFilters() {
+    const p = new URLSearchParams();
+    const q = document.getElementById('search-input')?.value;
+    const sf = document.getElementById('filter-status')?.value;
+    const dep = document.getElementById('departure-select')?.value;
+    if (q) p.set('q', q);
+    if (sf) p.set('status', sf);
+    if (dep) p.set('dep', dep);
+    if (document.getElementById('show-history')?.checked) p.set('hist', '1');
+    location.href = location.pathname + (p.size ? '?' + p : '');
+  }
+
   const badgeStyle = (s) =>
     s === 'confirmed' ? 'background:#D1FAE5;color:#065F46;'
     : s === 'rejected' ? 'background:#FEE2E2;color:#991B1B;'
@@ -248,7 +262,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
       if (!confirm(`Set payment for registration #${id} to "${value}"?`)) return;
       const data = await requestPaymentUpdate([Number(id)], value);
       if (!data.success || data.failed) alert(data.error || data.results?.find((r) => !r.success)?.error || 'Payment update failed.');
-      else location.reload();
+      else reloadWithFilters();
       return;
     }
     if (btn.dataset.action === 'save-notes') {
@@ -373,7 +387,7 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
     if (!selected.length || !status || !confirm(`Change ${selected.length} registration(s) to ${status}?`)) return;
     const failures = [];
     for (const b of selected) { const id = Number(b.dataset.registrationId); const r = await requestStatusUpdate(id, status); if (!r.ok) failures.push(`#${id}: ${r.error}`); }
-    if (failures.length) alert(failures.join('\n')); else location.reload();
+    if (failures.length) alert(failures.join('\n')); else reloadWithFilters();
   });
   document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {
     const selected = boxes().filter((b) => b.checked);
@@ -382,12 +396,21 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
     const data = await requestPaymentUpdate(selected.map((b) => Number(b.dataset.registrationId)), action);
     if (!data.success) alert(data.error);
     else if (data.failed) alert(data.results.filter((r) => !r.success).map((r) => `#${r.id}: ${r.error}`).join('\n'));
-    else location.reload();
+    else reloadWithFilters();
   });
 
   document.getElementById('search-input')?.addEventListener('input', applyFilters);
   document.getElementById('filter-status')?.addEventListener('change', applyFilters);
   depSelect?.addEventListener('change', applyFilters);
   histCheckbox?.addEventListener('change', applyFilters);
+
+  // Restore filters carried over by reloadWithFilters() after a bulk action.
+  const sp = new URLSearchParams(location.search);
+  const searchEl = document.getElementById('search-input');
+  const statusEl = document.getElementById('filter-status');
+  if (searchEl && sp.get('q')) searchEl.value = sp.get('q');
+  if (statusEl && sp.get('status')) statusEl.value = sp.get('status');
+  if (depSelect && sp.get('dep')) depSelect.value = sp.get('dep');
+  if (histCheckbox && sp.get('hist')) histCheckbox.checked = true;
   applyFilters();
 </script>
