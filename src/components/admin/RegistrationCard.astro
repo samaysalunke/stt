@@ -16,7 +16,7 @@ const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : pay
     </div>
     <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong><span>Applied {formatDateIN(r.created_at)}</span></div>
     <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong>{formatINR(r.amount_paid)}</strong><span class="payment-badge" data-id={r.id} style={payStyle}>{paymentStateLabel(payState)}</span></div>
-    <div class="reg-actions"><button onclick={`toggleDetail(${r.id})`} aria-expanded="false" class="details-btn">View details</button></div>
+    <div class="reg-actions"><button type="button" data-action="toggle-detail" data-id={r.id} aria-expanded="false" class="details-btn">View details</button></div>
   </div>
   <div id={`detail-${r.id}`} class="detail-row">
     <div class="detail-grid">
@@ -38,10 +38,10 @@ const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : pay
         <h3>Admin actions</h3>
         {!readOnly ? <>
           <p>Update Status</p>
-          <div class="status-actions">{['lead', 'pending', 'confirmed', 'rejected'].map(s => <button onclick={`updateStatus(${r.id}, '${s}')`} class={r.status === s ? 'current' : ''}>{s}</button>)}</div>
-          <p>Payment</p><div class="status-actions">{['unpaid', 'advance', 'full'].map(a => <button onclick={`updatePayment(${r.id}, '${a}')`}>{a}</button>)}</div>
+          <div class="status-actions">{['lead', 'pending', 'confirmed', 'rejected'].map(s => <button type="button" data-action="update-status" data-id={r.id} data-value={s} class={r.status === s ? 'current' : ''}>{s}</button>)}</div>
+          <p>Payment</p><div class="status-actions">{['unpaid', 'advance', 'full'].map(a => <button type="button" data-action="update-payment" data-id={r.id} data-value={a}>{a}</button>)}</div>
           <p>Admin Notes</p><textarea id={`notes-${r.id}`} rows={3} placeholder="Add internal notes…">{r.admin_notes ?? ''}</textarea>
-          <button class="save-notes" onclick={`saveNotes(${r.id})`}>Save Notes</button><p id={`msg-${r.id}`} class="saved">Saved!</p>
+          <button type="button" class="save-notes" data-action="save-notes" data-id={r.id}>Save Notes</button><p id={`msg-${r.id}`} class="saved">Saved!</p>
         </> : <p class="read-only-note">Trip leads have read-only access.</p>}
       </div>
     </div>
