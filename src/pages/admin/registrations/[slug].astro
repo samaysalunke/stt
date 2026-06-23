@@ -337,8 +337,10 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
       rows.forEach((row) => {
         const matchText = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
         const matchStatus = !sf || row.dataset.status === sf;
-        row.style.display = matchText && matchStatus ? '' : 'none';
-        if (matchText && matchStatus) rowsVisible++;
+        const show = matchText && matchStatus;
+        row.style.display = show ? '' : 'none';
+        if (!show) { const cb = row.querySelector('.registration-checkbox'); if (cb) cb.checked = false; }
+        if (show) rowsVisible++;
       });
       if (rowsVisible === 0) { dep.style.display = 'none'; } else { totalVisible++; }
     });
