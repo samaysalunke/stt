@@ -40,8 +40,10 @@ if (fs.existsSync(seedSettings) && !fs.existsSync(destSettings)) {
 }
 
 if (alreadySeeded) {
-  console.log('[seed] Content already exists in volume, skipping full seed');
-  process.exit(0);
+  // Volume already populated. Don't skip — copy additively so new committed
+  // content (new FAQs, trips, etc.) lands on the volume. copyDir guards each
+  // file with !fs.existsSync, so existing files / admin edits are preserved.
+  console.log('[seed] Content exists in volume — running additive seed (new files only)');
 }
 
 function copyDir(src, dest) {
