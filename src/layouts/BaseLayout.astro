@@ -22,9 +22,11 @@ interface Props {
   //  'none'   — page provides its own top bar (about, album detail)
   nav?: 'scroll' | 'header' | 'back' | 'logo' | 'none';
   backFallback?: string;
+  // Hide the floating WhatsApp button (e.g. during the checkout flow).
+  hideWhatsApp?: boolean;
 }
 
-const { title, description, image, imageAlt, canonical, robots, type = 'website', nav = 'back', backFallback = '/' } = Astro.props;
+const { title, description, image, imageAlt, canonical, robots, type = 'website', nav = 'back', backFallback = '/', hideWhatsApp = false } = Astro.props;
 const isHome = nav === 'scroll';
 const user = Astro.locals.user ?? null;
 
@@ -130,7 +132,7 @@ const orgSchema = {
     {nav !== 'none' && <Footer />}
 
     <!-- WhatsApp Floating Button (not on the homepage, matching the prototype) -->
-    {!isHome && (
+    {!isHome && !hideWhatsApp && (
     <a
       href={`https://wa.me/${(settings.phone ?? '+917975027491').replace(/[^0-9]/g, '')}?text=Hi%2C%20I%27m%20interested%20in%20a%20trip%20with%20Seek%20the%20Thrill!`}
       target="_blank"
