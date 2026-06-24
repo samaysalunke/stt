@@ -91,7 +91,6 @@ const saved = Astro.url.searchParams.get('saved') === '1';
           <label class="flabel">Trip Name *</label>
           <input type="text" name="name" required class="finput" value={trip.title ?? trip.name ?? ''} />
         </div>
-
         <div class="field">
           <label class="flabel">Slug</label>
           <input type="text" name="newSlug" class="finput" placeholder={slug ?? ''} />
@@ -287,12 +286,6 @@ const saved = Astro.url.searchParams.get('saved') === '1';
           <label class="flabel">Balance Due Rule</label>
           <input type="text" name="balanceDueRule" class="finput" placeholder="e.g. 15 days before trip" value={trip.balanceDueRule ?? ''} />
           <span class="fhint">Shown in the booking summary, e.g. "due 15 days before trip".</span>
-        </div>
-
-
-        <div class="field full">
-          <label class="flabel">Payment Instructions</label>
-          <textarea name="paymentInstructions" class="finput" rows="3">{trip.paymentInstructions ?? ''}</textarea>
         </div>
 
         <div class="field">

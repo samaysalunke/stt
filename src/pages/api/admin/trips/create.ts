@@ -66,7 +66,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     featuredImage: featuredImage || null,
     gallery,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,
-    paymentInstructions: sanitizeInput(body.get('paymentInstructions')) || null,
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,
     batches,
