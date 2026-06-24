@@ -24,7 +24,7 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
     </div>
   )}
 
-  <form method="POST" action="/api/admin/settings/update">
+  <form method="POST" action="/api/admin/settings/update" enctype="multipart/form-data">
     <!-- Contact & Social -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Contact &amp; Social</h2>
@@ -128,8 +128,28 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
       <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Copy for the <a href="/about/" target="_blank" class="underline" style="color: var(--color-coral);">/about</a> page. Leave any field blank to use the built-in default.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Portrait image URL</label>
-          <input type="text" name="aboutFounderImage" value={s.aboutFounderImage ?? ''} placeholder="Blank = default portrait" class={inputCls} style={inputStyle} />
+          <label class={labelCls} style={labelStyle}>Portrait photo</label>
+          {s.aboutFounderImage && (
+            <img
+              src={s.aboutFounderImage}
+              alt="Current About page portrait"
+              class="mb-3 h-48 w-36 rounded-xl object-cover"
+            />
+          )}
+          <input
+            id="about-founder-image"
+            type="file"
+            name="aboutFounderImage"
+            accept="image/jpeg,image/png,image/webp"
+            class={inputCls}
+            style={inputStyle}
+          />
+          <img
+            id="about-founder-image-preview"
+            alt="New About page portrait preview"
+            class="mt-3 hidden h-48 w-36 rounded-xl object-cover"
+          />
+          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">JPG, PNG or WebP · max 10 MB. Leave empty to keep the current portrait.</p>
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Byline name</label>
@@ -204,3 +224,22 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
     </form>
   </section>
 </AdminLayout>
+
+<script>
+  const portraitInput = document.querySelector<HTMLInputElement>('#about-founder-image');
+  const portraitPreview = document.querySelector<HTMLImageElement>('#about-founder-image-preview');
+  let portraitPreviewUrl: string | null = null;
+
+  portraitInput?.addEventListener('change', () => {
+    if (portraitPreviewUrl) URL.revokeObjectURL(portraitPreviewUrl);
+    const file = portraitInput.files?.[0];
+    if (!file || !portraitPreview) {
+      portraitPreview?.classList.add('hidden');
+      portraitPreviewUrl = null;
+      return;
+    }
+    portraitPreviewUrl = URL.createObjectURL(file);
+    portraitPreview.src = portraitPreviewUrl;
+    portraitPreview.classList.remove('hidden');
+  });
+</script>

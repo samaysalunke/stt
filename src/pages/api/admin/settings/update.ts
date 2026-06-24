@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { readSiteSettings, writeSettings } from '../../../../lib/content';
+import { deleteImageByUrl, readSiteSettings, saveImageFile, writeSettings } from '../../../../lib/content';
 import { sanitizeInput } from '../../../../lib/utils';
 
 // Fields the settings form is allowed to update. Anything not listed here is
@@ -10,7 +10,7 @@ const TEXT_FIELDS = [
   'googleAnalyticsId', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',
   // About page copy (blank = built-in default, like the legal overrides)
-  'aboutFounderImage', 'aboutBylineName', 'aboutCaption', 'aboutQuote',
+  'aboutBylineName', 'aboutCaption', 'aboutQuote',
   'aboutBody', 'aboutPrinciplesHeading', 'aboutSignature', 'aboutSignoff',
   'aboutSignName', 'aboutCtaLabel',
 ];
@@ -19,7 +19,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
 
   // Merge over existing so fields not present in the form are never wiped.
-  const updated: Record<string, any> = { ...readSiteSettings() };
+  const existing = readSiteSettings();
+  const updated: Record<string, any> = { ...existing };
 
   for (const field of TEXT_FIELDS) {
     const v = body.get(field);
@@ -44,6 +45,20 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     updated.aboutPrinciples = principles;
   }
 
+  // About portrait: keep the existing image unless a replacement is uploaded.
+  // A unique filename avoids stale browser/CDN caches after replacement.
+  const portraitFile = body.get('aboutFounderImage');
+  let replacedPortrait: unknown = null;
+  if (portraitFile instanceof File && portraitFile.size > 0) {
+    updated.aboutFounderImage = await saveImageFile(
+      portraitFile,
+      'images/about',
+      `founder-${Date.now()}`,
+    );
+    replacedPortrait = existing.aboutFounderImage;
+  }
+
   writeSettings(updated);
+  if (replacedPortrait) deleteImageByUrl(replacedPortrait);
   return redirect('/admin/settings?saved=1');
 };
