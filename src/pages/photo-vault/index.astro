@@ -12,12 +12,6 @@ function formatDate(d: string | null | undefined) {
   return new Date(d).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
-const placeholderImgs = [
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1583418855676-8a93cf51b4a6?w=600&auto=format&fit=crop&q=80',
-];
 ---
 
 <BaseLayout
@@ -38,61 +32,62 @@ const placeholderImgs = [
   <section class="pb-16 lg:pb-20">
     <div class="max-w-2xl mx-auto px-5">
       <div id="albums-grid" class="grid grid-cols-1 gap-6">
-        {(albums.length > 0 ? albums.map((album, i) => ({
-          href: `/photo-vault/${album.slug}/`,
-          img: album.coverImage ?? placeholderImgs[i % placeholderImgs.length],
-          title: (album.name as string) || album.slug,
-          location: album.location ?? '',
-          date: formatDate(album.date),
-          rawDate: album.date ?? '',
-          photoCount: Array.isArray((album as any).photos) ? (album as any).photos.length : 0,
-          isLink: true,
-        })) : [
-          { href: '#', img: placeholderImgs[0], title: 'Spiti Valley 2023', location: 'Himachal Pradesh, India', date: 'September 2023', rawDate: '2023-09-01', photoCount: 0, isLink: false },
-          { href: '#', img: placeholderImgs[1], title: 'Gokarna Beach 2024', location: 'Karnataka, India', date: 'January 2024', rawDate: '2024-01-01', photoCount: 0, isLink: false },
-          { href: '#', img: placeholderImgs[2], title: 'Rishikesh Weekend', location: 'Uttarakhand, India', date: 'March 2024', rawDate: '2024-03-01', photoCount: 0, isLink: false },
-          { href: '#', img: placeholderImgs[3], title: 'Meghalaya Trek', location: 'Northeast India', date: 'October 2024', rawDate: '2024-10-01', photoCount: 0, isLink: false },
-        ]).map((item) => (
+        {albums.length > 0 ? albums.map((album) => {
+          const title = (album.name as string) || album.slug;
+          const photos = Array.isArray(album.photos) ? album.photos : [];
+          const image = album.coverImage ?? photos[0]?.image;
+
+          return (
           <a
-            href={item.href}
+            href={`/photo-vault/${album.slug}/`}
             class="album-card group block relative overflow-hidden rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
             style="aspect-ratio: 5/6;"
-            data-title={item.title.toLowerCase()}
-            data-date={item.rawDate}
+            data-title={title.toLowerCase()}
+            data-date={album.date ?? ''}
           >
-            <img
-              src={item.img}
-              alt={`${item.title} album`}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-            />
+            {image ? (
+              <img
+                src={image}
+                alt={`${title} album`}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+            ) : (
+              <div class="h-full w-full" style="background-color: var(--color-peach);"></div>
+            )}
             <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);"></div>
-            {item.photoCount > 0 && (
+            {photos.length > 0 && (
               <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold text-white backdrop-blur-sm" style="background: rgba(0,0,0,0.45);">
-                {item.photoCount} photos
+                {photos.length} photos
               </div>
             )}
             <div class="absolute bottom-0 left-0 right-0 p-5">
               <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
-                {item.title}
+                {title}
               </h3>
-              {item.location && (
+              {album.location && (
                 <p class="text-white/80 text-sm flex items-center gap-1">
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
-                  {item.location}
+                  {album.location}
                 </p>
               )}
               <div class="flex items-center justify-between mt-2">
-                <span class="text-white/60 text-xs">{item.date}</span>
+                <span class="text-white/60 text-xs">{formatDate(album.date)}</span>
                 <span class="text-xs font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   View Album →
                 </span>
               </div>
             </div>
           </a>
-        ))}
+          );
+        }) : (
+          <div class="py-16 text-center">
+            <h2 class="font-display text-2xl" style="color: var(--color-navy);">No albums yet</h2>
+            <p class="mt-2 text-sm" style="color: var(--color-gray-text);">New memories will appear here soon.</p>
+          </div>
+        )}
       </div>
     </div>
   </section>
