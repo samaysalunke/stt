@@ -115,7 +115,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
 
       const activeDeps = departures.filter(
         (d) =>
-          trip.registrationEnabled !== false &&
+          trip.registrationEnabled === true &&
           !d.historical &&
           ACTIVE_STATUSES.includes(d.status) &&
           !d.soldOut &&

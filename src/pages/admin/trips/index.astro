@@ -12,7 +12,14 @@ const trips = listTrips().map((t) => {
   // Card price falls back to past batches so expired trips show a number, not "—".
   const cardPrice = tripCardSummaryAnyBatch(t);
   // Trip-level status is gone — derive a display state from departures.
-  const _derivedStatus = upcoming.length === 0 ? 'hidden' : (summary.soldOut ? 'sold-out' : 'booking-open');
+  const _derivedStatus =
+    upcoming.length === 0
+      ? 'hidden'
+      : t.registrationEnabled !== true
+        ? 'registration-closed'
+        : summary.soldOut
+          ? 'sold-out'
+          : 'booking-open';
   const offers = Array.isArray(lead?.offers) ? lead.offers : [];
   const meteredOffers = offers.length > 0 && offers.every((o: any) => Number.isFinite(Number(o?.cap)));
   const leadTotal = meteredOffers
@@ -43,14 +50,16 @@ function fmtDay(d: string | null) {
 
 // Display vocabulary for the derived trip state (computed from departures).
 const statusColors: Record<string, string> = {
-  'booking-open': '#16a34a',
-  'hidden':       '#6b7280',
-  'sold-out':     '#dc2626',
+  'booking-open':        '#16a34a',
+  'hidden':              '#6b7280',
+  'sold-out':            '#dc2626',
+  'registration-closed': '#dc2626',
 };
 const statusLabels: Record<string, string> = {
-  'booking-open': 'Booking Open',
-  'hidden':       'No upcoming dates',
-  'sold-out':     'Sold Out',
+  'booking-open':        'Booking Open',
+  'hidden':              'No upcoming dates',
+  'sold-out':            'Sold Out',
+  'registration-closed': 'Registration closed',
 };
 ---
 

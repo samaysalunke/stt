@@ -49,10 +49,15 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const gallery = parseGallery(body.get('gallery_json'));
 
   const tripName = sanitizeInput(body.get('name'));
+  // NOTE: writeTrip does a full overwrite — every field that must survive a save
+  // MUST be listed here. Any YAML field absent from this object is destroyed on
+  // save. See the round-trip test in the admin trips suite.
   const data: Record<string, any> = {
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name: tripName,
     title: tripName,
+    // Explicit boolean so a missing value never re-appears (missing ⇒ closed).
+    registrationEnabled: body.get('registrationEnabled') === 'true',
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || existing.publicationStatus || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
