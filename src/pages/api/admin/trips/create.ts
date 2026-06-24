@@ -47,7 +47,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,
-    registrationEnabled: body.get('registrationEnabled') === 'true',
     shortDescription: sanitizeInput(body.get('shortDescription')) || null,
     description: sanitizeInput(body.get('description')) || null,
     seoTitle: sanitizeInput(body.get('seoTitle')) || null,

@@ -2,7 +2,6 @@ title: QA Test — Sold Out Trip
 publicationStatus: test
 slug: qa-test-sold-out
 status: sold-out
-registrationEnabled: false
 duration: 3 Days, 2 Nights
 description: Automated QA fixture trip. Do not delete.
 batches:

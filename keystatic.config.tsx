@@ -118,7 +118,6 @@ export default config({
           }),
           { label: 'Trip Gallery' }
         ),
-        registrationEnabled: fields.checkbox({ label: 'Enable Registration', defaultValue: true }),
         registrationDeadline: fields.date({ label: 'Registration Deadline' }),
       },
     }),

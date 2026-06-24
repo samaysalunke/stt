@@ -56,8 +56,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name: tripName,
     title: tripName,
-    // Explicit boolean so a missing value never re-appears (missing ⇒ closed).
-    registrationEnabled: body.get('registrationEnabled') === 'true',
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || existing.publicationStatus || 'draft',
     location: sanitizeInput(body.get('location')) || null,
     duration: sanitizeInput(body.get('duration')) || null,

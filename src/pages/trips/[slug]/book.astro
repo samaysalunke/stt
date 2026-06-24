@@ -19,7 +19,7 @@ const tripName = (trip.title as string) || (trip.name as string) || slug!;
 if (departures.length === 0) return Astro.redirect(`/trips/${slug}/`);
 
 const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-if (isSoldOut || !trip.registrationEnabled) return Astro.redirect(`/trips/${slug}/`);
+if (isSoldOut) return Astro.redirect(`/trips/${slug}/`);
 
 // Validate ?batch and ?tier params
 const batchParam = Astro.url.searchParams.get('batch') ?? '';

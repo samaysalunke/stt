@@ -84,7 +84,7 @@ const initialOffer = firstDeparture
 const initialPerPerson = initialOffer?.price ?? 0;
 
 const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-const isOpen = trip.registrationEnabled && !isSoldOut && departures.length > 0;
+const isOpen = !isSoldOut && departures.length > 0;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({

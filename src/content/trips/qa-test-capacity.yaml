@@ -2,7 +2,6 @@ title: QA Test — Capacity Check
 publicationStatus: test
 slug: qa-test-capacity
 status: booking-open
-registrationEnabled: true
 duration: 2 Days
 description: Automated QA fixture. Cap=1 tier for over-confirm testing.
 paymentAmount: 500

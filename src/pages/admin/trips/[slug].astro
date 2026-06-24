@@ -130,19 +130,6 @@ const saved = Astro.url.searchParams.get('saved') === '1';
           </select>
         </div>
 
-        <div class="field">
-          <label class="flabel" style="display:flex; align-items:center; gap:0.5rem;">
-            <input
-              type="checkbox"
-              name="registrationEnabled"
-              value="true"
-              checked={trip.registrationEnabled === true}
-              style="width:1rem; height:1rem;"
-            />
-            Registration open (accept bookings)
-          </label>
-        </div>
-
       </div>
     </div>
 

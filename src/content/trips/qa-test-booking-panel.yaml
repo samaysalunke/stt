@@ -2,7 +2,6 @@ title: QA Test — Booking Panel
 publicationStatus: test
 slug: qa-test-booking-panel
 status: booking-open
-registrationEnabled: true
 duration: 3 Days, 2 Nights
 description: >
   Automated QA fixture for Playwright E2E tests. Mirrors the Sahyadri
