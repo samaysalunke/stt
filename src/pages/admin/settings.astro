@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import { ABOUT_DEFAULTS } from '../../lib/aboutDefaults';
 import { readSiteSettings } from '../../lib/content';
 import { ADMIN_CONTENT_INPUT_STYLE as inputStyle, ADMIN_CONTENT_LABEL_STYLE as labelStyle } from '../../lib/adminStyles';
 export const prerender = false;
@@ -11,6 +12,11 @@ const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
 const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
 const cardCls = 'bg-white rounded-[2rem] p-6 mb-6';
 const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
+const aboutValue = (value: unknown, fallback: string) =>
+  typeof value === 'string' && value.trim() ? value : fallback;
+const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.length > 0
+  ? s.aboutPrinciples
+  : ABOUT_DEFAULTS.principles;
 ---
 
 <AdminLayout title="Settings" page="settings">
@@ -129,9 +135,9 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Portrait photo</label>
-          {s.aboutFounderImage && (
+          {(s.aboutFounderImage || ABOUT_DEFAULTS.founderImage) && (
             <img
-              src={s.aboutFounderImage}
+              src={s.aboutFounderImage || ABOUT_DEFAULTS.founderImage}
               alt="Current About page portrait"
               class="mb-3 h-48 w-36 rounded-xl object-cover"
             />
@@ -153,51 +159,51 @@ const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Byline name</label>
-          <input type="text" name="aboutBylineName" value={s.aboutBylineName ?? ''} placeholder="Zahra" class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutBylineName" value={aboutValue(s.aboutBylineName, ABOUT_DEFAULTS.bylineName)} class={inputCls} style={inputStyle} />
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Portrait caption</label>
-          <input type="text" name="aboutCaption" value={s.aboutCaption ?? ''} placeholder="The Tour Industry is Broken." class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutCaption" value={aboutValue(s.aboutCaption, ABOUT_DEFAULTS.caption)} class={inputCls} style={inputStyle} />
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Pull quote</label>
-          <textarea name="aboutQuote" rows="3" placeholder="Blank = default quote" class={inputCls} style={inputStyle}>{s.aboutQuote ?? ''}</textarea>
+          <textarea name="aboutQuote" rows="3" class={inputCls} style={inputStyle}>{aboutValue(s.aboutQuote, ABOUT_DEFAULTS.quote)}</textarea>
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Body <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(one paragraph per blank line)</span></label>
-          <textarea name="aboutBody" rows="6" placeholder="Blank = default body copy" class={inputCls} style={inputStyle}>{s.aboutBody ?? ''}</textarea>
+          <textarea name="aboutBody" rows="6" class={inputCls} style={inputStyle}>{aboutValue(s.aboutBody, ABOUT_DEFAULTS.body)}</textarea>
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Principles heading</label>
-          <input type="text" name="aboutPrinciplesHeading" value={s.aboutPrinciplesHeading ?? ''} placeholder="How we do it differently" class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutPrinciplesHeading" value={aboutValue(s.aboutPrinciplesHeading, ABOUT_DEFAULTS.principlesHeading)} class={inputCls} style={inputStyle} />
         </div>
         {[0, 1, 2].map((i) => (
           <div class="sm:col-span-2 grid gap-2 sm:grid-cols-[1fr_2fr] rounded-2xl p-3" style="background: var(--color-gray-soft);">
             <div>
               <label class={labelCls} style={labelStyle}>Principle {i + 1} title</label>
-              <input type="text" name="aboutPrincipleTitle[]" value={s.aboutPrinciples?.[i]?.title ?? ''} class={inputCls} style={inputStyle} />
+              <input type="text" name="aboutPrincipleTitle[]" value={aboutPrinciples[i]?.title ?? ''} class={inputCls} style={inputStyle} />
             </div>
             <div>
               <label class={labelCls} style={labelStyle}>Principle {i + 1} description</label>
-              <input type="text" name="aboutPrincipleDesc[]" value={s.aboutPrinciples?.[i]?.desc ?? ''} class={inputCls} style={inputStyle} />
+              <input type="text" name="aboutPrincipleDesc[]" value={aboutPrinciples[i]?.desc ?? ''} class={inputCls} style={inputStyle} />
             </div>
           </div>
         ))}
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Closing paragraph</label>
-          <textarea name="aboutSignature" rows="3" placeholder="Blank = default closing copy" class={inputCls} style={inputStyle}>{s.aboutSignature ?? ''}</textarea>
+          <textarea name="aboutSignature" rows="3" class={inputCls} style={inputStyle}>{aboutValue(s.aboutSignature, ABOUT_DEFAULTS.signature)}</textarea>
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Sign-off label</label>
-          <input type="text" name="aboutSignoff" value={s.aboutSignoff ?? ''} placeholder="With love & grit," class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutSignoff" value={aboutValue(s.aboutSignoff, ABOUT_DEFAULTS.signoff)} class={inputCls} style={inputStyle} />
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Signature name</label>
-          <input type="text" name="aboutSignName" value={s.aboutSignName ?? ''} placeholder="Zahra" class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutSignName" value={aboutValue(s.aboutSignName, ABOUT_DEFAULTS.signName)} class={inputCls} style={inputStyle} />
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>CTA button label</label>
-          <input type="text" name="aboutCtaLabel" value={s.aboutCtaLabel ?? ''} placeholder="Explore Zahra's Trips" class={inputCls} style={inputStyle} />
+          <input type="text" name="aboutCtaLabel" value={aboutValue(s.aboutCtaLabel, ABOUT_DEFAULTS.ctaLabel)} class={inputCls} style={inputStyle} />
         </div>
       </div>
     </section>

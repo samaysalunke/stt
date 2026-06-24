@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { ABOUT_DEFAULTS } from '../lib/aboutDefaults';
 import { readSiteSettings } from '../lib/content';
 
 export const prerender = false;
@@ -7,41 +8,20 @@ export const prerender = false;
 let s: any = {};
 try { s = readSiteSettings(); } catch {}
 
-// Built-in defaults — used whenever the matching admin field is left blank.
-const DEFAULTS = {
-  founderImg: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=900&auto=format&fit=crop&q=80',
-  bylineName: 'Zahra',
-  caption: 'The Tour Industry is Broken.',
-  quote: "I spent years watching people travel thousands of miles just to see the same gift shops and eat at the same 'tourist-friendly' buffets.",
-  body: `I started Seek the Thrill because I was tired of the fluff. I wanted the dust of the mountain roads, the taste of a home-cooked meal in a village that isn't on Google Maps, and the silence of a valley at dawn.
-
-Travel should change you. It shouldn't just be a checklist of monuments. It should be about the people you meet and the stories that don't make it to the brochure.`,
-  principlesHeading: 'How we do it differently',
-  principles: [
-    { title: 'Real People', desc: 'No professional guides. Just local legends who know the land better than any map.' },
-    { title: 'Hidden Spots', desc: "We go where the big buses can't fit. Private trails and secret stays are our specialty." },
-    { title: 'Zero Fluff', desc: 'No forced stopping spots. No generic itineraries. Just raw, unfiltered adventure.' },
-  ],
-  signature: "If you're looking for a holiday, there are plenty of apps for that. If you're looking for a journey that sticks to your soul, come with us.",
-  signoff: 'With love & grit,',
-  signName: 'Zahra',
-  ctaLabel: "Explore Zahra's Trips",
-};
-
 const pick = (v: unknown, d: string) => (typeof v === 'string' && v.trim()) ? v.trim() : d;
 
-const founderImg = pick(s.aboutFounderImage, DEFAULTS.founderImg);
-const bylineName = pick(s.aboutBylineName, DEFAULTS.bylineName);
-const caption = pick(s.aboutCaption, DEFAULTS.caption);
-const quote = pick(s.aboutQuote, DEFAULTS.quote);
-const bodyParas = pick(s.aboutBody, DEFAULTS.body).split(/\n\s*\n/).map((p: string) => p.trim()).filter(Boolean);
-const principlesHeading = pick(s.aboutPrinciplesHeading, DEFAULTS.principlesHeading);
-const principlesSrc = (Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.length > 0) ? s.aboutPrinciples : DEFAULTS.principles;
+const founderImg = pick(s.aboutFounderImage, ABOUT_DEFAULTS.founderImage);
+const bylineName = pick(s.aboutBylineName, ABOUT_DEFAULTS.bylineName);
+const caption = pick(s.aboutCaption, ABOUT_DEFAULTS.caption);
+const quote = pick(s.aboutQuote, ABOUT_DEFAULTS.quote);
+const bodyParas = pick(s.aboutBody, ABOUT_DEFAULTS.body).split(/\n\s*\n/).map((p: string) => p.trim()).filter(Boolean);
+const principlesHeading = pick(s.aboutPrinciplesHeading, ABOUT_DEFAULTS.principlesHeading);
+const principlesSrc = (Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.length > 0) ? s.aboutPrinciples : ABOUT_DEFAULTS.principles;
 const principles = principlesSrc.map((p: any, i: number) => ({ n: String(i + 1).padStart(2, '0'), t: p.title, d: p.desc }));
-const signature = pick(s.aboutSignature, DEFAULTS.signature);
-const signoff = pick(s.aboutSignoff, DEFAULTS.signoff);
-const signName = pick(s.aboutSignName, DEFAULTS.signName);
-const ctaLabel = pick(s.aboutCtaLabel, DEFAULTS.ctaLabel);
+const signature = pick(s.aboutSignature, ABOUT_DEFAULTS.signature);
+const signoff = pick(s.aboutSignoff, ABOUT_DEFAULTS.signoff);
+const signName = pick(s.aboutSignName, ABOUT_DEFAULTS.signName);
+const ctaLabel = pick(s.aboutCtaLabel, ABOUT_DEFAULTS.ctaLabel);
 ---
 
 <BaseLayout
