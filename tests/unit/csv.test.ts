@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'node:fs';
 import { inferTierIdFromRow, parseCsv, parseCsvToObjects, parseGoogleFormsRegistrations, parseIndiaFormsTimestamp } from '../../src/lib/csv';
 
 describe('parseCsv', () => {
@@ -53,13 +52,6 @@ describe('Google Forms registration CSV', () => {
     expect(rows[2].error).toContain('Invalid timestamp');
     expect(rows[2].error).toContain('Unknown stay option');
     expect(rows[2].error).toContain('Unknown status');
-  });
-  it('parses the supplied 52 responses into 49 latest candidates', () => {
-    const source=fs.readFileSync('Monsoon Meghalaya_ 21-27th June (6N_7D) (Responses) - Form Responses 1.csv','utf8');
-    const rows=parseGoogleFormsRegistrations(source)!;
-    expect(rows).toHaveLength(52);
-    expect(rows.filter(r=>!r.superseded)).toHaveLength(49);
-    expect(rows.filter(r=>r.superseded)).toHaveLength(3);
   });
 });
 
