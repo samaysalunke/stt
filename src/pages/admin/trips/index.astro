@@ -33,6 +33,7 @@ const trips = listTrips().map((t) => {
     _upcomingCount: upcoming.length,
   };
 });
+const visibleTripCount = trips.filter((trip) => trip._upcomingCount > 0).length;
 
 function fmtDay(d: string | null) {
   if (!d) return '—';
@@ -55,7 +56,15 @@ const statusLabels: Record<string, string> = {
 
 <AdminLayout title="Trips" page="trips">
   <div class="flex items-center justify-between mb-6">
-    <p class="text-sm" style="color: rgba(27,43,58,0.55);">{trips.length} trip{trips.length === 1 ? '' : 's'}</p>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <p id="trip-count" class="text-sm" style="color: rgba(27,43,58,0.55);">
+        {visibleTripCount} of {trips.length} trips
+      </p>
+      <label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--color-navy);">
+        <input id="hide-done-trips" type="checkbox" checked class="h-4 w-4 accent-current" />
+        Hide completed trips
+      </label>
+    </div>
     <div class="flex items-center gap-2">
       <a href="/admin/trips/import/" class="rounded-xl px-4 py-2.5 text-sm font-semibold" style="color: var(--color-navy); border: 1px solid var(--color-peach);">Import</a>
       <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New Trip</a>
@@ -68,9 +77,15 @@ const statusLabels: Record<string, string> = {
       <a href="/admin/trips/new" class="rounded-full px-6 py-3 text-sm font-semibold text-white inline-block" style="background-color: var(--color-cta);">Create your first trip</a>
     </div>
   ) : (
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <>
+    <div id="trip-grid" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {trips.map((trip) => (
-        <div class="bg-white rounded-[2rem] p-5 flex flex-col" style="border: 1px solid rgba(245,221,215,0.6);">
+        <div
+          class="trip-card bg-white rounded-[2rem] p-5 flex flex-col"
+          data-done={trip._upcomingCount === 0 ? 'true' : 'false'}
+          hidden={trip._upcomingCount === 0}
+          style="border: 1px solid rgba(245,221,215,0.6);"
+        >
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
               <h3 class="font-display text-base font-semibold truncate" style="color: var(--color-navy);">{trip.name || trip.slug}</h3>
@@ -108,10 +123,35 @@ const statusLabels: Record<string, string> = {
         </div>
       ))}
     </div>
+    <div id="no-visible-trips" class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);" hidden={visibleTripCount > 0}>
+      <p class="text-sm" style="color: rgba(27,43,58,0.5);">No active trips. Uncheck “Hide completed trips” to view completed trips.</p>
+    </div>
+    </>
   )}
 </AdminLayout>
 
 <script>
+const hideDoneTrips = document.getElementById('hide-done-trips') as HTMLInputElement | null;
+const tripCards = Array.from(document.querySelectorAll<HTMLElement>('.trip-card'));
+const tripCount = document.getElementById('trip-count');
+const noVisibleTrips = document.getElementById('no-visible-trips');
+
+function filterTrips() {
+  const hideDone = hideDoneTrips?.checked ?? true;
+  let visibleCount = 0;
+
+  tripCards.forEach((card) => {
+    const shouldHide = hideDone && card.dataset.done === 'true';
+    card.hidden = shouldHide;
+    if (!shouldHide) visibleCount++;
+  });
+
+  if (tripCount) tripCount.textContent = `${visibleCount} of ${tripCards.length} trips`;
+  if (noVisibleTrips) noVisibleTrips.hidden = visibleCount > 0;
+}
+
+hideDoneTrips?.addEventListener('change', filterTrips);
+
 // Duplicate trip
 document.querySelectorAll('.duplicate-trip-btn').forEach(btn => {
   btn.addEventListener('click', async (e) => {
