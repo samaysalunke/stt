@@ -31,3 +31,7 @@ public/uploads/
 
 # test reports (generated on each run, not committed)
 test-reports/
+
+# caveman skill tooling (local)
+.agents/
+skills-lock.json

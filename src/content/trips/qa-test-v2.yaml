@@ -1,4 +1,5 @@
 name: ""
+title: ""
 publicationStatus: test
 location: null
 duration: null
@@ -20,7 +21,6 @@ cancellationPolicy: null
 featuredImage: null
 gallery: []
 paymentAmount: 1000
-paymentInstructions: null
 balanceDueRule: 15 days before trip
 occupancyCatalog:
   - id: economy

@@ -1,4 +1,7 @@
 ---
+import type { ResolvedDeparture } from '../lib/trips';
+import { formatDepartureRange, getDepartureSummary } from '../lib/departureSummary';
+
 interface Props {
   slug: string;
   title?: string;
@@ -13,6 +16,7 @@ interface Props {
   multiPrice?: boolean;
   spotsLeft?: number | null;
   soldOut?: boolean;
+  departures?: ResolvedDeparture[];
 }
 
 const {
@@ -29,6 +33,7 @@ const {
   multiPrice = false,
   spotsLeft = null,
   soldOut = false,
+  departures = [],
 } = Astro.props;
 
 const tripName = title || name || slug;
@@ -38,6 +43,7 @@ const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN
 const isSoldOut = soldOut;
 // One capacity signal, only when stock is low.
 const showLowStock = !isSoldOut && spotsLeft != null && spotsLeft <= 3;
+const departureSummary = getDepartureSummary(departures);
 ---
 
 <article
@@ -45,22 +51,43 @@ const showLowStock = !isSoldOut && spotsLeft != null && spotsLeft <= 3;
   style="box-shadow: 0 4px 30px -12px rgba(27,43,58,0.18);"
 >
   <!-- Cover image -->
-  <a href={`/trips/${slug}/`} class="relative block overflow-hidden" style="aspect-ratio: 4/3;">
-    <img
-      src={img}
-      alt={tripName}
-      class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-      loading="lazy"
-    />
+  <div class="relative overflow-hidden" style="aspect-ratio: 4/3;">
+    <a href={`/trips/${slug}/`} class="block h-full">
+      <img
+        src={img}
+        alt={tripName}
+        class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        loading="lazy"
+      />
+    </a>
     {duration && (
       <span
-        class="absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white"
+        class="pointer-events-none absolute left-3 top-3 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white"
         style="background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);"
       >
         {duration}
       </span>
     )}
-  </a>
+    {departureSummary.displayed.length > 0 && (
+      <div data-testid="card-departure-summary" aria-label="Upcoming departures" class="pointer-events-none absolute inset-x-3 bottom-3 flex min-w-0 flex-wrap items-stretch gap-1.5">
+        {departureSummary.displayed.map((departure) => (
+          <span
+            data-sold-out={String(departure.soldOut)}
+            class:list={[
+              'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1.5 text-[11px] leading-tight text-white shadow-sm backdrop-blur-sm',
+              departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/60 opacity-70' : 'border-white/30 bg-[#1B2B3A]/85',
+            ]}
+          >
+            <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
+            {departure.soldOut && <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>}
+          </span>
+        ))}
+        {departureSummary.moreAvailable > 0 && (
+          <span class="flex flex-none items-center rounded-lg bg-[#1B2B3A]/70 px-2 text-[11px] font-semibold text-white backdrop-blur-sm">+{departureSummary.moreAvailable} more</span>
+        )}
+      </div>
+    )}
+  </div>
 
   <!-- Card body -->
   <div class="flex flex-1 flex-col gap-5 p-6">

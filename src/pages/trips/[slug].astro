@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, isTripPublic, isAlbumPublic } from '../../lib/content';
+import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 
 export const prerender = false;
 
@@ -80,6 +81,7 @@ const firstDeparture = departures.find((d) => !d.soldOut) ?? departures[0] ?? nu
 
 const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
 const isOpen = !isSoldOut && departures.length > 0;
+const departureSummary = getDepartureSummary(departures);
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({
@@ -143,7 +145,8 @@ const tripSchema: Record<string, any> = {
   description={trip.seoDescription || description || `Join ${tripName} — an offbeat group trip with Seek the Thrill.`}
   image={trip.socialImage || heroImg}
   imageAlt={trip.socialImageAlt || trip.imageAlt || `${tripName} group trip in ${trip.location || 'India'}`}
-  nav="header"
+  nav="back"
+  backFallback="/trips/"
 >
   <Fragment slot="head">
     <script type="application/ld+json" is:inline set:html={JSON.stringify(tripSchema)} />
@@ -156,51 +159,62 @@ const tripSchema: Record<string, any> = {
 
   <!-- ── HERO ─────────────────────────────────────────────── -->
   <section
-    class="relative overflow-hidden"
-    style="height: clamp(320px, 55vh, 680px);"
+    data-testid="trip-hero"
+    class="relative min-w-0 overflow-hidden"
+    style="height: clamp(360px, 70svh, 680px); max-height: 100svh;"
   >
     <img src={heroImg} alt={trip.imageAlt || `${tripName} group trip in ${trip.location || 'India'}`} width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(27,43,58,0.9) 0%, rgba(27,43,58,0.3) 55%, rgba(0,0,0,0.1) 100%);"></div>
 
-    <div class="absolute bottom-0 left-0 right-0 pb-8 pt-4">
-      <div class="container-app">
-        <!-- Breadcrumb -->
-        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-1 text-xs sm:text-sm text-white/80">
-          <a href="/" class="transition-colors hover:text-white">Home</a>
-          <svg class="h-3.5 w-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-          <a href="/trips/" class="transition-colors hover:text-white">Trips</a>
-          <svg class="h-3.5 w-3.5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-          <span class="font-medium text-white">{tripName}</span>
-        </nav>
-        <!-- Status badge (derived from departures) -->
-        {departures.length > 0 && (
-          <span class="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3" style={`background-color: ${isSoldOut ? '#9CA3AF' : '#E8725A'}; color: white;`}>
-            {isSoldOut ? 'Sold Out' : 'Upcoming'}
-          </span>
-        )}
-        <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4" style="font-family: var(--font-display);">
+    <div class="absolute inset-x-0 bottom-0 py-4 sm:pb-8">
+      <div class="container-app min-w-0">
+        <h1 class="mb-3 break-words text-[clamp(1.75rem,8vw,3rem)] font-bold leading-[1.05] text-white md:text-4xl lg:text-5xl" style="font-family: var(--font-display);">
           {tripName}
         </h1>
         <!-- Quick pills -->
-        <div class="flex flex-wrap gap-2">
+        <div class="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {trip.location && (
-            <span class="flex items-center gap-1.5 text-sm text-white bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
-              {trip.location}
+              <span class="min-w-0 break-words">{trip.location}</span>
             </span>
           )}
           {trip.duration && (
-            <span class="flex items-center gap-1.5 text-sm text-white bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {trip.duration}
+              <span class="min-w-0 break-words">{trip.duration}</span>
             </span>
           )}
+        </div>
+        {departureSummary.displayed.length > 0 && (
+          <div data-testid="departure-summary" aria-label="Upcoming departures" class="mt-2 flex min-w-0 flex-wrap items-stretch gap-1.5">
+            {departureSummary.displayed.map((departure) => (
+              <span
+                data-testid={`hero-departure-${departure.id}`}
+                data-sold-out={String(departure.soldOut)}
+                class:list={[
+                  'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1 text-[11px] leading-tight text-white sm:px-3 sm:text-xs',
+                  departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/45 opacity-65' : 'border-white/30 bg-[#1B2B3A]/75',
+                ]}
+              >
+                <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
+                {departure.soldOut ? (
+                  <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>
+                ) : null}
+              </span>
+            ))}
+            {departureSummary.moreAvailable > 0 && (
+              <span data-testid="departure-more" class="flex flex-none items-center text-[11px] font-semibold text-white sm:text-xs">+{departureSummary.moreAvailable} more</span>
+            )}
+          </div>
+        )}
+        <div class="mt-2 flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {fromPrice != null && (
-            <span class="flex items-center gap-1.5 text-sm font-bold text-white px-3 py-1.5 rounded-full" style="background-color: rgba(232,114,90,0.85);">
+            <span class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm" style="background-color: rgba(232,114,90,0.85);">
               from {formattedLead} / person
             </span>
           )}

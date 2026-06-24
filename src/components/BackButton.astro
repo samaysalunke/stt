@@ -20,10 +20,11 @@ const { fallback = '/', label = 'Back' } = Astro.props;
 </a>
 
 <script>
-  // Pop history when possible; otherwise let the link navigate to the fallback.
+  // A new tab can report history.length > 1 because of its initial blank entry.
+  // A referrer proves that this document was reached from an actual page.
   document.querySelectorAll('[data-back-button]').forEach((el) => {
     el.addEventListener('click', (e) => {
-      if (window.history.length > 1) {
+      if (document.referrer && window.history.length > 1) {
         e.preventDefault();
         window.history.back();
       }

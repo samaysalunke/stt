@@ -21,9 +21,10 @@ interface Props {
   //  'logo'   — sticky header with logo only, no hamburger (trip detail)
   //  'none'   — page provides its own top bar (about, album detail)
   nav?: 'scroll' | 'header' | 'back' | 'logo' | 'none';
+  backFallback?: string;
 }
 
-const { title, description, image, imageAlt, canonical, robots, type = 'website', nav = 'back' } = Astro.props;
+const { title, description, image, imageAlt, canonical, robots, type = 'website', nav = 'back', backFallback = '/' } = Astro.props;
 const isHome = nav === 'scroll';
 const user = Astro.locals.user ?? null;
 
@@ -119,7 +120,7 @@ const orgSchema = {
     {nav === 'scroll' && <Header hidden={true} user={user} />}
     {nav === 'header' && <Header user={user} />}
     {nav === 'logo' && <Header logoOnly={true} user={user} />}
-    {nav === 'back' && <BackButton />}
+    {nav === 'back' && <BackButton fallback={backFallback} />}
     <main class="flex-1">
       <slot />
     </main>

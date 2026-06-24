@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
-import { listTrips, isTripListable, tripCardSummary } from '../../lib/content';
+import { listTrips, isTripListable, resolveBooking, tripCardSummary } from '../../lib/content';
 
 // Visibility derives from departures (trip-level status removed): list trips
 // that have at least one upcoming, non-draft departure.
@@ -57,6 +57,7 @@ const trips = [...available, ...soldOut];
                 multiPrice={card.multiPrice}
                 spotsLeft={card.spotsLeft}
                 soldOut={card.soldOut}
+                departures={resolveBooking(trip).departures}
               />
             );
           })}
