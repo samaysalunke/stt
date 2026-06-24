@@ -15,6 +15,12 @@ async function goToStep2(page: any) {
   await expect(page.locator('text=Full Name').first()).toBeVisible({ timeout: 10_000 });
 }
 
+async function selectDetailBooking(page: any) {
+  await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
+  await page.locator('[data-testid^="departure-"]').first().click();
+  await page.locator('[data-testid^="tier-"]').first().click();
+}
+
 async function fillAllStep2(page: any, overrides: Record<string, string> = {}) {
   const vals = {
     fullName: 'Journey Tester',
@@ -91,7 +97,7 @@ test.describe('WF-1: Discovery journey — browsing to booking CTA', () => {
 
   test('trip detail has a working "Save my spot" CTA pointing to /book', async ({ page }) => {
     await page.goto(TRIP_URL);
-    await page.waitForSelector('a[href*="/book?"]', { timeout: 15_000 });
+    await selectDetailBooking(page);
     const cta = page.locator('a[href*="/book?"]').first();
     const href = await cta.getAttribute('href');
     expect(href).toMatch(/\/book\?batch=.+&tier=.+/);
@@ -99,7 +105,7 @@ test.describe('WF-1: Discovery journey — browsing to booking CTA', () => {
 
   test('navigating via CTA lands on book page Step 1', async ({ page }) => {
     await page.goto(TRIP_URL);
-    await page.waitForSelector('a[href*="/book?"]', { timeout: 15_000 });
+    await selectDetailBooking(page);
     const href = await page.locator('a[href*="/book?"]').first().getAttribute('href');
     await page.goto(`http://localhost:4321${href}`);
     await expect(page.locator('text=Your Trip').first()).toBeVisible({ timeout: 15_000 });

@@ -75,13 +75,8 @@ const formattedLead = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN'
 const hasBatchArray = Array.isArray(trip.batches) && trip.batches.length > 0;
 const noUpcomingDates = hasBatchArray && departures.length === 0;
 
-// First non-sold-out departure and its cheapest available offer — used to
-// seed the mobile sticky bar's initial price and the book-page link.
+// First departure is used for the trip-level group-size summary only.
 const firstDeparture = departures.find((d) => !d.soldOut) ?? departures[0] ?? null;
-const initialOffer = firstDeparture
-  ? firstDeparture.offers.filter((o) => o.available).sort((a, b) => a.price - b.price)[0] ?? null
-  : null;
-const initialPerPerson = initialOffer?.price ?? 0;
 
 const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
 const isOpen = !isSoldOut && departures.length > 0;
@@ -382,13 +377,12 @@ const tripSchema: Record<string, any> = {
       <div class="lg:sticky lg:top-24 space-y-5 mt-10 lg:mt-0">
 
         <!-- Booking card -->
-        <div class="bg-white rounded-2xl overflow-hidden" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
+        <div id="booking-panel" class="bg-white rounded-2xl overflow-hidden scroll-mt-24" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
           <div class="p-6">
 
             {isOpen ? (
               <BookingPanel
                 departures={departures}
-                occupancyCatalog={booking.occupancyCatalog}
                 advanceAmount={paymentAmount}
                 balanceDueRule={balanceDueRule}
                 fromPrice={fromPrice}
@@ -454,17 +448,11 @@ const tripSchema: Record<string, any> = {
 
   <!-- Mobile sticky booking bar -->
   {isOpen && (
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 flex items-center justify-between" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
-      <div>
-        <span id="sticky-price" class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">
-          {initialPerPerson > 0 ? `₹${initialPerPerson.toLocaleString('en-IN')}` : formattedLead}
-        </span>
-        <span class="text-xs block" style="color: var(--color-gray-text);">per person</span>
-      </div>
+    <div id="booking-sticky" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 transition-all duration-300" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
       <a
         id="sticky-cta"
-        href={`/trips/${slug}/book?batch=${firstDeparture?.id ?? ''}&tier=${initialOffer?.tierId ?? ''}`}
-        class="font-semibold text-white px-7 py-3 rounded-full text-sm"
+        href="#booking-panel"
+        class="block w-full text-center font-semibold text-white px-7 py-3 rounded-full text-sm"
         style="background-color: var(--color-cta);"
       >
         Save my spot →
@@ -475,16 +463,39 @@ const tripSchema: Record<string, any> = {
 </BaseLayout>
 
 <script>
-  // Update sticky price + CTA link when BookingPanel selection changes
-  const inr = (n: number) => '₹' + Math.round(n || 0).toLocaleString('en-IN');
-  window.addEventListener('stt:booking-changed', (e: any) => {
-    const d = e.detail || {};
-    const stickyPrice = document.getElementById('sticky-price');
-    const stickyCta = document.getElementById('sticky-cta') as HTMLAnchorElement | null;
-    if (stickyPrice && d.perPersonPrice) stickyPrice.textContent = inr(Number(d.perPersonPrice));
-    if (stickyCta && d.departureId && d.tierId) {
-      const base = stickyCta.href.split('?')[0];
-      stickyCta.href = `${base}?batch=${d.departureId}&tier=${d.tierId}`;
-    }
+  const stickyBar = document.getElementById('booking-sticky');
+  const stickyCta = document.getElementById('sticky-cta');
+  const bookingPanel = document.getElementById('booking-panel');
+
+  stickyCta?.addEventListener('click', (event) => {
+    event.preventDefault();
+    bookingPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+
+  // The fixed CTA hands off to the in-page CTA as it enters the viewport.
+  const observeInPageCta = () => {
+    const inPageCta = document.getElementById('booking-panel-cta');
+    if (!stickyBar || !inPageCta) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      stickyBar.classList.toggle('translate-y-full', entry.isIntersecting);
+      stickyBar.classList.toggle('opacity-0', entry.isIntersecting);
+      stickyBar.classList.toggle('pointer-events-none', entry.isIntersecting);
+      stickyBar.setAttribute('aria-hidden', String(entry.isIntersecting));
+    }, { threshold: 0.15 });
+
+    observer.observe(inPageCta);
+  };
+
+  // Wait until the React booking panel has hydrated and rendered its CTA.
+  if (document.getElementById('booking-panel-cta')) {
+    observeInPageCta();
+  } else if (bookingPanel) {
+    const hydrationObserver = new MutationObserver(() => {
+      if (!document.getElementById('booking-panel-cta')) return;
+      hydrationObserver.disconnect();
+      observeInPageCta();
+    });
+    hydrationObserver.observe(bookingPanel, { childList: true, subtree: true });
+  }
 </script>

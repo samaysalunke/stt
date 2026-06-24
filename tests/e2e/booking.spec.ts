@@ -1,142 +1,92 @@
 import { test, expect } from '@playwright/test';
 
 // Uses qa-test-booking-panel fixture:
-//   dep-A (qa-panel-dep-a): both tiers, private sold out (cap=3, booked=3)
-//   dep-B (qa-panel-dep-b): dorm only
-//   dep-C (qa-panel-dep-c): both tiers available
+//   dep-A: both tiers, private sold out
+//   dep-B: dorm only
+//   dep-C: both tiers available
 const TRIP_URL = '/trips/qa-test-booking-panel/';
 
 async function waitForPanel(page: any) {
-  // Wait for React island hydration: the date chooser buttons appear once BookingPanel renders
   await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
 }
 
-test.describe('BookingPanel — initial load (dep-A selected)', () => {
-  test('dorm is pre-selected (cheapest available on dep-A)', async ({ page }) => {
+test.describe('BookingPanel — explicit selection', () => {
+  test('starts without a selected date or occupancy', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
-    const dormLabel = page.locator('[data-testid="tier-dorm"]');
-    await expect(dormLabel).toBeVisible();
-    const radio = dormLabel.locator('input[type="radio"]');
-    await expect(radio).toBeChecked();
+
+    await expect(page.locator('[data-testid^="tier-"]')).toHaveCount(0);
+    await expect(page.locator('#booking-panel-cta')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('#booking-panel-cta')).not.toHaveAttribute('href', /.+/);
   });
 
-  test('summary shows dorm price ₹5,000', async ({ page }) => {
+  test('selecting a date reveals occupancy without selecting it', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
-    // Booking summary "Per person" row
-    await expect(page.locator('text=₹5,000').first()).toBeVisible({ timeout: 10_000 });
-  });
+    await page.click('[data-testid="departure-qa-panel-dep-a"]');
 
-  test('private shows "Sold out for these dates" on dep-A', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    await expect(page.locator('[data-testid="tier-private"]')).toBeVisible();
+    await expect(page.locator('[data-testid="tier-dorm"]')).toBeVisible();
+    await expect(page.locator('[data-testid="tier-dorm"] input')).not.toBeChecked();
+    await expect(page.locator('[data-testid="tier-private"] input')).toBeDisabled();
     await expect(page.locator('text=Sold out for these dates')).toBeVisible();
   });
 
-  test('private radio is disabled on dep-A', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    const radio = page.locator('[data-testid="tier-private"] input[type="radio"]');
-    await expect(radio).toBeDisabled();
-  });
-});
-
-test.describe('BookingPanel — switch to dep-B (dorm only)', () => {
-  test('occupancy chooser is hidden', async ({ page }) => {
+  test('a single occupancy option still requires an explicit choice', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
     await page.click('[data-testid="departure-qa-panel-dep-b"]');
-    // The chooser (radio group) should not be rendered
-    await expect(page.locator('[data-testid="tier-dorm"]')).not.toBeVisible();
+
+    const dorm = page.locator('[data-testid="tier-dorm"] input');
+    await expect(dorm).toBeVisible();
+    await expect(dorm).not.toBeChecked();
+    await expect(page.locator('#booking-panel-cta')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('"Dorm Bed only for these dates." note is visible', async ({ page }) => {
+  test('date and occupancy selection enables checkout with exact parameters', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
+    await page.click('[data-testid="departure-qa-panel-dep-c"]');
+    await page.click('[data-testid="tier-private"]');
+
+    const cta = page.locator('#booking-panel-cta');
+    await expect(cta).toHaveAttribute('aria-disabled', 'false');
+    await expect(cta).toHaveAttribute('href', /batch=qa-panel-dep-c&tier=private/);
+    await expect(page.locator('text=₹7,000').first()).toBeVisible();
+  });
+
+  test('changing dates clears the occupancy selection', async ({ page }) => {
+    await page.goto(TRIP_URL);
+    await waitForPanel(page);
+    await page.click('[data-testid="departure-qa-panel-dep-c"]');
+    await page.click('[data-testid="tier-private"]');
     await page.click('[data-testid="departure-qa-panel-dep-b"]');
-    await expect(page.locator('text=Dorm Bed only for these dates')).toBeVisible({ timeout: 5_000 });
+
+    await expect(page.locator('[data-testid="tier-dorm"] input')).not.toBeChecked();
+    await expect(page.locator('#booking-panel-cta')).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
-test.describe('BookingPanel — switch to dep-C (both available)', () => {
-  test('both tiers are selectable', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await expect(page.locator('[data-testid="tier-dorm"]')).toBeVisible();
-    await expect(page.locator('[data-testid="tier-private"]')).toBeVisible();
-    const privateRadio = page.locator('[data-testid="tier-private"] input[type="radio"]');
-    await expect(privateRadio).not.toBeDisabled();
-  });
-
-  test('selecting private updates summary price to ₹7,000', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await page.click('[data-testid="tier-private"]');
-    await expect(page.locator('text=₹7,000').first()).toBeVisible({ timeout: 5_000 });
-  });
-
-  test('selecting private on dep-C updates the CTA href to include tierId=private', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await page.click('[data-testid="tier-private"]');
-    await page.waitForTimeout(300); // allow stt:booking-changed to fire
-    const cta = page.locator('a[href*="/book?"]').first();
-    const href = await cta.getAttribute('href');
-    expect(href).toContain('tier=private');
-  });
-
-  test('CTA href updates batch id when dep-C is selected', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await page.waitForTimeout(300);
-    const cta = page.locator('a[href*="/book?"]').first();
-    const href = await cta.getAttribute('href');
-    expect(href).toContain('batch=qa-panel-dep-c');
-  });
-});
-
-test.describe('BookingPanel — sticky bar', () => {
-  test('sticky price shows correct amount after selection change', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    // Switch to dep-C and select private
-    await page.click('[data-testid="departure-qa-panel-dep-c"]');
-    await page.click('[data-testid="tier-private"]');
-    await page.waitForTimeout(300);
-    const stickyText = await page.locator('#sticky-price').textContent();
-    expect(stickyText).toContain('7,000');
-  });
-});
-
-test.describe('BookingPanel — mobile viewport (375×812)', () => {
+test.describe('BookingPanel — mobile sticky CTA', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('sticky bar is visible on mobile', async ({ page }) => {
+  test('contains no price and scrolls to the booking chooser', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
-    const sticky = page.locator('#sticky-price');
+
+    const sticky = page.locator('#booking-sticky');
     await expect(sticky).toBeVisible();
+    await expect(sticky.locator('text=/₹[0-9,]+/')).toHaveCount(0);
+    // Astro's development toolbar overlaps the bottom edge; production does not.
+    await page.locator('#sticky-cta').click({ force: true });
+    await expect(page.locator('#booking-panel')).toBeInViewport({ ratio: 0.2 });
   });
 
-  test('CTA button links to the book page and is visible on mobile', async ({ page }) => {
+  test('hands off to the in-page CTA when it enters the viewport', async ({ page }) => {
     await page.goto(TRIP_URL);
     await waitForPanel(page);
-    const cta = page.locator('a[href*="/book?"]').first();
-    await expect(cta).toBeVisible();
-  });
+    await page.locator('#booking-panel-cta').scrollIntoViewIfNeeded();
 
-  test('date cards render and are clickable on mobile', async ({ page }) => {
-    await page.goto(TRIP_URL);
-    await waitForPanel(page);
-    const depB = page.locator('[data-testid="departure-qa-panel-dep-b"]');
-    await expect(depB).toBeVisible();
-    await depB.click();
-    await expect(page.locator('text=Dorm Bed only for these dates')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#booking-sticky')).toHaveAttribute('aria-hidden', 'true');
+    await expect(page.locator('#booking-sticky')).toHaveClass(/pointer-events-none/);
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 
 // Mirrors the ResolvedBooking shape from src/lib/content.ts. Re-declared here
@@ -24,13 +24,11 @@ interface Departure {
 }
 interface Props {
   departures: Departure[];
-  occupancyCatalog: Array<{ id: string; label: string; helperText: string }>;
   advanceAmount: number;
   balanceDueRule: string;
   fromPrice: number | null;
   whatsappLink: string;
   slug: string;
-  initialDepartureId?: string;
 }
 
 const C = {
@@ -46,73 +44,30 @@ function dateRange(d: Departure) {
   return `${formatDateIN(d.startDate)} – ${formatDateIN(d.endDate)}`;
 }
 
-// Cheapest available offer for a departure (or null when none available).
-function cheapestAvailable(dep: Departure): Offer | null {
-  const avail = dep.offers.filter((o) => o.available);
-  if (avail.length === 0) return null;
-  return avail.reduce((min, o) => (o.price < min.price ? o : min), avail[0]);
-}
-
 export default function BookingPanel({
   departures,
-  occupancyCatalog,
   advanceAmount,
   balanceDueRule,
   fromPrice,
   whatsappLink,
   slug,
-  initialDepartureId,
 }: Props) {
   const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-
-  // Initial departure: ?batch= target if bookable, else first non-sold-out, else first.
-  const initialDep = useMemo(() => {
-    const urlBatch = typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('batch')
-      : null;
-    const wantedId = initialDepartureId || urlBatch;
-    const wanted = wantedId
-      ? departures.find((d) => d.id === wantedId && !d.soldOut)
-      : null;
-    return wanted ?? departures.find((d) => !d.soldOut) ?? departures[0] ?? null;
-  }, [departures, initialDepartureId]);
-
-  const [departureId, setDepartureId] = useState<string>(initialDep?.id ?? '');
-  const [tierId, setTierId] = useState<string>(() => {
-    const t = initialDep ? cheapestAvailable(initialDep) : null;
-    return t?.tierId ?? '';
-  });
-  const [notice, setNotice] = useState<string>('');
+  const [departureId, setDepartureId] = useState<string>('');
+  const [tierId, setTierId] = useState<string>('');
 
   const selectedDeparture = departures.find((d) => d.id === departureId) ?? null;
-  const availableOffers = selectedDeparture ? selectedDeparture.offers.filter((o) => o.available) : [];
-  const selectedOffer =
-    selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ??
-    (selectedDeparture ? cheapestAvailable(selectedDeparture) : null);
+  const selectedOffer = selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ?? null;
 
   const perPerson = selectedOffer?.price ?? 0;
   const advanceDue = Math.min(advanceAmount, perPerson || advanceAmount);
   const balance = Math.max(0, perPerson - advanceDue);
 
-  // ── Selecting a date: re-validate the held tier against the new date ──────
+  // A new date always requires an explicit occupancy choice.
   function selectDeparture(dep: Departure) {
     if (dep.soldOut) return;
     setDepartureId(dep.id);
-    const held = dep.offers.find((o) => o.tierId === tierId && o.available);
-    if (held) {
-      setNotice('');
-    } else {
-      const fallback = cheapestAvailable(dep);
-      if (fallback) {
-        const prev = selectedDeparture?.offers.find((o) => o.tierId === tierId);
-        setTierId(fallback.tierId);
-        if (prev && prev.label !== fallback.label) {
-          setNotice(`${prev.label} isn't available for these dates. Switched you to ${fallback.label}.`);
-        } else {
-          setNotice('');
-        }
-      }
-    }
+    setTierId('');
     if (typeof (window as any).gtag === 'function') {
       (window as any).gtag('event', 'select_batch', { batch_id: dep.id });
     }
@@ -121,27 +76,7 @@ export default function BookingPanel({
   function selectTier(offer: Offer) {
     if (!offer.available) return;
     setTierId(offer.tierId);
-    setNotice('');
   }
-
-  // ── Broadcast the current selection to the rest of the page (reg form + sticky bar) ──
-  const lastSent = useRef<string>('');
-  useEffect(() => {
-    if (!selectedDeparture || !selectedOffer) return;
-    const detail = {
-      departureId: selectedDeparture.id,
-      tierId: selectedOffer.tierId,
-      tierLabel: selectedOffer.label,
-      perPersonPrice: perPerson,
-      advanceDue,
-      balance,
-      dateStr: dateRange(selectedDeparture),
-    };
-    const key = JSON.stringify(detail);
-    if (key === lastSent.current) return;
-    lastSent.current = key;
-    window.dispatchEvent(new CustomEvent('stt:booking-changed', { detail }));
-  }, [selectedDeparture, selectedOffer, perPerson, advanceDue, balance]);
 
   // ── All departures sold out ───────────────────────────────────────────────
   if (allSoldOut) {
@@ -161,15 +96,6 @@ export default function BookingPanel({
     );
   }
 
-  // Skip the chooser only when the date genuinely offers a single tier (e.g. a
-  // dorm-only date, or a single-catalog trip like Kashmir). A date that offers
-  // two tiers but has one sold out still shows the chooser, with the sold-out
-  // tier disabled (spec point 1 vs point 2).
-  const singleTier = selectedDeparture ? selectedDeparture.offers.length === 1 : false;
-  // The "X only for these dates" note is only meaningful when the trip has more
-  // than one tier overall; for single-catalog trips, render nothing.
-  const showSingleTierNote = singleTier && occupancyCatalog.length > 1;
-
   return (
     <div>
       {/* Price header — the "from" floor (never contradicted; summary is the truth) */}
@@ -184,7 +110,7 @@ export default function BookingPanel({
       )}
 
       {/* ── Dates ─────────────────────────────────────────────────────────── */}
-      {departures.length > 1 && (
+      {departures.length > 0 && (
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: C.gray }}>
             Choose your dates
@@ -241,105 +167,54 @@ export default function BookingPanel({
         </div>
       )}
 
-      {/* Single departure: show its dates as a static line */}
-      {departures.length === 1 && selectedDeparture && (
-        <div className="mb-5 text-sm">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: C.gray }}>Dates</p>
-          <p style={{ color: C.navy }}>{dateRange(selectedDeparture)}</p>
-          {selectedDeparture.spotsLeft != null && (
-            <div className="mt-3">
-              <div
-                className="text-xs mb-1"
-                style={{
-                  color: selectedDeparture.spotsLeft <= 3 ? C.coral : C.gray,
-                  fontWeight: selectedDeparture.spotsLeft <= 3 ? 600 : 400,
-                }}
-              >
-                {selectedDeparture.spotsLeft <= 3
-                  ? `Only ${selectedDeparture.spotsLeft} left`
-                  : `${selectedDeparture.spotsLeft} of ${selectedDeparture.totalCap} left`}
-              </div>
-              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: '#F5DDD7' }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${
-                      selectedDeparture.totalCap && selectedDeparture.totalCap > 0
-                        ? Math.min(100, ((selectedDeparture.totalCap - selectedDeparture.spotsLeft) / selectedDeparture.totalCap) * 100)
-                        : 0
-                    }%`,
-                    background: selectedDeparture.spotsLeft <= 3 ? C.coral : C.navy,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ── Occupancy (reactive to the selected date) ─────────────────────── */}
       {selectedDeparture && (
-        singleTier ? (
-          showSingleTierNote && availableOffers[0] ? (
-            <div className="mb-5 text-xs" style={{ color: C.gray }}>
-              {availableOffers[0].label} only for these dates.
-            </div>
-          ) : null
-        ) : (
-          <div className="mb-5">
-            <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: C.gray }}>
-              Choose occupancy
-            </p>
-            <div className="flex flex-col gap-2">
-              {selectedDeparture.offers.map((offer) => {
-                const isSelected = selectedOffer?.tierId === offer.tierId;
-                const disabled = !offer.available;
-                return (
-                  <label
-                    key={offer.tierId}
-                    data-testid={`tier-${offer.tierId}`}
-                    className="flex items-start justify-between gap-3 rounded-xl border px-4 py-3"
-                    style={{
-                      borderColor: isSelected ? C.coral : C.peach,
-                      background: isSelected ? C.blush : 'white',
-                      opacity: disabled ? 0.55 : 1,
-                      cursor: disabled ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <span className="flex items-start gap-2.5">
-                      <input
-                        type="radio"
-                        name="__occupancy"
-                        checked={isSelected}
-                        disabled={disabled}
-                        onChange={() => selectTier(offer)}
-                        className="mt-0.5"
-                        style={{ accentColor: C.coral }}
-                      />
-                      <span>
-                        <span className="block text-sm font-medium" style={{ color: C.navy }}>{offer.label}</span>
-                        {disabled ? (
-                          <span className="block text-xs mt-0.5" style={{ color: C.coral }}>Sold out for these dates</span>
-                        ) : offer.helperText ? (
-                          <span className="block text-xs mt-0.5" style={{ color: C.gray }}>{offer.helperText}</span>
-                        ) : null}
-                      </span>
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: C.gray }}>
+            Choose occupancy
+          </p>
+          <div className="flex flex-col gap-2">
+            {selectedDeparture.offers.map((offer) => {
+              const isSelected = selectedOffer?.tierId === offer.tierId;
+              const disabled = !offer.available;
+              return (
+                <label
+                  key={offer.tierId}
+                  data-testid={`tier-${offer.tierId}`}
+                  className="flex items-start justify-between gap-3 rounded-xl border px-4 py-3"
+                  style={{
+                    borderColor: isSelected ? C.coral : C.peach,
+                    background: isSelected ? C.blush : 'white',
+                    opacity: disabled ? 0.55 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  <span className="flex items-start gap-2.5">
+                    <input
+                      type="radio"
+                      name="__occupancy"
+                      checked={isSelected}
+                      disabled={disabled}
+                      onChange={() => selectTier(offer)}
+                      className="mt-0.5"
+                      style={{ accentColor: C.coral }}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium" style={{ color: C.navy }}>{offer.label}</span>
+                      {disabled ? (
+                        <span className="block text-xs mt-0.5" style={{ color: C.coral }}>Sold out for these dates</span>
+                      ) : offer.helperText ? (
+                        <span className="block text-xs mt-0.5" style={{ color: C.gray }}>{offer.helperText}</span>
+                      ) : null}
                     </span>
-                    <span className="text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
-                      {formatINR(offer.price)}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
+                  </span>
+                  <span className="text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
+                    {formatINR(offer.price)}
+                  </span>
+                </label>
+              );
+            })}
           </div>
-        )
-      )}
-
-      {/* Re-validation notice */}
-      {notice && (
-        <div className="mb-5 rounded-xl px-4 py-2.5 text-xs" style={{ background: C.blush, color: C.navy }}>
-          {notice}
         </div>
       )}
 
@@ -367,9 +242,20 @@ export default function BookingPanel({
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
       <a
-        href={`/trips/${slug}/book?batch=${departureId}&tier=${tierId}`}
-        className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all hover:opacity-90 hover:shadow-md"
-        style={{ background: C.cta }}
+        id="booking-panel-cta"
+        href={selectedDeparture && selectedOffer ? `/trips/${slug}/book?batch=${departureId}&tier=${tierId}` : undefined}
+        aria-disabled={!selectedDeparture || !selectedOffer}
+        tabIndex={selectedDeparture && selectedOffer ? 0 : -1}
+        onClick={(event) => {
+          if (!selectedDeparture || !selectedOffer) event.preventDefault();
+        }}
+        className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all"
+        style={{
+          background: C.cta,
+          opacity: selectedDeparture && selectedOffer ? 1 : 0.5,
+          cursor: selectedDeparture && selectedOffer ? 'pointer' : 'not-allowed',
+        }}
+        title={selectedDeparture && selectedOffer ? undefined : 'Choose your dates and occupancy first'}
       >
         Save my spot →
       </a>

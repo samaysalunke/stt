@@ -8,19 +8,26 @@ const TRIP_URL = '/trips/qa-test-bookable/';
 const BOOK_URL = '/trips/qa-test-bookable/book';
 
 async function waitForPanel(page: any) {
-  await page.waitForSelector('text=Advance now', { timeout: 15_000 });
+  await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
+}
+
+async function selectBooking(page: any) {
+  await waitForPanel(page);
+  await page.locator('[data-testid^="departure-"]').first().click();
+  await page.locator('[data-testid^="tier-"]').first().click();
 }
 
 // ── Trip page — booking summary ───────────────────────────────────────────────
-test('booking summary is visible on trip page load', async ({ page }) => {
+test('booking summary appears after date and occupancy selection', async ({ page }) => {
   await page.goto(TRIP_URL);
+  await selectBooking(page);
   await expect(page.locator('text=Advance now').first()).toBeVisible({ timeout: 15_000 });
 });
 
 // ── Trip page — CTA navigates to /book ───────────────────────────────────────
 test('sidebar "Save my spot" CTA links to the book page', async ({ page }) => {
   await page.goto(TRIP_URL);
-  await waitForPanel(page);
+  await selectBooking(page);
   // The CTA inside BookingPanel
   const cta = page.locator('a[href*="/book?"]').first();
   await expect(cta).toBeVisible({ timeout: 10_000 });
@@ -28,14 +35,12 @@ test('sidebar "Save my spot" CTA links to the book page', async ({ page }) => {
   expect(href).toMatch(/\/trips\/qa-test-bookable\/book\?batch=.+&tier=.+/);
 });
 
-test('sticky CTA also links to the book page', async ({ page }) => {
+test('sticky CTA targets the booking chooser', async ({ page }) => {
   await page.goto(TRIP_URL);
   await waitForPanel(page);
-  // Sticky bar is CSS-hidden on desktop; check the element exists with the right href
   const sticky = page.locator('#sticky-cta');
   await expect(sticky).toBeAttached({ timeout: 10_000 });
-  const href = await sticky.getAttribute('href');
-  expect(href).toMatch(/\/trips\/qa-test-bookable\/book/);
+  await expect(sticky).toHaveAttribute('href', '#booking-panel');
 });
 
 // ── Book page — Step 1 ────────────────────────────────────────────────────────
