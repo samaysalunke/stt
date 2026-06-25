@@ -210,4 +210,45 @@ function initializeSchema(db: Database.Database) {
       createdAt INTEGER DEFAULT (unixepoch())
     );
   `);
+
+  // feature/analytics-chatbot — owner-only analytics sessions, messages, audit
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_sessions (
+      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES analytics_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK(role IN ('user','assistant','tool')),
+      content TEXT,
+      tool_name TEXT,
+      tool_input TEXT,
+      tool_output TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS analytics_audit_log (
+      id TEXT PRIMARY KEY,
+      session_id TEXT,
+      owner_id TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      tool_tier TEXT,
+      tool_name TEXT,
+      tool_input TEXT,
+      pii_attempt_detected INTEGER NOT NULL DEFAULT 0,
+      ambiguity_resolved INTEGER NOT NULL DEFAULT 0,
+      selection_made TEXT,
+      result_row_count INTEGER,
+      error TEXT,
+      duration_ms INTEGER,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS analytics_messages_session_id ON analytics_messages(session_id);
+    CREATE INDEX IF NOT EXISTS analytics_audit_log_owner_created ON analytics_audit_log(owner_id, created_at);
+  `);
 }

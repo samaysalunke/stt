@@ -17,3 +17,10 @@ declare namespace App {
     } | null;
   }
 }
+
+interface ImportMetaEnv {
+  readonly ANALYTICS_LLM_PROVIDER?: 'anthropic' | 'openai' | 'test';
+  readonly ANALYTICS_LLM_MODEL?: string;
+  readonly ANALYTICS_LLM_API_KEY?: string;
+  readonly ANALYTICS_LLM_FAKE_RESPONSE?: string;
+}

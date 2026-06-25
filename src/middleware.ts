@@ -51,12 +51,17 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
 
   if (isAdminRoute && !isAuthRoute) {
     const token = cookies.get('admin_token')?.value;
-    if (!token) return redirect('/admin/login');
+    const isAnalyticsApi = url.pathname.startsWith('/api/admin/analytics');
+    if (!token) {
+      if (isAnalyticsApi) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return redirect('/admin/login');
+    }
 
     const adminUser = getAdminBySession(token);
     if (!adminUser) {
       // Clear stale cookie
       cookies.delete('admin_token', { path: '/' });
+      if (isAnalyticsApi) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
       return redirect('/admin/login');
     }
 
@@ -69,6 +74,8 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
     const ownerOnly = [
       '/admin/settings/roles',
       '/admin/audit',
+      '/admin/analytics',
+      '/api/admin/analytics',
       '/api/admin/roles',
       '/api/admin/trips/create',
       '/api/admin/trips/delete',
@@ -86,6 +93,8 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
     ];
 
     if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {
+      if (path.startsWith('/api/admin/')) return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      if (path.startsWith('/admin/analytics')) return redirect('/admin');
       return new Response('Access denied', { status: 403 });
     }
     if (ownerOrOpsOnly.some(p => path.startsWith(p)) && adminUser.role === 'trip_lead') {
