@@ -1,17 +1,20 @@
 import type { APIRoute } from 'astro';
-import { createLLMAdapter, LLMConfigError } from '../../../../lib/analytics/llm';
+import { createLLMAdapter, LLMConfigError, type LLMMessage, type LLMToolCall } from '../../../../lib/analytics/llm';
 import { buildAnalyticsSystemPrompt } from '../../../../lib/analytics/prompt';
-import { analyzeCustomQuery, type StructuredAnalyticsQuery } from '../../../../lib/analytics/customQuery';
-import { defaultSuggestions, getTool, routeNamedTool, tripOptionsForAmbiguousMessage, type ToolResult } from '../../../../lib/analytics/tools';
+import { analyzeCustomQuery, customQueryToolSchema, type StructuredAnalyticsQuery } from '../../../../lib/analytics/customQuery';
+import { defaultSuggestions, getTool, namedToolSchemas, type ToolResult } from '../../../../lib/analytics/tools';
 import { appendAnalyticsMessage, createOrLoadSession, loadAnalyticsHistory, writeAnalyticsAudit } from '../../../../lib/analytics/sessions';
 
 export const prerender = false;
+
+// Wall-clock budget for the whole turn (LLM round-trips + tool execution).
+const TURN_DEADLINE_MS = 10_000;
+const MAX_TOOL_ROUNDS = 5;
 
 interface ChatRequest {
   message?: string;
   conversationId?: string;
   selection?: { type: 'trip' | 'departure'; id: string };
-  customQuery?: StructuredAnalyticsQuery;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -35,119 +38,136 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const started = Date.now();
+      const remaining = () => TURN_DEADLINE_MS - (Date.now() - started);
       let auditWritten = false;
       const send = (event: string, data: unknown) => {
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
       };
-      const audit = (input: Parameters<typeof writeAnalyticsAudit>[0]) => {
+      const audit = (input: Partial<Parameters<typeof writeAnalyticsAudit>[0]>) => {
         if (auditWritten) return;
         auditWritten = true;
         writeAnalyticsAudit({ ...input, sessionId, ownerId: adminUser.userId, prompt: message, durationMs: Date.now() - started });
       };
 
+      // Tracked across tool rounds for the final event + audit row.
+      let answer = '';
+      let lastData: ToolResult | null = null;
+      let toolTier: 'named' | 'escape_hatch' | null = null;
+      let lastToolName: string | null = null;
+      let lastToolInput: unknown = null;
+      let piiAttemptDetected = false;
+
       try {
-        const ambiguity = !body.selection && /\b(for|in|on)\b/i.test(message) ? tripOptionsForAmbiguousMessage(message) : null;
-        if (ambiguity) {
-          const payload = { conversationId: sessionId, needsSelection: ambiguity, suggestedQuestions: defaultSuggestions() };
-          send('final', payload);
-          audit({ toolTier: 'named', toolName: 'findTripsByQuery', resultRowCount: ambiguity.options.length });
-          controller.close();
-          return;
+        const adapter = createLLMAdapter();
+        const tools = [...namedToolSchemas(), customQueryToolSchema];
+        const system = buildAnalyticsSystemPrompt();
+
+        const history = loadAnalyticsHistory(sessionId)
+          .slice(0, -1) // drop the user turn we just appended; it is added explicitly below
+          .map(toLlmMessage);
+        const messages: LLMMessage[] = [...history, { role: 'user', content: message }];
+        if (body.selection) {
+          messages.push({
+            role: 'user',
+            content: `The owner selected ${body.selection.type} "${body.selection.id}". Use it directly as a filter and do not ask to disambiguate again.`,
+          });
         }
 
-        let toolName: string;
-        let toolInput: Record<string, any>;
-        let toolResult: ToolResult;
-        let toolTier: 'named' | 'escape_hatch' = 'named';
-        let piiAttemptDetected = false;
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          if (remaining() <= 0) return finishTimeout();
 
-        const timeoutAt = Date.now() + 10_000;
-        if (body.customQuery) {
-          toolTier = 'escape_hatch';
-          toolName = 'analyzeCustomQuery';
-          toolInput = sanitizeAuditInput(body.customQuery);
-          const result = analyzeCustomQuery(body.customQuery);
-          piiAttemptDetected = result.piiAttemptDetected;
-          toolResult = { columns: result.columns, rows: result.rows, summary: result.summary };
-        } else {
-          const routed = routeNamedTool(message, body.selection);
-          toolName = routed.name;
-          toolInput = routed.input;
-          const tool = getTool(toolName);
-          if (!tool) throw new Error('Unknown analytics tool');
-          toolResult = tool.execute(toolInput);
-          if (toolResult.needsSelection) {
-            const payload = { conversationId: sessionId, needsSelection: toolResult.needsSelection, suggestedQuestions: defaultSuggestions() };
-            send('final', payload);
-            audit({ toolTier, toolName, toolInput, resultRowCount: toolResult.rows.length });
-            controller.close();
-            return;
-          }
-        }
-
-        if (Date.now() > timeoutAt) {
-          const error = 'Query timed out. Try a more specific question.';
-          send('final', { conversationId: sessionId, error, suggestedQuestions: defaultSuggestions() });
-          audit({ toolTier, toolName, toolInput, piiAttemptDetected, error });
-          controller.close();
-          return;
-        }
-
-        appendAnalyticsMessage({ sessionId, role: 'tool', toolName, toolInput, toolOutput: toolResult });
-
-        const answerPrompt = [
-          message,
-          '',
-          `Tool used: ${toolName}`,
-          `Tool summary: ${toolResult.summary}`,
-          `Columns: ${toolResult.columns.join(', ')}`,
-          `Rows JSON: ${JSON.stringify(toolResult.rows.slice(0, 50))}`,
-          '',
-          'Answer succinctly. Explain the calculation and mention the revenue definition when relevant. Do not expose PII.',
-        ].join('\n');
-
-        let answer = '';
-        try {
-          const adapter = createLLMAdapter();
-          const history = loadAnalyticsHistory(sessionId).map((m) => ({ role: m.role === 'assistant' ? 'assistant' as const : 'user' as const, content: m.content }));
-          for await (const delta of adapter.streamChat({
-            system: buildAnalyticsSystemPrompt(),
-            messages: [...history, { role: 'user', content: answerPrompt }],
-          })) {
-            if (delta.type === 'text' && delta.text) {
-              answer += delta.text;
-              send('token', { text: delta.text });
+          const pending: LLMToolCall[] = [];
+          let turnText = '';
+          const signal = AbortSignal.timeout(remaining());
+          try {
+            for await (const delta of adapter.streamChat({ system, messages, tools, signal })) {
+              if (delta.type === 'text' && delta.text) {
+                turnText += delta.text;
+                answer += delta.text;
+                send('token', { text: delta.text });
+              } else if (delta.type === 'tool_call' && delta.toolCall) {
+                pending.push(delta.toolCall);
+              }
             }
+          } catch (error: any) {
+            if (error instanceof LLMConfigError) throw error;
+            if (isAbort(error)) return finishTimeout();
+            // Provider/network failure mid-turn: degrade gracefully if a tool already ran.
+            if (lastData) {
+              answer = composeFallbackAnswer(message, lastData);
+              send('token', { text: answer });
+              break;
+            }
+            throw error;
           }
-        } catch (error) {
-          if (error instanceof LLMConfigError) throw error;
-          answer = composeFallbackAnswer(message, toolResult);
+
+          if (!pending.length) break; // model produced its final answer
+
+          messages.push({ role: 'assistant', content: turnText, toolCalls: pending });
+
+          for (const call of pending) {
+            toolTier = call.name === 'analyzeCustomQuery' ? 'escape_hatch' : 'named';
+            lastToolName = call.name;
+            lastToolInput = call.name === 'analyzeCustomQuery' ? sanitizeAuditInput(call.input as unknown as StructuredAnalyticsQuery) : call.input;
+
+            const { result, piiAttempt } = runTool(call.name, call.input, body.selection);
+            piiAttemptDetected = piiAttemptDetected || piiAttempt;
+
+            if (result.needsSelection) {
+              appendAnalyticsMessage({ sessionId, role: 'tool', toolName: call.name, toolInput: lastToolInput, toolOutput: result });
+              send('final', { conversationId: sessionId, needsSelection: result.needsSelection, suggestedQuestions: defaultSuggestions() });
+              audit({ toolTier, toolName: call.name, toolInput: lastToolInput, ambiguityResolved: false, resultRowCount: result.needsSelection.options.length });
+              controller.close();
+              return;
+            }
+
+            lastData = result;
+            appendAnalyticsMessage({ sessionId, role: 'tool', toolName: call.name, toolInput: lastToolInput, toolOutput: result });
+            messages.push({
+              role: 'tool',
+              toolCallId: call.id,
+              toolName: call.name,
+              content: JSON.stringify({ summary: result.summary, columns: result.columns, rows: result.rows.slice(0, 50) }),
+            });
+          }
+        }
+
+        if (!answer.trim() && lastData) {
+          answer = composeFallbackAnswer(message, lastData);
           send('token', { text: answer });
         }
 
         appendAnalyticsMessage({ sessionId, role: 'assistant', content: answer });
-        const payload = {
+        send('final', {
           conversationId: sessionId,
           answer,
-          data: { columns: toolResult.columns, rows: toolResult.rows },
+          data: lastData ? { columns: lastData.columns, rows: lastData.rows } : undefined,
           suggestedQuestions: defaultSuggestions().slice(0, 3),
-        };
-        send('final', payload);
-        audit({ toolTier, toolName, toolInput, piiAttemptDetected, resultRowCount: toolResult.rows.length });
+        });
+        audit({
+          toolTier,
+          toolName: lastToolName,
+          toolInput: lastToolInput,
+          piiAttemptDetected,
+          ambiguityResolved: Boolean(body.selection),
+          selectionMade: body.selection ?? null,
+          resultRowCount: lastData?.rows.length ?? null,
+        });
         controller.close();
+        return;
+
+        function finishTimeout() {
+          const error = 'Query timed out. Try a more specific question.';
+          send('final', { conversationId: sessionId, error, suggestedQuestions: defaultSuggestions() });
+          audit({ toolTier, toolName: lastToolName, toolInput: lastToolInput, piiAttemptDetected, error });
+          controller.close();
+        }
       } catch (error: any) {
         const isConfig = error instanceof LLMConfigError;
         const msg = isConfig ? 'Analytics unavailable - check LLM configuration' : String(error?.message || 'Something went wrong. Try again.');
         send('final', { conversationId: sessionId, error: msg, suggestedQuestions: defaultSuggestions() });
         appendAnalyticsMessage({ sessionId, role: 'assistant', content: msg });
-        writeAnalyticsAudit({
-          sessionId,
-          ownerId: adminUser.userId,
-          prompt: message,
-          error: msg,
-          piiAttemptDetected: Boolean(error?.piiAttemptDetected),
-          durationMs: Date.now() - started,
-        });
+        audit({ toolTier, toolName: lastToolName, toolInput: lastToolInput, piiAttemptDetected: piiAttemptDetected || Boolean(error?.piiAttemptDetected), error: msg });
         controller.close();
       }
     },
@@ -161,6 +181,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     },
   });
 };
+
+function runTool(name: string, input: Record<string, unknown>, selection?: { type: 'trip' | 'departure'; id: string }): { result: ToolResult; piiAttempt: boolean } {
+  const merged: Record<string, any> = { ...input };
+  if (selection?.type === 'trip' && merged.tripSlug == null) merged.tripSlug = selection.id;
+  if (selection?.type === 'departure' && merged.departureId == null) merged.departureId = selection.id;
+
+  if (name === 'analyzeCustomQuery') {
+    const result = analyzeCustomQuery(merged as StructuredAnalyticsQuery);
+    return { result: { columns: result.columns, rows: result.rows, summary: result.summary }, piiAttempt: result.piiAttemptDetected };
+  }
+  const tool = getTool(name);
+  if (!tool) throw new Error(`Unknown analytics tool: ${name}`);
+  return { result: tool.execute(merged), piiAttempt: false };
+}
+
+function toLlmMessage(row: { role: string; content: string }): LLMMessage {
+  return { role: row.role === 'assistant' ? 'assistant' : 'user', content: row.content };
+}
+
+function isAbort(error: any): boolean {
+  return error?.name === 'AbortError' || error?.name === 'TimeoutError';
+}
 
 function composeFallbackAnswer(message: string, result: ToolResult): string {
   const rowCount = result.rows.length;

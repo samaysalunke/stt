@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 import { stripBlockedRows } from './schema';
-import { findDepartureById, findTripBySlug, findTripsByText, getAnalyticsTrips } from './trips';
+import { findDepartureById, findTripBySlug, findTripsByText } from './trips';
 
 export interface ToolResult {
   columns: string[];
@@ -93,11 +93,13 @@ export const analyticsTools: ToolDefinition[] = [
     description: 'Revenue grouped by trip location.',
     parameters: objectParams({ startDate: { type: 'string' }, endDate: { type: 'string' } }),
     execute(params) {
-      const tripRows = analyticsTools.find((t) => t.name === 'getRevenueByTrip')!.execute(params).rows;
+      const tripResult = getTool('getRevenueByTrip')!.execute(params);
+      const locIdx = tripResult.columns.indexOf('location');
+      const revIdx = tripResult.columns.indexOf('revenue');
       const byLocation = new Map<string, number>();
-      for (const row of tripRows) {
-        const location = String(row[4] || 'Unknown');
-        byLocation.set(location, (byLocation.get(location) ?? 0) + Number(row[2] || 0));
+      for (const row of tripResult.rows) {
+        const location = String(row[locIdx] || 'Unknown');
+        byLocation.set(location, (byLocation.get(location) ?? 0) + Number(row[revIdx] || 0));
       }
       return shape([...byLocation].map(([location, revenue]) => ({ location, revenue })), 'Revenue grouped by YAML trip location.');
     },
@@ -107,7 +109,7 @@ export const analyticsTools: ToolDefinition[] = [
     description: 'Top N trips by revenue.',
     parameters: objectParams({ limit: { type: 'number' }, startDate: { type: 'string' }, endDate: { type: 'string' } }),
     execute(params) {
-      const result = analyticsTools.find((t) => t.name === 'getRevenueByTrip')!.execute(params);
+      const result = getTool('getRevenueByTrip')!.execute(params);
       const limit = Math.max(1, Math.min(50, Number(params.limit || 10)));
       return { ...result, rows: result.rows.slice(0, limit), summary: `Top ${limit} trips by revenue, excluding rejected registrations.` };
     },
@@ -317,7 +319,7 @@ export const analyticsTools: ToolDefinition[] = [
     description: 'Registrations by source/channel.',
     parameters: objectParams({}),
     execute() {
-      return analyticsTools.find((t) => t.name === 'getDemographicBreakdown')!.execute({ field: 'source' });
+      return getTool('getDemographicBreakdown')!.execute({ field: 'source' });
     },
   },
   {
@@ -371,6 +373,10 @@ export const analyticsTools: ToolDefinition[] = [
 
 export function getTool(name: string): ToolDefinition | undefined {
   return analyticsTools.find((tool) => tool.name === name);
+}
+
+export function namedToolSchemas(): Array<{ name: string; description: string; parameters: Record<string, unknown> }> {
+  return analyticsTools.map((tool) => ({ name: tool.name, description: tool.description, parameters: tool.parameters }));
 }
 
 export function chooseGranularity(start?: string, end?: string): 'daily' | 'weekly' | 'monthly' {

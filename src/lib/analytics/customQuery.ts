@@ -31,6 +31,64 @@ const DANGEROUS_RE = /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|EXEC|EXECUTE|C
 const AGGREGATIONS = new Set(['SUM', 'COUNT', 'AVG', 'MIN', 'MAX', 'COUNT_DISTINCT']);
 const OPERATORS = new Set(['=', '!=', '>', '<', '>=', '<=', 'IN', 'BETWEEN', 'LIKE']);
 
+export const customQueryToolSchema = {
+  name: 'analyzeCustomQuery',
+  description:
+    'Escape hatch for novel analytics questions no named tool covers. Express the query as a structured object (never raw SQL). The server validates the schema, strips restricted columns, compiles to parameterised read-only SQL, and executes it. Prefer named tools when one fits.',
+  parameters: {
+    type: 'object',
+    properties: {
+      intent: { type: 'string', description: 'Plain-language description of what the query computes.' },
+      tables: { type: 'array', items: { type: 'string' }, description: 'Tables referenced; first is the base table.' },
+      select: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            table: { type: 'string' },
+            column: { type: 'string' },
+            alias: { type: 'string' },
+            aggregation: { type: 'string', enum: ['SUM', 'COUNT', 'AVG', 'MIN', 'MAX', 'COUNT_DISTINCT'] },
+          },
+          required: ['table', 'column'],
+        },
+      },
+      filters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            table: { type: 'string' },
+            column: { type: 'string' },
+            operator: { type: 'string', enum: ['=', '!=', '>', '<', '>=', '<=', 'IN', 'BETWEEN', 'LIKE'] },
+            value: {},
+          },
+          required: ['table', 'column', 'operator', 'value'],
+        },
+      },
+      groupBy: { type: 'array', items: { type: 'object', properties: { table: { type: 'string' }, column: { type: 'string' } }, required: ['table', 'column'] } },
+      orderBy: {
+        type: 'array',
+        items: { type: 'object', properties: { table: { type: 'string' }, column: { type: 'string' }, direction: { type: 'string', enum: ['ASC', 'DESC'] } }, required: ['table', 'column', 'direction'] },
+      },
+      joins: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string', enum: ['INNER', 'LEFT'] },
+            table: { type: 'string' },
+            on: { type: 'object', properties: { leftCol: { type: 'string' }, rightCol: { type: 'string' } }, required: ['leftCol', 'rightCol'] },
+          },
+          required: ['type', 'table', 'on'],
+        },
+      },
+      limit: { type: 'number', description: 'Row cap; server enforces a maximum of 500.' },
+    },
+    required: ['intent', 'tables', 'select'],
+  },
+} as const;
+
 export function analyzeCustomQuery(input: StructuredAnalyticsQuery): CustomQueryResult {
   validateShape(input);
   const sanitized = sanitizeStructuredQuery(input);
