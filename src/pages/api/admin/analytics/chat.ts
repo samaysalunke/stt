@@ -79,10 +79,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           const pending: LLMToolCall[] = [];
           let turnText = '';
-          // Each round renders into a fresh bubble; text from tool rounds is just
-          // narration that gets superseded by the next round, so reset and keep
-          // only the terminal (non-tool) round's text as the answer.
-          send('reset', {});
+          // Buffer text instead of streaming: text from tool rounds is just
+          // narration. Reset each round so only the terminal (non-tool) round's
+          // text survives, and emit it once in the final event - no live typing
+          // of the model thinking out loud.
           answer = '';
           const signal = AbortSignal.timeout(Math.min(remaining(), PER_CALL_DEADLINE_MS));
           try {
@@ -90,7 +90,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
               if (delta.type === 'text' && delta.text) {
                 turnText += delta.text;
                 answer += delta.text;
-                send('token', { text: delta.text });
               } else if (delta.type === 'tool_call' && delta.toolCall) {
                 pending.push(delta.toolCall);
               }
@@ -101,8 +100,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Provider/network failure mid-turn: degrade gracefully if a tool already ran.
             if (lastData) {
               answer = composeFallbackAnswer(message, lastData);
-              send('reset', {});
-              send('token', { text: answer });
               break;
             }
             throw error;
@@ -141,15 +138,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (!answer.trim() && lastData) {
           answer = composeFallbackAnswer(message, lastData);
-          send('reset', {});
-          send('token', { text: answer });
         }
 
         appendAnalyticsMessage({ sessionId, role: 'assistant', content: answer });
         send('final', {
           conversationId: sessionId,
           answer,
-          data: lastData ? { columns: lastData.columns, rows: lastData.rows } : undefined,
           suggestedQuestions: defaultSuggestions().slice(0, 3),
         });
         audit({
