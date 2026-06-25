@@ -27,6 +27,7 @@ const adminUser = Astro.locals.adminUser;
       <section id="history" class="history" aria-live="polite">
         <div class="empty" id="empty-state">
           <h2>Ask a data question</h2>
+          <p class="hint">Tap a suggestion or type your own</p>
           <div class="chips" data-default-suggestions></div>
         </div>
       </section>
@@ -209,40 +210,63 @@ const adminUser = Astro.locals.adminUser;
 
     <style>
       :root { color-scheme: light; }
-      body { margin: 0; min-height: 100vh; background: #f7f3ef; color: #1b2b3a; font-family: var(--font-sans); }
+      body { margin: 0; min-height: 100vh; background: #ece5dd; color: #1b2b3a; font-family: var(--font-sans); }
       .analytics-shell { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-      .topbar { height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 18px; background: rgba(255,255,255,.92); border-bottom: 1px solid rgba(245,221,215,.8); }
-      .topbar h1 { margin: 0; font-family: var(--font-display); font-size: 20px; }
-      .topbar p { margin: 2px 0 0; font-size: 12px; color: rgba(27,43,58,.55); }
-      .back-link, .composer button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; border: 1px solid rgba(232,114,90,.25); color: #1b2b3a; background: #fff; }
+
+      /* WhatsApp-style header bar */
+      .topbar { height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #1b2b3a; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); position: relative; z-index: 2; }
+      .topbar h1 { margin: 0; font-family: var(--font-display); font-size: 18px; }
+      .topbar p { margin: 1px 0 0; font-size: 12px; color: rgba(255,255,255,.6); }
+      .back-link { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: none; color: #fff; background: transparent; }
+      .back-link:hover { background: rgba(255,255,255,.12); }
       svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-      .history { overflow-y: auto; padding: 22px clamp(14px, 3vw, 36px); }
-      .empty { max-width: 860px; margin: 10vh auto 0; }
-      .empty h2 { font-family: var(--font-display); font-size: clamp(28px, 5vw, 54px); margin: 0 0 22px; }
-      .turn { display: flex; flex-direction: column; gap: 10px; max-width: 980px; margin: 0 auto 18px; }
+
+      /* Chat surface — subtle paper texture like WhatsApp */
+      .history { overflow-y: auto; padding: 16px clamp(10px, 3vw, 28px); background-color: #ece5dd; background-image: radial-gradient(rgba(27,43,58,.035) 1px, transparent 1px); background-size: 22px 22px; }
+
+      .empty { max-width: 560px; margin: 6vh auto 0; text-align: center; }
+      .empty h2 { font-family: var(--font-display); font-size: clamp(24px, 5vw, 40px); margin: 0 0 6px; }
+      .empty .hint { margin: 0 0 22px; font-size: 14px; color: rgba(27,43,58,.55); }
+
+      /* Chat rows + bubbles with tails */
+      .turn { display: flex; flex-direction: column; gap: 6px; max-width: 980px; margin: 0 auto 10px; }
       .turn.user { align-items: flex-end; }
       .turn.assistant { align-items: flex-start; }
-      .bubble { max-width: min(760px, 88vw); white-space: pre-wrap; line-height: 1.55; padding: 13px 15px; border-radius: 8px; background: #fff; border: 1px solid rgba(245,221,215,.9); box-shadow: 0 8px 28px rgba(27,43,58,.05); }
-      .user .bubble { background: #1b2b3a; color: #fff; border-color: #1b2b3a; }
-      .bubble.error { background: #fff1f1; color: #991b1b; border-color: #fecaca; }
-      .composer { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px clamp(14px, 3vw, 36px); background: rgba(255,255,255,.94); border-top: 1px solid rgba(245,221,215,.8); }
-      .composer input { min-width: 0; height: 48px; border: 1px solid rgba(232,114,90,.28); border-radius: 8px; padding: 0 14px; font: inherit; outline: none; background: #fff; }
-      .composer button { height: 48px; background: #e8725a; color: #fff; border-color: #e8725a; }
+      .bubble { position: relative; max-width: min(75%, 620px); white-space: pre-wrap; line-height: 1.5; font-size: 14.5px; padding: 8px 12px 9px; border-radius: 12px; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+      .assistant .bubble { background: #fff; border-top-left-radius: 3px; }
+      .user .bubble { background: #d6f0c8; border-top-right-radius: 3px; }
+      .bubble.error { background: #fff1f1; color: #991b1b; }
+      /* little tail triangles */
+      .assistant .bubble::before { content: ''; position: absolute; top: 0; left: -7px; width: 0; height: 0; border: 7px solid transparent; border-top-color: #fff; border-right: 0; }
+      .user .bubble::before { content: ''; position: absolute; top: 0; right: -7px; width: 0; height: 0; border: 7px solid transparent; border-top-color: #d6f0c8; border-left: 0; }
+
+      /* Composer */
+      .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px clamp(8px, 3vw, 20px); background: #f3eee8; border-top: 1px solid rgba(27,43,58,.08); }
+      .composer input { min-width: 0; height: 44px; border: 1px solid transparent; border-radius: 22px; padding: 0 16px; font: inherit; outline: none; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+      .composer input:focus { border-color: rgba(232,114,90,.4); }
+      .composer button { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; border: none; background: #e8725a; color: #fff; box-shadow: 0 2px 6px rgba(232,114,90,.4); }
+      .composer button:hover { background: #d9624b; }
       .composer :disabled { opacity: .55; cursor: not-allowed; }
+
+      /* Suggestion + selection pills — clearly tappable */
       .chips, .selection { display: flex; flex-wrap: wrap; gap: 8px; }
-      .chip, .selection button { border: 1px solid rgba(232,114,90,.32); background: #fff; color: #1b2b3a; border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 13px; cursor: pointer; }
-      .chip:hover, .selection button:hover { border-color: #e8725a; }
+      .empty .chips { justify-content: center; }
+      .chip, .selection button { border: 1px solid rgba(232,114,90,.5); background: #fff; color: #c2563f; font-weight: 600; border-radius: 999px; padding: 9px 15px; font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(27,43,58,.08); transition: background .15s, color .15s, transform .05s; }
+      .chip:hover, .selection button:hover { background: #e8725a; color: #fff; border-color: #e8725a; }
+      .chip:active, .selection button:active { transform: scale(.97); }
+      .selection { margin-top: 2px; }
+      .selection button { color: #1b2b3a; border-color: rgba(27,43,58,.2); font-weight: 500; }
       .selection button:disabled { opacity: .5; cursor: default; }
-      .table-wrap { max-width: min(980px, 92vw); overflow-x: auto; border: 1px solid rgba(245,221,215,.9); border-radius: 8px; background: #fff; }
+      .followups { max-width: 75%; margin-top: 2px; }
+
+      .table-wrap { max-width: min(75%, 620px); overflow-x: auto; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
       table { border-collapse: collapse; min-width: 100%; font-size: 13px; }
-      th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(245,221,215,.7); white-space: nowrap; }
-      th { background: #fbfaf8; font-weight: 700; color: rgba(27,43,58,.7); }
-      .followups { max-width: min(760px, 88vw); }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid rgba(27,43,58,.08); white-space: nowrap; }
+      th { background: #f3eee8; font-weight: 700; color: rgba(27,43,58,.7); }
+
       @media (max-width: 640px) {
-        .topbar { padding: 0 12px; }
-        .composer { padding: 10px; }
-        .composer input { height: 44px; }
-        .composer button { width: 44px; height: 44px; }
+        .bubble, .table-wrap, .followups { max-width: 85%; }
+        .topbar { padding: 0 10px; }
       }
     </style>
   </body>
