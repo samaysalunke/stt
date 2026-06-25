@@ -1,5 +1,35 @@
 import { describe, test, expect } from 'vitest';
-import { editableBooking, parseEditorBooking } from '../../src/lib/tripEditor';
+import { editableBooking, parseEditorBooking, matchTierFromStay, normalizeTierText } from '../../src/lib/tripEditor';
+
+describe('matchTierFromStay', () => {
+  const catalog = [
+    { id: 'mudhouse-triple', label: 'Mudhouse Triple', helperText: '' },
+    { id: 'swiss-double', label: 'Swiss Tent Double', helperText: '' },
+    { id: 'dorm', label: 'Dorm', helperText: '' },
+  ];
+
+  test('exact match on id (case/space-insensitive)', () => {
+    expect(matchTierFromStay('mudhouse triple', catalog)).toBe('mudhouse-triple');
+    expect(matchTierFromStay('Mudhouse-Triple', catalog)).toBe('mudhouse-triple');
+  });
+
+  test('exact match on label', () => {
+    expect(matchTierFromStay('Swiss Tent Double', catalog)).toBe('swiss-double');
+  });
+
+  test('contains-match strips price suffix', () => {
+    expect(matchTierFromStay('Triple sharing - Mudhouse (Rs 22,000)', catalog)).toBe('mudhouse-triple');
+  });
+
+  test('no match returns empty string', () => {
+    expect(matchTierFromStay('penthouse', catalog)).toBe('');
+    expect(matchTierFromStay('', catalog)).toBe('');
+  });
+
+  test('normalizeTierText drops price and punctuation', () => {
+    expect(normalizeTierText('Triple sharing - Mudhouse (Rs 22,000)')).toBe('triple sharing mudhouse');
+  });
+});
 
 // ── editableBooking ───────────────────────────────────────────────────────────
 

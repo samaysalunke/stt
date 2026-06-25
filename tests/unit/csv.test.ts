@@ -48,9 +48,13 @@ describe('Google Forms registration CSV', () => {
   it('maps tiers/status/consent and supersedes the earlier duplicate', () => {
     const rows=parseGoogleFormsRegistrations(csv)!;
     expect(rows[0].superseded).toBe(true);
-    expect(rows[1]).toMatchObject({full_name:'Latest Name',email:'user@example.com',tier_id:'triple',status:'lead',consent_at:'2026-05-17 23:31:02'});
+    expect(rows[1]).toMatchObject({full_name:'Latest Name',email:'user@example.com',tier_id:'triple',stay_raw:'Triple Sharing',status:'lead',consent_at:'2026-05-17 23:31:02'});
     expect(rows[2].error).toContain('Invalid timestamp');
-    expect(rows[2].error).toContain('Unknown stay option');
+    // Stay validity is now decided trip-aware in the importer, not here: the pure
+    // parser keeps the raw stay and leaves tier_id blank, but raises no stay error.
+    expect(rows[2].tier_id).toBe('');
+    expect(rows[2].stay_raw).toBe('Unknown');
+    expect(rows[2].error).not.toContain('Unknown stay option');
     expect(rows[2].error).toContain('Unknown status');
   });
 });

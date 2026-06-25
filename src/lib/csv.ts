@@ -115,6 +115,7 @@ export interface GoogleRegistrationRow {
   instagram: string;
   why_join: string;
   tier_id: string;
+  stay_raw: string;
   status: 'lead' | 'confirmed' | '';
   created_at: string | null;
   consent_at: string | null;
@@ -165,14 +166,15 @@ export function parseGoogleFormsRegistrations(input: string): GoogleRegistration
     const status = sourceStatus === 'Confirmed' ? 'confirmed' : sourceStatus === '' ? 'lead' : '';
     const errors: string[] = [];
     if (!timestamp) errors.push('Invalid timestamp');
-    if (required.stay >= 0 && !tier_id) errors.push(`Unknown stay option: ${stay || '(blank)'}`);
+    // Stay → tier validity is decided trip-aware in the importer (against the
+    // trip's occupancyCatalog), not here — the pure parser has no trip context.
     if (!status) errors.push(`Unknown status: ${sourceStatus}`);
     result.push({
       row: i,
       full_name: get('name'), email: get('email').toLowerCase(), phone: get('phone'),
       emergency_phone: get('emergencyPhone'), gender: get('gender'), age: get('age'),
       city: get('city'), instagram: get('instagram'), why_join: get('reason'),
-      tier_id, status, created_at: timestamp,
+      tier_id, stay_raw: stay, status, created_at: timestamp,
       consent_at: timestamp && (cells[consentIndex] ?? '').trim() === GOOGLE_FORM_ACCEPTANCE ? timestamp : null,
       error: errors.length ? errors.join('; ') : undefined,
     });

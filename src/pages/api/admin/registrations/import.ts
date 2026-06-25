@@ -3,6 +3,8 @@ import { sanitizeInput, isValidEmail, isValidPhone } from '../../../../lib/utils
 import { logAction } from '../../../../lib/audit';
 import { inferTierIdFromRow, parseCsvToObjects, parseGoogleFormsRegistrations } from '../../../../lib/csv';
 import { createRegistration, hasActiveRegistration, confirmedCountForTier, tierCapFor, type RegStatus } from '../../../../lib/registrationWrite';
+import { readTrip } from '../../../../lib/content';
+import { editableBooking, matchTierFromStay } from '../../../../lib/tripEditor';
 import { resolveSelection, type ResolvedSelection } from './create';
 import { jsonOk as json, jsonFail as fail } from '../../../../lib/apiResponse';
 
@@ -13,19 +15,41 @@ interface PreviewRow { row:number; name:string; email:string; tierId:string; sta
 function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:string, fallbackStatus:RegStatus) {
   const google = parseGoogleFormsRegistrations(csv);
   const preview: PreviewRow[] = [];
+
+  // Trip-aware tier resolution: match the stay/accommodation answer against THIS
+  // trip's occupancy catalog. Precedence: legacy keyword hint (if a real tier) >
+  // catalog match on the raw stay > UI-selected fallback > none.
+  const catalog = editableBooking(readTrip(tripSlug) ?? {}).editorCatalog;
+  const catalogIds = new Set(catalog.map((c) => c.id));
+  const validFallback = catalogIds.has(fallbackTier) ? fallbackTier : '';
+  const resolveTier = (hint: string, stayRaw: string): string => {
+    if (hint && catalogIds.has(hint)) return hint;
+    const matched = matchTierFromStay(stayRaw || hint, catalog);
+    if (matched) return matched;
+    return validFallback;
+  };
+
   const raw = google
-    ? google.map((r) => ({ ...r, tier_id: r.tier_id || fallbackTier }))
-    : parseCsvToObjects(csv).map((r, i) => ({
-        row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
-        emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
-        city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
-        tier_id: inferTierIdFromRow(r) || fallbackTier, status:fallbackStatus,
-      }));
+    ? google.map((r) => ({ ...r, stay_raw: r.stay_raw, tier_id: resolveTier(r.tier_id, r.stay_raw) }))
+    : parseCsvToObjects(csv).map((r, i) => {
+        const stay_raw = inferTierIdFromRow(r);
+        return {
+          row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
+          emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
+          city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
+          stay_raw, tier_id: resolveTier('', stay_raw), status:fallbackStatus,
+        };
+      });
 
   for (const r of raw) {
     const base:PreviewRow = { row:r.row, name:r.full_name || '—', email:r.email || '—', tierId:r.tier_id || '—', status:r.status || '—', action:'create' };
     if ('superseded' in r && r.superseded) { preview.push({ ...base, action:'superseded', reason:`Superseded by row ${r.supersededByRow}` }); continue; }
     if ('error' in r && r.error) { preview.push({ ...base, action:'error', reason:r.error }); continue; }
+    if (!r.tier_id && r.stay_raw) {
+      const valid = catalog.map((c) => c.label).join(', ');
+      preview.push({ ...base, action:'error', reason:`Stay "${r.stay_raw}" doesn't match any occupancy option${valid ? ` (valid: ${valid})` : ''}` });
+      continue;
+    }
     if (!r.full_name || !r.email || !r.phone) { preview.push({ ...base, action:'error', reason:'Missing name, email, or phone' }); continue; }
     if (!isValidEmail(r.email)) { preview.push({ ...base, action:'error', reason:'Invalid email' }); continue; }
     if (!isValidPhone(r.phone)) { preview.push({ ...base, action:'error', reason:'Invalid phone' }); continue; }

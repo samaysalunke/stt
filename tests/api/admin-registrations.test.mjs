@@ -133,6 +133,33 @@ test('TC-210a import dry-run can infer occupancy from the CSV tier column', asyn
   assert.equal(data.preview[0].tierId, 'standard');
 });
 
+test('TC-210b stay answer resolves against the trip catalog (label match)', async () => {
+  // CAP trip catalog: { id: solo, label: "Solo Tent" }. The stay column carries
+  // the label, not the id — must still resolve to `solo` trip-aware.
+  const email = `qa-import-stay-${Date.now()}@example.invalid`;
+  const csv = ['full_name,email,phone,stay', `Stay Row,${email},9876543210,Solo Tent`].join('\n');
+  const { status, data } = await adminPost('/api/admin/registrations/import', {
+    tripSlug: CAP.tripSlug, batchId: CAP.batchId,
+    status: 'pending', csv, dryRun: true,
+  });
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal(data.counts.create, 1, JSON.stringify(data));
+  assert.equal(data.preview[0].tierId, 'solo');
+});
+
+test('TC-210c unmatched stay answer errors trip-aware (no UI fallback)', async () => {
+  const email = `qa-import-badstay-${Date.now()}@example.invalid`;
+  const csv = ['full_name,email,phone,stay', `Bad Stay,${email},9876543210,Penthouse`].join('\n');
+  const { status, data } = await adminPost('/api/admin/registrations/import', {
+    tripSlug: CAP.tripSlug, batchId: CAP.batchId,
+    status: 'pending', csv, dryRun: true,
+  });
+  assert.equal(status, 200, JSON.stringify(data));
+  assert.equal(data.counts.error, 1, JSON.stringify(data));
+  assert.equal(data.preview[0].action, 'error');
+  assert.match(data.preview[0].reason, /doesn't match any occupancy option/);
+});
+
 test('TC-211 import commit inserts only the valid new rows', async () => {
   const a = `qa-commit-a-${Date.now()}@example.invalid`;
   const b = `qa-commit-b-${Date.now()}@example.invalid`;

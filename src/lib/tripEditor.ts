@@ -16,6 +16,51 @@ export interface EditorDeparture {
   offers: EditorOffer[];
 }
 
+/**
+ * Normalize a tier/stay/accommodation string for fuzzy comparison:
+ * NFKC, smart-quotes → ', lowercase, strip a trailing price suffix like
+ * "(Rs 22,000)", collapse non-alphanumerics to single spaces, trim.
+ */
+export function normalizeTierText(value: string): string {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/[‘’]/g, "'")
+    .toLowerCase()
+    .replace(/\(\s*(?:rs\.?|₹|inr)[^)]*\)/g, ' ') // drop "(Rs 22,000)" style suffix
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Resolve a free-text stay/accommodation answer to a tier id, validated against
+ * THIS trip's catalog. Matches an entry's id or label (normalized), exact first,
+ * then a contains-either-way fallback (so "Triple sharing - Mudhouse (Rs 22,000)"
+ * matches a label like "Mudhouse Triple"). Returns '' when nothing matches.
+ */
+export function matchTierFromStay(stayRaw: string, catalog: EditorTier[]): string {
+  const want = normalizeTierText(stayRaw);
+  if (!want) return '';
+  const wantTokens = new Set(want.split(' ').filter(Boolean));
+  const entries = catalog.map((c) => ({
+    id: c.id,
+    keys: [normalizeTierText(c.id), normalizeTierText(c.label)].filter(Boolean),
+  }));
+  // 1. exact normalized match on id or label.
+  for (const e of entries) if (e.keys.includes(want)) return e.id;
+  // 2. token-subset either way (handles reordered words + a "(Rs …)"/"sharing"
+  //    extra token), e.g. "Triple sharing - Mudhouse" ⊇ key "Mudhouse Triple".
+  for (const e of entries) {
+    for (const k of e.keys) {
+      const keyTokens = k.split(' ').filter(Boolean);
+      if (!keyTokens.length) continue;
+      const keySubsetOfWant = keyTokens.every((t) => wantTokens.has(t));
+      const wantSubsetOfKey = [...wantTokens].every((t) => keyTokens.includes(t));
+      if (keySubsetOfWant || wantSubsetOfKey) return e.id;
+    }
+  }
+  return '';
+}
+
 export function editableBooking(trip: Record<string, any>): {
   editorCatalog: EditorTier[];
   editorDepartures: EditorDeparture[];
