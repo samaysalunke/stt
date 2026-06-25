@@ -3,6 +3,7 @@ import { analyzeCustomQuery } from '../../src/lib/analytics/customQuery';
 import { createLLMAdapter, LLMConfigError } from '../../src/lib/analytics/llm';
 import { cleanupExpiredAnalyticsSessions } from '../../src/lib/analytics/sessions';
 import { chooseGranularity, analyticsTools } from '../../src/lib/analytics/tools';
+import { buildBookingGrowthWeek } from '../../src/lib/adminDashboard';
 import { getDb } from '../../src/lib/db';
 
 async function collectText(adapter: ReturnType<typeof createLLMAdapter>) {
@@ -22,6 +23,29 @@ afterEach(() => {
 });
 
 describe('analytics safety and helpers', () => {
+  it('builds dashboard booking growth in India business time', () => {
+    const week = buildBookingGrowthWeek(
+      [
+        { d: '2026-06-20', c: 2 },
+        { d: '2026-06-25', c: 5 },
+        { d: '2026-06-26', c: 7 },
+      ],
+      new Date('2026-06-25T20:00:00.000Z'),
+    );
+
+    expect(week.map((day) => day.key)).toEqual([
+      '2026-06-20',
+      '2026-06-21',
+      '2026-06-22',
+      '2026-06-23',
+      '2026-06-24',
+      '2026-06-25',
+      '2026-06-26',
+    ]);
+    expect(week.map((day) => day.count)).toEqual([2, 0, 0, 0, 0, 5, 7]);
+    expect(week.at(-1)?.label).toBe('Fri');
+  });
+
   it('uses expected trend granularity thresholds', () => {
     expect(chooseGranularity('2026-01-01', '2026-03-31')).toBe('daily');
     expect(chooseGranularity('2026-01-01', '2026-07-20')).toBe('weekly');
