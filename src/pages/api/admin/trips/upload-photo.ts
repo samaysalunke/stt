@@ -1,10 +1,13 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { saveImageFileWithMeta } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
 // Upload a trip-only photo. Stored under images/trips/<slug>/ and returned to the
 // editor to append to the trip's gallery. These never enter the Photo Vault.
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   try {
     const body = await request.formData();
     const slug = slugify(sanitizeInput(body.get('slug')));

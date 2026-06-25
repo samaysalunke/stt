@@ -8,7 +8,9 @@ import node from '@astrojs/node';
 export default defineConfig({
   site: process.env.SITE_URL ?? 'https://seekthethrill.in',
   output: 'server',
-  security: { checkOrigin: false },
+  // Reject cross-origin form/multipart POSTs (CSRF). Astro enforces this only for
+  // browser-sendable content types, so same-origin forms and JSON API calls pass.
+  security: { checkOrigin: true },
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {

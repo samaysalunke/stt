@@ -105,12 +105,31 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
   }
 
   const response = await next();
+  const headers = new Headers(response.headers);
+
+  // ── Baseline security headers (all routes) ─────────────────────────────────
+  // Stop MIME sniffing (matters for same-origin user uploads) and trim referrer.
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  if (import.meta.env.PROD) {
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  // Admin/CMS must never be framed (clickjacking on privileged actions).
+  const adminUi =
+    url.pathname.startsWith('/admin') || url.pathname.startsWith('/keystatic') ||
+    url.pathname.startsWith('/api/admin');
+  if (adminUi) {
+    headers.set('X-Frame-Options', 'DENY');
+    headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+  }
+
+  // Keep private surfaces out of search indexes.
   const privateRoute =
     url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/keystatic/') || url.pathname.startsWith('/profile/') ||
     url.pathname.startsWith('/login/') || url.pathname.startsWith('/unsubscribe/');
-  if (!privateRoute) return response;
-  const headers = new Headers(response.headers);
-  headers.set('X-Robots-Tag', 'noindex, nofollow');
+  if (privateRoute) headers.set('X-Robots-Tag', 'noindex, nofollow');
+
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 });

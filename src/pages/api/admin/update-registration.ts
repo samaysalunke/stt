@@ -5,10 +5,15 @@ import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from 
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
 import { tripAdvanceAmountBySlug, adjustBookingCount } from '../../../lib/registrationWrite';
+import { requireRole } from '../../../lib/requireRole';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Confirming/rejecting a booking records payment + emails the customer —
+  // a payment-data action, owner/ops only (matches registration create/import).
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   try {
     const body = await request.json();
     const id = parseInt(body.id);

@@ -8,6 +8,7 @@ import {
   assignRole,
   countOwners,
 } from '../../../../lib/admin-session';
+import { decodeIdToken, verifyGoogleClaims } from '../../../../lib/googleIdToken';
 
 export const prerender = false;
 
@@ -46,14 +47,12 @@ export const GET: APIRoute = async ({ url, cookies, redirect, clientAddress }) =
     return redirect('/admin/login?error=oauth');
   }
 
-  // Decode JWT payload (no sig verification needed at this scale)
-  let profile: { sub: string; email: string; name?: string; picture?: string };
-  try {
-    const payload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString());
-    profile = { sub: payload.sub, email: payload.email, name: payload.name, picture: payload.picture };
-  } catch {
+  // Decode + verify JWT claims (issuer, audience, expiry, email_verified).
+  const claims = decodeIdToken(idToken);
+  if (!verifyGoogleClaims(claims, clientId)) {
     return redirect('/admin/login?error=oauth');
   }
+  const profile = { sub: claims!.sub, email: claims!.email, name: claims!.name, picture: claims!.picture };
 
   // Upsert user
   const userId = getUserIdByGoogleId(profile.sub) ?? crypto.randomUUID();

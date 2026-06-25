@@ -1,9 +1,12 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { readAlbum, writeAlbum, saveImageFile } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput } from '../../../../lib/utils';
 
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request, redirect, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   const contentType = request.headers.get('content-type') ?? '';
 
   // JSON call from the "Save Captions" button — only updates photos array

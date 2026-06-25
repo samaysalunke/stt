@@ -1,11 +1,13 @@
 // Test-only endpoint — wipes registrations for a given batchId+tierId back to 'pending'.
-// Only active when DISABLE_RATE_LIMIT=true (test env).
+// Active only in dev builds OR when ENABLE_TEST_ENDPOINTS=true (test harness).
+// Never gate destructive/PII test routes on the rate-limit kill switch.
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { findTripByName, readTrip, writeTrip } from '../../../lib/content';
+import { testEndpointsEnabled } from '../../../lib/testGuard';
 
 export const POST: APIRoute = async ({ request }) => {
-  if (process.env.DISABLE_RATE_LIMIT !== 'true') {
+  if (!testEndpointsEnabled()) {
     return new Response(JSON.stringify({ error: 'Not available' }), {
       status: 403, headers: { 'Content-Type': 'application/json' },
     });

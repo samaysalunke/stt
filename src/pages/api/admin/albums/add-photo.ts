@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { readAlbum, writeAlbum, saveImageFileWithMeta } from '../../../../lib/content';
 import { sanitizeInput } from '../../../../lib/utils';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   try {
     const body = await request.formData();
     const slug = sanitizeInput(body.get('slug'));

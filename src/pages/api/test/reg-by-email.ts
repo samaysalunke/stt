@@ -1,11 +1,12 @@
-// Test-only endpoint — only active when DISABLE_RATE_LIMIT=true (dev/test env).
-// Returns the most recent registration row for a given email.
-// Never expose this in production.
+// Test-only endpoint — returns the most recent registration row for a given email.
+// Active only in dev builds OR when ENABLE_TEST_ENDPOINTS=true (test harness).
+// Returns PII; never gate on the rate-limit kill switch and never enable in prod.
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
+import { testEndpointsEnabled } from '../../../lib/testGuard';
 
 export const GET: APIRoute = async ({ url }) => {
-  if (process.env.DISABLE_RATE_LIMIT !== 'true') {
+  if (!testEndpointsEnabled()) {
     return new Response(JSON.stringify({ error: 'Not available' }), {
       status: 403, headers: { 'Content-Type': 'application/json' },
     });

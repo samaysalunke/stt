@@ -2,8 +2,11 @@ import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { getDb } from '../../../lib/db';
 import { sendBroadcastToSubscriber } from '../../../lib/email';
+import { requireRole } from '../../../lib/requireRole';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   try {
     const body = await request.json();
     const subject  = typeof body.subject   === 'string' ? body.subject.trim()   : '';

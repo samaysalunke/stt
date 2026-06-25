@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { readAlbum, writeAlbum, deleteImageByUrl } from '../../../../lib/content';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   try {
     const { slug, photoUrl } = await request.json();
     if (!slug || !photoUrl) {

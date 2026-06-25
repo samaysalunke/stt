@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { getDb } from '../../../lib/db';
 import { createUserSession } from '../../../lib/session';
 import { assignAutoUsername } from '../../../lib/usernames';
+import { decodeIdToken, verifyGoogleClaims } from '../../../lib/googleIdToken';
 
 export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   const code = url.searchParams.get('code');
@@ -43,16 +44,13 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return new Response('No id_token in response', { status: 500 });
   }
 
-  // Decode id_token payload (base64url, no signature verification needed at this scale)
-  let profile: { sub: string; email: string; name: string; picture: string };
-  try {
-    const payload = tokenData.id_token.split('.')[1];
-    profile = JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8'));
-  } catch {
-    return new Response('Failed to decode id_token', { status: 500 });
+  // Decode + verify id_token claims (issuer, audience, expiry, email_verified).
+  const claims = decodeIdToken(tokenData.id_token);
+  if (!verifyGoogleClaims(claims, clientId)) {
+    return new Response('Invalid id_token', { status: 401 });
   }
 
-  const { sub: googleId, email, name: displayName, picture: avatarUrl } = profile;
+  const { sub: googleId, email, name: displayName, picture: avatarUrl } = claims!;
 
   // Upsert user
   const db = getDb();

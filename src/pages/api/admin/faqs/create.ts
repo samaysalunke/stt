@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { writeFaq, listFaqs } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request, redirect, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   const body = await request.formData();
   const question = sanitizeInput(body.get('question'));
   const slug = slugify(sanitizeInput(body.get('slug') as string) || question);

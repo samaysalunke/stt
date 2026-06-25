@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { requireRole } from '../../../../lib/requireRole';
 import { deleteImageByUrl, readSiteSettings, saveImageFile, writeSettings } from '../../../../lib/content';
 import { sanitizeInput } from '../../../../lib/utils';
 
@@ -15,7 +16,9 @@ const TEXT_FIELDS = [
   'aboutSignName', 'aboutCtaLabel',
 ];
 
-export const POST: APIRoute = async ({ request, redirect }) => {
+export const POST: APIRoute = async ({ request, redirect, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
   const body = await request.formData();
 
   // Merge over existing so fields not present in the form are never wiped.
