@@ -8,7 +8,8 @@ import { appendAnalyticsMessage, createOrLoadSession, loadAnalyticsHistory, writ
 export const prerender = false;
 
 // Wall-clock budget for the whole turn (LLM round-trips + tool execution).
-const TURN_DEADLINE_MS = 10_000;
+const TURN_DEADLINE_MS = 45_000;     // whole-turn wall clock (LLM round-trips + tools)
+const PER_CALL_DEADLINE_MS = 20_000; // cap on a single LLM stream, so later rounds aren't starved
 const MAX_TOOL_ROUNDS = 5;
 
 interface ChatRequest {
@@ -78,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           const pending: LLMToolCall[] = [];
           let turnText = '';
-          const signal = AbortSignal.timeout(remaining());
+          const signal = AbortSignal.timeout(Math.min(remaining(), PER_CALL_DEADLINE_MS));
           try {
             for await (const delta of adapter.streamChat({ system, messages, tools, signal })) {
               if (delta.type === 'text' && delta.text) {
