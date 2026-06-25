@@ -208,7 +208,7 @@ const adminUser = Astro.locals.adminUser;
       }
     </script>
 
-    <style>
+    <style is:global>
       :root { color-scheme: light; }
       body { margin: 0; min-height: 100vh; background: #ece5dd; color: #1b2b3a; font-family: var(--font-sans); }
       .analytics-shell { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
