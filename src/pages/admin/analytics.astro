@@ -120,6 +120,10 @@ const adminUser = Astro.locals.adminUser;
         const dataLine = lines.find((line) => line.startsWith('data:'));
         if (!event || !dataLine) return;
         const data = JSON.parse(dataLine.slice(5));
+        if (event === 'reset') {
+          assistant.textContent = '';
+          assistant.classList.remove('error');
+        }
         if (event === 'token') {
           assistant.textContent += data.text || '';
           history.scrollTop = history.scrollHeight;

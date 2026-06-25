@@ -151,7 +151,7 @@ class AnthropicAdapter implements LLMAdapter {
       signal: input.signal,
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 1200,
+        max_tokens: 700,
         stream: true,
         system: input.system,
         messages: toAnthropicMessages(input.messages),

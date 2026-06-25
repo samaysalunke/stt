@@ -79,6 +79,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           const pending: LLMToolCall[] = [];
           let turnText = '';
+          // Each round renders into a fresh bubble; text from tool rounds is just
+          // narration that gets superseded by the next round, so reset and keep
+          // only the terminal (non-tool) round's text as the answer.
+          send('reset', {});
+          answer = '';
           const signal = AbortSignal.timeout(Math.min(remaining(), PER_CALL_DEADLINE_MS));
           try {
             for await (const delta of adapter.streamChat({ system, messages, tools, signal })) {
@@ -96,6 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Provider/network failure mid-turn: degrade gracefully if a tool already ran.
             if (lastData) {
               answer = composeFallbackAnswer(message, lastData);
+              send('reset', {});
               send('token', { text: answer });
               break;
             }
@@ -135,6 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (!answer.trim() && lastData) {
           answer = composeFallbackAnswer(message, lastData);
+          send('reset', {});
           send('token', { text: answer });
         }
 
