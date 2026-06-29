@@ -345,7 +345,7 @@ const tripSchema: Record<string, any> = {
               )}
               {excluded.length > 0 && (
                 <div>
-                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--color-gray-text);">
+                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: #DC2626;">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -487,29 +487,41 @@ const tripSchema: Record<string, any> = {
   });
 
   // The fixed CTA hands off to the in-page CTA as it enters the viewport.
-  const observeInPageCta = () => {
+  // The in-page CTA is a React (client:load) island: it is server-rendered,
+  // then hydrated, and re-rendered on every date/occupancy choice. Any of those
+  // can replace the CTA node, which would orphan an observer pinned to the old
+  // node and freeze the sticky bar on screen. So we re-acquire the live node on
+  // every mutation instead of observing it once.
+  const observer = stickyBar
+    ? new IntersectionObserver(([entry]) => {
+        const intersecting = entry.isIntersecting;
+        stickyBar.classList.toggle('translate-y-full', intersecting);
+        stickyBar.classList.toggle('opacity-0', intersecting);
+        stickyBar.classList.toggle('pointer-events-none', intersecting);
+        stickyBar.setAttribute('aria-hidden', String(intersecting));
+      }, { threshold: 0.15 })
+    : null;
+
+  let observedCta: Element | null = null;
+  const syncObservedCta = () => {
+    if (!observer || !stickyBar) return;
     const inPageCta = document.getElementById('booking-panel-cta');
-    if (!stickyBar || !inPageCta) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      stickyBar.classList.toggle('translate-y-full', entry.isIntersecting);
-      stickyBar.classList.toggle('opacity-0', entry.isIntersecting);
-      stickyBar.classList.toggle('pointer-events-none', entry.isIntersecting);
-      stickyBar.setAttribute('aria-hidden', String(entry.isIntersecting));
-    }, { threshold: 0.15 });
-
-    observer.observe(inPageCta);
+    if (inPageCta === observedCta) return;
+    if (observedCta) observer.unobserve(observedCta);
+    observedCta = inPageCta;
+    if (inPageCta) {
+      observer.observe(inPageCta);
+    } else {
+      // No in-page CTA (e.g. sold-out waitlist panel): keep the sticky bar up.
+      stickyBar.classList.remove('translate-y-full', 'opacity-0', 'pointer-events-none');
+      stickyBar.setAttribute('aria-hidden', 'false');
+    }
   };
 
-  // Wait until the React booking panel has hydrated and rendered its CTA.
-  if (document.getElementById('booking-panel-cta')) {
-    observeInPageCta();
-  } else if (bookingPanel) {
-    const hydrationObserver = new MutationObserver(() => {
-      if (!document.getElementById('booking-panel-cta')) return;
-      hydrationObserver.disconnect();
-      observeInPageCta();
-    });
-    hydrationObserver.observe(bookingPanel, { childList: true, subtree: true });
+  syncObservedCta();
+  if (bookingPanel) {
+    // Stays connected for the page's life so hydration and later re-renders
+    // both re-point the observer at the current node.
+    new MutationObserver(syncObservedCta).observe(bookingPanel, { childList: true, subtree: true });
   }
 </script>

@@ -73,7 +73,7 @@ export default function DayAccordion({ itinerary }: Props) {
                   {day.transport && (
                     <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full" style={{ background: '#F5F5F3', color: '#1B2B3A' }}>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 17a2 2 0 11-4 0 2 2 0 014 0zM20 17a2 2 0 11-4 0 2 2 0 014 0zM4 17H2v-4l2-5h12l3 5v4h-2M16 17H8" />
                       </svg>
                       {day.transport}
                     </span>
@@ -81,7 +81,7 @@ export default function DayAccordion({ itinerary }: Props) {
                   {(day.meals ?? []).length > 0 && (
                     <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full" style={{ background: '#F5F5F3', color: '#1B2B3A' }}>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 3v5a2 2 0 002 2h0a2 2 0 002-2V3M6 10v11M18 3c-1.657 0-3 2.239-3 5s1.343 4 3 4m0 0v9m0-9V3" />
                       </svg>
                       {(day.meals ?? []).join(' · ')}
                     </span>

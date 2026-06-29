@@ -69,22 +69,26 @@ const departureSummary = getDepartureSummary(departures);
       </span>
     )}
     {departureSummary.displayed.length > 0 && (
-      <div data-testid="card-departure-summary" aria-label="Upcoming departures" class="pointer-events-none absolute inset-x-3 bottom-3 flex min-w-0 flex-wrap items-stretch gap-1.5">
-        {departureSummary.displayed.map((departure) => (
-          <span
-            data-sold-out={String(departure.soldOut)}
-            class:list={[
-              'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1.5 text-[11px] leading-tight text-white shadow-sm backdrop-blur-sm',
-              departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/60 opacity-70' : 'border-white/30 bg-[#1B2B3A]/85',
-            ]}
-          >
-            <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
-            {departure.soldOut && <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>}
-          </span>
-        ))}
-        {departureSummary.moreAvailable > 0 && (
-          <span class="flex flex-none items-center rounded-lg bg-[#1B2B3A]/70 px-2 text-[11px] font-semibold text-white backdrop-blur-sm">+{departureSummary.moreAvailable} more</span>
-        )}
+      <div data-testid="card-departure-summary" aria-label="Upcoming departures" class="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-start gap-1.5">
+        <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white" style="background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);">Departures</span>
+        <div class="flex min-w-0 flex-wrap items-stretch gap-1.5">
+          {departureSummary.displayed.map((departure) => (
+            <span
+              data-sold-out={String(departure.soldOut)}
+              class:list={[
+                'flex flex-none flex-col justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold leading-tight text-white shadow-md backdrop-blur-sm',
+                departure.soldOut ? 'border border-white/20 bg-[#1B2B3A]/60 opacity-70' : '',
+              ]}
+              style={departure.soldOut ? undefined : 'background-color: var(--color-cta);'}
+            >
+              <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
+              {departure.soldOut && <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>}
+            </span>
+          ))}
+          {departureSummary.moreAvailable > 0 && (
+            <span class="flex flex-none items-center rounded-lg bg-[#1B2B3A]/80 px-2 text-xs font-semibold text-white backdrop-blur-sm">+{departureSummary.moreAvailable} more</span>
+          )}
+        </div>
       </div>
     )}
   </div>
