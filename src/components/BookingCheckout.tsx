@@ -95,7 +95,82 @@ function Field({
   );
 }
 
-const inputCls = 'w-full px-4 py-3 border rounded-xl text-sm outline-none transition-all focus:border-[#E8725A] focus:shadow-[0_0_0_3px_rgba(232,114,90,0.15)] bg-white';
+// Controls are 16px on mobile (text-base) so iOS Safari doesn't zoom-on-focus —
+// that zoom is what let the checkout page pan sideways. Desktop keeps 14px.
+const inputCls = 'w-full px-4 py-3 border rounded-xl text-base sm:text-sm outline-none transition-all focus:border-[#E8725A] focus:shadow-[0_0_0_3px_rgba(232,114,90,0.15)] bg-white';
+
+// Custom dropdown — a native <select> can't be styled (its arrow and open
+// animation are OS-controlled and inconsistent). This matches the inputs, uses
+// our own coral chevron, and animates open/close with a CSS transition.
+function CustomSelect({
+  value, onChange, options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value) ?? options[0];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={inputCls + ' flex items-center justify-between text-left cursor-pointer'}
+        style={{ borderColor: C.peach }}
+      >
+        <span style={{ color: C.navy }}>{selected.label}</span>
+        <svg
+          className="w-4 h-4 ml-2 shrink-0 transition-transform duration-200"
+          style={{ color: C.coral, transform: open ? 'rotate(180deg)' : 'none' }}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <ul
+        role="listbox"
+        className="absolute left-0 right-0 z-20 mt-1.5 overflow-hidden rounded-xl border bg-white origin-top transition-all duration-150 ease-out"
+        style={{
+          borderColor: C.peach,
+          boxShadow: '0 10px 30px -10px rgba(27,43,58,0.25)',
+          opacity: open ? 1 : 0,
+          transform: open ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.98)',
+          pointerEvents: open ? 'auto' : 'none',
+        }}
+      >
+        {options.map((o) => (
+          <li
+            key={o.value}
+            role="option"
+            aria-selected={o.value === value}
+            onClick={() => { onChange(o.value); setOpen(false); }}
+            className="px-4 py-2.5 text-sm cursor-pointer transition-colors"
+            style={{ color: C.navy, background: o.value === value ? C.blush : 'white' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = C.blush; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = o.value === value ? C.blush : 'white'; }}
+          >
+            {o.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function BookingCheckout({
   slug, tripName, departure, offer, advanceAmount, balanceDueRule,
@@ -135,26 +210,61 @@ export default function BookingCheckout({
     if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
   }
 
-  function validateStep2(): boolean {
-    const required: [string, string][] = [
-      ['fullName', 'Full Name'],
-      ['email', 'Email'],
-      ['phone', 'WhatsApp Number'],
-      ['age', 'Age'],
-      ['city', 'City'],
-      ['emergencyName', 'Emergency Contact Name'],
-      ['emergencyPhone', 'Emergency Contact Number'],
-      ['whyJoin', 'Why do you want to join?'],
-    ];
-    const errs: Record<string, string> = {};
-    for (const [field, label] of required) {
-      if (!form[field as keyof typeof form].trim()) errs[field] = `${label} is required`;
+  // Single source of truth for field rules. Used both at the step gate and
+  // on blur so travellers get feedback as they go, not just on submit.
+  const LABELS: Record<string, string> = {
+    fullName: 'Full Name', email: 'Email', phone: 'WhatsApp Number', age: 'Age',
+    city: 'City', emergencyName: 'Emergency Contact Name',
+    emergencyPhone: 'Emergency Contact Number', whyJoin: 'Why do you want to join?',
+  };
+  const REQUIRED = ['fullName', 'email', 'phone', 'age', 'city', 'emergencyName', 'emergencyPhone', 'whyJoin'];
+
+  function fieldError(field: string, raw: string): string {
+    const value = (raw ?? '').trim();
+    if (REQUIRED.includes(field) && !value) return `${LABELS[field]} is required`;
+    if (!value) return ''; // optional + empty → ok
+
+    const digits = value.replace(/\D/g, '');
+    switch (field) {
+      case 'fullName':
+      case 'emergencyName':
+        if (value.length < 2 || !/[a-zA-Z]/.test(value)) return 'Enter a valid name';
+        return '';
+      case 'email':
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Enter a valid email address';
+      case 'phone':
+      case 'emergencyPhone':
+        if (!/^[+\d][\d\s-]+$/.test(value) || digits.length < 8 || digits.length > 15) return 'Enter a valid phone number';
+        return '';
+      case 'age': {
+        const n = Number(value);
+        return Number.isInteger(n) && n >= 16 && n <= 100 ? '' : 'Enter a valid age (16–100)';
+      }
+      case 'city':
+        return value.length >= 2 ? '' : 'Enter a valid city';
+      case 'instagram':
+        return /^@?[A-Za-z0-9._]{1,30}$/.test(value) ? '' : 'Enter a valid Instagram handle';
+      case 'whyJoin':
+        return value.length >= 10 ? '' : 'Tell us a little more (at least 10 characters)';
+      default:
+        return '';
     }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Enter a valid email address';
-    if (form.phone && !/^[\+\d][\d\s\-]{5,}$/.test(form.phone)) errs.phone = 'Enter a valid phone number';
-    if (form.age) {
-      const ageNum = Number(form.age);
-      if (!Number.isInteger(ageNum) || ageNum < 16 || ageNum > 100) errs.age = 'Enter a valid age (16–100)';
+  }
+
+  function handleBlur(field: string) {
+    const err = fieldError(field, form[field as keyof typeof form]);
+    setErrors((prev) => {
+      const n = { ...prev };
+      if (err) n[field] = err; else delete n[field];
+      return n;
+    });
+  }
+
+  function validateStep2(): boolean {
+    const errs: Record<string, string> = {};
+    for (const field of [...REQUIRED, 'instagram']) {
+      const err = fieldError(field, form[field as keyof typeof form]);
+      if (err) errs[field] = err;
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -335,32 +445,36 @@ export default function BookingCheckout({
           <h3 className="font-bold text-base mb-4" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Personal Information</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Full Name" required error={errors.fullName} >
-              <input type="text" value={form.fullName} onChange={(e) => set('fullName', e.target.value)} className={inputCls} style={{ borderColor: errors.fullName ? C.coral : C.peach }} />
+              <input type="text" value={form.fullName} onChange={(e) => set('fullName', e.target.value)} onBlur={() => handleBlur('fullName')} className={inputCls} style={{ borderColor: errors.fullName ? C.coral : C.peach }} />
             </Field>
             <div className="sm:col-span-2">
               <Field label="Email ID" required error={errors.email}>
-                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} style={{ borderColor: errors.email ? C.coral : C.peach }} />
+                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} onBlur={() => handleBlur('email')} className={inputCls} style={{ borderColor: errors.email ? C.coral : C.peach }} />
               </Field>
             </div>
             <Field label="WhatsApp Number" required error={errors.phone}>
-              <input type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputCls} style={{ borderColor: errors.phone ? C.coral : C.peach }} />
+              <input type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} onBlur={() => handleBlur('phone')} className={inputCls} style={{ borderColor: errors.phone ? C.coral : C.peach }} />
             </Field>
             <Field label="How old are you?" required error={errors.age}>
-              <input type="text" inputMode="numeric" placeholder="e.g. 24" value={form.age} onChange={(e) => set('age', e.target.value)} className={inputCls} style={{ borderColor: errors.age ? C.coral : C.peach }} />
+              <input type="text" inputMode="numeric" placeholder="e.g. 24" value={form.age} onChange={(e) => set('age', e.target.value)} onBlur={() => handleBlur('age')} className={inputCls} style={{ borderColor: errors.age ? C.coral : C.peach }} />
             </Field>
             <Field label="Gender">
-              <select value={form.gender} onChange={(e) => set('gender', e.target.value)} className={inputCls + ' bg-white cursor-pointer'} style={{ borderColor: C.peach }}>
-                <option value="">Prefer not to say</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <CustomSelect
+                value={form.gender}
+                onChange={(v) => set('gender', v)}
+                options={[
+                  { value: '', label: 'Prefer not to say' },
+                  { value: 'male', label: 'Male' },
+                  { value: 'female', label: 'Female' },
+                  { value: 'other', label: 'Other' },
+                ]}
+              />
             </Field>
             <Field label="City" required error={errors.city}>
-              <input type="text" value={form.city} onChange={(e) => set('city', e.target.value)} className={inputCls} style={{ borderColor: errors.city ? C.coral : C.peach }} />
+              <input type="text" value={form.city} onChange={(e) => set('city', e.target.value)} onBlur={() => handleBlur('city')} className={inputCls} style={{ borderColor: errors.city ? C.coral : C.peach }} />
             </Field>
-            <Field label="Instagram Handle (optional)">
-              <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} className={inputCls} style={{ borderColor: C.peach }} />
+            <Field label="Instagram Handle (optional)" error={errors.instagram}>
+              <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} onBlur={() => handleBlur('instagram')} className={inputCls} style={{ borderColor: errors.instagram ? C.coral : C.peach }} />
             </Field>
           </div>
         </div>
@@ -372,10 +486,10 @@ export default function BookingCheckout({
           <p className="text-xs mb-4" style={{ color: 'rgba(27,43,58,0.5)' }}>Someone we can reach if we can't get hold of you on the trip.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Their Name" required error={errors.emergencyName}>
-              <input type="text" value={form.emergencyName} onChange={(e) => set('emergencyName', e.target.value)} className={inputCls} style={{ borderColor: errors.emergencyName ? C.coral : C.peach }} />
+              <input type="text" value={form.emergencyName} onChange={(e) => set('emergencyName', e.target.value)} onBlur={() => handleBlur('emergencyName')} className={inputCls} style={{ borderColor: errors.emergencyName ? C.coral : C.peach }} />
             </Field>
             <Field label="Their Number" required error={errors.emergencyPhone}>
-              <input type="tel" value={form.emergencyPhone} onChange={(e) => set('emergencyPhone', e.target.value)} className={inputCls} style={{ borderColor: errors.emergencyPhone ? C.coral : C.peach }} />
+              <input type="tel" value={form.emergencyPhone} onChange={(e) => set('emergencyPhone', e.target.value)} onBlur={() => handleBlur('emergencyPhone')} className={inputCls} style={{ borderColor: errors.emergencyPhone ? C.coral : C.peach }} />
             </Field>
           </div>
         </div>
@@ -388,6 +502,7 @@ export default function BookingCheckout({
             placeholder="No perfect answer. Tell us what pulled you here."
             value={form.whyJoin}
             onChange={(e) => set('whyJoin', e.target.value)}
+            onBlur={() => handleBlur('whyJoin')}
             className={inputCls + ' resize-none'}
             style={{ borderColor: errors.whyJoin ? C.coral : C.peach }}
           />
