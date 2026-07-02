@@ -1,7 +1,15 @@
 import { YAML, fs, path, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
+import { listDeletedSlugs } from './tripDeletions';
+
+/** Raw, unfiltered slugs of every trip file on disk (includes soft-deleted). */
+export function listTripSlugs(): string[] {
+  ensureDir(TRIPS_DIR);
+  return fs.readdirSync(TRIPS_DIR).filter(f => f.endsWith('.yaml')).map(f => f.replace('.yaml', ''));
+}
 
 export function listTrips(): Array<Record<string, any>> {
   ensureDir(TRIPS_DIR);
+  const deleted = listDeletedSlugs();
   const trips = fs
     .readdirSync(TRIPS_DIR)
     .filter(f => f.endsWith('.yaml'))
@@ -9,8 +17,13 @@ export function listTrips(): Array<Record<string, any>> {
       const slug = f.replace('.yaml', '');
       const raw = fs.readFileSync(path.join(TRIPS_DIR, f), 'utf-8');
       const data = YAML.parse(raw) ?? {};
-      return { slug, ...data };
-    });
+      // Filename is the authoritative identity (readTrip/writeTrip/deleteTrip all
+      // key by it). Spread data first so a stale in-YAML `slug:` can never override
+      // it — otherwise two files sharing an internal slug collide, and delete/edit
+      // hit the wrong file.
+      return { ...data, slug };
+    })
+    .filter(t => !deleted.has(t.slug));
   const ranked = trips.map((t) => ({
     t,
     rank: !tripHasUpcomingDates(t) ? 2 : (tripCardSummary(t).soldOut ? 1 : 0),

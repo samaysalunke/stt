@@ -194,7 +194,7 @@ document.querySelectorAll('.delete-trip-btn').forEach(btn => {
     const target = e.target as HTMLButtonElement;
     const slug = target.dataset.slug!;
     const name = target.dataset.name!;
-    if (!confirm(`Delete trip "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete trip "${name}"?\n\nIt will be hidden from the site but kept on file, so it can be restored if this was a mistake.`)) return;
     try {
       const res = await fetch('/api/admin/trips/delete', {
         method: 'POST',

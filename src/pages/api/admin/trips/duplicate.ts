@@ -1,6 +1,6 @@
 export const prerender = false;
 import type { APIRoute } from 'astro';
-import { readTrip, writeTrip, listTrips } from '../../../../lib/content';
+import { readTrip, writeTrip, listTripSlugs } from '../../../../lib/content';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -14,8 +14,9 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: 'Trip not found' }), { status: 404 });
     }
 
-    // Find a unique slug for the copy
-    const existingSlugs = new Set(listTrips().map((t: any) => t.slug));
+    // Find a unique slug for the copy. Use raw on-disk slugs (incl. soft-deleted)
+    // so a copy can't collide with a hidden trip's still-present file.
+    const existingSlugs = new Set(listTripSlugs());
     let newSlug = `${slug}-copy`;
     let counter = 2;
     while (existingSlugs.has(newSlug)) {
@@ -36,6 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const newData: Record<string, any> = {
       ...source,
+      slug: newSlug, // keep the in-YAML slug in sync with the new filename (else the copy collides with the original)
       name: `${source.name ?? slug} (Copy)`,
       batches: copiedBatches,
     };

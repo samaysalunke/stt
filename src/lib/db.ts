@@ -251,4 +251,16 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS analytics_messages_session_id ON analytics_messages(session_id);
     CREATE INDEX IF NOT EXISTS analytics_audit_log_owner_created ON analytics_audit_log(owner_id, created_at);
   `);
+
+  // Soft-delete tombstones for trips. The YAML file stays on disk (on the
+  // content volume); a row here hides the trip everywhere. Restore = delete
+  // the row. Lives on the DATA_DIR volume so it survives deploys/re-seeds.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS deleted_trips (
+      slug TEXT PRIMARY KEY,
+      deletedAt INTEGER DEFAULT (unixepoch()),
+      actorEmail TEXT,
+      actorRole TEXT
+    );
+  `);
 }
