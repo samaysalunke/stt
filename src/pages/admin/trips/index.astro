@@ -2,6 +2,17 @@
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch } from '../../../lib/content';
+import { getDb } from '../../../lib/db';
+
+const db = getDb();
+// Confirmed seats per departure — the source of truth for "Next batch" is the
+// registrations table (status='confirmed'), not the admin-maintained YAML counter.
+const confirmedByBatch = new Map<string, number>();
+for (const row of db
+  .prepare("SELECT trip_slug, batch_id, COUNT(*) AS n FROM registrations WHERE status='confirmed' AND batch_id IS NOT NULL GROUP BY trip_slug, batch_id")
+  .all() as Array<{ trip_slug: string; batch_id: string; n: number }>) {
+  confirmedByBatch.set(`${row.trip_slug}::${row.batch_id}`, row.n);
+}
 
 // Derive an at-a-glance summary from each trip's departures (the source of truth).
 const trips = listTrips().map((t) => {
@@ -18,9 +29,10 @@ const trips = listTrips().map((t) => {
   const leadTotal = meteredOffers
     ? offers.reduce((sum: number, o: any) => sum + Math.max(0, Number(o.cap)), 0)
     : (lead?.totalSpots ?? null);
-  const leadBooked = offers.length > 0
-    ? offers.reduce((sum: number, o: any) => sum + Math.max(0, Number(o?.booked) || 0), 0)
-    : (lead?.bookedSpots ?? null);
+  // Only confirmed registrations count as booked seats.
+  const leadBooked = lead?.id != null
+    ? (confirmedByBatch.get(`${t.slug}::${lead.id}`) ?? 0)
+    : null;
   return {
     ...t,
     _derivedStatus,

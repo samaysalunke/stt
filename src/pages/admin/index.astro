@@ -7,13 +7,13 @@ export const prerender = false;
 
 const db = getDb();
 
-const regsAll = db.prepare('SELECT status, amount_paid, created_at FROM registrations').all() as Array<Record<string, any>>;
+const regsAll = db.prepare('SELECT status, amount_paid, created_at, trip_name FROM registrations').all() as Array<Record<string, any>>;
 const totalBookings = regsAll.length;
 const pendingCount = regsAll.filter(r => r.status === 'pending').length;
 // Match the registrations page definition: payments collected = all non-rejected.
-const revenue = regsAll
-  .filter(r => r.status !== 'rejected')
-  .reduce((sum, r) => sum + (r.amount_paid ?? 0), 0);
+const paidRegs = regsAll.filter(r => r.status !== 'rejected');
+const revenue = paidRegs.reduce((sum, r) => sum + (r.amount_paid ?? 0), 0);
+const revenueTripCount = new Set(paidRegs.map(r => r.trip_name).filter(Boolean)).size;
 
 const recent = db
   .prepare('SELECT full_name, trip_name, amount_paid, status, created_at FROM registrations ORDER BY id DESC LIMIT 5')
@@ -39,7 +39,7 @@ function statusStyle(status: string) {
 }
 
 const kpis = [
-  { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} bookings` },
+  { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} bookings · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
   { label: 'Total bookings', value: String(totalBookings), hint: `${pendingCount} pending` },
   { label: 'Pending review', value: String(pendingCount), hint: 'Awaiting confirmation' },
   { label: 'Active trips', value: String(activeTrips), hint: `${trips.length} total` },
