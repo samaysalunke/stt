@@ -59,14 +59,15 @@ const jsonLd = {
   </Fragment>
 
   <!-- Hero -->
-  <section class="relative overflow-hidden" style="height: 56vh; min-height: 420px;">
+  <section class="relative overflow-hidden" style="min-height: max(56vh, 420px);">
     <img
       src={heroImg}
       alt="A quiet mountain trail winding into the distance at dawn"
       class="absolute inset-0 h-full w-full object-cover"
     />
     <div class="absolute inset-0" style="background: rgba(0,0,0,0.55);"></div>
-    <div class="relative z-10 mx-auto flex h-full max-w-4xl flex-col justify-end px-4 pb-14 text-white">
+    <!-- pt-20 keeps the eyebrow clear of the fixed back button on short/mobile viewports -->
+    <div class="relative z-10 mx-auto flex min-h-[inherit] max-w-4xl flex-col justify-end px-4 pb-14 pt-20 text-white">
       <p class="mb-3 text-xs uppercase tracking-[0.2em] text-white/70">Custom Itineraries</p>
       <h1 class="font-display font-medium leading-tight text-white" style="font-size: clamp(2.25rem, 5.5vw, 4rem);">
         For the trip that doesn’t fit a fixed date.
