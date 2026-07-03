@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import net from 'node:net';
 import {
   getTransporter,
   isEmailConfigured,
@@ -8,11 +9,27 @@ import {
   ADMIN_EMAIL,
 } from '../../../lib/emailTransport';
 
+// Raw TCP reachability probe — bypasses TLS/auth to isolate egress blocks.
+function probe(host: string, port: number, timeout = 8000): Promise<string> {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const socket = net.connect({ host, port, family: 4 });
+    const done = (result: string) => {
+      socket.destroy();
+      resolve(`${result} (${Date.now() - start}ms)`);
+    };
+    socket.setTimeout(timeout);
+    socket.once('connect', () => done('open'));
+    socket.once('timeout', () => done('TIMEOUT'));
+    socket.once('error', (e: any) => done(`error:${e?.code ?? e?.message}`));
+  });
+}
+
 // Admin-gated (see middleware). Verifies SMTP connect + auth without sending.
-// Optional ?to=addr sends a real test email.
+// ?to=addr sends a real test email. ?probe=1 runs raw TCP egress checks.
 export const GET: APIRoute = async ({ url }) => {
   const config = {
-    build: 'smtp-ipv4-3',
+    build: 'smtp-probe-1',
     configured: isEmailConfigured(),
     host: SMTP_HOST ?? null,
     port: SMTP_PORT,
@@ -26,6 +43,17 @@ export const GET: APIRoute = async ({ url }) => {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
+
+  if (url.searchParams.get('probe')) {
+    const host = SMTP_HOST || 'smtp.gmail.com';
+    const [p587, p465, p2525, p443] = await Promise.all([
+      probe(host, 587),
+      probe(host, 465),
+      probe(host, 2525),
+      probe(host, 443), // control: 443 is never blocked; proves egress works at all
+    ]);
+    return json({ config, probe: { host, '587': p587, '465': p465, '2525': p2525, '443(control)': p443 } });
+  }
 
   if (!config.configured) {
     return json({ ok: false, config, error: 'SMTP env vars missing (SMTP_HOST/SMTP_USER/SMTP_PASS)' }, 503);
