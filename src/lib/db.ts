@@ -252,6 +252,23 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS analytics_audit_log_owner_created ON analytics_audit_log(owner_id, created_at);
   `);
 
+  // feature/custom-itineraries — leads from the bespoke-trip enquiry form
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS custom_itinerary_leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT,
+      destination TEXT,
+      travellers TEXT,
+      dates TEXT,
+      budget TEXT,
+      message TEXT,
+      status TEXT DEFAULT 'new',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Soft-delete tombstones for trips. The YAML file stays on disk (on the
   // content volume); a row here hides the trip everywhere. Restore = delete
   // the row. Lives on the DATA_DIR volume so it survives deploys/re-seeds.

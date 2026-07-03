@@ -34,6 +34,7 @@ export const GET: APIRoute = () => {
     url('/about/', '0.6', 'monthly'),
     url('/contact/', '0.6', 'monthly'),
     url('/faq/', '0.6', 'monthly'),
+    url('/custom-itineraries/', '0.6', 'monthly'),
     url('/photo-vault/', '0.5', 'monthly'),
     url('/privacy/', '0.3', 'yearly'),
     url('/terms/', '0.3', 'yearly'),
