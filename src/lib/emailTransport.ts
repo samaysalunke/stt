@@ -22,6 +22,9 @@ export function getTransporter() {
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
+      // Force IPv4: Railway containers have no IPv6 route, so an AAAA
+      // record (e.g. smtp.gmail.com) fails with connect ENETUNREACH.
+      family: 4,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
       pool: true,
       maxConnections: 3,
