@@ -1,52 +1,25 @@
-import nodemailer from 'nodemailer';
-import dns from 'node:dns/promises';
-import net from 'node:net';
+// Transactional email over the Resend HTTPS API (port 443). Railway blocks
+// all outbound SMTP ports (25/465/587/2525 time out; only 443 is open), so
+// nodemailer/SMTP can never work here — see /api/admin/test-smtp?probe=1.
+//
+// Env:
+//   RESEND_API_KEY  — required to actually send (else emails are mock-logged).
+//   EMAIL_FROM      — sender, e.g. "Seek the Thrill <notifications@seekthethrill.in>".
+//                     Must be a Resend-verified domain. Until seekthethrill.in
+//                     is verified, Resend's sandbox "onboarding@resend.dev" only
+//                     delivers to the account owner's address.
+//   ADMIN_EMAIL     — Reply-To + destination for internal notifications.
 
-export const SMTP_HOST = import.meta.env.SMTP_HOST || process.env.SMTP_HOST;
-export const SMTP_PORT = parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587');
-export const SMTP_USER = import.meta.env.SMTP_USER || process.env.SMTP_USER;
-export const SMTP_PASS = import.meta.env.SMTP_PASS || process.env.SMTP_PASS;
-export const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'zahra@seekthethrill.in';
+const env = (k: string) => (import.meta.env as any)[k] || process.env[k];
 
-let _transporter: nodemailer.Transporter | null = null;
+export const RESEND_API_KEY = env('RESEND_API_KEY');
+export const EMAIL_FROM = env('EMAIL_FROM') || 'Seek the Thrill <onboarding@resend.dev>';
+export const ADMIN_EMAIL = env('ADMIN_EMAIL') || 'zahra@seekthethrill.in';
+
+const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
 export function isEmailConfigured(): boolean {
-  return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
-}
-
-export async function getTransporter() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn('[Email] SMTP not configured — emails will be logged to console only.');
-    return null;
-  }
-  if (!_transporter) {
-    // Resolve the SMTP host to an IPv4 literal ourselves. Railway containers
-    // have no IPv6 route, and nodemailer's internal resolver picks a *random*
-    // A/AAAA record — landing on IPv6 fails with connect ENETUNREACH. Passing
-    // an IP literal short-circuits that resolver; `servername` keeps SNI + TLS
-    // cert validation pointed at the real hostname.
-    let host = SMTP_HOST;
-    let servername: string | undefined;
-    if (!net.isIP(SMTP_HOST)) {
-      const { address } = await dns.lookup(SMTP_HOST, { family: 4 });
-      host = address;
-      servername = SMTP_HOST;
-    }
-    _transporter = nodemailer.createTransport({
-      host,
-      servername,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 100,
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 10000,
-    });
-  }
-  return _transporter;
+  return Boolean(RESEND_API_KEY);
 }
 
 export function escapeHtml(str: any): string {
@@ -90,17 +63,28 @@ export function wrapEmail(body: string): string {
 }
 
 export async function sendEmail(to: string, subject: string, html: string) {
-  const transporter = await getTransporter();
-  if (!transporter) {
+  if (!RESEND_API_KEY) {
     console.log(`[Email Mock] To: ${to}\nSubject: ${subject}\n`);
     return;
   }
-  await transporter.sendMail({
-    from: `"Seek the Thrill" <${SMTP_USER}>`,
-    replyTo: ADMIN_EMAIL,
-    to,
-    subject,
-    html,
-    text: htmlToText(html),
+  const res = await fetch(RESEND_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: EMAIL_FROM,
+      to: [to],
+      reply_to: ADMIN_EMAIL,
+      subject,
+      html,
+      text: htmlToText(html),
+    }),
   });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Resend send failed (${res.status}): ${detail}`);
+  }
+  return res.json().catch(() => ({}));
 }

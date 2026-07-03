@@ -19,6 +19,9 @@ declare namespace App {
 }
 
 interface ImportMetaEnv {
+  readonly RESEND_API_KEY?: string;
+  readonly EMAIL_FROM?: string;
+  readonly ADMIN_EMAIL?: string;
   readonly ANALYTICS_LLM_PROVIDER?: 'anthropic' | 'openai' | 'test';
   readonly ANALYTICS_LLM_MODEL?: string;
   readonly ANALYTICS_LLM_API_KEY?: string;

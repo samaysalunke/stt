@@ -170,8 +170,8 @@ const allNavItems = [...navItems, ...ownerNavItems];
           </svg>
           <div class="text-sm leading-relaxed">
             <strong>Email is not configured.</strong> Registration confirmations, status emails, and broadcasts are
-            <strong>not being sent</strong> — they're only logged to the server console. Set <code>SMTP_HOST</code>,
-            <code>SMTP_USER</code>, and <code>SMTP_PASS</code> in the production environment to enable email.
+            <strong>not being sent</strong> — they're only logged to the server console. Set <code>RESEND_API_KEY</code>
+            (and <code>EMAIL_FROM</code>) in the production environment to enable email.
           </div>
         </div>
       )}
