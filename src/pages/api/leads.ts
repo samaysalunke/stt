@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
 import { sanitizeInput, isValidEmail } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
+import { sendEmail, wrapEmail, escapeHtml, ADMIN_EMAIL } from '../../lib/emailTransport';
 
 // Server-rendered endpoint (writes to sqlite) — never prerender.
 export const prerender = false;
@@ -58,9 +59,27 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     `);
     stmt.run(name, email, phone, destination, travellers, dates, budget, message);
 
-    // TODO(email): fire a new-lead notification to the team here once SMTP is
-    // restored (see src/lib/email.ts). Deliberately NOT wired now — outbound
-    // email is broken on prod, so we persist the lead and notify manually.
+    // Notify the team. Best-effort: the lead is already persisted, so an email
+    // failure must not fail the request.
+    try {
+      const row = (k: string, v: string | null) =>
+        v ? `<tr><td style="padding:4px 12px 4px 0;color:#6B7280;">${k}</td><td style="padding:4px 0;">${escapeHtml(v)}</td></tr>` : '';
+      const html = wrapEmail(`
+        <h2 style="margin:0 0 16px;font-size:18px;color:#1F2A44;">New custom-itinerary enquiry</h2>
+        <table style="font-size:14px;border-collapse:collapse;">
+          ${row('Name', name)}
+          ${row('Email', email)}
+          ${row('Phone', phone)}
+          ${row('Destination', destination)}
+          ${row('Travellers', travellers)}
+          ${row('Dates', dates)}
+          ${row('Budget', budget)}
+          ${row('Message', message)}
+        </table>`);
+      await sendEmail(ADMIN_EMAIL, `New custom-itinerary enquiry — ${name}`, html);
+    } catch (mailErr) {
+      console.error('[Leads API] notification email failed (lead was saved):', mailErr);
+    }
 
     return new Response(JSON.stringify({ success: true, message: 'Thanks — we’ll be in touch soon.' }), {
       status: 200,
