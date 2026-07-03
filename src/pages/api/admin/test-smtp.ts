@@ -12,6 +12,7 @@ import {
 // Optional ?to=addr sends a real test email.
 export const GET: APIRoute = async ({ url }) => {
   const config = {
+    build: 'smtp-ipv4-2',
     configured: isEmailConfigured(),
     host: SMTP_HOST ?? null,
     port: SMTP_PORT,

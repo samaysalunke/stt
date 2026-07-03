@@ -1,4 +1,10 @@
 import nodemailer from 'nodemailer';
+import dns from 'node:dns';
+
+// Railway containers have no IPv6 route. Prefer IPv4 for every outbound
+// DNS resolution so smtp.gmail.com (which has AAAA records) doesn't fail
+// with connect ENETUNREACH on an IPv6 address.
+dns.setDefaultResultOrder('ipv4first');
 
 export const SMTP_HOST = import.meta.env.SMTP_HOST || process.env.SMTP_HOST;
 export const SMTP_PORT = parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587');
