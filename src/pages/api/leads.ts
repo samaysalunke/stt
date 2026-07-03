@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
-import { sanitizeInput, isValidEmail } from '../../lib/utils';
+import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { sendEmail, wrapEmail, escapeHtml, ADMIN_EMAIL } from '../../lib/emailTransport';
 
@@ -43,6 +43,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       });
     }
 
+    const badRequest = (error: string) =>
+      new Response(JSON.stringify({ success: false, error }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
     // Optional fields — stored as-is (sanitized) or null when blank.
     const phone       = sanitizeInput(body.phone) || null;
     const destination = sanitizeInput(body.destination) || null;
@@ -50,6 +56,13 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     const dates       = sanitizeInput(body.dates) || null;
     const budget      = sanitizeInput(body.budget) || null;
     const message     = sanitizeInput(body.message) || null;
+
+    // Validate optional fields only when provided (mirrors the client).
+    if (phone && !isValidPhone(phone)) return badRequest('Please enter a valid phone number.');
+    if (travellers && !/^\d{1,3}$/.test(travellers)) return badRequest('Number of travellers must be a number.');
+    if (travellers && (Number(travellers) < 1 || Number(travellers) > 100)) {
+      return badRequest('Number of travellers must be between 1 and 100.');
+    }
 
     const db = getDb();
     const stmt = db.prepare(`
@@ -78,7 +91,24 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
         </table>`);
       await sendEmail(ADMIN_EMAIL, `New custom-itinerary enquiry — ${name}`, html);
     } catch (mailErr) {
-      console.error('[Leads API] notification email failed (lead was saved):', mailErr);
+      console.error('[Leads API] team notification email failed (lead was saved):', mailErr);
+    }
+
+    // Acknowledge the submitter. Best-effort — never fails the request.
+    try {
+      const ack = wrapEmail(`
+        <h2 style="margin:0 0 16px;font-size:18px;color:#1F2A44;">Thanks, ${escapeHtml(name)} — we’ve got your enquiry</h2>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#1F2A44;">
+          We’ll be in touch soon to set up your 45-minute consultation call. Nothing has been charged — this is just
+          the start of the conversation.
+        </p>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#1F2A44;">
+          If you’d like to add anything in the meantime, reply straight to this email.
+        </p>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:#1F2A44;">— Team Seek the Thrill</p>`);
+      await sendEmail(email, 'We’ve got your custom-trip enquiry — Seek the Thrill', ack);
+    } catch (mailErr) {
+      console.error('[Leads API] submitter acknowledgement email failed (lead was saved):', mailErr);
     }
 
     return new Response(JSON.stringify({ success: true, message: 'Thanks — we’ll be in touch soon.' }), {

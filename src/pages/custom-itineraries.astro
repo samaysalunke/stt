@@ -159,37 +159,43 @@ const jsonLd = {
               Name <span style="color: var(--color-coral);">*</span>
             </label>
             <input
-              type="text" id="lead-name" name="name" required autocomplete="name"
+              type="text" id="lead-name" name="name" required autocomplete="name" maxlength="100"
+              aria-describedby="lead-name-err"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
+            <p id="lead-name-err" class="mt-1.5 hidden text-xs" style="color: #B91C1C;"></p>
           </div>
           <div>
             <label for="lead-email" class="mb-1.5 block text-sm font-medium" style="color: var(--color-navy);">
               Email <span style="color: var(--color-coral);">*</span>
             </label>
             <input
-              type="email" id="lead-email" name="email" required autocomplete="email"
+              type="email" id="lead-email" name="email" required autocomplete="email" maxlength="150"
+              aria-describedby="lead-email-err"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
+            <p id="lead-email-err" class="mt-1.5 hidden text-xs" style="color: #B91C1C;"></p>
           </div>
           <div>
             <label for="lead-phone" class="mb-1.5 block text-sm font-medium" style="color: var(--color-navy);">
               Phone / WhatsApp
             </label>
             <input
-              type="tel" id="lead-phone" name="phone" autocomplete="tel"
+              type="tel" id="lead-phone" name="phone" autocomplete="tel" maxlength="20"
+              aria-describedby="lead-phone-err"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
+            <p id="lead-phone-err" class="mt-1.5 hidden text-xs" style="color: #B91C1C;"></p>
           </div>
           <div>
             <label for="lead-destination" class="mb-1.5 block text-sm font-medium" style="color: var(--color-navy);">
               Destination or region
             </label>
             <input
-              type="text" id="lead-destination" name="destination" placeholder="Spiti, Meghalaya, still deciding…"
+              type="text" id="lead-destination" name="destination" placeholder="Spiti, Meghalaya, still deciding…" maxlength="150"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
@@ -199,17 +205,19 @@ const jsonLd = {
               Number of travellers
             </label>
             <input
-              type="text" id="lead-travellers" name="travellers" inputmode="numeric" placeholder="e.g. 4"
+              type="text" id="lead-travellers" name="travellers" inputmode="numeric" placeholder="e.g. 4" maxlength="3"
+              aria-describedby="lead-travellers-err"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
+            <p id="lead-travellers-err" class="mt-1.5 hidden text-xs" style="color: #B91C1C;"></p>
           </div>
           <div>
             <label for="lead-dates" class="mb-1.5 block text-sm font-medium" style="color: var(--color-navy);">
               Rough dates
             </label>
             <input
-              type="text" id="lead-dates" name="dates" placeholder="Mid-October, flexible"
+              type="text" id="lead-dates" name="dates" placeholder="Mid-October, flexible" maxlength="100"
               class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
               style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
             />
@@ -221,7 +229,7 @@ const jsonLd = {
             Rough budget per person <span style="color: var(--color-gray-text); font-weight: 400;">(optional)</span>
           </label>
           <input
-            type="text" id="lead-budget" name="budget" placeholder="Helps us pitch it right"
+            type="text" id="lead-budget" name="budget" placeholder="Helps us pitch it right" maxlength="60"
             class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
             style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
           />
@@ -232,7 +240,7 @@ const jsonLd = {
             Anything else
           </label>
           <textarea
-            id="lead-message" name="message" rows="5"
+            id="lead-message" name="message" rows="5" maxlength="2000"
             placeholder="The shape of the trip you’re imagining — pace, must-dos, things to avoid."
             class="w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none focus:border-[var(--color-coral)]"
             style="border-color: rgba(27,43,58,0.15); color: var(--color-navy);"
@@ -247,11 +255,25 @@ const jsonLd = {
           Send enquiry
         </button>
 
-        <p id="lead-success" class="hidden rounded-xl p-4 text-sm" style="background-color: var(--color-blush); color: var(--color-navy);" role="status">
-          Thank you — we’ve got it. We’ll reach out to set up your consultation call. This didn’t charge you anything.
-        </p>
         <p id="lead-error" class="hidden rounded-xl p-4 text-sm" style="background-color: #FEE2E2; color: #991B1B;" role="alert"></p>
       </form>
+
+      <!-- Shown in place of the form after a successful submit. -->
+      <div id="lead-success" class="hidden rounded-3xl bg-white p-8 text-center lg:p-10" role="status">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full" style="background-color: var(--color-blush);">
+          <svg class="h-7 w-7" fill="none" stroke="var(--color-coral)" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
+        <h3 class="mt-5 font-display text-2xl" style="color: var(--color-navy);">Enquiry received</h3>
+        <p class="mx-auto mt-3 max-w-md text-sm leading-relaxed" style="color: var(--color-gray-text);">
+          Thank you — we’ve got it, and sent a confirmation to your email. We’ll reach out shortly to set up your
+          45-minute consultation call. Submitting this didn’t charge you anything.
+        </p>
+        <a href="/" class="mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white transition-transform hover:scale-[1.03]" style="background-color: var(--color-cta);">
+          Back to home
+        </a>
+      </div>
     </div>
   </section>
 
@@ -263,9 +285,82 @@ const jsonLd = {
       var success = document.getElementById('lead-success');
       var error = document.getElementById('lead-error');
 
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      // Phone: optional +, digits, spaces, hyphens, parens; 8–15 chars.
+      // Mirrors isValidPhone() on the server.
+      var PHONE_RE = /^[+]?[\d\s\-()]{8,15}$/;
+
+      function fieldEl(name) { return document.getElementById('lead-' + name); }
+      function errEl(name) { return document.getElementById('lead-' + name + '-err'); }
+
+      function setError(name, msg) {
+        var input = fieldEl(name), err = errEl(name);
+        if (!input || !err) return;
+        if (msg) {
+          err.textContent = msg;
+          err.classList.remove('hidden');
+          input.setAttribute('aria-invalid', 'true');
+          input.style.borderColor = '#B91C1C';
+        } else {
+          err.textContent = '';
+          err.classList.add('hidden');
+          input.removeAttribute('aria-invalid');
+          input.style.borderColor = 'rgba(27,43,58,0.15)';
+        }
+      }
+
+      // Returns an error string (or '') for a single field.
+      function checkField(name, value) {
+        var v = (value == null ? '' : String(value)).trim();
+        if (name === 'name') {
+          if (!v) return 'Please tell us your name.';
+          if (v.length < 2) return 'Please enter your full name.';
+        }
+        if (name === 'email') {
+          if (!v) return 'Please enter your email.';
+          if (!EMAIL_RE.test(v)) return 'That doesn’t look like a valid email.';
+        }
+        if (name === 'phone') {
+          if (v && !PHONE_RE.test(v)) return 'Please enter a valid phone number.';
+        }
+        if (name === 'travellers') {
+          if (v) {
+            var n = Number(v);
+            if (!/^\d+$/.test(v) || n < 1 || n > 100) return 'Enter a number between 1 and 100.';
+          }
+        }
+        return '';
+      }
+
+      var VALIDATED = ['name', 'email', 'phone', 'travellers'];
+
+      // Live: clear/refresh a field's error as the user edits or leaves it.
+      VALIDATED.forEach(function (name) {
+        var input = fieldEl(name);
+        if (!input) return;
+        input.addEventListener('blur', function () { setError(name, checkField(name, input.value)); });
+        input.addEventListener('input', function () {
+          if (input.getAttribute('aria-invalid')) setError(name, checkField(name, input.value));
+        });
+      });
+
+      function validateAll() {
+        var firstBad = null;
+        VALIDATED.forEach(function (name) {
+          var input = fieldEl(name);
+          var msg = checkField(name, input ? input.value : '');
+          setError(name, msg);
+          if (msg && !firstBad) firstBad = input;
+        });
+        if (firstBad) { firstBad.focus(); firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        return !firstBad;
+      }
+
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
         error.classList.add('hidden');
+
+        if (!validateAll()) return;
 
         var fd = new FormData(form);
         var payload = {
@@ -293,7 +388,7 @@ const jsonLd = {
           var data = await res.json();
           if (res.ok && data.success) {
             form.reset();
-            form.querySelectorAll('input, textarea, button').forEach(function (el) { el.style.display = 'none'; });
+            form.style.display = 'none';
             success.classList.remove('hidden');
             success.scrollIntoView({ behavior: 'smooth', block: 'center' });
           } else {
