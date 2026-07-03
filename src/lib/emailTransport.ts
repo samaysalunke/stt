@@ -1,10 +1,6 @@
 import nodemailer from 'nodemailer';
-import dns from 'node:dns';
-
-// Railway containers have no IPv6 route. Prefer IPv4 for every outbound
-// DNS resolution so smtp.gmail.com (which has AAAA records) doesn't fail
-// with connect ENETUNREACH on an IPv6 address.
-dns.setDefaultResultOrder('ipv4first');
+import dns from 'node:dns/promises';
+import net from 'node:net';
 
 export const SMTP_HOST = import.meta.env.SMTP_HOST || process.env.SMTP_HOST;
 export const SMTP_PORT = parseInt(import.meta.env.SMTP_PORT || process.env.SMTP_PORT || '587');
@@ -18,19 +14,29 @@ export function isEmailConfigured(): boolean {
   return Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
 }
 
-export function getTransporter() {
+export async function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     console.warn('[Email] SMTP not configured — emails will be logged to console only.');
     return null;
   }
   if (!_transporter) {
+    // Resolve the SMTP host to an IPv4 literal ourselves. Railway containers
+    // have no IPv6 route, and nodemailer's internal resolver picks a *random*
+    // A/AAAA record — landing on IPv6 fails with connect ENETUNREACH. Passing
+    // an IP literal short-circuits that resolver; `servername` keeps SNI + TLS
+    // cert validation pointed at the real hostname.
+    let host = SMTP_HOST;
+    let servername: string | undefined;
+    if (!net.isIP(SMTP_HOST)) {
+      const { address } = await dns.lookup(SMTP_HOST, { family: 4 });
+      host = address;
+      servername = SMTP_HOST;
+    }
     _transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
+      host,
+      servername,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
-      // Force IPv4: Railway containers have no IPv6 route, so an AAAA
-      // record (e.g. smtp.gmail.com) fails with connect ENETUNREACH.
-      family: 4,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
       pool: true,
       maxConnections: 3,
@@ -84,7 +90,7 @@ export function wrapEmail(body: string): string {
 }
 
 export async function sendEmail(to: string, subject: string, html: string) {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!transporter) {
     console.log(`[Email Mock] To: ${to}\nSubject: ${subject}\n`);
     return;

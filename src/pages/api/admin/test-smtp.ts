@@ -12,7 +12,7 @@ import {
 // Optional ?to=addr sends a real test email.
 export const GET: APIRoute = async ({ url }) => {
   const config = {
-    build: 'smtp-ipv4-2',
+    build: 'smtp-ipv4-3',
     configured: isEmailConfigured(),
     host: SMTP_HOST ?? null,
     port: SMTP_PORT,
@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ url }) => {
     return json({ ok: false, config, error: 'SMTP env vars missing (SMTP_HOST/SMTP_USER/SMTP_PASS)' }, 503);
   }
 
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!transporter) {
     return json({ ok: false, config, error: 'Transporter unavailable' }, 503);
   }
