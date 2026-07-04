@@ -1,0 +1,120 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+import { buildUnpaidLeadNudgeMessage, unpaidLeadCutoffDate, UNPAID_LEAD_NUDGE_THRESHOLD_HOURS } from '../../../lib/unpaidLeads';
+
+export const prerender = false;
+
+const adminUser = Astro.locals.adminUser;
+if (adminUser?.role === 'trip_lead') return Astro.redirect('/admin/registrations');
+
+const cutoff = unpaidLeadCutoffDate();
+const rows = getDb().prepare(`
+  SELECT id, full_name, phone, trip_name, trip_date, sharing_option, why_join, created_at, nudge_sent_at
+  FROM registrations
+  WHERE status = 'lead' AND datetime(created_at) <= datetime(?)
+  ORDER BY datetime(created_at) ASC
+`).all(cutoff.toISOString()) as Array<Record<string, any>>;
+
+function digits(phone: string) {
+  const d = String(phone || '').replace(/\D/g, '');
+  if (d.length === 10) return `91${d}`;
+  return d;
+}
+
+function firstName(name: string) {
+  return String(name || 'there').trim().split(/\s+/)[0] || 'there';
+}
+
+function since(createdAt: string) {
+  const ms = Date.now() - new Date(createdAt).getTime();
+  const mins = Math.max(0, Math.floor(ms / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function waLink(r: Record<string, any>) {
+  const phone = digits(r.phone);
+  const msg = buildUnpaidLeadNudgeMessage({
+    firstName: firstName(r.full_name),
+    tripName: String(r.trip_name || 'your trip'),
+    departure: String(r.trip_date || 'selected dates'),
+  });
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+---
+
+<AdminLayout title="Unpaid leads" page="registrations">
+  <a class="back-link" href="/admin/registrations">← Registrations</a>
+
+  <div class="page-head">
+    <div>
+      <h1>Unpaid leads</h1>
+      <p>Leads older than {UNPAID_LEAD_NUDGE_THRESHOLD_HOURS} hours that have not moved to payment review.</p>
+    </div>
+    <span>{rows.length} lead{rows.length === 1 ? '' : 's'}</span>
+  </div>
+
+  {rows.length === 0 ? (
+    <div class="empty">No unpaid leads need a nudge right now.</div>
+  ) : (
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Trip</th>
+            <th>Departure</th>
+            <th>WhatsApp</th>
+            <th>Why join</th>
+            <th>Age</th>
+            <th>Nudge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td>
+                <strong>{r.full_name}</strong>
+                <small>#{r.id}{r.nudge_sent_at ? ` · nudged ${since(r.nudge_sent_at)} ago` : ''}</small>
+              </td>
+              <td>{r.trip_name}</td>
+              <td>{r.trip_date}{r.sharing_option ? ` · ${r.sharing_option}` : ''}</td>
+              <td><a href={`tel:${r.phone}`}>{r.phone}</a></td>
+              <td class="why">{r.why_join || '—'}</td>
+              <td>{since(r.created_at)}</td>
+              <td><a class="chat" href={waLink(r)} target="_blank" rel="noopener noreferrer" data-nudge-id={r.id}>Chat</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</AdminLayout>
+
+<style>
+  .back-link{display:inline-block;margin-bottom:.75rem;color:var(--color-text-secondary);font-weight:700;font-size:.82rem;text-decoration:none}.back-link:hover{color:var(--color-coral)}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:1rem}
+  .page-head h1{margin:0;font:800 1.45rem var(--font-display);color:var(--color-navy)}.page-head p{margin:.25rem 0 0;color:var(--color-text-secondary);font-size:.86rem}.page-head span{padding:.25rem .65rem;border-radius:999px;background:var(--color-blush);color:var(--color-coral);font-weight:800;font-size:.8rem;white-space:nowrap}
+  .empty{background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:2rem;text-align:center;color:var(--color-text-secondary)}
+  .table-wrap{overflow:auto;background:#fff;border:1px solid var(--color-border);border-radius:1rem}
+  table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:.85rem 1rem;border-bottom:1px solid var(--color-border);vertical-align:top;text-align:left;font-size:.84rem}th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-secondary);background:#FCFAF9}td{color:var(--color-navy)}td strong{display:block}td small{display:block;margin-top:.2rem;color:var(--color-text-secondary);font-size:.72rem}.why{max-width:280px;color:var(--color-text-secondary);line-height:1.35}.chat{display:inline-block;padding:.45rem .75rem;border-radius:.5rem;background:#25D366;color:#fff;font-weight:800;text-decoration:none}td a:not(.chat){color:var(--color-coral);font-weight:700}
+  tr:last-child td{border-bottom:0}
+  @media(max-width:700px){.page-head{flex-direction:column}.table-wrap{margin-inline:-.5rem;border-radius:.75rem}}
+</style>
+
+<script>
+  document.querySelectorAll<HTMLAnchorElement>('[data-nudge-id]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const id = Number(link.dataset.nudgeId || 0);
+      if (!id) return;
+      fetch('/api/admin/registrations/nudge-sent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      }).catch(() => {});
+    });
+  });
+</script>

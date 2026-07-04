@@ -62,7 +62,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update DB
     getDb()
       .prepare(
-        'UPDATE registrations SET status=?, admin_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+        newStatus !== prevStatus
+          ? 'UPDATE registrations SET status=?, admin_notes=?, status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+          : 'UPDATE registrations SET status=?, admin_notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
       )
       .run(newStatus, adminNotes, id);
 

@@ -109,6 +109,9 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN tier_id TEXT'); } catch {}
   // Migration: store email send error for failed transactional emails so ops can follow up
   try { db.exec('ALTER TABLE registrations ADD COLUMN email_error TEXT'); } catch {}
+  // Checkout recovery: track status transitions and manual unpaid-lead nudges.
+  try { db.exec('ALTER TABLE registrations ADD COLUMN status_changed_at DATETIME'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN nudge_sent_at DATETIME'); } catch {}
   // Migration: drop deprecated registration fields no longer collected by the booking form
   for (const col of ['num_travelers', 'other_travelers', 'dietary', 'food_allergies', 'medical_conditions', 'medications', 'special_requests']) {
     try { db.exec(`ALTER TABLE registrations DROP COLUMN ${col}`); } catch {}

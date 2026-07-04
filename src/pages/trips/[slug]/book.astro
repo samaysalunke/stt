@@ -47,22 +47,32 @@ try { settings = readSiteSettings(); } catch {}
 const user = Astro.locals.user;
 let prefill: Record<string, string> | null = null;
 let prefilledFromHistory = false;
+let existingRegistration: Record<string, any> | null = null;
 if (user) {
+  existingRegistration = getDb().prepare(`
+    SELECT id, status, full_name, email, phone, age, gender, city, instagram,
+           emergency_name, emergency_phone, why_join, tier_id, sharing_option,
+           total_amount, amount_paid
+    FROM registrations
+    WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ?
+    ORDER BY id DESC LIMIT 1
+  `).get(user.email, slug, selectedDeparture.id) as Record<string, any> | undefined ?? null;
   const prev = getDb().prepare(`
     SELECT full_name, phone, age, gender, city, instagram, emergency_name, emergency_phone
     FROM registrations WHERE email = ? ORDER BY id DESC LIMIT 1
   `).get(user.email) as Record<string, any> | undefined;
-  prefilledFromHistory = !!prev;
+  prefilledFromHistory = !!prev || !!existingRegistration;
   prefill = {
-    fullName:       prev?.full_name ?? user.displayName ?? '',
+    fullName:       existingRegistration?.full_name ?? prev?.full_name ?? user.displayName ?? '',
     email:          user.email,
-    phone:          prev?.phone ?? '',
-    age:            prev?.age ?? '',
-    gender:         prev?.gender ?? '',
-    city:           prev?.city ?? '',
-    instagram:      prev?.instagram ?? '',
-    emergencyName:  prev?.emergency_name ?? '',
-    emergencyPhone: prev?.emergency_phone ?? '',
+    phone:          existingRegistration?.phone ?? prev?.phone ?? '',
+    age:            existingRegistration?.age ?? prev?.age ?? '',
+    gender:         existingRegistration?.gender ?? prev?.gender ?? '',
+    city:           existingRegistration?.city ?? prev?.city ?? '',
+    instagram:      existingRegistration?.instagram ?? prev?.instagram ?? '',
+    emergencyName:  existingRegistration?.emergency_name ?? prev?.emergency_name ?? '',
+    emergencyPhone: existingRegistration?.emergency_phone ?? prev?.emergency_phone ?? '',
+    whyJoin:        existingRegistration?.why_join ?? '',
   };
 }
 
@@ -114,6 +124,14 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
         isLoggedIn={!!Astro.locals.user}
         prefill={prefill}
         prefilledFromHistory={prefilledFromHistory}
+        initialRegistration={existingRegistration ? {
+          id: existingRegistration.id,
+          status: existingRegistration.status,
+          fullName: existingRegistration.full_name,
+          whyJoin: existingRegistration.why_join,
+          amountPaid: existingRegistration.amount_paid,
+          totalAmount: existingRegistration.total_amount,
+        } : null}
         client:load
       />
     </div>

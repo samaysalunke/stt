@@ -21,6 +21,7 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
     <div class="actions">
       {!isTripLead && <a class="primary" href="/admin/registrations/new">+ Add</a>}
       {!isTripLead && <a href="/admin/registrations/import">↑ Import</a>}
+      {!isTripLead && <a href="/admin/registrations/unpaid-leads">Unpaid leads</a>}
       <a class="export" href="/api/admin/export?type=registrations">↓ Export all CSV</a>
       {historyCount > 0 && <label class="history-toggle"><input id="show-history" type="checkbox" /> Show history <span class="history-count">({historyCount})</span></label>}
     </div>

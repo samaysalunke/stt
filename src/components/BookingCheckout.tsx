@@ -28,16 +28,24 @@ interface Props {
   whatsappLink?: string;
   isLoggedIn?: boolean;
   prefill?: Partial<Record<
-    'fullName' | 'email' | 'phone' | 'age' | 'gender' | 'city' | 'instagram' | 'emergencyName' | 'emergencyPhone',
+    'fullName' | 'email' | 'phone' | 'age' | 'gender' | 'city' | 'instagram' | 'emergencyName' | 'emergencyPhone' | 'whyJoin',
     string
   >> | null;
   prefilledFromHistory?: boolean;
+  initialRegistration?: {
+    id: number;
+    status: 'lead' | 'pending' | 'confirmed' | 'rejected';
+    fullName?: string | null;
+    whyJoin?: string | null;
+    amountPaid?: number | null;
+    totalAmount?: number | null;
+  } | null;
 }
 
 const C = {
   coral: '#E8725A',
   navy: '#1B2B3A',
-  peach: '#E8DDD9',
+  peach: '#F5DDD7',
   blush: '#FDF0EC',
   gray: '#6B7280',
   cta: '#D95F3B',
@@ -293,6 +301,7 @@ export default function BookingCheckout({
   isLoggedIn = false,
   prefill = null,
   prefilledFromHistory = false,
+  initialRegistration = null,
 }: Props) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
@@ -311,10 +320,19 @@ export default function BookingCheckout({
   const [submitError, setSubmitError] = useState('');
   const [payTab, setPayTab] = useState<'upi' | 'bank'>('upi');
   const [uploadError, setUploadError] = useState('');
-  const [submitted, setSubmitted] = useState<null | 'pending' | 'lead'>(null);
+  const initialSubmitted =
+    initialRegistration?.status === 'lead' || initialRegistration?.status === 'pending' || initialRegistration?.status === 'confirmed'
+      ? initialRegistration.status
+      : null;
+  const [submitted, setSubmitted] = useState<null | 'pending' | 'lead' | 'confirmed'>(initialSubmitted);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const perPerson = offer.price;
+  // A resumed pending/confirmed registration already locked in an amount when it was
+  // paid — show that, not whatever tier the current URL/departure happens to resolve to.
+  const perPerson =
+    (initialRegistration?.status === 'pending' || initialRegistration?.status === 'confirmed') && initialRegistration.totalAmount
+      ? initialRegistration.totalAmount
+      : offer.price;
   const advanceDue = Math.min(advanceAmount, perPerson || advanceAmount);
   const balance = Math.max(0, perPerson - advanceDue);
   const dateStr = `${formatDateIN(departure.startDate)} – ${formatDateIN(departure.endDate)}`;
@@ -401,11 +419,45 @@ export default function BookingCheckout({
     setStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function goStep3() {
+  async function goStep3() {
     if (!validateStep2()) return;
-    history.pushState({ step: 3 }, '');
-    setStep(3);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSubmitError('');
+    setSubmitting('lead');
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripSlug: slug,
+          tripName,
+          batchId: departure.id,
+          tierId: offer.tierId,
+          sharingOption: offer.label,
+          tripDate: dateStr,
+          totalAmount: perPerson,
+          paymentScreenshotUrl: '',
+          intent: 'details',
+          ...form,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.status === 'pending' || data.status === 'confirmed') {
+          setSubmitted(data.status);
+        } else {
+          setSubmitted(null);
+          history.pushState({ step: 3 }, '');
+          setStep(3);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setSubmitError(data.error ?? 'Something went wrong. Please try again.');
+      }
+    } catch {
+      setSubmitError('Network error. Please check your connection.');
+    } finally {
+      setSubmitting(null);
+    }
   }
 
   async function handleUpload(file: File) {
@@ -470,7 +522,7 @@ export default function BookingCheckout({
         if (typeof (window as any).gtag === 'function') {
           (window as any).gtag('event', 'submit_registration', { trip_slug: slug });
         }
-        setSubmitted(withPayment ? 'pending' : 'lead');
+        setSubmitted((data.status === 'pending' || data.status === 'confirmed' || data.status === 'lead') ? data.status : (withPayment ? 'pending' : 'lead'));
       } else {
         setSubmitError(data.error ?? 'Something went wrong. Please try again.');
         setSubmitting(null);
@@ -568,6 +620,7 @@ export default function BookingCheckout({
             </div>
             <Field label="WhatsApp Number" required error={errors.phone}>
               <input type="tel" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={(e) => set('phone', e.target.value)} onBlur={() => handleBlur('phone')} className={inputCls} style={{ borderColor: errors.phone ? C.coral : C.peach }} />
+              <p className="text-xs mt-1.5" style={{ color: C.gray }}>This is how Zahra reaches you — and how we hold your spot if you need a minute to pay.</p>
             </Field>
             <Field label="How old are you?" required error={errors.age}>
               <input type="text" inputMode="numeric" placeholder="e.g. 24" value={form.age} onChange={(e) => set('age', e.target.value)} onBlur={() => handleBlur('age')} className={inputCls} style={{ borderColor: errors.age ? C.coral : C.peach }} />
@@ -611,6 +664,7 @@ export default function BookingCheckout({
         <hr style={{ borderColor: C.peach }} />
 
         <Field label="Why do you want to join this trip?" required error={errors.whyJoin}>
+          <p className="text-xs mb-2" style={{ color: C.gray }}>We read every one — it's how we keep the group feeling right. Not a test, just helps us know who's coming.</p>
           <textarea
             rows={3}
             placeholder="No perfect answer. Tell us what pulled you here."
@@ -624,18 +678,23 @@ export default function BookingCheckout({
       </div>
 
       <div className="mt-6">
+        {submitError && (
+          <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b' }}>{submitError}</div>
+        )}
         <button
           onClick={goStep3}
+          disabled={submitting !== null}
           className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
           style={{ background: C.cta }}
         >
-          Continue to payment →
+          {submitting === 'lead' ? 'Saving...' : 'Continue to payment →'}
         </button>
       </div>
     </div>
   );
 
   // ── Step 3: Pay & Confirm ─────────────────────────────────────────────────────
+  const firstName = (form.fullName || initialRegistration?.fullName || 'Traveller').trim().split(/\s+/)[0] || 'Traveller';
 
   // Pending confirmation state
   if (submitted === 'pending') return (
@@ -647,21 +706,19 @@ export default function BookingCheckout({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold mb-2 text-center" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Payment received.</h2>
-        <p className="text-sm mb-5 text-center" style={{ color: C.gray }}>We're verifying your spot for:</p>
+        <h2 className="text-xl font-bold mb-2 text-center" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Got it — we're verifying your payment.</h2>
+        <p className="text-sm mb-5 text-center" style={{ color: C.gray }}>Your screenshot is in. Zahra checks these in order of receipt and confirms on WhatsApp, usually within a few hours.</p>
         <div className="rounded-xl px-5 py-4 mb-6 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
           <p className="font-semibold mb-1" style={{ color: C.navy }}>{tripName}</p>
           <p style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
+          <p className="mt-3 text-sm font-semibold" style={{ color: '#D97706' }}>Status: Payment under review</p>
         </div>
         <p className="text-sm leading-relaxed mb-2" style={{ color: C.navy }}>
-          Your spot is confirmed once we verify your payment.
+          Your spot is confirmed only once we've verified the transfer — we'll message you the moment it's done.
         </p>
-        <p className="text-sm leading-relaxed mb-2" style={{ color: C.gray }}>
-          We work through payments in order of receipt — usually within a few hours.
-        </p>
-        <p className="text-sm leading-relaxed" style={{ color: C.gray }}>
-          You'll hear from us on WhatsApp once it's confirmed.
-        </p>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm mt-6" style={{ background: '#25D366' }}>
+          Message Zahra on WhatsApp
+        </a>
         {!isLoggedIn && (
           <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
             <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
@@ -671,6 +728,29 @@ export default function BookingCheckout({
             </a>
           </div>
         )}
+      </div>
+    </div>
+  );
+
+  if (submitted === 'confirmed') return (
+    <div>
+      <StepBar current={3} />
+      <div className="py-4">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: '#D1FAE5' }}>
+          <svg className="w-8 h-8" style={{ color: '#16a34a' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold mb-2 text-center" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>You're in. Spot confirmed.</h2>
+        <p className="text-sm mb-5 text-center" style={{ color: C.gray }}>Zahra verified your advance. Your seat on {tripName} is held — welcome aboard.</p>
+        <div className="rounded-xl px-5 py-4 mb-6 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
+          <p className="font-semibold mb-1" style={{ color: C.navy }}>{dateStr} · {offer.label}</p>
+          <p className="mt-3 font-semibold" style={{ color: '#16a34a' }}>Paid — {formatINR(advanceDue)} advance ✓</p>
+          <p className="mt-1" style={{ color: C.gray }}>Balance {formatINR(balance)} — due {balanceDueRule}</p>
+        </div>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: '#25D366' }}>
+          Join the trip WhatsApp group
+        </a>
       </div>
     </div>
   );
@@ -681,31 +761,27 @@ export default function BookingCheckout({
       <StepBar current={3} />
       <div className="py-4">
         <h2 className="text-xl font-bold mb-3" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>
-          You're registered — but your spot is not secured.
+          We're holding your details, {firstName}.
         </h2>
+        <p className="text-sm leading-relaxed mb-5" style={{ color: C.gray }}>
+          You're registered for {tripName} — but the spot isn't confirmed until the advance lands. No rush from us, just know it's first paid, first in.
+        </p>
         <div className="rounded-xl px-5 py-4 mb-5 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
           <p className="font-semibold mb-1" style={{ color: C.navy }}>{tripName}</p>
           <p style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
+          <p className="mt-3 font-semibold" style={{ color: C.coral }}>To confirm — {formatINR(advanceDue)} advance</p>
         </div>
-        <p className="text-sm leading-relaxed mb-1" style={{ color: C.navy }}>
-          Spots are confirmed on payment only, first come.
-        </p>
-        <p className="text-sm leading-relaxed mb-6" style={{ color: C.gray }}>
-          Pay the {formatINR(advanceDue)} advance to hold your place.
-        </p>
         <button
-          onClick={() => { setSubmitted(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onClick={() => { setSubmitted(null); setStep(3); history.pushState({ step: 3 }, ''); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 mb-4"
           style={{ background: C.cta }}
         >
-          Pay now →
+          Pay now & confirm →
         </button>
-        <p className="text-center text-sm" style={{ color: C.gray }}>
-          Need help?{' '}
-          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="underline" style={{ color: C.coral }}>
-            Chat on WhatsApp
-          </a>
-        </p>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold py-3.5 rounded-full text-sm mb-4" style={{ color: '#128C7E', border: '1px solid #25D366' }}>
+          Question first? Chat with Zahra
+        </a>
+        <p className="text-xs text-center" style={{ color: C.gray }}>We'll send a gentle nudge on WhatsApp if we don't hear back — no spam, promise.</p>
         {!isLoggedIn && (
           <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
             <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
@@ -719,30 +795,26 @@ export default function BookingCheckout({
     </div>
   );
 
-  // Payment reference hint
-  const firstName = form.fullName.split(' ')[0] || 'YourName';
-  const tripShort = tripName.split(' ')[0];
-  const depDate = new Date(departure.startDate);
-  const refExample = `${firstName} ${tripShort} ${depDate.toLocaleDateString('en-IN', { month: 'short' })}${depDate.getDate()}`;
-
   const hasBoth = !!(upiId && bankAccountNumber);
 
   return (
     <div>
       <StepBar current={3} />
+      <div className="mb-5">
+        <h2 className="text-xl font-bold mb-1" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Confirm your spot</h2>
+        <p className="text-sm" style={{ color: C.gray }}>You're registered. Pay the {formatINR(advanceDue)} advance to confirm your spot.</p>
+      </div>
+      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm mb-5" style={{ background: C.blush, color: C.navy, border: `1px solid ${C.peach}` }}>
+        <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.coral }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>You're registered as {firstName}. This spot isn't held yet — first paid, first confirmed.</span>
+      </div>
 
       {/* Booking summary */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(27,43,58,0.4)' }}>Your booking</span>
-          <button
-            type="button"
-            onClick={() => history.go(-2)}
-            className="text-sm underline"
-            style={{ color: C.coral }}
-          >
-            Change
-          </button>
         </div>
         <div className="rounded-xl overflow-hidden border" style={{ borderColor: C.peach }}>
           <div className="px-4 py-3 border-b" style={{ borderColor: C.peach, background: C.blush }}>
@@ -804,9 +876,7 @@ export default function BookingCheckout({
               </div>
               <div className="space-y-2.5 mb-3">
                 {[
-                  'Open GPay, PhonePe, Paytm or any UPI app',
-                  'Send to the UPI ID above',
-                  `Pay exactly ${formatINR(advanceDue)} — the advance amount`,
+                  `Pay ${formatINR(advanceDue)} (the advance) to the UPI ID above`,
                   'Screenshot the confirmation and upload below',
                 ].map((s, i) => (
                   <div key={i} className="flex gap-2.5 items-start">
@@ -815,9 +885,6 @@ export default function BookingCheckout({
                   </div>
                 ))}
               </div>
-              <p className="text-xs pt-3" style={{ color: 'rgba(27,43,58,0.5)', borderTop: `1px solid ${C.peach}` }}>
-                Use your name + trip as reference — e.g. <em>"{refExample}"</em>
-              </p>
             </div>
           )}
 
@@ -853,9 +920,6 @@ export default function BookingCheckout({
                   ))}
                 </tbody>
               </table>
-              <p className="text-xs mt-3 pt-3" style={{ color: 'rgba(27,43,58,0.5)', borderTop: `1px solid ${C.peach}` }}>
-                Use your name + trip as reference — e.g. <em>"{refExample}"</em>
-              </p>
             </div>
           )}
         </div>
@@ -912,11 +976,6 @@ export default function BookingCheckout({
           onChange={(e) => { if (e.target.files?.[0]) { setUploadError(''); handleUpload(e.target.files[0]); } }} />
       </div>
 
-      {/* Honesty line */}
-      <p className="text-sm leading-relaxed mb-5" style={{ color: C.navy }}>
-        Spots are confirmed only after we verify your payment, in order of receipt. Registering without paying does not hold a spot.
-      </p>
-
       {/* Trust line */}
       <p className="text-xs leading-relaxed rounded-lg px-4 py-3 mb-5" style={{ background: 'rgba(27,43,58,0.03)', border: `1px solid ${C.peach}`, color: 'rgba(27,43,58,0.6)' }}>
         Run by Zahra and a small team who've actually done these routes. Real humans, one WhatsApp away.
@@ -945,7 +1004,7 @@ export default function BookingCheckout({
       {/* Primary action */}
       <button
         onClick={() => handleSubmit(true)}
-        disabled={submitting !== null || uploadStatus !== 'done'}
+        disabled={submitting !== null || uploadStatus !== 'done' || !agreeTerms || !agreeCancel}
         className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90 disabled:opacity-40 mb-4"
         style={{ background: C.cta }}
       >
@@ -955,12 +1014,12 @@ export default function BookingCheckout({
       {/* Secondary action */}
       <button
         type="button"
-        onClick={() => handleSubmit(false)}
+        onClick={() => { setSubmitted('lead'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         disabled={submitting !== null}
-        className="w-full font-semibold py-4 rounded-full text-base transition-all hover:opacity-80 disabled:opacity-40"
-        style={{ color: C.coral, border: `2px solid ${C.coral}`, background: 'transparent' }}
+        className="w-full text-sm transition-all hover:opacity-80 disabled:opacity-40"
+        style={{ color: C.coral, background: 'transparent' }}
       >
-        {submitting === 'lead' ? 'Submitting...' : 'Register without paying'}
+        I'll pay later
       </button>
     </div>
   );

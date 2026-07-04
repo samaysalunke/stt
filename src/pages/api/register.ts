@@ -6,34 +6,78 @@ import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../l
 import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
-  if (!rateLimit(clientAddress, 5, 60 * 60 * 1000)) {
-    return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
-      status: 429,
-      headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
-    });
+const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
+
+function json(body: Record<string, any>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Upsert keyed on (email, trip_slug, batch_id) + status='lead'. Shared by the
+// details-only (Step 2) and payment (Step 3) paths so the two never drift.
+function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
+  tripName: string; tripSlug: string; tripDateStr: string; fullName: string; email: string; phone: string;
+  gender: string | null; age: string; city: string; instagram: string | null;
+  emergencyName: string; emergencyPhone: string; whyJoin: string;
+  sharingOption: string | null; totalAmount: number; batchId: string; tierId: string;
+}): { id: number; isNew: boolean } {
+  const existing = db.prepare(`
+    SELECT id FROM registrations
+    WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ? AND status = 'lead'
+    LIMIT 1
+  `).get(p.email, p.tripSlug, p.batchId) as { id: number } | undefined;
+
+  if (existing) {
+    db.prepare(`
+      UPDATE registrations SET
+        trip_name=?, trip_date=?, full_name=?, email=?, phone=?, gender=?,
+        age=?, city=?, instagram=?, emergency_name=?, emergency_phone=?,
+        why_join=?, sharing_option=?, total_amount=?, tier_id=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(
+      p.tripName, p.tripDateStr, p.fullName, p.email, p.phone, p.gender,
+      p.age, p.city, p.instagram, p.emergencyName, p.emergencyPhone,
+      p.whyJoin, p.sharingOption, p.totalAmount, p.tierId,
+      existing.id,
+    );
+    return { id: existing.id, isNew: false };
+  }
+
+  const insert = db.prepare(`
+    INSERT INTO registrations (
+      trip_name, trip_slug, trip_date, full_name, email, phone, gender,
+      age, city, instagram, emergency_name, emergency_phone,
+      why_join, sharing_option, total_amount, batch_id, tier_id,
+      source, status, status_changed_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'lead', CURRENT_TIMESTAMP)
+  `).run(
+    p.tripName, p.tripSlug, p.tripDateStr, p.fullName, p.email, p.phone, p.gender,
+    p.age, p.city, p.instagram, p.emergencyName, p.emergencyPhone,
+    p.whyJoin, p.sharingOption, p.totalAmount, p.batchId, p.tierId,
+    'checkout',
+  );
+  return { id: Number(insert.lastInsertRowid), isNew: true };
+}
+
+export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
+  if (!rateLimit(clientAddress, 30, 60 * 60 * 1000)) {
+    return json({ success: false, error: 'Too many requests. Please try again later.' }, 429);
   }
 
   try {
     const body = await request.json();
+    if (body._honey) return json({ success: false, error: 'Invalid submission.' }, 400);
 
-    // Trip + departure resolution. Sold-out is enforced per-departure below
-    // (selectedDeparture.soldOut), so there's no trip-level sold-out gate.
     const tripSlug = sanitizeInput(body.tripSlug);
     const trip = tripSlug ? readTrip(tripSlug) : null;
+    if (!trip) return json({ success: false, error: 'Trip not found.' }, 404);
 
-    // Honeypot check
-    if (body._honey) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid submission.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Required field validation
     const required: Record<string, string> = {
       fullName:       sanitizeInput(body.fullName),
-      email:          sanitizeInput(body.email),
+      email:          sanitizeInput(locals.user?.email ?? body.email),
       phone:          sanitizeInput(body.phone),
       age:            sanitizeInput(body.age),
       city:           sanitizeInput(body.city),
@@ -43,205 +87,185 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     };
 
     for (const [field, value] of Object.entries(required)) {
-      if (!value) {
-        return new Response(JSON.stringify({ success: false, error: `Missing required field: ${field}` }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
+      if (!value) return json({ success: false, error: `Missing required field: ${field}` }, 400);
     }
+    if (!isValidEmail(required.email)) return json({ success: false, error: 'Invalid email address.' }, 400);
+    if (!isValidPhone(required.phone)) return json({ success: false, error: 'Invalid phone number.' }, 400);
 
-    if (!isValidEmail(required.email)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid email address.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!isValidPhone(required.phone)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid phone number.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Age is stored as free text but must be a sane whole number.
     const ageNum = Number(required.age);
     if (!Number.isInteger(ageNum) || ageNum < 16 || ageNum > 100) {
-      return new Response(JSON.stringify({ success: false, error: 'Please enter a valid age (16–100).' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ success: false, error: 'Please enter a valid age (16–100).' }, 400);
     }
 
-    // Consent: both the Terms and Cancellation policy must be accepted. Checkboxes
-    // post as 'on'/true; treat anything else as not accepted (blocks non-JS/tampered submits).
-    const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
-    if (!truthy(body.agreeTerms) || !truthy(body.agreeCancel)) {
-      return new Response(JSON.stringify({ success: false, error: 'Please accept the Terms and Cancellation Policy to continue.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // ── Server-side departure + occupancy resolution (never trust the client) ──
-    // resolveBooking() is the single source of truth: it filters to bookable
-    // departures and resolves per-departure offers (new schema or legacy).
-    const fail = (msg: string) => new Response(
-      JSON.stringify({ success: false, error: msg }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
-
-    const booking = resolveBooking(trip!);
-    if (booking.departures.length === 0) return fail('This trip has no bookable dates right now.');
+    const booking = resolveBooking(trip);
+    if (booking.departures.length === 0) return json({ success: false, error: 'This trip has no bookable dates right now.' }, 400);
 
     const wantedDeparture = sanitizeInput(body.batchId) || null;
-    // Auto-select the first bookable departure; fall back to the first one so a
-    // fully sold-out trip yields a clear "sold out" message rather than "no dates".
     const selectedDeparture = wantedDeparture
       ? booking.departures.find((d) => d.id === wantedDeparture)
       : (booking.departures.find((d) => !d.soldOut) ?? booking.departures[0]);
-    if (!selectedDeparture) return fail('That departure date is no longer available. Please pick another.');
-    if (selectedDeparture.soldOut) return fail('This trip is sold out. Please pick another departure.');
+    if (!selectedDeparture) return json({ success: false, error: 'That departure date is no longer available. Please pick another.' }, 400);
+    if (selectedDeparture.soldOut) return json({ success: false, error: 'This trip is sold out. Please pick another departure.' }, 400);
 
-    const batchId: string = selectedDeparture.id;
-
-    // Occupancy: pick the requested available offer; fall back to cheapest available.
+    const batchId = selectedDeparture.id;
     const wantedTier = sanitizeInput(body.tierId) || null;
     const availableOffers = selectedDeparture.offers.filter((o) => o.available);
-    if (availableOffers.length === 0) return fail('That departure date is sold out. Please pick another.');
+    if (availableOffers.length === 0) return json({ success: false, error: 'That departure date is sold out. Please pick another.' }, 400);
     const cheapest = availableOffers.reduce((min, o) => (o.price < min.price ? o : min), availableOffers[0]);
-    const selectedOffer =
-      (wantedTier && availableOffers.find((o) => o.tierId === wantedTier)) || cheapest;
+    const selectedOffer = (wantedTier && availableOffers.find((o) => o.tierId === wantedTier)) || cheapest;
 
-    const sharingOption: string | null = booking.occupancyCatalog.length > 1 ? selectedOffer.label : null;
-    const totalAmount: number = selectedOffer.price;
-
-    // Instagram handle is optional — store when provided, else null.
+    const sharingOption = booking.occupancyCatalog.length > 1 ? selectedOffer.label : null;
+    const totalAmount = selectedOffer.price;
     const instagram = sanitizeInput(body.instagram) || null;
-
-    // Departure date string, derived from the resolved departure.
+    const tripName = sanitizeInput(body.tripName) || String(trip.title || trip.name || tripSlug);
     const tripDateStr = `${formatDateIN(selectedDeparture.startDate)} – ${formatDateIN(selectedDeparture.endDate)}`;
-
-    // Status: 'pending' when screenshot uploaded (awaiting ops verification);
-    // 'lead' when no screenshot (registered but unpaid — holds no seat).
     const screenshotUrl = sanitizeInput(body.paymentScreenshotUrl) || null;
-    const registrationStatus = screenshotUrl ? 'pending' : 'lead';
-
+    const submittingPayment = !!screenshotUrl;
+    const detailsOnly = sanitizeInput(body.intent) === 'details';
     const db = getDb();
 
-    // Duplicate guard: block a second registration for the same departure once the
-    // traveller already has a paid-pending or confirmed seat. 'lead' rows (registered
-    // without paying) are intentionally not blocked, so the pay-after-lead flow still works.
-    const existing = db.prepare(
-      `SELECT id FROM registrations
-       WHERE email = ? AND trip_slug = ? AND batch_id = ? AND status IN ('pending','confirmed')
-       LIMIT 1`
-    ).get(required.email, tripSlug, batchId);
-    if (existing) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "You already have a registration for these dates. We'll be in touch on WhatsApp — message us if you need to change anything.",
-      }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+    const existingPaid = db.prepare(`
+      SELECT id, status FROM registrations
+      WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ? AND status IN ('pending','confirmed')
+      LIMIT 1
+    `).get(required.email, tripSlug, batchId) as { id: number; status: string } | undefined;
+
+    if (!submittingPayment && existingPaid) {
+      // Already pending/confirmed — payment fields stay untouched, but a
+      // returning traveller editing a typo'd detail shouldn't have it silently dropped.
+      db.prepare(`
+        UPDATE registrations SET
+          full_name=?, phone=?, gender=?, age=?, city=?, instagram=?,
+          emergency_name=?, emergency_phone=?, why_join=?, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `).run(
+        required.fullName, required.phone, sanitizeInput(body.gender) || null,
+        required.age, required.city, instagram, required.emergencyName, required.emergencyPhone,
+        required.whyJoin, existingPaid.id,
+      );
+      return json({ success: true, status: existingPaid.status, registrationId: existingPaid.id });
+    }
+    if (submittingPayment && existingPaid?.status === 'confirmed') {
+      return json({ success: true, status: 'confirmed', registrationId: existingPaid.id });
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO registrations (
-        trip_name, trip_slug, trip_date, full_name, email, phone, gender,
-        age, city, instagram, emergency_name, emergency_phone,
-        payment_screenshot_url, why_join,
-        sharing_option, total_amount, batch_id, tier_id, consent_at, status
-      ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?,
-        ?, ?, ?, ?, ?,
-        ?, ?,
-        ?, ?, ?, ?, CURRENT_TIMESTAMP, ?
-      )
-    `);
+    if (!submittingPayment && !detailsOnly && (!truthy(body.agreeTerms) || !truthy(body.agreeCancel))) {
+      return json({ success: false, error: 'Please accept the Terms and Cancellation Policy to continue.' }, 400);
+    }
 
-    const insertResult = stmt.run(
-      sanitizeInput(body.tripName),
-      tripSlug,
-      tripDateStr,
-      required.fullName,
-      required.email,
-      required.phone,
-      sanitizeInput(body.gender) || null,
-      required.age,
-      required.city,
-      instagram,
-      required.emergencyName,
-      required.emergencyPhone,
-      screenshotUrl,
-      required.whyJoin,
-      sharingOption,
-      totalAmount,
-      batchId,
-      selectedOffer.tierId,
-      registrationStatus,
+    if (!submittingPayment) {
+      const { id: leadId, isNew } = findOrCreateLead(db, {
+        tripName, tripSlug, tripDateStr, fullName: required.fullName, email: required.email, phone: required.phone,
+        gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
+        emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
+        sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
+      });
+
+      if (isNew) {
+        let whatsappLink = 'https://wa.me/917975027491';
+        let upiId = '';
+        try {
+          const s = readSiteSettings();
+          if (s.whatsappLink) whatsappLink = s.whatsappLink;
+          if (s.upiId) upiId = s.upiId;
+        } catch {}
+        const firstName = required.fullName.split(' ')[0];
+        sendRegistrationPaymentPending({
+          firstName, email: required.email, tripName,
+          startDate: formatDateIN(selectedDeparture.startDate),
+          endDate: formatDateIN(selectedDeparture.endDate),
+          advanceAmount: booking.advanceAmount,
+          whatsappLink,
+          upiId,
+        }).then(() => {
+          try { db.prepare('UPDATE registrations SET email_sent = 1 WHERE id = ?').run(leadId); } catch {}
+        }).catch((emailErr) => {
+          console.error('[Register lead email error]', emailErr);
+          try { db.prepare('UPDATE registrations SET email_error = ? WHERE id = ?').run(String(emailErr?.message ?? emailErr), leadId); } catch {}
+        });
+
+        if (required.city) geocodeCity(required.city).catch(() => {});
+      }
+
+      return json({ success: true, status: 'lead', registrationId: leadId });
+    }
+
+    if (!truthy(body.agreeTerms) || !truthy(body.agreeCancel)) {
+      return json({ success: false, error: 'Please accept the Terms and Cancellation Policy to continue.' }, 400);
+    }
+
+    // A lead row ('status=lead') is the normal case — Step 2 always creates one first.
+    // If none exists but there's already a 'pending' row for this identity (e.g. the
+    // traveller corrected their screenshot via the back button, see recovery flow),
+    // reuse that row instead of silently discarding the resubmit.
+    const hasLeadRow = !!db.prepare(`
+      SELECT 1 FROM registrations
+      WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ? AND status = 'lead'
+      LIMIT 1
+    `).get(required.email, tripSlug, batchId);
+
+    const leadId = (!hasLeadRow && existingPaid?.status === 'pending')
+      ? existingPaid.id
+      : findOrCreateLead(db, {
+          tripName, tripSlug, tripDateStr, fullName: required.fullName, email: required.email, phone: required.phone,
+          gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
+          emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
+          sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
+        }).id;
+
+    db.prepare(`
+      UPDATE registrations SET
+        trip_name=?, trip_date=?, full_name=?, email=?, phone=?, gender=?,
+        age=?, city=?, instagram=?, emergency_name=?, emergency_phone=?,
+        payment_screenshot_url=?, why_join=?, sharing_option=?, total_amount=?,
+        tier_id=?, consent_at=CURRENT_TIMESTAMP, status='pending',
+        status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(
+      tripName, tripDateStr, required.fullName, required.email, required.phone, sanitizeInput(body.gender) || null,
+      required.age, required.city, instagram, required.emergencyName, required.emergencyPhone,
+      screenshotUrl, required.whyJoin, sharingOption, totalAmount,
+      selectedOffer.tierId, leadId,
     );
 
-    const registrationId = insertResult.lastInsertRowid;
-
-    // Resolve trip data for email from the booked departure.
-    const tripName = sanitizeInput(body.tripName);
-    const startDate = formatDateIN(selectedDeparture.startDate);
-    const endDate   = formatDateIN(selectedDeparture.endDate);
-    const advanceAmount = booking.advanceAmount;
-
     let whatsappLink = 'https://wa.me/917975027491';
-    let upiId = '';
     try {
       const s = readSiteSettings();
       if (s.whatsappLink) whatsappLink = s.whatsappLink;
-      if (s.upiId) upiId = s.upiId;
     } catch {}
 
-    const hasPayment = !!screenshotUrl;
     const firstName = required.fullName.split(' ')[0];
-
-    // Send confirmation email non-blocking — never delays the success response
-    const emailPromise = hasPayment
-      ? sendRegistrationPaymentReceived({ firstName, email: required.email, tripName, startDate, endDate, whatsappLink })
-      : sendRegistrationPaymentPending({ firstName, email: required.email, tripName, startDate, endDate, advanceAmount, whatsappLink, upiId });
-
-    emailPromise
-      .then(() => {
-        try { db.prepare('UPDATE registrations SET email_sent = 1 WHERE id = ?').run(registrationId); } catch {}
-      })
-      .catch((emailErr) => {
-        console.error('[Register email error]', emailErr);
-        try {
-          db.prepare('UPDATE registrations SET email_error = ? WHERE id = ?')
-            .run(String(emailErr?.message ?? emailErr), registrationId);
-        } catch {}
-      });
+    sendRegistrationPaymentReceived({
+      firstName,
+      email: required.email,
+      tripName,
+      startDate: formatDateIN(selectedDeparture.startDate),
+      endDate: formatDateIN(selectedDeparture.endDate),
+      whatsappLink,
+    }).then(() => {
+      try { db.prepare('UPDATE registrations SET email_sent = 1 WHERE id = ?').run(leadId); } catch {}
+    }).catch((emailErr) => {
+      console.error('[Register payment email error]', emailErr);
+      try { db.prepare('UPDATE registrations SET email_error = ? WHERE id = ?').run(String(emailErr?.message ?? emailErr), leadId); } catch {}
+    });
 
     sendAdminRegistrationNotification({
-      trip_name:       tripName,
-      full_name:       required.fullName,
-      email:           required.email,
-      phone:           required.phone,
-      gender:          sanitizeInput(body.gender) || '—',
-      city:            required.city,
-      emergency_name:  required.emergencyName,
+      trip_name: tripName,
+      full_name: required.fullName,
+      email: required.email,
+      phone: required.phone,
+      gender: sanitizeInput(body.gender) || '-',
+      city: required.city,
+      emergency_name: required.emergencyName,
       emergency_phone: required.emergencyPhone,
-      why_join:        required.whyJoin,
-      screenshot_url:  sanitizeInput(body.paymentScreenshotUrl) || '—',
+      why_join: required.whyJoin,
+      screenshot_url: screenshotUrl || '-',
     }).catch(console.error);
 
-    // Warm geocode cache for this city (non-blocking — never delays response)
     if (required.city) geocodeCity(required.city).catch(() => {});
-
-    return new Response(JSON.stringify({ success: true, message: 'Registration successful!' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ success: true, status: 'pending', registrationId: leadId });
   } catch (err) {
     console.error('[Register API Error]', err);
-    return new Response(JSON.stringify({ success: false, error: 'Server error. Please try again.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ success: false, error: 'Server error. Please try again.' }, 500);
   }
 };
