@@ -3,13 +3,80 @@ import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
 
+const CSRF_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_CONTENT_TYPES = [
+  'application/x-www-form-urlencoded',
+  'multipart/form-data',
+  'text/plain',
+];
+
+function firstHeaderValue(value: string | null): string | null {
+  return value?.split(',')[0]?.trim() || null;
+}
+
+function originFrom(proto: string | null, host: string | null): string | null {
+  if (!proto || !host) return null;
+  try {
+    return new URL(`${proto.replace(/:$/, '')}://${host}`).origin;
+  } catch {
+    return null;
+  }
+}
+
+function configuredSiteOrigin(): string | null {
+  try {
+    return new URL(process.env.SITE_URL ?? 'https://seekthethrill.in').origin;
+  } catch {
+    return null;
+  }
+}
+
+function allowedRequestOrigins(url: URL, request: Request): Set<string> {
+  const forwardedProto = firstHeaderValue(request.headers.get('x-forwarded-proto'));
+  const forwardedHost = firstHeaderValue(request.headers.get('x-forwarded-host'));
+  const host = firstHeaderValue(request.headers.get('host'));
+  const origins = [
+    url.origin,
+    configuredSiteOrigin(),
+    originFrom(forwardedProto, forwardedHost),
+    originFrom(forwardedProto, host),
+  ].filter(Boolean) as string[];
+
+  return new Set(origins);
+}
+
+function shouldCheckCsrf(request: Request): boolean {
+  if (!CSRF_METHODS.has(request.method.toUpperCase())) return false;
+  const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
+  return CSRF_CONTENT_TYPES.some((type) => contentType.startsWith(type));
+}
+
+function assertSameOriginPost(url: URL, request: Request): Response | null {
+  if (!shouldCheckCsrf(request)) return null;
+
+  const origin = request.headers.get('origin');
+  if (!origin) return null;
+
+  if (!allowedRequestOrigins(url, request).has(origin)) {
+    return new Response('Cross-site POST form submissions are forbidden', {
+      status: 403,
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    });
+  }
+
+  return null;
+}
+
 export const onRequest = defineMiddleware(async ({ url, request, cookies, locals, redirect }, next) => {
+  const csrfResponse = assertSameOriginPost(url, request);
+  if (csrfResponse) return csrfResponse;
+
   // One canonical public origin and path shape, resolved in a SINGLE hop:
   // host (www→apex) + protocol (http→https) + lowercase + trailing slash are
   // all folded into one target before redirecting. Keep local/preview hosts
   // untouched; never redirect non-GET requests (form posts) or asset paths.
   const target = new URL(url);
-  if (import.meta.env.PROD) {
+  if (import.meta.env.PROD && (request.method === 'GET' || request.method === 'HEAD')) {
     if (target.hostname === 'www.seekthethrill.in') target.hostname = 'seekthethrill.in';
     if (target.protocol === 'http:') target.protocol = 'https:';
   }

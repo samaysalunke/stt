@@ -87,3 +87,50 @@ test('TC-195 Set-Cookie header has httpOnly flag', async () => {
     `Expected httpOnly in Set-Cookie, got: ${setCookie}`
   );
 });
+
+function testUploadForm() {
+  const fd = new FormData();
+  fd.append('file', new Blob(['fake png'], { type: 'image/png' }), 'payment.png');
+  return fd;
+}
+
+test('TC-196 same-origin multipart upload is allowed', async () => {
+  const res = await fetch(`${BASE}/api/upload`, {
+    method: 'POST',
+    headers: { Origin: BASE },
+    body: testUploadForm(),
+  });
+  const data = await res.json();
+
+  assert.equal(res.status, 200, `Expected 200, got ${res.status}: ${JSON.stringify(data)}`);
+  assert.equal(data.success, true);
+  assert.match(data.url, /^\/api\/uploads\/.+\.png$/);
+});
+
+test('TC-197 cross-origin multipart upload is rejected', async () => {
+  const res = await fetch(`${BASE}/api/upload`, {
+    method: 'POST',
+    headers: { Origin: 'https://evil.example' },
+    body: testUploadForm(),
+  });
+  const text = await res.text();
+
+  assert.equal(res.status, 403);
+  assert.match(text, /Cross-site POST form submissions are forbidden/);
+});
+
+test('TC-198 forwarded same-origin multipart upload is allowed', async () => {
+  const res = await fetch(`${BASE}/api/upload`, {
+    method: 'POST',
+    headers: {
+      Origin: 'https://stt-production-2707.up.railway.app',
+      'X-Forwarded-Proto': 'https',
+      'X-Forwarded-Host': 'stt-production-2707.up.railway.app',
+    },
+    body: testUploadForm(),
+  });
+  const data = await res.json();
+
+  assert.equal(res.status, 200, `Expected 200, got ${res.status}: ${JSON.stringify(data)}`);
+  assert.equal(data.success, true);
+});

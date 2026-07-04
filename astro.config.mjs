@@ -8,9 +8,10 @@ import node from '@astrojs/node';
 export default defineConfig({
   site: process.env.SITE_URL ?? 'https://seekthethrill.in',
   output: 'server',
-  // Reject cross-origin form/multipart POSTs (CSRF). Astro enforces this only for
-  // browser-sendable content types, so same-origin forms and JSON API calls pass.
-  security: { checkOrigin: true },
+  // CSRF origin checks run in src/middleware.ts so forwarded host/proto headers
+  // from Railway are respected. Astro's built-in check sees the internal proxy
+  // URL and rejects legitimate same-origin multipart uploads in production.
+  security: { checkOrigin: false },
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
