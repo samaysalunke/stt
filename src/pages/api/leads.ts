@@ -8,7 +8,7 @@ import { sendEmail, wrapEmail, escapeHtml, ADMIN_EMAIL } from '../../lib/emailTr
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
-  if (!rateLimit(clientAddress, 5, 60 * 60 * 1000)) {
+  if (!rateLimit(`leads:${clientAddress}`, 5, 60 * 60 * 1000)) {
     return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
       status: 429,
       headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },

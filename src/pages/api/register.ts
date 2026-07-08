@@ -63,7 +63,7 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
 }
 
 export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
-  if (!rateLimit(clientAddress, 30, 60 * 60 * 1000)) {
+  if (!rateLimit(`register:${clientAddress}`, 30, 60 * 60 * 1000)) {
     return json({ success: false, error: 'Too many requests. Please try again later.' }, 429);
   }
 

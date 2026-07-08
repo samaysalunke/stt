@@ -6,7 +6,7 @@ import { rateLimit } from '../../lib/rateLimit';
 import { sendNewsletterWelcome } from '../../lib/email';
 
 export const POST: APIRoute = async ({ request, clientAddress }) => {
-  if (!rateLimit(clientAddress, 5, 60 * 60 * 1000)) {
+  if (!rateLimit(`newsletter:${clientAddress}`, 5, 60 * 60 * 1000)) {
     return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
       status: 429,
       headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },

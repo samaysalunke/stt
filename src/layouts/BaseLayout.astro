@@ -119,11 +119,18 @@ const orgSchema = {
     )}
   </head>
   <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
+      style="background-color: var(--color-cta);"
+    >
+      Skip to content
+    </a>
     {nav === 'scroll' && <Header hidden={true} user={user} />}
     {nav === 'header' && <Header user={user} />}
     {nav === 'logo' && <Header logoOnly={true} user={user} />}
     {nav === 'back' && <BackButton fallback={backFallback} />}
-    <main class="flex-1">
+    <main id="main-content" class="flex-1">
       <slot />
     </main>
     {/* Footer on every page except 'none' (checkout / about own their full chrome).

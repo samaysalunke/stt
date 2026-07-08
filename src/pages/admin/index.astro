@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { listTrips, tripHasUpcomingDates, tripCardSummary } from '../../lib/content';
+import { listTrips, tripHasUpcomingDates, tripCardSummary, resolveBooking } from '../../lib/content';
 import { getDb } from '../../lib/db';
 import { getBookingGrowthWeek } from '../../lib/adminDashboard';
 export const prerender = false;
@@ -23,8 +23,11 @@ const week = getBookingGrowthWeek(db);
 const maxCount = Math.max(1, ...week.map(d => d.count));
 
 const trips = listTrips();
-// Trip-level status removed — derive these from departures.
-const activeTrips = trips.filter(t => tripHasUpcomingDates(t) && !tripCardSummary(t).soldOut).length;
+// Trip-level status removed — derive these from departures. "Active" counts every
+// individual departure date that's upcoming and not sold out, not parent trips —
+// one trip with 3 open departures counts as 3.
+const allDepartures = trips.flatMap(t => resolveBooking(t).departures);
+const activeTrips = allDepartures.filter(d => !d.soldOut).length;
 const soldOut = trips.filter(t => tripHasUpcomingDates(t) && tripCardSummary(t).soldOut);
 
 function inr(n: number) {
@@ -42,7 +45,7 @@ const kpis = [
   { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} bookings · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
   { label: 'Total bookings', value: String(totalBookings), hint: `${pendingCount} pending` },
   { label: 'Pending review', value: String(pendingCount), hint: 'Awaiting confirmation' },
-  { label: 'Active trips', value: String(activeTrips), hint: `${trips.length} total` },
+  { label: 'Active trips', value: String(activeTrips), hint: `${allDepartures.length} departures · ${trips.length} trips` },
 ];
 
 const quickActions = [
