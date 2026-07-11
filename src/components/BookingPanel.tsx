@@ -121,6 +121,8 @@ export default function BookingPanel({
               const isSoldOut = dep.soldOut;
               const left = dep.spotsLeft;
               const isLow = !isSoldOut && left != null && left <= 3;
+              const showSpotsLeft =
+                !isSoldOut && left != null && dep.totalCap != null && dep.totalCap > 0 && left / dep.totalCap < 0.8;
               const pct =
                 dep.totalCap && dep.totalCap > 0 && left != null
                   ? Math.min(100, ((dep.totalCap - left) / dep.totalCap) * 100)
@@ -144,7 +146,7 @@ export default function BookingPanel({
                   </div>
                   {isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
-                  ) : left != null ? (
+                  ) : showSpotsLeft ? (
                     <div className="mt-3">
                       <div
                         className="text-xs mb-1"
