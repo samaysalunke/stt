@@ -58,7 +58,9 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
 
   if (user) {
     db.prepare(`
-      UPDATE users SET displayName = ?, avatarUrl = ?, lastLoginAt = unixepoch()
+      UPDATE users SET
+        displayName = CASE WHEN displayNameOverride = 1 THEN displayName ELSE ? END,
+        avatarUrl = ?, lastLoginAt = unixepoch()
       WHERE googleId = ?
     `).run(displayName, avatarUrl, googleId);
     // Backfill a username for any existing user that somehow lacks one

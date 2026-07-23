@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { setUsername } from '../../../lib/usernames';
+import { setDisplayName } from '../../../lib/displayName';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -46,6 +47,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (body.action === 'setDisplayName') {
+    const result = setDisplayName(user.id, (body.displayName ?? '').toString());
+    return new Response(JSON.stringify(result), {
+      status: result.success ? 200 : 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }

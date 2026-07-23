@@ -54,12 +54,22 @@ for (const reg of shareCandidates) {
   } catch { /* skip if YAML can't be read */ }
 }
 
+const PAGE_SIZE = 10;
+const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') ?? '1'));
+const offset = (page - 1) * PAGE_SIZE;
+
+const { total: totalBookings } = db.prepare(`
+  SELECT COUNT(*) as total FROM registrations WHERE email = ?
+`).get(user.email) as { total: number };
+const totalPages = Math.max(1, Math.ceil(totalBookings / PAGE_SIZE));
+
 const bookings = db.prepare(`
   SELECT trip_name, trip_date, batch_id, status, created_at
   FROM registrations
   WHERE email = ?
   ORDER BY created_at DESC
-`).all(user.email) as {
+  LIMIT ? OFFSET ?
+`).all(user.email, PAGE_SIZE, offset) as {
   trip_name: string;
   trip_date: string | null;
   batch_id: string | null;
@@ -91,7 +101,7 @@ const canChangeUsername = !userRow?.usernameChangedAt;
           {shareBannerTrip.tripName} just wrapped. Your profile is updated.
         </p>
         <div class="flex items-center gap-2 mt-3">
-          <code class="text-xs px-2 py-1 rounded-lg flex-1 truncate"
+          <code id="share-banner-url" class="text-xs px-2 py-1 rounded-lg flex-1 truncate"
                 style="background: white; color: var(--color-navy); border: 1px solid var(--color-peach);">
             seekthethrill.in/u/{userRow.username}
           </code>
@@ -126,8 +136,8 @@ const canChangeUsername = !userRow?.usernameChangedAt;
       </div>
     </div>
 
-    <!-- Stats (only shown when user has confirmed trips in leaderboard) -->
-    {stats && (
+    <!-- Stats (only populated when user has confirmed trips in leaderboard) -->
+    {stats ? (
       <div class="grid grid-cols-3 gap-3 mb-10">
         {[
           { value: `${stats.kmsFromHome.toLocaleString('en-IN')} km`, label: 'from home' },
@@ -140,6 +150,11 @@ const canChangeUsername = !userRow?.usernameChangedAt;
           </div>
         ))}
       </div>
+    ) : (
+      <div class="rounded-xl p-6 text-center mb-10" style="background: var(--color-blush);">
+        <p class="text-sm mb-3" style="color: var(--color-gray-text);">Complete a trip to start tracking your stats.</p>
+        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
+      </div>
     )}
 
     <!-- My Trips -->
@@ -151,7 +166,7 @@ const canChangeUsername = !userRow?.usernameChangedAt;
         <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
       </div>
     ) : (
-      <div class="flex flex-col gap-3 mb-10">
+      <div class="flex flex-col gap-3 mb-3">
         {bookings.map((b) => {
           const s = statusLabel[b.status] ?? { label: b.status, color: 'var(--color-gray-text)' };
           return (
@@ -170,6 +185,39 @@ const canChangeUsername = !userRow?.usernameChangedAt;
         })}
       </div>
     )}
+
+    {totalPages > 1 && (
+      <div class="flex items-center justify-between mb-10 text-sm">
+        {page > 1 ? (
+          <a href={`?page=${page - 1}`} class="font-semibold" style="color: var(--color-coral);">← Prev</a>
+        ) : <span />}
+        <span style="color: var(--color-gray-text);">Page {page} of {totalPages}</span>
+        {page < totalPages ? (
+          <a href={`?page=${page + 1}`} class="font-semibold" style="color: var(--color-coral);">Next →</a>
+        ) : <span />}
+      </div>
+    )}
+
+    <!-- Display name -->
+    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Display name</h2>
+    <div class="rounded-xl p-4 mb-10" style="border: 1px solid var(--color-peach);">
+      <form id="display-name-form" class="flex gap-2">
+        <input
+          id="display-name-input"
+          type="text"
+          value={user.displayName ?? ''}
+          maxlength="50"
+          class="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2"
+          style="border-color: var(--color-peach); --tw-ring-color: var(--color-coral);"
+        />
+        <button type="submit"
+                class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-80"
+                style="background: var(--color-coral);">
+          Save
+        </button>
+      </form>
+      <p id="display-name-msg" class="text-xs mt-2 hidden" aria-live="polite"></p>
+    </div>
 
     <!-- Username -->
     <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Username</h2>
@@ -205,7 +253,48 @@ const canChangeUsername = !userRow?.usernameChangedAt;
           </button>
         </form>
       )}
-      <p id="username-msg" class="text-xs mt-2 hidden"></p>
+      <p id="username-hint" class="text-xs mt-2 hidden" style="color: var(--color-gray-text);"></p>
+      <p id="username-msg" class="text-xs mt-2 hidden" aria-live="polite"></p>
+    </div>
+
+    <!-- Privacy -->
+    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Privacy</h2>
+    <div class="rounded-xl p-4 mb-10 flex flex-col gap-4" style="border: 1px solid var(--color-peach);">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm" style="color: var(--color-navy);">Show me on the leaderboard</span>
+        <button
+          id="toggle-leaderboard"
+          type="button"
+          role="switch"
+          aria-checked={userRow?.leaderboardOptOut !== 1}
+          data-on={userRow?.leaderboardOptOut !== 1 ? 'true' : 'false'}
+          class="w-10 h-6 rounded-full relative flex-shrink-0 transition-colors"
+          style={`background: ${userRow?.leaderboardOptOut !== 1 ? 'var(--color-coral)' : 'var(--color-gray-text)'};`}
+        >
+          <span
+            class="toggle-knob absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+            style={`left: ${userRow?.leaderboardOptOut !== 1 ? '1.125rem' : '0.125rem'};`}
+          ></span>
+        </button>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm" style="color: var(--color-navy);">Show my trips publicly</span>
+        <button
+          id="toggle-show-trips"
+          type="button"
+          role="switch"
+          aria-checked={userRow?.showTripsPublicly === 1}
+          data-on={userRow?.showTripsPublicly === 1 ? 'true' : 'false'}
+          class="w-10 h-6 rounded-full relative flex-shrink-0 transition-colors"
+          style={`background: ${userRow?.showTripsPublicly === 1 ? 'var(--color-coral)' : 'var(--color-gray-text)'};`}
+        >
+          <span
+            class="toggle-knob absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+            style={`left: ${userRow?.showTripsPublicly === 1 ? '1.125rem' : '0.125rem'};`}
+          ></span>
+        </button>
+      </div>
+      <p id="privacy-msg" class="text-xs hidden" aria-live="polite"></p>
     </div>
 
     <!-- Share profile -->
@@ -256,13 +345,34 @@ const canChangeUsername = !userRow?.usernameChangedAt;
     });
   }
 
+  // Copies text to clipboard; on failure, selects codeEl's text so the user can copy manually.
+  async function copyText(text: string, codeEl: HTMLElement | null): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      if (codeEl) {
+        const range = document.createRange();
+        range.selectNodeContents(codeEl);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+      return false;
+    }
+  }
+
   // Share profile (permanent)
   document.getElementById('share-profile-copy')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget as HTMLButtonElement;
     const url = btn.dataset.url ?? '';
-    try { await navigator.clipboard.writeText(url); } catch { /* fallback */ }
+    const ok = await copyText(url, document.getElementById('share-profile-url'));
     const msg = document.getElementById('share-profile-copied');
-    if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2000); }
+    if (msg) {
+      msg.textContent = ok ? 'Copied!' : 'Could not copy automatically — text selected, press Ctrl/Cmd+C.';
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), ok ? 2000 : 5000);
+    }
   });
 
   // Share banner (post-trip)
@@ -270,9 +380,13 @@ const canChangeUsername = !userRow?.usernameChangedAt;
     const btn = e.currentTarget as HTMLButtonElement;
     const url = btn.dataset.url ?? '';
     const regId = btn.dataset.regId ?? '';
-    try { await navigator.clipboard.writeText(url); } catch { /* fallback: select text */ }
+    const ok = await copyText(url, document.getElementById('share-banner-url'));
     const msg = document.getElementById('share-banner-copied');
-    if (msg) { msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2000); }
+    if (msg) {
+      msg.textContent = ok ? 'Copied!' : 'Could not copy automatically — text selected, press Ctrl/Cmd+C.';
+      msg.classList.remove('hidden');
+      setTimeout(() => msg.classList.add('hidden'), ok ? 2000 : 5000);
+    }
     if (regId) markShareBanner(regId, 'share');
   });
 
@@ -284,29 +398,150 @@ const canChangeUsername = !userRow?.usernameChangedAt;
   });
 
   // Username form
+  // Keep in sync with USERNAME_RE / validateUsername in src/lib/usernames.ts
+  const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$|^[a-z0-9]{1,30}$/;
+  const RESERVED = new Set([
+    'admin', 'owner', 'root', 'api', 'login', 'logout', 'register', 'profile',
+    'leaderboard', 'trips', 'about', 'contact', 'me', 'null', 'undefined',
+    'system', 'support', 'help', 'team', 'seekthethrill', 'stt', 'user', 'users',
+  ]);
+  function validateUsernameClientSide(username: string): string | null {
+    if (!username) return null;
+    if (username.length < 3) return 'Must be at least 3 characters.';
+    if (username.length > 30) return 'Must be 30 characters or fewer.';
+    if (!USERNAME_RE.test(username)) return 'Use only letters, numbers, hyphens, and underscores (start/end with a letter or number).';
+    if (RESERVED.has(username)) return 'That username is reserved.';
+    return null;
+  }
+
   const usernameForm = document.getElementById('username-form') as HTMLFormElement | null;
   const usernameInput = document.getElementById('username-input') as HTMLInputElement | null;
+  const usernameHint = document.getElementById('username-hint') as HTMLElement | null;
   const usernameMsg = document.getElementById('username-msg') as HTMLElement | null;
+
+  usernameInput?.addEventListener('input', () => {
+    const err = validateUsernameClientSide(usernameInput.value.trim().toLowerCase());
+    if (usernameHint) {
+      usernameHint.textContent = err ?? '';
+      usernameHint.classList.toggle('hidden', !err);
+    }
+  });
 
   usernameForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = usernameInput?.value.trim().toLowerCase() ?? '';
     if (!username) return;
 
-    const res = await fetch('/api/profile/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'setUsername', username }),
-    });
-    const data = await res.json();
+    const submitBtn = usernameForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+    if (usernameInput) usernameInput.disabled = true;
 
-    if (usernameMsg) {
-      usernameMsg.textContent = data.error ?? 'Username saved!';
-      usernameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
-      usernameMsg.classList.remove('hidden');
+    try {
+      const res = await fetch('/api/profile/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setUsername', username }),
+      });
+      const data = await res.json();
+
+      if (usernameMsg) {
+        usernameMsg.textContent = data.error ?? 'Username saved!';
+        usernameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
+        usernameMsg.classList.remove('hidden');
+      }
+
+      if (data.success) {
+        setTimeout(() => location.reload(), 800);
+        return;
+      }
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (usernameInput) usernameInput.disabled = false;
     }
-
-    if (data.success) setTimeout(() => location.reload(), 800);
   });
 
+  // Display name form
+  const displayNameForm = document.getElementById('display-name-form') as HTMLFormElement | null;
+  const displayNameInput = document.getElementById('display-name-input') as HTMLInputElement | null;
+  const displayNameMsg = document.getElementById('display-name-msg') as HTMLElement | null;
+
+  displayNameForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const displayName = displayNameInput?.value.trim() ?? '';
+    if (!displayName) return;
+
+    const submitBtn = displayNameForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    if (submitBtn) submitBtn.disabled = true;
+    if (displayNameInput) displayNameInput.disabled = true;
+
+    try {
+      const res = await fetch('/api/profile/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setDisplayName', displayName }),
+      });
+      const data = await res.json();
+
+      if (displayNameMsg) {
+        displayNameMsg.textContent = data.error ?? 'Display name saved!';
+        displayNameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
+        displayNameMsg.classList.remove('hidden');
+      }
+
+      if (data.success) setTimeout(() => location.reload(), 800);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+      if (displayNameInput) displayNameInput.disabled = false;
+    }
+  });
+
+  // Privacy toggles
+  const privacyMsg = document.getElementById('privacy-msg') as HTMLElement | null;
+
+  function showPrivacyMsg(text: string, isError: boolean) {
+    if (!privacyMsg) return;
+    privacyMsg.textContent = text;
+    privacyMsg.style.color = isError ? '#ef4444' : 'var(--color-coral)';
+    privacyMsg.classList.remove('hidden');
+    setTimeout(() => privacyMsg.classList.add('hidden'), 2000);
+  }
+
+  function paintToggle(btn: HTMLButtonElement, on: boolean) {
+    btn.dataset.on = on ? 'true' : 'false';
+    btn.setAttribute('aria-checked', String(on));
+    btn.style.background = on ? 'var(--color-coral)' : 'var(--color-gray-text)';
+    const knob = btn.querySelector('.toggle-knob') as HTMLElement | null;
+    if (knob) knob.style.left = on ? '1.125rem' : '0.125rem';
+  }
+
+  function bindToggle(id: string, action: 'setLeaderboard' | 'setShowTrips') {
+    const btn = document.getElementById(id) as HTMLButtonElement | null;
+    btn?.addEventListener('click', async () => {
+      const nextOn = btn.dataset.on !== 'true';
+      btn.disabled = true;
+      paintToggle(btn, nextOn); // optimistic
+      try {
+        const res = await fetch('/api/profile/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, value: nextOn }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          paintToggle(btn, !nextOn); // revert
+          showPrivacyMsg(data.error ?? 'Could not save.', true);
+        } else {
+          showPrivacyMsg('Saved!', false);
+        }
+      } catch {
+        paintToggle(btn, !nextOn);
+        showPrivacyMsg('Could not save.', true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  bindToggle('toggle-leaderboard', 'setLeaderboard');
+  bindToggle('toggle-show-trips', 'setShowTrips');
 </script>
