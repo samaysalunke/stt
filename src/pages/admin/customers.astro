@@ -261,12 +261,12 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                 </span>
               </div>
 
-              <div class="cust-meta" style="display:none;" data-desktop-only>
+              <div class="cust-meta" data-desktop-only>
                 <span class="meta-label">City</span>
                 <span style="font-size:0.82rem;">{c.city ?? '—'}</span>
               </div>
 
-              <div class="cust-meta" style="display:none;" data-desktop-only>
+              <div class="cust-meta" data-desktop-only>
                 <span class="meta-label">Last activity</span>
                 <span style="font-size:0.78rem;color:var(--color-text-secondary);">{formatDateIN(c.last_reg_at)}</span>
               </div>

@@ -25,7 +25,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       </label>
 
       <!-- Trip / departure / occupancy -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div style="grid-column:1 / -1;">
           <label style={labelStyle}>Trip *</label>
           <select id="trip" style={inputStyle}><option value="">Select a trip…</option></select>
@@ -40,7 +40,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div>
           <label style={labelStyle}>Status</label>
           <select id="status" style={inputStyle}>
@@ -59,7 +59,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       <hr style="border:none;border-top:1px solid var(--color-border);margin:0.25rem 0;" />
 
       <!-- Registrant -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div><label style={labelStyle}>Full name *</label><input id="full_name" type="text" style={inputStyle} /></div>
         <div><label style={labelStyle}>Email *</label><input id="email" type="email" style={inputStyle} /></div>
         <div><label style={labelStyle}>Phone *</label><input id="phone" type="tel" style={inputStyle} /></div>
@@ -85,6 +85,12 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       </div>
     </form>
   )}
+
+  <style>
+    @media (max-width: 640px) {
+      .reg-form-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
 
   <script is:inline define:vars={{ tripsData, preselectTrip, preselectDeparture }}>
     const tripSel = document.getElementById('trip');

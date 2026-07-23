@@ -25,7 +25,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       </label>
 
       <!-- Destination -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="import-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div style="grid-column:1 / -1;">
           <label style={labelStyle}>Trip *</label>
           <select id="trip" style={inputStyle}><option value="">Select a trip…</option></select>
@@ -79,6 +79,12 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       <div id="result-box" style="display:none;font-size:0.875rem;padding:0.85rem 1rem;border-radius:0.5rem;background:rgba(34,166,84,0.10);color:var(--color-success);"></div>
     </div>
   )}
+
+  <style>
+    @media (max-width: 640px) {
+      .import-form-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
 
   <script is:inline define:vars={{ tripsData, preselectTrip, preselectDeparture }}>
     const tripSel = document.getElementById('trip');

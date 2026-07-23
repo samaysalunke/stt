@@ -51,6 +51,7 @@ const error   = Astro.url.searchParams.get('error');
         No roles assigned yet.
       </div>
     ) : (
+      <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr style="background: rgba(245,221,215,0.2);">
@@ -101,6 +102,7 @@ const error   = Astro.url.searchParams.get('error');
           })}
         </tbody>
       </table>
+      </div>
     )}
   </div>
 
