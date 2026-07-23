@@ -90,7 +90,7 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
   <!-- Slim trip header -->
   <div class="border-b" style="border-color: var(--color-peach);">
     <div class="container-app py-4 flex items-center gap-3">
-      <a href={`/trips/${slug}/`} class="flex items-center gap-1.5 text-sm transition-colors hover:opacity-70" style="color: var(--color-coral);">
+      <a href={`/trips/${slug}/`} data-back-link class="flex items-center gap-1.5 text-sm transition-colors hover:opacity-70" style="color: var(--color-coral);">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
@@ -137,3 +137,16 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  // Prefer real browser back (pops to the trip page's existing history entry)
+  // over a fresh forward navigation, so a trip-detail <-> book ping-pong via
+  // history.back() on the trip page doesn't loop.
+  const back = document.querySelector('[data-back-link]');
+  back?.addEventListener('click', (e) => {
+    if (document.referrer && window.history.length > 1) {
+      e.preventDefault();
+      window.history.back();
+    }
+  });
+</script>

@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { listTrips, listTestimonials, readSiteSettings, isTripListable, tripCardSummary } from '../lib/content';
+import { listTrips, listTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking } from '../lib/content';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature trips that have an upcoming,
@@ -130,6 +130,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
                 multiPrice={card.multiPrice}
                 spotsLeft={card.spotsLeft}
                 soldOut={card.soldOut}
+                departures={resolveBooking(trip).departures}
               />
             );
           })}
