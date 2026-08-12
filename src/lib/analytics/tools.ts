@@ -125,7 +125,7 @@ export const analyticsTools: ToolDefinition[] = [
   },
   {
     name: 'getPendingPayments',
-    description: 'Outstanding balances by trip using total_amount minus amount_paid.',
+    description: 'Outstanding balances by trip using total_amount minus amount_paid for confirmed registrations.',
     parameters: objectParams({}),
     execute() {
       const rows = withTripTitles(all(
@@ -133,11 +133,11 @@ export const analyticsTools: ToolDefinition[] = [
                 SUM(MAX(COALESCE(total_amount, 0) - COALESCE(amount_paid, 0), 0)) AS pending_amount,
                 COUNT(*) AS registrations
          FROM registrations
-         WHERE status != 'rejected' AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
+         WHERE status = 'confirmed' AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
          GROUP BY COALESCE(trip_slug, trip_name), trip_name
          ORDER BY pending_amount DESC`,
       ));
-      return shape(rows, 'Pending payments are total amount minus amount paid for non-rejected registrations.');
+      return shape(rows, 'Pending payments are total amount minus amount paid for confirmed registrations.');
     },
   },
   {
