@@ -13,166 +13,228 @@ const galleryAlbums = publishedAlbums.map(a => ({
 }));
 const initialGallery: any[] = [];
 const tripSlug = '';
+const itinerary: any[] = [];
+const editorCatalog: any[] = [];
+const editorDepartures: any[] = [];
 ---
 
 <AdminLayout title="New Trip" page="trips">
-  <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
-    <a href="/admin/trips" style="color:var(--color-text-secondary); text-decoration:none; font-size:0.875rem;">← Back to Trips</a>
-    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">New Trip</h1>
+
+  <!-- Header -->
+  <div class="edit-header">
+    <a href="/admin/trips" class="back-link">← Trips</a>
+    <h1 class="edit-title">New Trip</h1>
+    <div class="header-actions">
+      <button type="submit" form="trip-form" class="save-btn">Create Trip</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    {[
+      { id: 'basics',    label: 'Basics'    },
+      { id: 'content',   label: 'Content'   },
+      { id: 'itinerary', label: 'Itinerary' },
+      { id: 'logistics', label: 'Logistics' },
+      { id: 'payment',   label: 'Payment & Media' },
+    ].map(({ id, label }) => (
+      <button type="button" class="tab-btn" data-tab={id}>{label}</button>
+    ))}
   </div>
 
   <form method="POST" action="/api/admin/trips/create" enctype="multipart/form-data" id="trip-form">
 
-    <!-- Section 1: Basic Info -->
-    <div class="form-section">
-      <h2 class="section-title">Basic Info</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Trip Name *</label>
-          <input type="text" name="name" required class="form-input" placeholder="e.g. Spiti Valley Winter Trek" oninput="autoSlug(this.value)" />
+    <!-- ── TAB: BASICS ─────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-basics">
+      <div class="panel-grid">
+
+        <div class="field full">
+          <label class="flabel">Trip Name *</label>
+          <input type="text" name="name" required class="finput" placeholder="e.g. Spiti Valley Winter Trek" />
         </div>
-        <div class="form-group">
-          <label class="form-label">Slug *</label>
-          <input type="text" name="slug" id="slug-field" required class="form-input" placeholder="spiti-valley-winter-trek" />
-          <span class="form-hint">URL: /trips/[slug]</span>
+        <div class="field">
+          <label class="flabel">Slug *</label>
+          <input type="text" name="slug" id="slug-field" required class="finput" placeholder="spiti-valley-winter-trek" />
+          <span class="fhint">URL: /trips/[slug]</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">Duration</label>
-          <input type="text" name="duration" class="form-input" placeholder="e.g. 7 Days / 6 Nights" />
+
+        <div class="field full">
+          <label class="flabel">Occupancy Tiers</label>
+          <p class="fhint" style="margin-bottom:0.5rem;">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
+          <div id="catalog-editor"></div>
+          <button type="button" id="add-tier-btn" class="add-btn">+ Add Occupancy Tier</button>
+          <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
         </div>
-        <div class="form-group">
-          <label class="form-label">Publication</label>
-          <select name="publicationStatus" class="form-input"><option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option><option value="test">Test only</option></select>
+
+        <div class="field full">
+          <label class="flabel">Departures &amp; Offers</label>
+          <p class="fhint" style="margin-bottom:0.5rem;">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
+          <div id="departures-editor"></div>
+          <button type="button" id="add-departure-btn" class="add-btn">+ Add Departure Date</button>
+          <input type="hidden" name="departures_json" id="departures_json" />
         </div>
-        <div class="form-group">
-          <label class="form-label">Location</label>
-          <input type="text" name="location" class="form-input" placeholder="e.g. Meghalaya" />
+
+        <div class="field">
+          <label class="flabel">Duration</label>
+          <input type="text" name="duration" class="finput" placeholder="e.g. 6N/7D" />
         </div>
+
+        <div class="field">
+          <label class="flabel">Location</label>
+          <input type="text" name="location" class="finput" placeholder="e.g. Meghalaya" />
+        </div>
+
+        <div class="field">
+          <label class="flabel">Publication</label>
+          <select name="publicationStatus" class="finput">
+            {['draft', 'published', 'archived', 'test'].map((status) => <option value={status}>{status}</option>)}
+          </select>
+        </div>
+
       </div>
     </div>
 
-    <!-- Section: Occupancy + Departures -->
-    <div class="form-section">
-      <h2 class="section-title">Occupancy Tiers</h2>
-      <p class="form-hint" style="margin-bottom:0.75rem;">Define each room type once (e.g. Dorm Bed, Double Sharing). For a trip with no real choice, add a single tier like "Standard".</p>
-      <div id="catalog-editor"></div>
-      <button type="button" id="add-tier-btn" class="add-item-btn">+ Add Occupancy Tier</button>
-      <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
+    <!-- ── TAB: CONTENT ────────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-content">
+      <div class="panel-grid">
 
-      <h2 class="section-title" style="margin-top:1.25rem;">Departures &amp; Offers</h2>
-      <p class="form-hint" style="margin-bottom:0.75rem;">One block per departure date. Tick which tiers it offers; set price, stock (cap) and booked per tier. Past dates auto-hide on the site.</p>
-      <div id="departures-editor"></div>
-      <button type="button" id="add-departure-btn" class="add-item-btn">+ Add Departure Date</button>
-      <input type="hidden" name="departures_json" id="departures_json" />
-    </div>
+        <div class="field full">
+          <label class="flabel">
+            Short Description
+            <span id="shortDesc-count" class="char-count">0/200</span>
+          </label>
+          <textarea name="shortDescription" class="finput" rows="3" maxlength="200"
+            placeholder="A brief enticing summary shown in listings..."
+            oninput="document.getElementById('shortDesc-count').textContent=this.value.length+'/200'"
+          ></textarea>
+          <span class="fhint">Shows on trip cards and meta description.</span>
+        </div>
 
-    <!-- Section 2: Content -->
-    <div class="form-section">
-      <h2 class="section-title">Content</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Short Description <span id="shortDesc-count" style="color:var(--color-text-muted); font-weight:400;">(0/200)</span></label>
-          <textarea name="shortDescription" class="form-input" rows="3" maxlength="200" placeholder="A brief enticing summary shown in listings..." oninput="document.getElementById('shortDesc-count').textContent = '('+this.value.length+'/200)'"></textarea>
+        <div class="field full">
+          <label class="flabel">Full Description</label>
+          <textarea name="description" class="finput" rows="8" placeholder="Detailed trip description shown on the trip page..."></textarea>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Full Description</label>
-          <textarea name="description" class="form-input" rows="8" placeholder="Detailed trip description..."></textarea>
+
+        <div class="field full">
+          <label class="flabel">SEO Title</label>
+          <input name="seoTitle" class="finput" maxlength="70" placeholder="Optional; falls back to trip name" />
         </div>
-        <div class="form-group full">
-          <label class="form-label">SEO Title</label>
-          <input name="seoTitle" class="form-input" maxlength="70" placeholder="Optional; falls back to trip name" />
+
+        <div class="field full">
+          <label class="flabel">SEO Description</label>
+          <textarea name="seoDescription" class="finput" rows="3" maxlength="170" placeholder="Search result summary"></textarea>
         </div>
-        <div class="form-group full">
-          <label class="form-label">SEO Description</label>
-          <textarea name="seoDescription" class="form-input" rows="3" maxlength="170" placeholder="Search result summary"></textarea>
+
+        <div class="field full">
+          <label class="flabel">Featured Image Alt Text</label>
+          <input name="imageAlt" class="finput" maxlength="180" placeholder="Describe the destination and scene" />
         </div>
-        <div class="form-group full">
-          <label class="form-label">Featured Image Alt Text</label>
-          <input name="imageAlt" class="form-input" maxlength="180" placeholder="Describe the destination and scene" />
+
+        <div class="field full">
+          <label class="flabel">Who Should Join?</label>
+          <textarea name="whoShouldJoin" class="finput" rows="4" placeholder="Describe the ideal traveler for this trip..."></textarea>
+          <span class="fhint">Shown as a highlighted box on the trip page.</span>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Who Should Join</label>
-          <textarea name="whoShouldJoin" class="form-input" rows="4" placeholder="This trip is perfect for..."></textarea>
+
+        <div class="field full">
+          <label class="flabel">Highlights</label>
+          <div id="highlights-list" class="dyn-list"></div>
+          <button type="button" class="add-btn" data-list="highlights-list" data-name="highlights[]" data-placeholder="e.g. Sunrise trek to summit...">+ Add Highlight</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Highlights</label>
-          <div id="highlights-list" class="dynamic-list"></div>
-          <button type="button" class="add-item-btn" onclick="addItem('highlights-list','highlights[]','Add a highlight...')">+ Add Highlight</button>
+
+        <div class="field full">
+          <label class="flabel">What's Included</label>
+          <div id="included-list" class="dyn-list"></div>
+          <button type="button" class="add-btn" data-list="included-list" data-name="included[]" data-placeholder="e.g. Accommodation...">+ Add Inclusion</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Included</label>
-          <div id="included-list" class="dynamic-list"></div>
-          <button type="button" class="add-item-btn" onclick="addItem('included-list','included[]','e.g. Accommodation, Meals...')">+ Add Inclusion</button>
+
+        <div class="field full">
+          <label class="flabel">What's Not Included</label>
+          <div id="notIncluded-list" class="dyn-list"></div>
+          <button type="button" class="add-btn" data-list="notIncluded-list" data-name="notIncluded[]" data-placeholder="e.g. Flight tickets...">+ Add Exclusion</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Not Included</label>
-          <div id="notIncluded-list" class="dynamic-list"></div>
-          <button type="button" class="add-item-btn" onclick="addItem('notIncluded-list','notIncluded[]','e.g. Flight tickets...')">+ Add Exclusion</button>
+
+        <div class="field full">
+          <label class="flabel">Packing List</label>
+          <div id="packingList-list" class="dyn-list"></div>
+          <button type="button" class="add-btn" data-list="packingList-list" data-name="packingList[]" data-placeholder="e.g. Warm jacket...">+ Add Item</button>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Packing List</label>
-          <div id="packingList-list" class="dynamic-list"></div>
-          <button type="button" class="add-item-btn" onclick="addItem('packingList-list','packingList[]','e.g. Warm jacket...')">+ Add Item</button>
-        </div>
+
       </div>
     </div>
 
-    <!-- Section 3: Logistics -->
-    <div class="form-section">
-      <h2 class="section-title">Logistics</h2>
-      <div class="form-grid">
-        <div class="form-group full">
-          <label class="form-label">Meeting Point</label>
-          <textarea name="meetingPoint" class="form-input" rows="3" placeholder="Where participants should gather..."></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Meeting Time</label>
-          <input type="text" name="meetingTime" class="form-input" placeholder="e.g. 6:00 AM" />
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Important Notes</label>
-          <textarea name="importantNotes" class="form-input" rows="4" placeholder="Any special instructions or warnings..."></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="form-label">Cancellation Policy</label>
-          <textarea name="cancellationPolicy" class="form-input" rows="4" placeholder="Cancellation and refund terms..."></textarea>
+    <!-- ── TAB: ITINERARY ──────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-itinerary">
+      <div class="itin-toolbar">
+        <span class="itin-count" id="itin-count">0 days</span>
+        <div style="display:flex;gap:0.5rem;">
+          <button type="button" class="itin-tool-btn" id="expand-all-btn">Expand all</button>
+          <button type="button" class="itin-tool-btn" id="collapse-all-btn">Collapse all</button>
         </div>
       </div>
-    </div>
-
-    <!-- Section 4: Itinerary -->
-    <div class="form-section">
-      <h2 class="section-title">Itinerary</h2>
       <div id="itinerary-container"></div>
-      <button type="button" onclick="addDay()" style="margin-top:0.75rem; background:var(--color-surface-elevated); border:1px dashed var(--color-border); color:var(--color-text-secondary); padding:0.6rem 1.25rem; border-radius:0.5rem; cursor:pointer; font-size:0.875rem; width:100%;">+ Add Day</button>
+      <button type="button" id="add-day-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Day
+      </button>
       <input type="hidden" name="itinerary_json" id="itinerary_json" />
     </div>
 
-    <!-- Section 5: Media & Payment -->
-    <div class="form-section">
-      <h2 class="section-title">Media & Payment</h2>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Featured Image</label>
-          <input type="file" name="featuredImage" accept="image/*" class="form-input" onchange="previewImage(this,'featured-preview')" />
-          <img id="featured-preview" src="" alt="" style="display:none; margin-top:0.5rem; max-height:150px; border-radius:0.5rem; object-fit:cover;" />
-          <p class="img-hint"><strong>Recommended:</strong> 1200 × 675 px · 16:9 ratio · JPG or PNG · Max 10 MB. Used as trip hero banner and listing card thumbnail.</p>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Advance / Booking Amount (₹)</label>
-          <input type="number" name="paymentAmount" class="form-input" placeholder="e.g. 5000 (paid now to confirm spot)" />
-          <span class="form-hint">Fixed amount paid now to confirm any departure. The full price comes from the per-departure occupancy offers.</span>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Balance Due Rule</label>
-          <input type="text" name="balanceDueRule" class="form-input" placeholder="e.g. 15 days before trip" />
-          <span class="form-hint">Shown in the booking summary, e.g. "due 15 days before trip".</span>
-        </div>
-        <div class="form-group full gallery-editor">
-          <label class="form-label">Trip Photos</label>
-          <span class="form-hint">Pick up to 10 images from a photo album, and/or upload trip-only photos. Trip-only uploads stay on this trip and are <strong>not</strong> added to the Photo Vault.</span>
+    <!-- ── TAB: LOGISTICS ─────────────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-logistics">
+      <div class="panel-grid">
 
-          <select id="gallery-album-select" class="form-input" style="margin-top:0.5rem;">
+        <div class="field full">
+          <label class="flabel">Meeting Point</label>
+          <textarea name="meetingPoint" class="finput" rows="3" placeholder="Where travelers should gather..."></textarea>
+        </div>
+
+        <div class="field">
+          <label class="flabel">Meeting Time</label>
+          <input type="text" name="meetingTime" class="finput" placeholder="e.g. 6:00 AM" />
+        </div>
+
+        <div class="field full">
+          <label class="flabel">Important Notes</label>
+          <textarea name="importantNotes" class="finput" rows="4" placeholder="Things travelers must know..."></textarea>
+        </div>
+
+        <div class="field full">
+          <label class="flabel">Cancellation Policy</label>
+          <textarea name="cancellationPolicy" class="finput" rows="4" placeholder="Cancellation and refund terms..."></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── TAB: PAYMENT & MEDIA ───────────────────────────── -->
+    <div class="tab-panel hidden" id="tab-payment">
+      <div class="panel-grid">
+
+        <div class="field">
+          <label class="flabel">Advance / Booking Amount (₹)</label>
+          <input type="number" name="paymentAmount" class="finput" placeholder="e.g. 5000 (paid now to confirm spot)" />
+          <span class="fhint">Fixed amount paid now to confirm any departure. The full price comes from the per-departure occupancy offers.</span>
+        </div>
+
+        <div class="field">
+          <label class="flabel">Balance Due Rule</label>
+          <input type="text" name="balanceDueRule" class="finput" placeholder="e.g. 15 days before trip" />
+          <span class="fhint">Shown in the booking summary, e.g. "due 15 days before trip".</span>
+        </div>
+
+        <div class="field">
+          <label class="flabel">Featured Image</label>
+          <input type="file" name="featuredImage" accept="image/*" class="finput file-input" data-preview="featured-preview" />
+          <img id="featured-preview" src="" alt="" class="img-preview hidden" />
+          <span class="fhint">1200×675px · 16:9 · JPG/PNG · max 10 MB. Used as trip hero banner and listing card thumbnail.</span>
+        </div>
+
+        <div class="field full gallery-editor">
+          <label class="flabel">Trip Photos</label>
+          <span class="fhint">Pick up to 10 images from a photo album, and/or upload trip-only photos. Trip-only uploads stay on this trip and are <strong>not</strong> added to the Photo Vault.</span>
+
+          <select id="gallery-album-select" class="finput" style="margin-top:0.5rem;">
             <option value="">— Choose an album to pick photos —</option>
             {publishedAlbums.map(a => (<option value={a.slug}>{a.name}</option>))}
           </select>
@@ -182,52 +244,145 @@ const tripSlug = '';
           <div style="margin-top:0.85rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
             <input type="file" id="gallery-upload-input" accept="image/*" multiple style="display:none;" />
             <label for="gallery-upload-input" class="gallery-upload-btn">📷 Upload trip-only photos</label>
-            <span id="gallery-upload-status" class="form-hint"></span>
+            <span id="gallery-upload-status" class="fhint"></span>
           </div>
 
-          <p class="form-label" style="margin:1rem 0 0.5rem;">Selected (<span id="gallery-count">0</span>) <span class="form-hint" id="gallery-album-count"></span></p>
+          <p class="flabel" style="margin:1rem 0 0.5rem;"><span>Selected (<span id="gallery-count">0</span>)</span><span class="fhint" id="gallery-album-count"></span></p>
           <div id="gallery-selected" class="gallery-grid"></div>
 
           <input type="hidden" name="gallery_json" id="gallery_json" />
         </div>
+
       </div>
     </div>
 
-    <div style="display:flex; gap:1rem; margin-top:1rem;">
-      <button type="submit" style="background:var(--color-primary); color:white; padding:0.65rem 2rem; border-radius:0.5rem; border:none; cursor:pointer; font-weight:600; font-size:0.95rem;">Create Trip</button>
-      <a href="/admin/trips" style="background:var(--color-surface-elevated); color:var(--color-text-secondary); padding:0.65rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:500; font-size:0.95rem; border:1px solid var(--color-border);">Cancel</a>
+    <!-- Bottom save bar -->
+    <div class="save-bar">
+      <a href="/admin/trips" class="cancel-btn">Cancel</a>
+      <button type="submit" class="save-btn">Create Trip</button>
     </div>
+
   </form>
 </AdminLayout>
 
-<style>
-.form-section {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
+<style is:global>
+/* ── Layout ─────────────────────────────────── */
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
-.section-title {
+.back-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+.edit-title {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin: 0 0 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+  margin: 0;
+  flex: 1;
 }
-.form-grid {
+.header-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.preview-btn {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  background: white;
+}
+.save-btn {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.55rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.save-btn:hover { opacity: 0.9; }
+
+/* ── Tabs ────────────────────────────────────── */
+.tabs-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-bar::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: 0.6rem 1.1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--color-text-primary); }
+.tab-btn.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── Panels ──────────────────────────────────── */
+.tab-panel { }
+.tab-panel.hidden { display: none; }
+
+.panel-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: 1.1rem;
 }
-.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.form-group.full { grid-column: 1 / -1; }
-.form-label { font-size: 0.875rem; font-weight: 600; color: var(--color-text-secondary); }
-.form-hint { font-size: 0.75rem; color: var(--color-text-muted); }
-.form-input {
-  background: var(--color-surface);
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.field.full { grid-column: 1 / -1; }
+
+.flabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.char-count {
+  font-weight: 400;
+  color: #9CA3AF;
+}
+.fhint {
+  font-size: 0.72rem;
+  color: #9CA3AF;
+  line-height: 1.4;
+}
+.fhint code {
+  background: var(--color-border);
+  padding: 0 0.2rem;
+  border-radius: 0.2rem;
+}
+.finput {
+  background: white;
   border: 1px solid var(--color-border);
   border-radius: 0.4rem;
   padding: 0.5rem 0.75rem;
@@ -236,277 +391,265 @@ const tripSlug = '';
   outline: none;
   width: 100%;
   box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s;
 }
-.form-input:focus { border-color: var(--color-primary); }
-.dynamic-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
-.dynamic-item { display: flex; gap: 0.4rem; }
-.dynamic-item input { flex: 1; }
-.remove-btn {
-  background: none; border: 1px solid #dc2626; color: #dc2626; border-radius: 0.35rem;
-  padding: 0.3rem 0.6rem; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
+.finput:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(45,95,62,0.1); }
+select.finput { cursor: pointer; }
+
+/* ── Dynamic lists ───────────────────────────── */
+.dyn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
 }
-.add-item-btn {
-  background: none; border: 1px dashed var(--color-border); color: var(--color-text-muted);
-  border-radius: 0.35rem; padding: 0.35rem 0.75rem; cursor: pointer; font-size: 0.8rem;
+.dyn-item { display: flex; gap: 0.4rem; }
+.dyn-item input { flex: 1; }
+.rm-btn {
+  background: none;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+  border-radius: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  flex-shrink: 0;
 }
-.day-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
+.add-btn {
+  background: none;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  align-self: flex-start;
+}
+.add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ── Itinerary toolbar ───────────────────────── */
+.itin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 0.75rem;
 }
-.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.day-title { font-weight: 600; font-size: 0.9rem; color: var(--color-text-primary); }
-.day-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.6rem; }
-.day-grid .full { grid-column: 1/-1; }
-.day-label { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 0.2rem; }
-.day-input { background: var(--color-surface-elevated); border: 1px solid var(--color-border); border-radius: 0.35rem; padding: 0.4rem 0.6rem; color: var(--color-text-primary); font-size: 0.8rem; width: 100%; box-sizing: border-box; outline: none; }
-.meal-row { display: flex; gap: 1rem; }
-.meal-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--color-text-secondary); cursor: pointer; }
-
-/* ===== RESPONSIVE FIXES ===== */
-@media (max-width: 768px) {
-  .form-grid { grid-template-columns: 1fr; }
-  .form-group.full { grid-column: 1; }
-  .day-grid { grid-template-columns: 1fr; }
-  .day-grid .full { grid-column: 1; }
-  .form-section { padding: 1rem; }
+.itin-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
-.img-hint {
-  margin: 0.35rem 0 0;
+.itin-tool-btn {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.itin-tool-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+#add-day-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  background: white;
+  border: 1.5px dashed var(--color-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+#add-day-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+/* ── Accordion day cards ─────────────────────── */
+.day-card {
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.day-card:focus-within { box-shadow: 0 0 0 2px rgba(45,95,62,0.15); border-color: var(--color-primary); }
+
+.day-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  user-select: none;
+}
+.day-header:hover { background: var(--color-surface); }
+
+.day-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+}
+.day-card.open .day-num { background: var(--color-accent); }
+
+.day-header-text { flex: 1; min-width: 0; }
+.day-title {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-display);
+}
+.day-summary {
   font-size: 0.72rem;
-  line-height: 1.45;
-  color: #9CA3AF;
-}
-.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
-</style>
-
-<script>
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-}
-function autoSlug(name: string) {
-  const field = document.getElementById('slug-field') as HTMLInputElement;
-  if (field) field.value = slugify(name);
-}
-function previewImage(input: HTMLInputElement, previewId: string) {
-  const img = document.getElementById(previewId) as HTMLImageElement;
-  if (input.files && input.files[0]) {
-    img.src = URL.createObjectURL(input.files[0]);
-    img.style.display = 'block';
-  }
-}
-function addItem(listId: string, name: string, placeholder: string) {
-  const list = document.getElementById(listId)!;
-  const div = document.createElement('div');
-  div.className = 'dynamic-item';
-  div.innerHTML = `<input type="text" name="${name}" placeholder="${placeholder}" class="form-input" /><button type="button" class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
-  list.appendChild(div);
+  color: var(--color-text-secondary);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// Itinerary
-let dayCount = 0;
-function addDay() {
-  dayCount++;
-  const container = document.getElementById('itinerary-container')!;
-  const div = document.createElement('div');
-  div.className = 'day-card';
-  div.dataset.day = String(dayCount);
-  div.innerHTML = `
-    <div class="day-header">
-      <span class="day-title">Day ${dayCount}</span>
-      <button type="button" class="remove-btn" onclick="this.closest('.day-card').remove(); renumberDays();">✕ Remove</button>
-    </div>
-    <div class="day-grid">
-      <div class="full">
-        <div class="day-label">Day Title</div>
-        <input type="text" class="day-input day-dayTitle" placeholder="e.g. Arrive in Manali" />
-      </div>
-      <div class="full">
-        <div class="day-label">Activities</div>
-        <textarea class="day-input day-activities" rows="3" placeholder="What happens on this day..."></textarea>
-      </div>
-      <div>
-        <div class="day-label">Accommodation</div>
-        <input type="text" class="day-input day-accommodation" placeholder="e.g. Hotel/Homestay" />
-      </div>
-      <div>
-        <div class="day-label">Transport</div>
-        <input type="text" class="day-input day-transport" placeholder="e.g. Shared SUV" />
-      </div>
-      <div class="full">
-        <div class="day-label">Meals Included</div>
-        <div class="meal-row">
-          <label class="meal-label"><input type="checkbox" class="day-breakfast" /> Breakfast</label>
-          <label class="meal-label"><input type="checkbox" class="day-lunch" /> Lunch</label>
-          <label class="meal-label"><input type="checkbox" class="day-dinner" /> Dinner</label>
-        </div>
-      </div>
-      <div class="full">
-        <div class="day-label">Special Notes</div>
-        <input type="text" class="day-input day-specialNotes" placeholder="Any special notes for this day..." />
-      </div>
-    </div>
-  `;
-  container.appendChild(div);
+.day-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
 }
-function renumberDays() {
-  document.querySelectorAll('.day-card').forEach((card, i) => {
-    (card.querySelector('.day-title') as HTMLElement).textContent = `Day ${i + 1}`;
-  });
+.day-move-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 0.3rem;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  padding: 0;
 }
-function serializeItinerary(): object[] {
-  const days: object[] = [];
-  document.querySelectorAll('.day-card').forEach((card, i) => {
-    days.push({
-      day: i + 1,
-      dayTitle: (card.querySelector('.day-dayTitle') as HTMLInputElement)?.value ?? '',
-      activities: (card.querySelector('.day-activities') as HTMLTextAreaElement)?.value ?? '',
-      accommodation: (card.querySelector('.day-accommodation') as HTMLInputElement)?.value ?? '',
-      transport: (card.querySelector('.day-transport') as HTMLInputElement)?.value ?? '',
-      breakfast: (card.querySelector('.day-breakfast') as HTMLInputElement)?.checked ?? false,
-      lunch: (card.querySelector('.day-lunch') as HTMLInputElement)?.checked ?? false,
-      dinner: (card.querySelector('.day-dinner') as HTMLInputElement)?.checked ?? false,
-      specialNotes: (card.querySelector('.day-specialNotes') as HTMLInputElement)?.value ?? '',
-    });
-  });
-  return days;
+.day-move-btn:hover { background: var(--color-surface); border-color: var(--color-primary); color: var(--color-primary); }
+.day-move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.day-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.day-card.open .day-chevron { transform: rotate(180deg); }
+
+.day-body {
+  display: none;
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--color-border);
+}
+.day-card.open .day-body { display: block; }
+
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+.day-grid .full { grid-column: 1 / -1; }
+.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.25rem; }
+.day-input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  color: var(--color-text-primary);
+  font-size: 0.825rem;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.day-input:focus { border-color: var(--color-primary); }
+
+.meal-row { display: flex; gap: 1.25rem; flex-wrap: wrap; padding: 0.5rem 0; }
+.meal-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--color-border);
+  transition: background 0.15s, border-color 0.15s;
+}
+.meal-label:has(input:checked) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
-document.getElementById('trip-form')!.addEventListener('submit', () => {
-  const el = document.getElementById('itinerary_json') as HTMLInputElement;
-  el.value = JSON.stringify(serializeItinerary());
-});
+.day-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
 
-// ── Occupancy catalog + per-departure offers editor ──────────────────────────
-(function () {
-  const STATUSES = ['booking-open', 'filling_fast', 'sold-out', 'draft', 'completed'];
-  const catalog: any[] = [];
-  const departures: any[] = [];
+/* ── Images ─────────────────────────────────── */
+.file-input { padding: 0.35rem 0.5rem; }
+.img-preview {
+  max-height: 120px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  margin-bottom: 0.35rem;
+}
+.img-preview.qr { object-fit: contain; }
+.img-preview.hidden { display: none; }
 
-  const catalogEl = document.getElementById('catalog-editor')!;
-  const departuresEl = document.getElementById('departures-editor')!;
-  const form = document.getElementById('trip-form')!;
-
-  const slug = (s: any) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const ensureTierId = (t: any, i: number) => { if (!t.id) t.id = slug(t.label) || ('tier-' + i); return t.id; };
-
-  function renderCatalog() {
-    catalogEl.innerHTML = '';
-    catalog.forEach((tier, i) => {
-      ensureTierId(tier, i);
-      const row = document.createElement('div');
-      row.className = 'dynamic-item';
-      row.style.cssText = 'gap:0.5rem; align-items:flex-start;';
-      row.innerHTML =
-        '<div style="flex:2;"><div class="day-label">Label</div>' +
-          '<input type="text" class="form-input tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
-        '<div style="flex:3;"><div class="day-label">Helper text</div>' +
-          '<input type="text" class="form-input tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
-        '<button type="button" class="remove-btn" style="margin-top:1.2rem;">✕</button>';
-      row.querySelector('.tier-label')!.addEventListener('input', (e: any) => { tier.label = e.target.value; });
-      row.querySelector('.tier-helper')!.addEventListener('input', (e: any) => { tier.helperText = e.target.value; });
-      row.querySelector('.remove-btn')!.addEventListener('click', () => { catalog.splice(i, 1); renderCatalog(); renderDepartures(); });
-      catalogEl.appendChild(row);
-    });
-  }
-
-  function renderDepartures() {
-    departuresEl.innerHTML = '';
-    departures.forEach((dep, di) => {
-      const card = document.createElement('div');
-      card.style.cssText = 'border:1px solid var(--color-border); border-radius:0.5rem; padding:0.75rem; margin-bottom:0.75rem;';
-      const head = document.createElement('div');
-      head.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;';
-      head.innerHTML =
-        '<div style="flex:1; min-width:140px;"><div class="day-label">Start</div><input type="date" class="form-input dep-start" value="' + esc(dep.startDate) + '" /></div>' +
-        '<div style="flex:1; min-width:140px;"><div class="day-label">End</div><input type="date" class="form-input dep-end" value="' + esc(dep.endDate) + '" /></div>' +
-        '<div style="flex:1; min-width:130px;"><div class="day-label">Status</div><select class="form-input dep-status">' +
-          STATUSES.map((s) => '<option value="' + s + '"' + (s === dep.status ? ' selected' : '') + '>' + s + '</option>').join('') +
-        '</select></div>' +
-        '<button type="button" class="remove-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
-      head.querySelector('.dep-start')!.addEventListener('input', (e: any) => { dep.startDate = e.target.value; });
-      head.querySelector('.dep-end')!.addEventListener('input', (e: any) => { dep.endDate = e.target.value; });
-      head.querySelector('.dep-status')!.addEventListener('change', (e: any) => { dep.status = e.target.value; });
-      head.querySelector('.dep-remove')!.addEventListener('click', () => { departures.splice(di, 1); renderDepartures(); });
-      card.appendChild(head);
-
-      const grid = document.createElement('div');
-      grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
-      if (catalog.length === 0) grid.innerHTML = '<span class="form-hint">Add an occupancy tier above to set offers.</span>';
-      catalog.forEach((tier, ti) => {
-        const tierId = ensureTierId(tier, ti);
-        const offer = dep.offers.find((o: any) => o.tierId === tierId);
-        const on = !!offer;
-        const r = document.createElement('div');
-        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
-        r.innerHTML =
-          '<label style="display:flex; align-items:center; gap:0.4rem; flex:2; min-width:160px; cursor:pointer;">' +
-            '<input type="checkbox" class="off-on"' + (on ? ' checked' : '') + ' /><span>' + esc(tier.label || tierId) + '</span></label>' +
-          '<div style="flex:1; min-width:90px;"><div class="day-label">Price ₹</div><input type="number" class="form-input off-price" value="' + (offer && offer.price != null ? offer.price : '') + '"' + (on ? '' : ' disabled') + ' /></div>' +
-          '<div style="flex:1; min-width:70px;"><div class="day-label">Cap</div><input type="number" class="form-input off-cap" value="' + (offer && offer.cap != null ? offer.cap : '') + '"' + (on ? '' : ' disabled') + ' /></div>' +
-          '<div style="flex:1; min-width:70px;"><div class="day-label">Booked</div><input type="number" class="form-input off-booked" value="' + (offer && offer.booked != null ? offer.booked : 0) + '"' + (on ? '' : ' disabled') + ' /></div>';
-        const cb = r.querySelector('.off-on') as HTMLInputElement;
-        const priceI = r.querySelector('.off-price') as HTMLInputElement;
-        const capI = r.querySelector('.off-cap') as HTMLInputElement;
-        const bookedI = r.querySelector('.off-booked') as HTMLInputElement;
-        const getOffer = () => dep.offers.find((o: any) => o.tierId === tierId);
-        cb.addEventListener('change', () => {
-          if (cb.checked) {
-            if (!getOffer()) dep.offers.push({ tierId, price: null, cap: null, booked: 0 });
-            priceI.disabled = capI.disabled = bookedI.disabled = false;
-          } else {
-            dep.offers = dep.offers.filter((o: any) => o.tierId !== tierId);
-            priceI.disabled = capI.disabled = bookedI.disabled = true;
-          }
-        });
-        priceI.addEventListener('input', () => { const o = getOffer(); if (o) o.price = priceI.value === '' ? null : Number(priceI.value); });
-        capI.addEventListener('input', () => { const o = getOffer(); if (o) o.cap = capI.value === '' ? null : Number(capI.value); });
-        bookedI.addEventListener('input', () => { const o = getOffer(); if (o) o.booked = bookedI.value === '' ? 0 : Number(bookedI.value); });
-        grid.appendChild(r);
-      });
-      card.appendChild(grid);
-      departuresEl.appendChild(card);
-    });
-  }
-
-  document.getElementById('add-tier-btn')!.addEventListener('click', () => { catalog.push({ id: '', label: '', helperText: '' }); renderCatalog(); renderDepartures(); });
-  document.getElementById('add-departure-btn')!.addEventListener('click', () => { departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', offers: [] }); renderDepartures(); });
-
-  form.addEventListener('submit', () => {
-    catalog.forEach((t, i) => ensureTierId(t, i));
-    departures.forEach((d) => { if (!d.id && d.startDate) d.id = slug(d.startDate); });
-    (document.getElementById('occupancyCatalog_json') as HTMLInputElement).value = JSON.stringify(catalog);
-    (document.getElementById('departures_json') as HTMLInputElement).value = JSON.stringify(departures);
-  });
-
-  renderCatalog();
-  renderDepartures();
-})();
-
-// Expose the inline-handler functions on window (this script is an ES module,
-// so its top-level functions aren't global by default — inline onclick/oninput
-// attributes need them on window).
-;(window as any).autoSlug = autoSlug;
-(window as any).previewImage = previewImage;
-(window as any).addItem = addItem;
-(window as any).addDay = addDay;
-(window as any).renumberDays = renumberDays;
-</script>
-
-<!-- ── Trip photo gallery editor styles (global: dynamic tiles need it) ─────── -->
-<style is:global>
-.gallery-editor .gallery-grid { columns: 5; column-gap: 0.6rem; margin-top: 0.6rem; }
+/* ── Trip photo gallery editor ───────────────── */
+.gallery-editor .gallery-grid {
+  columns: 5;
+  column-gap: 0.6rem;
+  margin-top: 0.6rem;
+}
 .gallery-editor .gallery-grid.hidden { display: none; }
 .gallery-editor #gallery-album-grid {
-  max-height: 320px; overflow-y: auto; padding: 0.6rem;
-  border: 1px dashed var(--color-border); border-radius: 0.5rem; background: var(--color-surface);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-surface);
 }
 .gallery-thumb {
-  position: relative; break-inside: avoid; margin-bottom: 0.6rem;
-  border-radius: 0.5rem; overflow: hidden; background: var(--color-surface);
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 0.6rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--color-surface);
 }
 .gallery-thumb img { display: block; width: 100%; height: auto; }
 .gallery-thumb.is-selected { outline: 3px solid var(--color-coral); outline-offset: -3px; }
@@ -519,13 +662,269 @@ document.getElementById('trip-form')!.addEventListener('submit', () => {
 }
 .gallery-thumb.is-selected .gallery-thumb-btn { background: var(--color-coral); }
 .gallery-upload-btn {
-  display: inline-block; background: var(--color-surface);
-  border: 1px dashed var(--color-border); color: var(--color-text-secondary);
-  padding: 0.5rem 1.1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.85rem;
+  display: inline-block;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-secondary, var(--color-navy));
+  padding: 0.5rem 1.1rem; border-radius: 0.5rem;
+  cursor: pointer; font-size: 0.85rem;
 }
 @media (max-width: 1024px) { .gallery-editor .gallery-grid { columns: 4; } }
 @media (max-width: 768px)  { .gallery-editor .gallery-grid { columns: 3; } }
+
+/* ── Bottom save bar ─────────────────────────── */
+.save-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.cancel-btn {
+  padding: 0.55rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  background: white;
+}
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 640px) {
+  .panel-grid { grid-template-columns: 1fr; }
+  .field.full { grid-column: 1; }
+  .day-grid { grid-template-columns: 1fr; }
+  .day-grid .full { grid-column: 1; }
+  .day-actions .day-move-btn { display: none; }
+  .edit-title { font-size: 1.1rem; }
+}
 </style>
+
+<script define:vars={{ itinerary }}>
+// ── Tab switching ─────────────────────────────
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+
+function switchTab(id) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  panels.forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + id));
+  history.replaceState(null, '', '#' + id);
+}
+
+tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// Restore tab from URL hash
+const hash = location.hash.replace('#', '');
+const validTabs = ['basics','content','itinerary','logistics','payment'];
+switchTab(validTabs.includes(hash) ? hash : 'basics');
+
+// ── Auto-slug from Trip Name ──────────────────
+function slugifyName(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+const nameField = document.querySelector('#trip-form [name="name"]');
+const slugField = document.getElementById('slug-field');
+nameField.addEventListener('input', () => { slugField.value = slugifyName(nameField.value); });
+
+// ── Dynamic list items ────────────────────────
+function addItem(listId, name, placeholder) {
+  const list = document.getElementById(listId);
+  const div = document.createElement('div');
+  div.className = 'dyn-item';
+  div.innerHTML = `<input type="text" name="${name}" placeholder="${placeholder}" class="finput" /><button type="button" class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(div);
+  div.querySelector('input').focus();
+}
+
+// ── Image preview ─────────────────────────────
+function previewImage(input, previewId) {
+  const img = document.getElementById(previewId);
+  if (input.files && input.files[0]) {
+    img.src = URL.createObjectURL(input.files[0]);
+    img.classList.remove('hidden');
+  }
+}
+
+// ── Itinerary accordion ───────────────────────
+const container = document.getElementById('itinerary-container');
+
+function updateCount() {
+  const n = container.querySelectorAll('.day-card').length;
+  document.getElementById('itin-count').textContent = `${n} day${n === 1 ? '' : 's'}`;
+}
+
+function updateSummary(card) {
+  const title = card.querySelector('.day-dayTitle').value.trim();
+  const accom = card.querySelector('.day-accommodation').value.trim();
+  const b = card.querySelector('.day-breakfast').checked;
+  const l = card.querySelector('.day-lunch').checked;
+  const d = card.querySelector('.day-dinner').checked;
+  const meals = [b && 'B', l && 'L', d && 'D'].filter(Boolean).join(' · ');
+  const parts = [accom, meals].filter(Boolean).join('  •  ');
+  card.querySelector('.day-title').textContent = title || `(untitled)`;
+  card.querySelector('.day-summary').textContent = parts || '—';
+}
+
+function updateMoveButtons() {
+  const cards = container.querySelectorAll('.day-card');
+  cards.forEach((card, i) => {
+    card.querySelector('.btn-up').disabled = i === 0;
+    card.querySelector('.btn-down').disabled = i === cards.length - 1;
+  });
+}
+
+function renumberDays() {
+  container.querySelectorAll('.day-card').forEach((card, i) => {
+    card.querySelector('.day-num').textContent = i + 1;
+  });
+  updateMoveButtons();
+  updateCount();
+}
+
+function createDayCard(data, open = false) {
+  const div = document.createElement('div');
+  div.className = 'day-card' + (open ? ' open' : '');
+
+  const title = (data?.dayTitle ?? data?.title ?? '').replace(/"/g, '&quot;');
+  const accom = (data?.accom ?? data?.accommodation ?? data?.stay ?? '').replace(/"/g, '&quot;');
+  const transport = (data?.transport ?? '').replace(/"/g, '&quot;');
+  const notes = (data?.specialNotes ?? data?.note ?? '').replace(/"/g, '&quot;');
+  const activities = (data?.activities ?? data?.description ?? '').replace(/</g, '&lt;');
+  const meals = Array.isArray(data?.meals) ? data.meals.map(m => String(m).toUpperCase()) : null;
+  const b = (meals ? meals.includes('B') : data?.breakfast) ? 'checked' : '';
+  const l = (meals ? meals.includes('L') : data?.lunch) ? 'checked' : '';
+  const d = (meals ? meals.includes('D') : data?.dinner) ? 'checked' : '';
+
+  div.innerHTML = `
+    <div class="day-header">
+      <div class="day-num">?</div>
+      <div class="day-header-text">
+        <div class="day-title">${title || '(untitled)'}</div>
+        <div class="day-summary">—</div>
+      </div>
+      <div class="day-actions">
+        <button type="button" class="day-move-btn btn-up" title="Move up">▲</button>
+        <button type="button" class="day-move-btn btn-down" title="Move down">▼</button>
+      </div>
+      <svg class="day-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+    <div class="day-body">
+      <div class="day-grid">
+        <div class="full">
+          <div class="day-label">Day Title</div>
+          <input type="text" class="day-input day-dayTitle" value="${title}" placeholder="e.g. Arrive in Manali" />
+        </div>
+        <div class="full">
+          <div class="day-label">Activities</div>
+          <textarea class="day-input day-activities" rows="4" placeholder="What happens this day...">${activities}</textarea>
+        </div>
+        <div>
+          <div class="day-label">Accommodation</div>
+          <input type="text" class="day-input day-accommodation" value="${accom}" placeholder="e.g. Guesthouse in Tabo" />
+        </div>
+        <div>
+          <div class="day-label">Transport</div>
+          <input type="text" class="day-input day-transport" value="${transport}" placeholder="e.g. Bus to Kaza" />
+        </div>
+        <div class="full">
+          <div class="day-label">Meals Included</div>
+          <div class="meal-row">
+            <label class="meal-label"><input type="checkbox" class="day-breakfast" ${b} /> Breakfast</label>
+            <label class="meal-label"><input type="checkbox" class="day-lunch" ${l} /> Lunch</label>
+            <label class="meal-label"><input type="checkbox" class="day-dinner" ${d} /> Dinner</label>
+          </div>
+        </div>
+        <div class="full">
+          <div class="day-label">Special Notes</div>
+          <input type="text" class="day-input day-specialNotes" value="${notes}" placeholder="Anything travellers should know..." />
+        </div>
+      </div>
+      <div class="day-footer">
+        <button type="button" class="rm-btn day-remove-btn">Remove Day</button>
+      </div>
+    </div>
+  `;
+
+  div.querySelector('.day-remove-btn').addEventListener('click', () => { div.remove(); renumberDays(); });
+
+  div.querySelector('.day-header').addEventListener('click', (e) => {
+    if (e.target.closest('.day-actions')) return;
+    div.classList.toggle('open');
+  });
+
+  div.querySelector('.btn-up').addEventListener('click', () => {
+    const prev = div.previousElementSibling;
+    if (prev) { container.insertBefore(div, prev); renumberDays(); }
+  });
+  div.querySelector('.btn-down').addEventListener('click', () => {
+    const next = div.nextElementSibling;
+    if (next) { container.insertBefore(next, div); renumberDays(); }
+  });
+
+  const updateThis = () => updateSummary(div);
+  div.querySelector('.day-dayTitle').addEventListener('input', updateThis);
+  div.querySelector('.day-accommodation').addEventListener('input', updateThis);
+  div.querySelectorAll('.day-breakfast,.day-lunch,.day-dinner').forEach(cb => cb.addEventListener('change', updateThis));
+
+  return div;
+}
+
+function addDay() {
+  const card = createDayCard(null, true);
+  container.appendChild(card);
+  renumberDays();
+  updateSummary(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  card.querySelector('.day-dayTitle').focus();
+}
+
+function expandAll()  { container.querySelectorAll('.day-card').forEach(c => c.classList.add('open')); }
+function collapseAll(){ container.querySelectorAll('.day-card').forEach(c => c.classList.remove('open')); }
+
+function serializeItinerary() {
+  return Array.from(container.querySelectorAll('.day-card')).map((card, i) => ({
+    dayNumber: i + 1,
+    dayTitle:       card.querySelector('.day-dayTitle')?.value ?? '',
+    activities:     card.querySelector('.day-activities')?.value ?? '',
+    accommodation:  card.querySelector('.day-accommodation')?.value ?? '',
+    transport:      card.querySelector('.day-transport')?.value ?? '',
+    breakfast:      card.querySelector('.day-breakfast')?.checked ?? false,
+    lunch:          card.querySelector('.day-lunch')?.checked ?? false,
+    dinner:         card.querySelector('.day-dinner')?.checked ?? false,
+    specialNotes:   card.querySelector('.day-specialNotes')?.value ?? '',
+  }));
+}
+
+// Populate from saved data (empty for a new trip)
+if (Array.isArray(itinerary)) {
+  itinerary.forEach(day => {
+    const card = createDayCard(day, false);
+    container.appendChild(card);
+    updateSummary(card);
+  });
+}
+renumberDays();
+
+document.getElementById('trip-form').addEventListener('submit', () => {
+  document.getElementById('itinerary_json').value = JSON.stringify(serializeItinerary());
+});
+
+// Wire up buttons
+document.getElementById('add-day-btn').addEventListener('click', addDay);
+document.getElementById('expand-all-btn').addEventListener('click', expandAll);
+document.getElementById('collapse-all-btn').addEventListener('click', collapseAll);
+document.querySelectorAll('.add-btn[data-list]').forEach(btn => {
+  btn.addEventListener('click', () => addItem(btn.dataset.list, btn.dataset.name, btn.dataset.placeholder ?? ''));
+});
+document.querySelectorAll('.file-input[data-preview]').forEach(input => {
+  input.addEventListener('change', () => previewImage(input, input.dataset.preview));
+});
+</script>
 
 <!-- ── Trip photo gallery editor ──────────────────────────────────────────── -->
 <script define:vars={{ galleryAlbums, initialGallery, tripSlug }}>
@@ -555,7 +954,7 @@ document.getElementById('trip-form')!.addEventListener('submit', () => {
     div.style.cssText = aspect(p);
     div.innerHTML =
       `<img src="${p.image}" loading="lazy" alt="" />` +
-      `<button type="button" class="gallery-thumb-btn">${opts.removable ? '✕' : (opts.selected ? '✓' : '+')}</button>`;
+      `<button type="button" class="gallery-thumb-btn" title="${opts.removable ? 'Remove' : 'Toggle'}">${opts.removable ? '✕' : (opts.selected ? '✓' : '+')}</button>`;
     div.querySelector('button').addEventListener('click', opts.onClick);
     return div;
   }
@@ -632,5 +1031,139 @@ document.getElementById('trip-form')!.addEventListener('submit', () => {
   });
 
   sync();
+})();
+</script>
+
+<!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
+<script define:vars={{ editorCatalog, editorDepartures }}>
+(function () {
+  const STATUSES = ['booking-open', 'filling_fast', 'sold-out', 'draft', 'completed'];
+  let catalog = JSON.parse(JSON.stringify(editorCatalog || []));
+  let departures = JSON.parse(JSON.stringify(editorDepartures || []));
+
+  const catalogEl = document.getElementById('catalog-editor');
+  const departuresEl = document.getElementById('departures-editor');
+  const form = document.getElementById('trip-form');
+
+  const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  function ensureTierId(tier, i) {
+    if (!tier.id) tier.id = slugify(tier.label) || ('tier-' + i);
+    return tier.id;
+  }
+
+  function renderCatalog() {
+    catalogEl.innerHTML = '';
+    catalog.forEach((tier, i) => {
+      ensureTierId(tier, i);
+      const row = document.createElement('div');
+      row.className = 'dyn-item';
+      row.style.cssText = 'gap:0.5rem; align-items:flex-start;';
+      row.innerHTML =
+        '<div style="flex:2;"><span class="fhint">Label</span>' +
+          '<input type="text" class="finput tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
+        '<div style="flex:3;"><span class="fhint">Helper text (what this sharing means)</span>' +
+          '<input type="text" class="finput tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
+        '<button type="button" class="rm-btn" style="margin-top:1.2rem;">✕</button>';
+      row.querySelector('.tier-label').addEventListener('input', (e) => { tier.label = e.target.value; });
+      row.querySelector('.tier-helper').addEventListener('input', (e) => { tier.helperText = e.target.value; });
+      row.querySelector('.rm-btn').addEventListener('click', () => {
+        catalog.splice(i, 1);
+        renderCatalog();
+        renderDepartures();
+      });
+      catalogEl.appendChild(row);
+    });
+  }
+
+  function renderDepartures() {
+    departuresEl.innerHTML = '';
+    departures.forEach((dep, di) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'border:1px solid var(--color-border); border-radius:0.5rem; padding:0.75rem; margin-bottom:0.75rem;';
+
+      const head = document.createElement('div');
+      head.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;';
+      head.innerHTML =
+        '<div style="flex:1; min-width:140px;"><span class="fhint">Start</span>' +
+          '<input type="date" class="finput dep-start" value="' + esc(dep.startDate) + '" /></div>' +
+        '<div style="flex:1; min-width:140px;"><span class="fhint">End</span>' +
+          '<input type="date" class="finput dep-end" value="' + esc(dep.endDate) + '" /></div>' +
+        '<div style="flex:1; min-width:130px;"><span class="fhint">Status</span>' +
+          '<select class="finput dep-status">' +
+            STATUSES.map((s) => '<option value="' + s + '"' + (s === dep.status ? ' selected' : '') + '>' + s + '</option>').join('') +
+          '</select></div>' +
+        '<button type="button" class="rm-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
+      head.querySelector('.dep-start').addEventListener('input', (e) => { dep.startDate = e.target.value; });
+      head.querySelector('.dep-end').addEventListener('input', (e) => { dep.endDate = e.target.value; });
+      head.querySelector('.dep-status').addEventListener('change', (e) => { dep.status = e.target.value; });
+      head.querySelector('.dep-remove').addEventListener('click', () => { departures.splice(di, 1); renderDepartures(); });
+      card.appendChild(head);
+
+      const grid = document.createElement('div');
+      grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
+      if (catalog.length === 0) {
+        grid.innerHTML = '<span class="fhint">Add an occupancy tier above to set offers.</span>';
+      }
+      catalog.forEach((tier, ti) => {
+        const tierId = ensureTierId(tier, ti);
+        const offer = dep.offers.find((o) => o.tierId === tierId);
+        const offered = !!offer;
+        const r = document.createElement('div');
+        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
+        r.innerHTML =
+          '<label style="display:flex; align-items:center; gap:0.4rem; flex:2; min-width:160px; cursor:pointer;">' +
+            '<input type="checkbox" class="off-on"' + (offered ? ' checked' : '') + ' />' +
+            '<span>' + esc(tier.label || tierId) + '</span></label>' +
+          '<div style="flex:1; min-width:90px;"><span class="fhint">Price ₹</span>' +
+            '<input type="number" class="finput off-price" value="' + (offer && offer.price != null ? offer.price : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><span class="fhint">Cap</span>' +
+            '<input type="number" class="finput off-cap" value="' + (offer && offer.cap != null ? offer.cap : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
+          '<div style="flex:1; min-width:70px;"><span class="fhint">Booked</span>' +
+            '<input type="number" class="finput off-booked" value="' + (offer && offer.booked != null ? offer.booked : 0) + '"' + (offered ? '' : ' disabled') + ' /></div>';
+        const cb = r.querySelector('.off-on');
+        const priceI = r.querySelector('.off-price');
+        const capI = r.querySelector('.off-cap');
+        const bookedI = r.querySelector('.off-booked');
+        const getOffer = () => dep.offers.find((o) => o.tierId === tierId);
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            if (!getOffer()) dep.offers.push({ tierId, price: null, cap: null, booked: 0 });
+            priceI.disabled = capI.disabled = bookedI.disabled = false;
+          } else {
+            dep.offers = dep.offers.filter((o) => o.tierId !== tierId);
+            priceI.disabled = capI.disabled = bookedI.disabled = true;
+          }
+        });
+        priceI.addEventListener('input', () => { const o = getOffer(); if (o) o.price = priceI.value === '' ? null : Number(priceI.value); });
+        capI.addEventListener('input', () => { const o = getOffer(); if (o) o.cap = capI.value === '' ? null : Number(capI.value); });
+        bookedI.addEventListener('input', () => { const o = getOffer(); if (o) o.booked = bookedI.value === '' ? 0 : Number(bookedI.value); });
+        grid.appendChild(r);
+      });
+      card.appendChild(grid);
+      departuresEl.appendChild(card);
+    });
+  }
+
+  document.getElementById('add-tier-btn').addEventListener('click', () => {
+    catalog.push({ id: '', label: '', helperText: '' });
+    renderCatalog();
+    renderDepartures();
+  });
+  document.getElementById('add-departure-btn').addEventListener('click', () => {
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', offers: [] });
+    renderDepartures();
+  });
+
+  form.addEventListener('submit', () => {
+    catalog.forEach((t, i) => ensureTierId(t, i));
+    departures.forEach((d) => { if (!d.id && d.startDate) d.id = slugify(d.startDate); });
+    document.getElementById('occupancyCatalog_json').value = JSON.stringify(catalog);
+    document.getElementById('departures_json').value = JSON.stringify(departures);
+  });
+
+  renderCatalog();
+  renderDepartures();
 })();
 </script>
