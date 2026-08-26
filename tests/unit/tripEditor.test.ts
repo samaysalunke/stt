@@ -199,19 +199,37 @@ describe('parseEditorBooking — valid round-trip', () => {
     const { batches } = parseEditorBooking(catJson, depJson);
     expect(batches[0].offers[0].cap).toBeNull();
   });
+
+  test('zero is accepted as an intentional price', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const depJson = JSON.stringify([
+      {
+        id: 'dep-1',
+        startDate: '2099-01-01',
+        endDate: '2099-01-05',
+        status: 'booking-open',
+        offers: [{ tierId: 'std', price: 0, cap: 10, booked: 0 }],
+      },
+    ]);
+    const { batches, errors } = parseEditorBooking(catJson, depJson);
+    expect(errors).toEqual([]);
+    expect(batches[0].offers[0].price).toBe(0);
+  });
 });
 
 describe('parseEditorBooking — malformed input', () => {
   test('malformed catalogJson → empty occupancyCatalog (does not throw)', () => {
-    const { occupancyCatalog, batches } = parseEditorBooking('NOT JSON', '[]');
+    const { occupancyCatalog, batches, errors } = parseEditorBooking('NOT JSON', '[]');
     expect(occupancyCatalog).toHaveLength(0);
     expect(batches).toHaveLength(0);
+    expect(errors).toContainEqual({ code: 'invalid-catalog' });
   });
 
   test('malformed departuresJson → empty batches (does not throw)', () => {
     const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
-    const { batches } = parseEditorBooking(catJson, 'NOT JSON');
+    const { batches, errors } = parseEditorBooking(catJson, 'NOT JSON');
     expect(batches).toHaveLength(0);
+    expect(errors).toContainEqual({ code: 'invalid-departures' });
   });
 
   test('offer tierId not in catalog is filtered out', () => {
@@ -244,7 +262,40 @@ describe('parseEditorBooking — malformed input', () => {
         offers: [], // no valid offers
       },
     ]);
-    const { batches } = parseEditorBooking(catJson, depJson);
+    const { batches, errors } = parseEditorBooking(catJson, depJson);
     expect(batches).toHaveLength(0);
+    expect(errors).toContainEqual({ code: 'missing-offer', departureIndex: 0 });
+  });
+
+  test('departure with a blank selected-offer price is rejected', () => {
+    const catJson = JSON.stringify([{ id: 'economy', label: 'Economy', helperText: '' }]);
+    const depJson = JSON.stringify([
+      {
+        id: 'dep-1',
+        startDate: '2099-01-01',
+        endDate: '2099-01-05',
+        status: 'booking-open',
+        offers: [{ tierId: 'economy', price: null, cap: 10, booked: 0 }],
+      },
+    ]);
+    const { batches, errors } = parseEditorBooking(catJson, depJson);
+    expect(batches).toHaveLength(0);
+    expect(errors).toContainEqual({ code: 'missing-price', departureIndex: 0 });
+  });
+
+  test('departure without a start date is rejected', () => {
+    const catJson = JSON.stringify([{ id: 'economy', label: 'Economy', helperText: '' }]);
+    const depJson = JSON.stringify([
+      {
+        id: '',
+        startDate: '',
+        endDate: '',
+        status: 'booking-open',
+        offers: [{ tierId: 'economy', price: 5000, cap: 10, booked: 0 }],
+      },
+    ]);
+    const { batches, errors } = parseEditorBooking(catJson, depJson);
+    expect(batches).toHaveLength(0);
+    expect(errors).toContainEqual({ code: 'missing-start-date', departureIndex: 0 });
   });
 });

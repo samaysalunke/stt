@@ -3,6 +3,7 @@ import { writeTrip, saveImageFile } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
+import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -13,10 +14,13 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   if (!slug) return redirect('/admin/trips/new?error=slug');
 
   // Occupancy catalog + departures-with-offers come in as serialized JSON.
-  const { occupancyCatalog, batches } = parseEditorBooking(
+  const { occupancyCatalog, batches, errors: bookingErrors } = parseEditorBooking(
     sanitizeInput(body.get('occupancyCatalog_json')),
     sanitizeInput(body.get('departures_json')),
   );
+  if (bookingErrors.length > 0) {
+    return redirect('/admin/trips/new?error=incomplete-departure');
+  }
   for (const b of batches) {
     if (!b.id && b.startDate) b.id = `${slug}-${b.startDate}`;
   }
@@ -40,7 +44,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const gallery = parseGallery(body.get('gallery_json'));
 
-  const data: Record<string, any> = {
+  const data: Record<string, any> = withAdminTripUpdate({
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name,
     title: name,
@@ -68,7 +72,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,
     batches,
-  };
+  });
 
   writeTrip(slug, data);
   await submitToIndexNow([`/trips/${slug}/`]);

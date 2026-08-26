@@ -52,10 +52,11 @@ export function getBookingGrowthWeek(db: Database.Database, now = new Date()): B
   const startKey = addDays(todayKey, -6);
   const rows = db
     .prepare(
-      `SELECT date(created_at, ${BUSINESS_TZ_OFFSET_SQL}) AS d, COUNT(*) AS c
+      `SELECT date(COALESCE(status_changed_at, created_at), ${BUSINESS_TZ_OFFSET_SQL}) AS d, COUNT(*) AS c
        FROM registrations
-       WHERE date(created_at, ${BUSINESS_TZ_OFFSET_SQL}) BETWEEN ? AND ?
-       GROUP BY date(created_at, ${BUSINESS_TZ_OFFSET_SQL})
+       WHERE status = 'confirmed'
+         AND date(COALESCE(status_changed_at, created_at), ${BUSINESS_TZ_OFFSET_SQL}) BETWEEN ? AND ?
+       GROUP BY date(COALESCE(status_changed_at, created_at), ${BUSINESS_TZ_OFFSET_SQL})
        ORDER BY d`,
     )
     .all(startKey, todayKey) as Array<{ d: string; c: number }>;

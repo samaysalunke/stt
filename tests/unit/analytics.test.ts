@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import Database from 'better-sqlite3';
 import { analyzeCustomQuery } from '../../src/lib/analytics/customQuery';
 import { createLLMAdapter, LLMConfigError } from '../../src/lib/analytics/llm';
 import { cleanupExpiredAnalyticsSessions } from '../../src/lib/analytics/sessions';
 import { chooseGranularity, analyticsTools } from '../../src/lib/analytics/tools';
-import { buildBookingGrowthWeek } from '../../src/lib/adminDashboard';
+import { buildBookingGrowthWeek, getBookingGrowthWeek } from '../../src/lib/adminDashboard';
 import { getDb } from '../../src/lib/db';
 
 async function collectText(adapter: ReturnType<typeof createLLMAdapter>) {
@@ -44,6 +45,27 @@ describe('analytics safety and helpers', () => {
     ]);
     expect(week.map((day) => day.count)).toEqual([2, 0, 0, 0, 0, 5, 7]);
     expect(week.at(-1)?.label).toBe('Fri');
+  });
+
+  it('counts only confirmed seats in dashboard booking growth', () => {
+    const db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE registrations (
+        status TEXT,
+        created_at DATETIME,
+        status_changed_at DATETIME
+      )
+    `);
+    const insert = db.prepare('INSERT INTO registrations (status, created_at, status_changed_at) VALUES (?, ?, ?)');
+    insert.run('lead', '2026-06-26 09:00:00', null);
+    insert.run('pending', '2026-06-26 10:00:00', null);
+    insert.run('confirmed', '2026-06-20 10:00:00', '2026-06-26 11:00:00');
+    insert.run('confirmed', '2026-06-26 12:00:00', null);
+
+    const week = getBookingGrowthWeek(db, new Date('2026-06-26T12:00:00.000Z'));
+
+    expect(week.at(-1)).toMatchObject({ key: '2026-06-26', count: 2 });
+    db.close();
   });
 
   it('uses expected trend granularity thresholds', () => {

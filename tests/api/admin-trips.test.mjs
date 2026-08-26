@@ -62,13 +62,17 @@ test('TC-100 authenticated update with valid catalog+departures JSON → redirec
   );
 });
 
-test('TC-101 malformed departures_json → graceful 302 redirect (no 500 crash)', async () => {
+test('TC-101 malformed departures_json → rejected without a false success redirect', async () => {
   const { cookie } = await adminLogin();
   const res = await updateTrip('qa-test-v2', VALID_CATALOG, 'NOT VALID JSON', cookie);
-  // parseEditorBooking silently catches JSON errors → saves with empty batches → redirect
   assert.ok(
     res.status >= 300 && res.status < 400,
     `Expected redirect, got ${res.status} — server must not crash on malformed input`,
+  );
+  assert.match(
+    res.headers.get('location') ?? '',
+    /error=incomplete-departure/,
+    'Malformed departures must not be reported as saved',
   );
 });
 

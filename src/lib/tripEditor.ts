@@ -16,6 +16,18 @@ export interface EditorDeparture {
   offers: EditorOffer[];
 }
 
+export type EditorBookingErrorCode =
+  | 'invalid-catalog'
+  | 'invalid-departures'
+  | 'missing-start-date'
+  | 'missing-offer'
+  | 'missing-price';
+
+export interface EditorBookingError {
+  code: EditorBookingErrorCode;
+  departureIndex?: number;
+}
+
 /**
  * Normalize a tier/stay/accommodation string for fuzzy comparison:
  * NFKC, smart-quotes → ', lowercase, strip a trailing price suffix like
@@ -145,11 +157,25 @@ function numOrNull(v: unknown): number | null {
 export function parseEditorBooking(catalogJson: string, departuresJson: string): {
   occupancyCatalog: EditorTier[];
   batches: Array<{ id: string; startDate: string; endDate: string; status: string; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+  errors: EditorBookingError[];
 } {
   let cat: any[] = [];
   let deps: any[] = [];
-  try { cat = JSON.parse(catalogJson || '[]'); } catch { /* ignore */ }
-  try { deps = JSON.parse(departuresJson || '[]'); } catch { /* ignore */ }
+  const errors: EditorBookingError[] = [];
+  try {
+    const parsed = JSON.parse(catalogJson || '[]');
+    if (Array.isArray(parsed)) cat = parsed;
+    else errors.push({ code: 'invalid-catalog' });
+  } catch {
+    errors.push({ code: 'invalid-catalog' });
+  }
+  try {
+    const parsed = JSON.parse(departuresJson || '[]');
+    if (Array.isArray(parsed)) deps = parsed;
+    else errors.push({ code: 'invalid-departures' });
+  } catch {
+    errors.push({ code: 'invalid-departures' });
+  }
 
   const occupancyCatalog: EditorTier[] = (Array.isArray(cat) ? cat : [])
     .map((c: any) => ({
@@ -161,11 +187,30 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
 
   const validTierIds = new Set(occupancyCatalog.map((c) => c.id));
 
-  const batches = (Array.isArray(deps) ? deps : [])
+  deps.forEach((departure: any, departureIndex) => {
+    const startDate = String(departure?.startDate ?? '').trim();
+    const rawOffers = Array.isArray(departure?.offers) ? departure.offers : [];
+    const knownOffers = rawOffers.filter((offer: any) => offer && validTierIds.has(String(offer.tierId)));
+
+    if (!startDate) errors.push({ code: 'missing-start-date', departureIndex });
+    if (knownOffers.length === 0) {
+      errors.push({ code: 'missing-offer', departureIndex });
+    } else if (knownOffers.some((offer: any) =>
+      offer.price == null || offer.price === '' || !Number.isFinite(Number(offer.price)))) {
+      errors.push({ code: 'missing-price', departureIndex });
+    }
+  });
+
+  const batches = deps
     .map((d: any) => {
       const startDate = String(d?.startDate ?? '').trim();
       const offers = (Array.isArray(d?.offers) ? d.offers : [])
-        .filter((o: any) => o && validTierIds.has(String(o.tierId)) && Number.isFinite(Number(o.price)))
+        .filter((o: any) =>
+          o &&
+          validTierIds.has(String(o.tierId)) &&
+          o.price != null &&
+          o.price !== '' &&
+          Number.isFinite(Number(o.price)))
         .map((o: any) => ({
           tierId: String(o.tierId),
           price: Math.round(Number(o.price)),
@@ -182,7 +227,7 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
     })
     .filter((b) => b.startDate && b.offers.length > 0);
 
-  return { occupancyCatalog, batches };
+  return { occupancyCatalog, batches, errors };
 }
 
 export interface GalleryImage {

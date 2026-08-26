@@ -8,7 +8,8 @@ export const prerender = false;
 const db = getDb();
 
 const regsAll = db.prepare('SELECT status, amount_paid, created_at, trip_name FROM registrations').all() as Array<Record<string, any>>;
-const totalBookings = regsAll.length;
+const confirmedRegs = regsAll.filter(r => r.status === 'confirmed');
+const totalBookings = confirmedRegs.length;
 const pendingCount = regsAll.filter(r => r.status === 'pending').length;
 // Match the registrations page definition: payments collected = all non-rejected.
 const paidRegs = regsAll.filter(r => r.status !== 'rejected');
@@ -42,8 +43,8 @@ function statusStyle(status: string) {
 }
 
 const kpis = [
-  { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} bookings · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
-  { label: 'Total bookings', value: String(totalBookings), hint: `${pendingCount} pending` },
+  { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} confirmed seat${totalBookings === 1 ? '' : 's'} · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
+  { label: 'Total bookings', value: String(totalBookings), hint: `${pendingCount} pending signup${pendingCount === 1 ? '' : 's'}` },
   { label: 'Pending review', value: String(pendingCount), hint: 'Awaiting confirmation' },
   { label: 'Active trips', value: String(activeTrips), hint: `${allDepartures.length} departures · ${trips.length} trips` },
 ];
@@ -72,7 +73,7 @@ const quickActions = [
     <!-- Booking growth -->
     <div class="md:col-span-2 bg-white rounded-[2rem] p-6" style="border: 1px solid rgba(245,221,215,0.6);">
       <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Booking growth</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Registrations over the last 7 days.</p>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Confirmed seats over the last 7 days.</p>
       <div class="flex items-end gap-3 h-36">
         {week.map(d => (
           <div class="flex-1 flex flex-col items-center gap-2 min-w-0">
@@ -81,7 +82,7 @@ const quickActions = [
               <div
                 class="w-full rounded-t-lg transition-all"
                 style={`height: ${d.count === 0 ? 2 : Math.max(8, (d.count / maxCount) * 100)}%; background: ${d.count === 0 ? 'rgba(27,43,58,0.12)' : 'rgba(232,114,90,0.8)'};`}
-                title={`${d.count} bookings on ${d.key}`}
+                title={`${d.count} confirmed seat${d.count === 1 ? '' : 's'} on ${d.key}`}
               ></div>
             </div>
             <span class="text-[10px]" style="color: rgba(27,43,58,0.5);">{d.label}</span>

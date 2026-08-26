@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch } from '../../../lib/content';
+import { contentLastmod, listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch } from '../../../lib/content';
 import { getDb } from '../../../lib/db';
 
 const db = getDb();
@@ -43,6 +43,7 @@ const trips = listTrips().map((t) => {
     _leadTotal: leadTotal,
     _departureCount: allBatches.length,
     _upcomingCount: upcoming.length,
+    _updatedAt: t.updatedAt ?? contentLastmod('trips', t.slug) ?? null,
   };
 });
 const visibleTripCount = trips.filter((trip) => trip._upcomingCount > 0).length;
@@ -51,6 +52,19 @@ function fmtDay(d: string | null) {
   if (!d) return '—';
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtUpdatedAt(value: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Kolkata',
+      });
 }
 
 // Display vocabulary for the derived trip state (computed from departures).
@@ -102,6 +116,7 @@ const statusLabels: Record<string, string> = {
             <div class="min-w-0">
               <h3 class="font-display text-base font-semibold truncate" style="color: var(--color-navy);">{trip.name || trip.slug}</h3>
               <p class="text-[11px] truncate" style="color: rgba(27,43,58,0.45);">{trip.slug}</p>
+              <p class="mt-1 text-[11px]" style="color: rgba(27,43,58,0.55);">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
                   style={`background:${statusColors[trip._derivedStatus]}22; color:${statusColors[trip._derivedStatus]};`}>

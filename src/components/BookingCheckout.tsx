@@ -376,8 +376,6 @@ export default function BookingCheckout({
         return value.length >= 2 ? '' : 'Enter a valid city';
       case 'instagram':
         return /^@?[A-Za-z0-9._]{1,30}$/.test(value) ? '' : 'Enter a valid Instagram handle';
-      case 'whyJoin':
-        return value.length >= 10 ? '' : 'Tell us a little more (at least 10 characters)';
       default:
         return '';
     }

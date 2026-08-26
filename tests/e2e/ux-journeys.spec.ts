@@ -169,6 +169,11 @@ test.describe('WF-2: Step 2 field-level validation', () => {
     await expect(page.locator('text=Why do you want to join? is required')).toBeVisible({ timeout: 5_000 });
   });
 
+  test('short Why Join answer proceeds to payment', async ({ page }) => {
+    await submitBlank(page, { whyJoin: 'Y' });
+    await expect(page.locator('text=Pay & Confirm')).toBeVisible({ timeout: 5_000 });
+  });
+
   test('fixing an error field removes its error message', async ({ page }) => {
     await goToStep2(page);
     // Submit blank to trigger errors

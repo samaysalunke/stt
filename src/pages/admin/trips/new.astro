@@ -16,6 +16,7 @@ const tripSlug = '';
 const itinerary: any[] = [];
 const editorCatalog: any[] = [];
 const editorDepartures: any[] = [];
+const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departure';
 ---
 
 <AdminLayout title="New Trip" page="trips">
@@ -69,6 +70,14 @@ const editorDepartures: any[] = [];
         <div class="field full">
           <label class="flabel">Departures &amp; Offers</label>
           <p class="fhint" style="margin-bottom:0.5rem;">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
+          <div
+            id="departure-validation-error"
+            role="alert"
+            hidden={!bookingError}
+            style="margin-bottom:0.75rem; border:1px solid var(--color-danger); border-radius:0.5rem; padding:0.75rem; color:var(--color-danger); background:rgba(220,38,38,0.06); font-size:0.875rem;"
+          >
+            The trip was not saved because a departure is incomplete. Check its date, selected occupancy tier, and price.
+          </div>
           <div id="departures-editor"></div>
           <button type="button" id="add-departure-btn" class="add-btn">+ Add Departure Date</button>
           <input type="hidden" name="departures_json" id="departures_json" />
@@ -1044,6 +1053,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
   const catalogEl = document.getElementById('catalog-editor');
   const departuresEl = document.getElementById('departures-editor');
   const form = document.getElementById('trip-form');
+  const validationError = document.getElementById('departure-validation-error');
 
   const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1051,6 +1061,54 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
   function ensureTierId(tier, i) {
     if (!tier.id) tier.id = slugify(tier.label) || ('tier-' + i);
     return tier.id;
+  }
+
+  function clearDepartureError() {
+    validationError.hidden = true;
+    departuresEl.querySelectorAll('[data-departure-card]').forEach((card) => {
+      card.style.borderColor = 'var(--color-border)';
+      card.style.boxShadow = '';
+    });
+  }
+
+  function showDepartureError(index, message, focusTarget) {
+    const card = departuresEl.querySelector(`[data-departure-card="${index}"]`);
+    validationError.textContent = `Departure ${index + 1}: ${message}`;
+    validationError.hidden = false;
+    if (card) {
+      card.style.borderColor = 'var(--color-danger)';
+      card.style.boxShadow = '0 0 0 2px rgba(220,38,38,0.10)';
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      validationError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (focusTarget) focusTarget.focus();
+  }
+
+  function validateDepartures() {
+    clearDepartureError();
+    const validTierIds = new Set(catalog.map((tier, i) => ensureTierId(tier, i)));
+    for (let index = 0; index < departures.length; index++) {
+      const departure = departures[index];
+      const card = departuresEl.querySelector(`[data-departure-card="${index}"]`);
+      if (!String(departure.startDate || '').trim()) {
+        showDepartureError(index, 'Enter a start date before saving.', card && card.querySelector('.dep-start'));
+        return false;
+      }
+      const knownOffers = departure.offers.filter((offer) => validTierIds.has(String(offer.tierId)));
+      if (knownOffers.length === 0) {
+        const message = catalog.length === 0
+          ? 'Add an occupancy tier, then select it for this departure.'
+          : 'Select at least one occupancy tier before saving.';
+        showDepartureError(index, message, (card && card.querySelector('.off-on')) || document.getElementById('add-tier-btn'));
+        return false;
+      }
+      if (knownOffers.some((offer) => offer.price == null || offer.price === '' || !Number.isFinite(Number(offer.price)))) {
+        showDepartureError(index, 'Enter a price for every selected occupancy tier.', card && card.querySelector('.off-price:not([disabled])'));
+        return false;
+      }
+    }
+    return true;
   }
 
   function renderCatalog() {
@@ -1081,6 +1139,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     departuresEl.innerHTML = '';
     departures.forEach((dep, di) => {
       const card = document.createElement('div');
+      card.dataset.departureCard = String(di);
       card.style.cssText = 'border:1px solid var(--color-border); border-radius:0.5rem; padding:0.75rem; margin-bottom:0.75rem;';
 
       const head = document.createElement('div');
@@ -1156,12 +1215,16 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
 
-  form.addEventListener('submit', () => {
+  form.addEventListener('submit', (event) => {
     catalog.forEach((t, i) => ensureTierId(t, i));
     departures.forEach((d) => { if (!d.id && d.startDate) d.id = slugify(d.startDate); });
     document.getElementById('occupancyCatalog_json').value = JSON.stringify(catalog);
     document.getElementById('departures_json').value = JSON.stringify(departures);
+    if (!validateDepartures()) event.preventDefault();
   });
+
+  departuresEl.addEventListener('input', clearDepartureError);
+  departuresEl.addEventListener('change', clearDepartureError);
 
   renderCatalog();
   renderDepartures();

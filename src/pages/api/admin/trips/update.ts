@@ -3,6 +3,7 @@ import { readTrip, writeTrip, deleteTrip, saveImageFile } from '../../../../lib/
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
+import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -19,10 +20,13 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   // Occupancy catalog + departures-with-offers come in as serialized JSON from
   // the editor (nested data; parallel form arrays don't fit). parseEditorBooking
   // validates + normalizes both into trip YAML shape.
-  const { occupancyCatalog, batches } = parseEditorBooking(
+  const { occupancyCatalog, batches, errors: bookingErrors } = parseEditorBooking(
     sanitizeInput(body.get('occupancyCatalog_json')),
     sanitizeInput(body.get('departures_json')),
   );
+  if (bookingErrors.length > 0) {
+    return redirect(`/admin/trips/${oldSlug}?error=incomplete-departure`);
+  }
   // Backfill any blank departure id from the (possibly new) slug + start date.
   for (const b of batches) {
     if (!b.id && b.startDate) b.id = `${newSlug}-${b.startDate}`;
@@ -52,7 +56,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   // NOTE: writeTrip does a full overwrite — every field that must survive a save
   // MUST be listed here. Any YAML field absent from this object is destroyed on
   // save. See the round-trip test in the admin trips suite.
-  const data: Record<string, any> = {
+  const data: Record<string, any> = withAdminTripUpdate({
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name: tripName,
     title: tripName,
@@ -80,7 +84,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,
     batches,
-  };
+  });
 
   if (newSlug !== oldSlug) {
     deleteTrip(oldSlug);

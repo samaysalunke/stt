@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import YAML from 'yaml';
 import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary } from '../../../../lib/content';
 import { slugify } from '../../../../lib/utils';
+import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 // Bulk import trips from a YAML or JSON document. The `yaml` parser accepts
 // JSON too (JSON is a subset of YAML), so one parse path handles both.
@@ -66,7 +67,12 @@ export const POST: APIRoute = async ({ request }) => {
     // Ensure slug + title are present and consistent.
     // The editor/create/update layer keys off `name`; content/import uses
     // `title`. Write both (identical) so imported trips show their name in admin.
-    const data: Record<string, any> = { ...item, slug, title, name: title };
+    const data: Record<string, any> = withAdminTripUpdate({
+      ...item,
+      slug,
+      title,
+      name: title,
+    });
     // Trip-level status was removed — visibility/sold-out derive from departures.
     // Strip any legacy top-level status carried in the YAML.
     delete data.status;

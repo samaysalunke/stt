@@ -1,6 +1,7 @@
 export const prerender = false;
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, listTripSlugs } from '../../../../lib/content';
+import { copiedTripName, withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -35,12 +36,14 @@ export const POST: APIRoute = async ({ request }) => {
       ...(Array.isArray(b.offers) ? { offers: b.offers.map((o: any) => ({ ...o, booked: 0 })) } : {}),
     }));
 
-    const newData: Record<string, any> = {
+    const copiedName = copiedTripName(source, slug);
+    const newData: Record<string, any> = withAdminTripUpdate({
       ...source,
       slug: newSlug, // keep the in-YAML slug in sync with the new filename (else the copy collides with the original)
-      name: `${source.name ?? slug} (Copy)`,
+      name: copiedName,
+      title: copiedName,
       batches: copiedBatches,
-    };
+    });
     delete newData.status; // strip any legacy trip-level status
 
     writeTrip(newSlug, newData);
