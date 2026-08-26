@@ -1,7 +1,8 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { listAlbums } from '../../../lib/content';
+import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
+import { listAlbums, listFaqs } from '../../../lib/content';
 
 const publishedAlbums = listAlbums().filter(a => a.published);
 const galleryAlbums = publishedAlbums.map(a => ({
@@ -17,6 +18,7 @@ const itinerary: any[] = [];
 const editorCatalog: any[] = [];
 const editorDepartures: any[] = [];
 const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departure';
+const globalFaqs = listFaqs();
 ---
 
 <AdminLayout title="New Trip" page="trips">
@@ -38,6 +40,7 @@ const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departu
       { id: 'itinerary', label: 'Itinerary' },
       { id: 'logistics', label: 'Logistics' },
       { id: 'payment',   label: 'Payment & Media' },
+      { id: 'faqs',      label: 'FAQs' },
     ].map(({ id, label }) => (
       <button type="button" class="tab-btn" data-tab={id}>{label}</button>
     ))}
@@ -264,6 +267,8 @@ const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departu
 
       </div>
     </div>
+
+    <TripFaqEditor globalFaqs={globalFaqs} />
 
     <!-- Bottom save bar -->
     <div class="save-bar">
@@ -727,7 +732,7 @@ tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.ta
 
 // Restore tab from URL hash
 const hash = location.hash.replace('#', '');
-const validTabs = ['basics','content','itinerary','logistics','payment'];
+const validTabs = ['basics','content','itinerary','logistics','payment','faqs'];
 switchTab(validTabs.includes(hash) ? hash : 'basics');
 
 // ── Auto-slug from Trip Name ──────────────────

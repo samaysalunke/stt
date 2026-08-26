@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, deleteTrip, saveImageFile } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
-import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
+import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -51,6 +51,11 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
 
   const gallery = parseGallery(body.get('gallery_json'));
+  // Older API clients may not send the new fields. Preserve the stored values
+  // in that case; the current editor always posts both hidden JSON inputs.
+  const { tripFaqOverrides, tripFaqs } = body.has('tripFaqOverrides_json') || body.has('tripFaqs_json')
+    ? parseTripFaqs(body.get('tripFaqOverrides_json'), body.get('tripFaqs_json'))
+    : parseTripFaqs(JSON.stringify(existing.tripFaqOverrides ?? {}), JSON.stringify(existing.tripFaqs ?? []));
 
   const tripName = sanitizeInput(body.get('name'));
   // NOTE: writeTrip does a full overwrite — every field that must survive a save
@@ -80,6 +85,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     cancellationPolicy: sanitizeInput(body.get('cancellationPolicy')) || null,
     featuredImage,
     gallery,
+    tripFaqOverrides,
+    tripFaqs,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,

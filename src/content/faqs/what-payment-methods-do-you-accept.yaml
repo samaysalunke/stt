@@ -5,3 +5,4 @@ answer: "UPI or bank transfer. For UPI — send to zahrashakir2002-2@okaxis via 
   Screenshot or note your transaction ID and upload it with your registration."
 category: Payment
 order: 7
+defaultOnTripPages: true

@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { writeTrip, saveImageFile } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
-import { parseEditorBooking, parseGallery } from '../../../../lib/tripEditor';
+import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
@@ -43,6 +43,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
 
   const gallery = parseGallery(body.get('gallery_json'));
+  const { tripFaqOverrides, tripFaqs } = parseTripFaqs(
+    body.get('tripFaqOverrides_json'), body.get('tripFaqs_json'),
+  );
 
   const data: Record<string, any> = withAdminTripUpdate({
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
@@ -68,6 +71,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     cancellationPolicy: sanitizeInput(body.get('cancellationPolicy')) || null,
     featuredImage: featuredImage || null,
     gallery,
+    tripFaqOverrides,
+    tripFaqs,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,
     balanceDueRule: sanitizeInput(body.get('balanceDueRule')) || null,
     occupancyCatalog,

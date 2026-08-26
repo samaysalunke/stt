@@ -4,3 +4,4 @@ answer: It varies by trip — every trip page lists exactly what's covered (stay
   the trip you're looking at before you book.
 category: Payment
 order: 17
+defaultOnTripPages: true

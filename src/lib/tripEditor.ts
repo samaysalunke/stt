@@ -267,3 +267,42 @@ export function parseGallery(galleryJson: unknown): GalleryImage[] {
   }
   return out;
 }
+
+export interface ParsedTripFaqs {
+  tripFaqOverrides: { include: string[]; exclude: string[] };
+  tripFaqs: Array<{ question: string; answer: string }>;
+}
+
+// Parse and sanitize the two serialized FAQ editor fields. Keeping this in the
+// shared editor boundary ensures create and update accept exactly the same data.
+export function parseTripFaqs(overridesJson: unknown, tripFaqsJson: unknown): ParsedTripFaqs {
+  let overrides: any = {};
+  let custom: any[] = [];
+  try {
+    const parsed = JSON.parse(typeof overridesJson === 'string' ? overridesJson : '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) overrides = parsed;
+  } catch { /* use empty overrides */ }
+  try {
+    const parsed = JSON.parse(typeof tripFaqsJson === 'string' ? tripFaqsJson : '[]');
+    if (Array.isArray(parsed)) custom = parsed;
+  } catch { /* use no custom FAQs */ }
+
+  const cleanSlugs = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return [...new Set(value
+      .map((slug) => String(slug ?? '').trim())
+      .filter((slug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))];
+  };
+  const include = cleanSlugs(overrides.include);
+  const includeSet = new Set(include);
+  const exclude = cleanSlugs(overrides.exclude).filter((slug) => !includeSet.has(slug));
+
+  const tripFaqs = custom
+    .map((faq) => ({
+      question: String(faq?.question ?? '').trim().slice(0, 5000),
+      answer: String(faq?.answer ?? '').trim().slice(0, 5000),
+    }))
+    .filter((faq) => faq.question && faq.answer);
+
+  return { tripFaqOverrides: { include, exclude }, tripFaqs };
+}

@@ -3,3 +3,4 @@ answer: If we cancel a departure, you get a full refund of everything you've pai
   — including the ₹3,000 advance. That's the one case where the advance comes back.
 category: Payment
 order: 19
+defaultOnTripPages: true

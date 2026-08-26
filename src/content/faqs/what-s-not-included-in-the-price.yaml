@@ -4,3 +4,4 @@ answer: Getting to the meeting point (flights, trains, buses), travel insurance,
   trip's inclusions. When in doubt, the trip page is the source of truth.
 category: Payment
 order: 18
+defaultOnTripPages: true

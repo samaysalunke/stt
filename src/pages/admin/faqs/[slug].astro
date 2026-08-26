@@ -37,6 +37,13 @@ const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
           <input type="number" name="order" value={f.order ?? ''} class={inputCls} style={inputStyle} />
         </div>
       </div>
+      <label class="flex items-start gap-3 rounded-2xl px-4 py-3" style={inputStyle}>
+        <input type="checkbox" name="defaultOnTripPages" class="mt-1" checked={f.defaultOnTripPages === true} />
+        <span>
+          <span class="block text-sm font-semibold" style="color: var(--color-navy);">Default on trip pages</span>
+          <span class="block text-xs mt-1" style="color: rgba(27,43,58,0.55);">Show this FAQ on every trip unless a trip hides it.</span>
+        </span>
+      </label>
     </div>
     <div class="flex items-center gap-3 mt-6">
       <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);">Save changes</button>

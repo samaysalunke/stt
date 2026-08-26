@@ -17,6 +17,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     answer: sanitizeInput(body.get('answer')),
     category: sanitizeInput(body.get('category')) || 'General',
     order,
+    defaultOnTripPages: body.get('defaultOnTripPages') === 'on',
   });
   return redirect('/admin/faqs');
 };

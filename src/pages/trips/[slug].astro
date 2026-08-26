@@ -2,7 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 
 export const prerender = false;
@@ -101,6 +101,7 @@ const itinerary = (trip.itinerary ?? []).map((d: any) => ({
 const included: string[] = trip.included ?? [];
 const excluded: string[] = trip.excluded ?? trip.notIncluded ?? [];
 const highlights: string[] = trip.highlights ?? [];
+const tripFaqs = resolveTripFaqs(trip);
 
 // GA4 event on page load
 const tripNameJson = JSON.stringify(tripName);
@@ -136,7 +137,19 @@ const eventSchemas = departures.map((departure) => {
 });
 const tripSchema: Record<string, any> = {
   '@context': 'https://schema.org',
-  '@graph': [breadcrumbSchema, ...eventSchemas],
+  '@graph': [
+    breadcrumbSchema,
+    ...eventSchemas,
+    ...(tripFaqs.length > 0 ? [{
+      '@type': 'FAQPage',
+      '@id': `${canonicalUrl}#faq`,
+      mainEntity: tripFaqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+      })),
+    }] : []),
+  ],
 };
 ---
 
@@ -471,6 +484,25 @@ const tripSchema: Record<string, any> = {
           </a>
         </div>
       </div>
+    )}
+
+    {tripFaqs.length > 0 && (
+      <section class="mx-auto mt-16 max-w-3xl" aria-labelledby="trip-faq-heading">
+        <h2 id="trip-faq-heading" class="mb-6 text-2xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">Frequently asked questions</h2>
+        <div class="space-y-2">
+          {tripFaqs.map((faq) => (
+            <details class="group overflow-hidden rounded-xl border bg-white" style="border-color: var(--color-border);">
+              <summary class="flex cursor-pointer list-none select-none items-center justify-between px-5 py-4 text-sm font-medium" style="color: var(--color-navy);">
+                <span>{faq.question}</span>
+                <svg class="ml-3 h-4 w-4 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" style="color: var(--color-gray-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="px-5 pb-5 pt-1 text-sm leading-relaxed" style="color: var(--color-gray-text);">{faq.answer}</div>
+            </details>
+          ))}
+        </div>
+      </section>
     )}
   </div>
 

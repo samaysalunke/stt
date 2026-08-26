@@ -4,3 +4,4 @@ answer: "Each trip page has a packing list. The one universal rule: pack light.
   uphill."
 category: Safety & logistics
 order: 16
+defaultOnTripPages: true

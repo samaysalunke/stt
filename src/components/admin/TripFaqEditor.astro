@@ -1,0 +1,143 @@
+---
+interface Props {
+  globalFaqs: Array<Record<string, any>>;
+  trip?: Record<string, any>;
+}
+
+const { globalFaqs, trip = {} } = Astro.props;
+const included = new Set(Array.isArray(trip?.tripFaqOverrides?.include) ? trip.tripFaqOverrides.include : []);
+const excluded = new Set(Array.isArray(trip?.tripFaqOverrides?.exclude) ? trip.tripFaqOverrides.exclude : []);
+const initialTripFaqs = (Array.isArray(trip?.tripFaqs) ? trip.tripFaqs : [])
+  .map((faq: any) => ({ question: String(faq?.question ?? ''), answer: String(faq?.answer ?? '') }));
+---
+
+<div class="tab-panel hidden" id="tab-faqs">
+  <div class="faq-editor-section">
+    <h2>Global FAQs</h2>
+    <p class="faq-editor-help">Defaults stay in sync with the global FAQ. Change a checkbox to override visibility only for this trip.</p>
+    <div class="faq-global-list">
+      {globalFaqs.map((faq) => {
+        const isDefault = faq.defaultOnTripPages === true;
+        const checked = included.has(faq.slug) || (isDefault && !excluded.has(faq.slug));
+        return (
+          <label class="faq-global-row">
+            <input
+              type="checkbox"
+              class="trip-global-faq"
+              data-slug={faq.slug}
+              data-default={String(isDefault)}
+              checked={checked}
+            />
+            <span>
+              <strong>{faq.question}</strong>
+              <small>{isDefault ? 'Global default' : 'Not a global default'}</small>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+    {globalFaqs.length === 0 && <p class="faq-editor-empty">No global FAQs exist yet.</p>}
+    <input type="hidden" name="tripFaqOverrides_json" id="tripFaqOverrides_json" />
+  </div>
+
+  <div class="faq-editor-section">
+    <div class="faq-editor-heading">
+      <div>
+        <h2>Trip-only FAQs</h2>
+        <p class="faq-editor-help">These appear after the selected global FAQs and belong only to this trip.</p>
+      </div>
+      <button type="button" class="add-btn" id="add-trip-faq">+ Add FAQ</button>
+    </div>
+    <div id="trip-faq-list"></div>
+    <p id="trip-faq-empty" class="faq-editor-empty">No trip-only FAQs yet.</p>
+    <input type="hidden" name="tripFaqs_json" id="tripFaqs_json" />
+  </div>
+</div>
+
+<style is:global>
+  .faq-editor-section { background:#fff; border:1px solid var(--color-border); border-radius:0.75rem; padding:1.25rem; margin-bottom:1rem; }
+  .faq-editor-section h2 { color:var(--color-text-primary); font-size:1rem; font-weight:700; margin:0; }
+  .faq-editor-help, .faq-editor-empty { color:#7b8490; font-size:0.78rem; line-height:1.45; margin:0.25rem 0 0.9rem; }
+  .faq-editor-empty { margin:0.75rem 0 0; }
+  .faq-global-list { display:grid; gap:0.5rem; }
+  .faq-global-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.75rem; border:1px solid var(--color-border); border-radius:0.6rem; cursor:pointer; }
+  .faq-global-row input { margin-top:0.2rem; accent-color:var(--color-primary); }
+  .faq-global-row span { display:flex; flex-direction:column; gap:0.15rem; min-width:0; }
+  .faq-global-row strong { color:var(--color-text-primary); font-size:0.85rem; line-height:1.35; }
+  .faq-global-row small { color:#9ca3af; font-size:0.7rem; }
+  .faq-editor-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+  .trip-faq-card { border:1px solid var(--color-border); border-radius:0.65rem; padding:0.9rem; margin-top:0.65rem; }
+  .trip-faq-fields { display:grid; gap:0.65rem; }
+  .trip-faq-fields label { color:var(--color-text-secondary); font-size:0.72rem; font-weight:600; }
+  .trip-faq-fields input, .trip-faq-fields textarea { display:block; width:100%; margin-top:0.2rem; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.65rem; font-size:0.85rem; outline:none; }
+  .trip-faq-actions { display:flex; justify-content:flex-end; gap:0.35rem; margin-top:0.65rem; }
+  .trip-faq-actions button { border:1px solid var(--color-border); background:#fff; border-radius:0.4rem; padding:0.3rem 0.55rem; color:var(--color-text-secondary); font-size:0.72rem; cursor:pointer; }
+  .trip-faq-actions .remove { color:var(--color-danger); }
+</style>
+
+<script define:vars={{ initialTripFaqs }}>
+  (() => {
+    const list = document.getElementById('trip-faq-list');
+    const empty = document.getElementById('trip-faq-empty');
+    const overridesInput = document.getElementById('tripFaqOverrides_json');
+    const customInput = document.getElementById('tripFaqs_json');
+    const form = document.getElementById('trip-form');
+    if (!list || !form || !overridesInput || !customInput) return;
+
+    const createCard = (faq = { question: '', answer: '' }) => {
+      const card = document.createElement('div');
+      card.className = 'trip-faq-card';
+      card.innerHTML = `
+        <div class="trip-faq-fields">
+          <label>Question<input type="text" class="trip-faq-question" maxlength="5000" /></label>
+          <label>Answer<textarea class="trip-faq-answer" rows="4" maxlength="5000"></textarea></label>
+        </div>
+        <div class="trip-faq-actions">
+          <button type="button" class="move-up" aria-label="Move FAQ up">↑ Up</button>
+          <button type="button" class="move-down" aria-label="Move FAQ down">↓ Down</button>
+          <button type="button" class="remove">Remove</button>
+        </div>`;
+      card.querySelector('.trip-faq-question').value = faq.question || '';
+      card.querySelector('.trip-faq-answer').value = faq.answer || '';
+      card.querySelector('.move-up').addEventListener('click', () => {
+        if (card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
+      });
+      card.querySelector('.move-down').addEventListener('click', () => {
+        if (card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
+      });
+      card.querySelector('.remove').addEventListener('click', () => {
+        card.remove();
+        empty.hidden = list.children.length > 0;
+      });
+      list.appendChild(card);
+      empty.hidden = true;
+      return card;
+    };
+
+    (Array.isArray(initialTripFaqs) ? initialTripFaqs : []).forEach(createCard);
+    empty.hidden = list.children.length > 0;
+    document.getElementById('add-trip-faq')?.addEventListener('click', () => {
+      const card = createCard();
+      card.querySelector('.trip-faq-question')?.focus();
+    });
+
+    const serialize = () => {
+      const include = [];
+      const exclude = [];
+      document.querySelectorAll('.trip-global-faq').forEach((checkbox) => {
+        const slug = checkbox.dataset.slug;
+        const isDefault = checkbox.dataset.default === 'true';
+        if (!slug) return;
+        if (checkbox.checked && !isDefault) include.push(slug);
+        if (!checkbox.checked && isDefault) exclude.push(slug);
+      });
+      overridesInput.value = JSON.stringify({ include, exclude });
+      customInput.value = JSON.stringify(Array.from(list.querySelectorAll('.trip-faq-card')).map((card) => ({
+        question: card.querySelector('.trip-faq-question')?.value || '',
+        answer: card.querySelector('.trip-faq-answer')?.value || '',
+      })));
+    };
+    serialize();
+    form.addEventListener('submit', serialize);
+  })();
+</script>

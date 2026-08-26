@@ -28,6 +28,7 @@ const TEST_FILES = [
   'tests/api/gamification.test.mjs',
   'tests/api/public-profile.test.mjs',
   'tests/api/admin-trips.test.mjs',
+  'tests/api/admin-faqs.test.mjs',
   ...(includeRateLimits ? ['tests/api/rate-limits.test.mjs'] : []),
 ];
 

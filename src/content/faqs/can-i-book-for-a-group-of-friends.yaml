@@ -3,3 +3,4 @@ answer: Yes — fill out one form per person. If you're all traveling together,
   mention it in the form and we'll try to keep you in the same batch.
 category: Booking
 order: 2
+defaultOnTripPages: true

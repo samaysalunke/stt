@@ -6,7 +6,8 @@ test.describe('trip departure hero', () => {
   test('uses back navigation chrome and renders an informational summary', async ({ page }) => {
     await page.goto(TRIP_URL);
 
-    await expect(page.locator('header')).toHaveCount(0);
+    // Scope to page chrome; Astro's dev toolbar uses shadow-DOM <header> nodes.
+    await expect(page.locator('body > header')).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveCount(0);
     await expect(page.getByText('Upcoming', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Sold Out', { exact: true })).toHaveCount(0);
@@ -51,6 +52,39 @@ test.describe('trip departure hero', () => {
 
     await expect(page.locator('[data-testid^="tier-"]')).toHaveCount(0);
     await expect(page.locator('#booking-panel-cta')).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('renders inherited FAQs at the end and emits matching FAQPage data', async ({ page }) => {
+    await page.goto(TRIP_URL);
+    const heading = page.getByRole('heading', { name: 'Frequently asked questions' });
+    await expect(heading).toBeVisible();
+    await expect(page.locator('section[aria-labelledby="trip-faq-heading"] details')).toHaveCount(19);
+
+    const structuredFaqs = await page.locator('script[type="application/ld+json"]').evaluateAll((scripts) =>
+      scripts.flatMap((script) => {
+        const data = JSON.parse(script.textContent || '{}');
+        return (data['@graph'] || []).filter((node: any) => node['@type'] === 'FAQPage');
+      }),
+    );
+    expect(structuredFaqs).toHaveLength(1);
+    expect(structuredFaqs[0].mainEntity).toHaveLength(19);
+    expect(structuredFaqs[0].mainEntity[0].name).toBe(
+      await page.locator('section[aria-labelledby="trip-faq-heading"] summary span').first().textContent(),
+    );
+  });
+
+  test('places FAQs after the sold-out message without horizontal overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto('/trips/qa-test-sold-out/');
+    const soldOut = page.getByText('All spots on this trip are filled.');
+    const faqHeading = page.getByRole('heading', { name: 'Frequently asked questions' });
+    await expect(soldOut).toBeVisible();
+    await expect(faqHeading).toBeVisible();
+    expect(await soldOut.evaluate((message, heading) =>
+      Boolean(message.compareDocumentPosition(heading as Node) & Node.DOCUMENT_POSITION_FOLLOWING),
+      await faqHeading.elementHandle(),
+    )).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 
   for (const viewport of [
