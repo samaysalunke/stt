@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('legal pages and navigation drawer', () => {
+  test('homepage header stays hidden over the hero and appears after it', async ({ page }) => {
+    await page.goto('/');
+
+    const header = page.locator('#site-header');
+    await expect(header).not.toHaveClass(/header-visible/);
+
+    await page.locator('#homepage-hero + section').scrollIntoViewIfNeeded();
+    await expect(header).toHaveClass(/header-visible/);
+
+    await page.locator('#homepage-hero').scrollIntoViewIfNeeded();
+    await expect(header).not.toHaveClass(/header-visible/);
+  });
+
   for (const pageInfo of [
     { path: '/cancellation/', slug: 'cancellation', title: 'Cancellation Policy', date: 'August 2026' },
     { path: '/terms/', slug: 'terms', title: 'Terms & Conditions', date: 'June 2025' },
