@@ -9,6 +9,7 @@ import {
   countOwners,
 } from '../../../../lib/admin-session';
 import { decodeIdToken, verifyGoogleClaims } from '../../../../lib/googleIdToken';
+import { siteUrl } from '../../../../lib/siteUrl';
 
 export const prerender = false;
 
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect, clientAddress }) =
   const clientSecret = import.meta.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET ?? '';
   const redirectUri  = import.meta.env.ADMIN_OAUTH_REDIRECT_URI
     ?? process.env.ADMIN_OAUTH_REDIRECT_URI
-    ?? 'http://localhost:4321/api/admin/auth/callback';
+    ?? siteUrl('/api/admin/auth/callback');
 
   // Exchange code for tokens
   let idToken: string;

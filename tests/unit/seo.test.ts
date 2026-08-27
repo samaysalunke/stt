@@ -40,8 +40,10 @@ describe('SEO publication controls', () => {
     // Only GET/HEAD navigations get the path-shape redirect (never form posts).
     expect(middleware).toContain("request.method === 'GET' || request.method === 'HEAD'");
     expect(middleware).toContain('toLowerCase()');
-    // Single redirect emitted only when the normalized target actually differs.
-    expect(middleware).toContain('if (target.href !== url.href) return redirect(target.toString(), 308)');
+    // Single redirect emitted only when the normalized target actually differs
+    // from the browser-facing URL (built from x-forwarded-* behind the proxy).
+    expect(middleware).toContain('x-forwarded-host');
+    expect(middleware).toContain('if (target.href !== publicHref) return redirect(target.toString(), 308)');
   });
 
   it('emits valid absolute JSON-LD on trip pages', () => {
@@ -53,8 +55,8 @@ describe('SEO publication controls', () => {
   });
 
   it('builds absolute, de-duplicated IndexNow URL lists', () => {
-    expect(indexNowUrls(['/trips/ladakh-high-passes/'])).toEqual(['https://seekthethrill.in/trips/ladakh-high-passes/']);
-    expect(indexNowUrls(['/trips/a/', '/trips/a/'])).toEqual(['https://seekthethrill.in/trips/a/']);
-    expect(indexNowUrls(['https://seekthethrill.in/trips/a/', ''])).toEqual(['https://seekthethrill.in/trips/a/']);
+    expect(indexNowUrls(['/trips/ladakh-high-passes/'])).toEqual(['https://www.seekthethrill.in/trips/ladakh-high-passes/']);
+    expect(indexNowUrls(['/trips/a/', '/trips/a/'])).toEqual(['https://www.seekthethrill.in/trips/a/']);
+    expect(indexNowUrls(['https://www.seekthethrill.in/trips/a/', ''])).toEqual(['https://www.seekthethrill.in/trips/a/']);
   });
 });

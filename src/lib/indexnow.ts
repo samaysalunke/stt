@@ -1,12 +1,14 @@
 // IndexNow: notify search engines (Bing, Yandex, et al.) when a public URL is
 // created, updated, or removed. See SEO-OPERATIONS.md item 7.
 //
-// Requires a production key hosted at https://seekthethrill.in/<key>.txt — set
-// INDEXNOW_KEY in the production environment. Without it, every call is a no-op,
-// so this is safe to leave wired in non-prod and before the key is provisioned.
+// Requires a production key hosted at <SITE_ORIGIN>/<key>.txt — set INDEXNOW_KEY
+// in the production environment. Without it, every call is a no-op, so this is
+// safe to leave wired in non-prod and before the key is provisioned.
 
-const SITE = 'https://seekthethrill.in';
-const HOST = 'seekthethrill.in';
+import { SITE_HOST, SITE_ORIGIN } from './siteUrl';
+
+const SITE = SITE_ORIGIN;
+const HOST = SITE_HOST;
 
 export const INDEXNOW_KEY = process.env.INDEXNOW_KEY ?? '';
 

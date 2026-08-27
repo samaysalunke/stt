@@ -6,6 +6,7 @@ import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
+import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 
 export const prerender = false;
 
@@ -106,15 +107,15 @@ const tripNameJson = JSON.stringify(tripName);
 const slugJson = JSON.stringify(slug);
 
 // ── Structured data (Event + Offer) for rich results ──────────────────────
-const canonicalUrl = `https://seekthethrill.in/trips/${slug}/`;
+const canonicalUrl = siteUrl(`/trips/${slug}/`);
 // schema.org image URLs must be absolute; heroImg may be a site-relative path.
-const heroImgAbs = heroImg.startsWith('http') ? heroImg : `https://seekthethrill.in${heroImg}`;
+const heroImgAbs = heroImg.startsWith('http') ? heroImg : `${SITE_ORIGIN}${heroImg}`;
 const breadcrumbSchema = {
   '@type': 'BreadcrumbList',
   '@id': `${canonicalUrl}#breadcrumb`,
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://seekthethrill.in/' },
-    { '@type': 'ListItem', position: 2, name: 'Trips', item: 'https://seekthethrill.in/trips/' },
+    { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl('/') },
+    { '@type': 'ListItem', position: 2, name: 'Trips', item: siteUrl('/trips/') },
     { '@type': 'ListItem', position: 3, name: tripName, item: canonicalUrl },
   ],
 };
@@ -128,7 +129,7 @@ const eventSchemas = departures.map((departure) => {
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     eventStatus: 'https://schema.org/EventScheduled',
     startDate: departure.startDate, ...(departure.endDate ? { endDate: departure.endDate } : {}),
-    organizer: { '@id': 'https://seekthethrill.in/#organization' },
+    organizer: { '@id': `${SITE_ORIGIN}/#organization` },
     ...(trip.location ? { location: { '@type': 'Place', name: trip.location, address: { '@type': 'PostalAddress', addressRegion: trip.location, addressCountry: 'IN' } } } : {}),
     ...(cheapestOffer ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),
   };

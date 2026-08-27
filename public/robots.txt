@@ -17,4 +17,4 @@ Disallow: /keystatic/
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://seekthethrill.in/sitemap.xml
+Sitemap: https://www.seekthethrill.in/sitemap.xml

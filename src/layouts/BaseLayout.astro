@@ -5,6 +5,7 @@ import BackButton from '../components/BackButton.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
 import { readSiteSettings } from '../lib/content';
+import { SITE_ORIGIN, siteUrl } from '../lib/siteUrl';
 
 interface Props {
   title: string;
@@ -43,19 +44,19 @@ const analyticsEnabled = import.meta.env.PROD && !isAdminRoute;
 const gaId = settings.googleAnalyticsId || '';
 const clarityId = 'x2ms8bxixr';
 
-const siteId = 'https://seekthethrill.in/#website';
-const orgId = 'https://seekthethrill.in/#organization';
-const founderId = 'https://seekthethrill.in/about/#zahra-shakir';
+const siteId = `${SITE_ORIGIN}/#website`;
+const orgId = `${SITE_ORIGIN}/#organization`;
+const founderId = `${SITE_ORIGIN}/about/#zahra-shakir`;
 const orgSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'WebSite', '@id': siteId, name: 'Seek the Thrill',
-      url: 'https://seekthethrill.in/', publisher: { '@id': orgId }, inLanguage: 'en-IN',
+      url: siteUrl('/'), publisher: { '@id': orgId }, inLanguage: 'en-IN',
     },
     {
       '@type': 'Organization', '@id': orgId, name: 'Seek the Thrill',
-      url: 'https://seekthethrill.in/', logo: 'https://seekthethrill.in/logo.jpg',
+      url: siteUrl('/'), logo: siteUrl('/logo.jpg'),
       email: settings.email ?? 'zahra@seekthethrill.in',
       founder: { '@id': founderId },
       contactPoint: {
@@ -64,7 +65,7 @@ const orgSchema = {
       },
       sameAs: [settings.instagram, settings.facebook, settings.youtube, settings.linkedin].filter(Boolean),
     },
-    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: 'https://seekthethrill.in/about/' },
+    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/') },
   ],
 };
 ---

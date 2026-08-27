@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getDb } from '../lib/db';
 import { readTrip } from '../lib/content';
+import { SITE_HOST, siteUrl } from '../lib/siteUrl';
 
 export const prerender = false;
 
@@ -103,10 +104,10 @@ const canChangeUsername = !userRow?.usernameChangedAt;
         <div class="flex items-center gap-2 mt-3">
           <code id="share-banner-url" class="text-xs px-2 py-1 rounded-lg flex-1 truncate"
                 style="background: white; color: var(--color-navy); border: 1px solid var(--color-peach);">
-            seekthethrill.in/u/{userRow.username}
+            {SITE_HOST}/u/{userRow.username}
           </code>
           <button id="share-banner-copy"
-                  data-url={`https://seekthethrill.in/u/${userRow.username}`}
+                  data-url={siteUrl(`/u/${userRow.username}`)}
                   data-reg-id={String(shareBannerTrip.id)}
                   class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
                   style="background: var(--color-coral);">
@@ -304,10 +305,10 @@ const canChangeUsername = !userRow?.usernameChangedAt;
         <div class="flex items-center gap-2">
           <code id="share-profile-url" class="text-xs px-2 py-1.5 rounded-lg flex-1 truncate"
                 style="background: var(--color-blush); color: var(--color-navy);">
-            seekthethrill.in/u/{userRow.username}
+            {SITE_HOST}/u/{userRow.username}
           </code>
           <button id="share-profile-copy"
-                  data-url={`https://seekthethrill.in/u/${userRow.username}`}
+                  data-url={siteUrl(`/u/${userRow.username}`)}
                   class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
                   style="background: var(--color-coral);">
             Copy

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteUrl } from '../lib/siteUrl';
 
 const heroImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 
@@ -26,7 +27,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'TravelAgency',
   name: 'Seek the Thrill — Custom Itineraries',
-  url: 'https://seekthethrill.in/custom-itineraries/',
+  url: siteUrl('/custom-itineraries/'),
   description:
     'Bespoke, custom-designed adventure itineraries across India for travellers whose dates, group, or route don’t fit our fixed group departures.',
   areaServed: 'IN',
