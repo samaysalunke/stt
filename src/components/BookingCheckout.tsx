@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import { INDIA_CITIES } from '../lib/indiaCities';
+import { INDIA_STATES } from '../lib/indiaStates';
 import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 
 interface Offer {
@@ -193,7 +194,7 @@ function CitySelect({
 }: {
   value: string;
   onChange: (v: string) => void;
-  onBlur: () => void;
+  onBlur: (v?: string) => void;
   error?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -221,7 +222,7 @@ function CitySelect({
       <div>
         <input
           type="text" autoFocus value={value} placeholder="Type your city"
-          onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
+          onChange={(e) => onChange(e.target.value)} onBlur={() => onBlur()}
           className={inputCls} style={{ borderColor: error ? C.coral : C.peach }}
         />
         <button type="button" onClick={() => setOtherMode(false)} className="text-xs mt-1.5 underline" style={{ color: C.coral }}>
@@ -273,7 +274,7 @@ function CitySelect({
           {filtered.map((c) => (
             <li
               key={c} role="option" aria-selected={c === value}
-              onClick={() => { onChange(c); setQuery(''); setOpen(false); onBlur(); }}
+              onClick={() => { onChange(c); setQuery(''); setOpen(false); onBlur(c); }}
               className="px-4 py-2 text-sm cursor-pointer transition-colors"
               style={{ color: C.navy, background: c === value ? C.blush : 'white' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = C.blush; }}
@@ -294,6 +295,95 @@ function CitySelect({
         >
           Other — type my city
         </button>
+      </div>
+    </div>
+  );
+}
+
+// State/UT picker: exhaustive dropdown (all 28 states + 8 UTs) with an in-panel
+// search box. No free-text escape hatch — the list is complete.
+function StateSelect({
+  value, onChange, onBlur, error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur: (v?: string) => void;
+  error?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); onBlur(); } }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  useEffect(() => { if (open) searchRef.current?.focus(); }, [open]);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q ? INDIA_STATES.filter((s) => s.toLowerCase().includes(q)) : INDIA_STATES;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={inputCls + ' flex items-center justify-between text-left cursor-pointer'}
+        style={{ borderColor: error ? C.coral : C.peach }}
+      >
+        <span style={{ color: value ? C.navy : C.gray }}>{value || 'Select your state'}</span>
+        <svg
+          className="w-4 h-4 ml-2 shrink-0 transition-transform duration-200"
+          style={{ color: C.coral, transform: open ? 'rotate(180deg)' : 'none' }}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div
+        role="listbox"
+        className="absolute left-0 right-0 z-20 mt-1.5 rounded-xl border bg-white origin-top transition-all duration-150 ease-out"
+        style={{
+          borderColor: C.peach,
+          boxShadow: '0 10px 30px -10px rgba(27,43,58,0.25)',
+          opacity: open ? 1 : 0,
+          transform: open ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(0.98)',
+          pointerEvents: open ? 'auto' : 'none',
+        }}
+      >
+        <div className="p-2 border-b" style={{ borderColor: C.peach }}>
+          <input
+            ref={searchRef} type="text" value={query} placeholder="Search state…"
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border text-base sm:text-sm outline-none"
+            style={{ borderColor: C.peach }}
+          />
+        </div>
+        <ul className="max-h-56 overflow-y-auto py-1">
+          {filtered.map((s) => (
+            <li
+              key={s} role="option" aria-selected={s === value}
+              onClick={() => { onChange(s); setQuery(''); setOpen(false); onBlur(s); }}
+              className="px-4 py-2 text-sm cursor-pointer transition-colors"
+              style={{ color: C.navy, background: s === value ? C.blush : 'white' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = C.blush; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = s === value ? C.blush : 'white'; }}
+            >
+              {s}
+            </li>
+          ))}
+          {filtered.length === 0 && (
+            <li className="px-4 py-2 text-sm" style={{ color: C.gray }}>No match.</li>
+          )}
+        </ul>
       </div>
     </div>
   );
@@ -380,8 +470,9 @@ export default function BookingCheckout({
         return Number.isInteger(n) && n >= 16 && n <= 100 ? '' : 'Enter a valid age (16–100)';
       }
       case 'city':
-      case 'state':
         return value.length >= 2 ? '' : 'Enter a valid city';
+      case 'state':
+        return value.length >= 2 ? '' : 'Enter a valid state';
       case 'instagram':
         return /^@?[A-Za-z0-9._]{1,30}$/.test(value) ? '' : 'Enter a valid Instagram handle';
       default:
@@ -389,8 +480,11 @@ export default function BookingCheckout({
     }
   }
 
-  function handleBlur(field: string) {
-    const err = fieldError(field, form[field as keyof typeof form]);
+  // valueOverride lets a custom control (City/State pickers) validate the value
+  // it just selected — reading form[field] here would be a stale closure because
+  // the preceding set() hasn't flushed yet.
+  function handleBlur(field: string, valueOverride?: unknown) {
+    const err = fieldError(field, valueOverride !== undefined ? valueOverride : form[field as keyof typeof form]);
     setErrors((prev) => {
       const n = { ...prev };
       if (err) n[field] = err; else delete n[field];
@@ -653,10 +747,10 @@ export default function BookingCheckout({
               />
             </Field>
             <Field label="City" required error={errors.city}>
-              <CitySelect value={form.city} onChange={(v) => set('city', v)} onBlur={() => handleBlur('city')} error={!!errors.city} />
+              <CitySelect value={form.city} onChange={(v) => set('city', v)} onBlur={(v) => handleBlur('city', v)} error={!!errors.city} />
             </Field>
             <Field label="State" required error={errors.state}>
-              <input type="text" placeholder="e.g. Maharashtra" value={form.state} onChange={(e) => set('state', e.target.value)} onBlur={() => handleBlur('state')} className={inputCls} style={{ borderColor: errors.state ? C.coral : C.peach }} />
+              <StateSelect value={form.state} onChange={(v) => set('state', v)} onBlur={(v) => handleBlur('state', v)} error={!!errors.state} />
             </Field>
             <Field label="Instagram Handle (optional)" error={errors.instagram}>
               <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} onBlur={() => handleBlur('instagram')} className={inputCls} style={{ borderColor: errors.instagram ? C.coral : C.peach }} />
