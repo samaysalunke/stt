@@ -1,0 +1,37 @@
+---
+import MarkdownIt from 'markdown-it';
+
+interface Props {
+  content: string;
+  class?: string;
+}
+
+const { content, class: className } = Astro.props;
+
+// Admin-authored Markdown is rendered without inline HTML so policy overrides
+// cannot inject scripts or arbitrary markup into public pages.
+const markdown = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+});
+
+const defaultLinkOpen = markdown.renderer.rules.link_open
+  ?? ((tokens, index, options, _env, self) => self.renderToken(tokens, index, options));
+
+markdown.renderer.rules.link_open = (tokens, index, options, env, self) => {
+  const token = tokens[index];
+  const href = token.attrGet('href') ?? '';
+
+  if (/^https?:\/\//i.test(href)) {
+    token.attrSet('target', '_blank');
+    token.attrSet('rel', 'noopener noreferrer');
+  }
+
+  return defaultLinkOpen(tokens, index, options, env, self);
+};
+
+const html = markdown.render(content);
+---
+
+<div class:list={['legal-prose', 'legal-markdown', className]} set:html={html} />

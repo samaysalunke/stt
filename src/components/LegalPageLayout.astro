@@ -80,16 +80,26 @@ const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
   .legal-date svg { width: 0.95rem; height: 0.95rem; color: var(--color-coral); }
   .legal-body { padding: 3.5rem 0 5rem; background: var(--color-gray-soft); }
   .legal-content-card { padding: clamp(1.4rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: 1.4rem; background: white; box-shadow: 0 12px 40px rgba(27,43,58,0.055); }
-  .legal-override { color: var(--color-navy); font-size: 0.95rem; line-height: 1.9; white-space: pre-line; }
   .legal-prose > section + section { margin-top: 2.35rem; padding-top: 2.35rem; border-top: 1px solid var(--color-border); }
+  .legal-markdown > *:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .legal-markdown > *:last-child { margin-bottom: 0; }
+  .legal-prose h1 { margin-bottom: 1.5rem; color: var(--color-navy); font-family: var(--font-display); font-size: clamp(1.65rem, 4vw, 2.15rem); font-weight: 700; line-height: 1.2; }
   .legal-prose h2 { margin-bottom: 0.8rem; color: var(--color-navy); font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
   .legal-prose h2:not(:first-child) { margin-top: 2.35rem; padding-top: 2.35rem; border-top: 1px solid var(--color-border); }
+  .legal-prose h3 { margin-top: 1.5rem; margin-bottom: 0.65rem; color: var(--color-navy); font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; }
   .legal-prose p, .legal-prose li { color: var(--color-gray-text); font-size: 0.9rem; line-height: 1.78; }
   .legal-prose p + p { margin-top: 0.75rem; }
-  .legal-prose ul { margin-top: 0.75rem; padding-left: 1.2rem; list-style: disc; }
+  .legal-prose ul, .legal-prose ol { margin-top: 0.75rem; padding-left: 1.2rem; }
+  .legal-prose ul { list-style: disc; }
+  .legal-prose ol { list-style: decimal; }
   .legal-prose li + li { margin-top: 0.4rem; }
+  .legal-prose ul + p, .legal-prose ol + p { margin-top: 0.9rem; }
   .legal-prose strong { color: var(--color-navy); font-weight: 650; }
   .legal-prose a { color: var(--color-cta); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .legal-prose blockquote { margin: 1.25rem 0; padding: 0.15rem 0 0.15rem 1rem; border-left: 3px solid var(--color-peach); }
+  .legal-prose blockquote p { color: var(--color-gray-text); font-style: italic; }
+  .legal-prose hr { margin: 2rem 0; border: 0; border-top: 1px solid var(--color-border); }
+  .legal-prose code { padding: 0.12rem 0.3rem; border-radius: 0.3rem; background: var(--color-gray-soft); font-size: 0.86em; }
   .legal-support { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-top: 3.5rem; padding: clamp(1.5rem, 4vw, 2.35rem); border-radius: 1.4rem; background: var(--color-navy); color: white; box-shadow: 0 18px 45px rgba(27,43,58,0.15); }
   .legal-support-label { margin-bottom: 0.45rem; color: var(--color-peach) !important; font-size: 0.68rem !important; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
   .legal-support h2 { color: white; font-family: var(--font-display); font-size: clamp(1.35rem, 3vw, 1.8rem); font-weight: 700; }

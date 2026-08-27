@@ -1,5 +1,6 @@
 ---
 import LegalPageLayout from '../components/LegalPageLayout.astro';
+import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -17,7 +18,7 @@ const override = (settings.termsAndConditions ?? '').trim();
 >
   <div class="legal-content-card">
     {override ? (
-      <div class="legal-override">{override}</div>
+      <MarkdownContent content={override} />
     ) : (
       <div class="legal-prose">
 

@@ -1,5 +1,6 @@
 ---
 import LegalPageLayout from '../components/LegalPageLayout.astro';
+import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
 
 let settings: any = {};
@@ -36,7 +37,7 @@ const refundWindows = [
               <p>Please read these terms before submitting a cancellation request.</p>
             </div>
           </div>
-          <div class="policy-override-copy whitespace-pre-line">{override}</div>
+          <MarkdownContent content={override} />
         </div>
       ) : (
         <div class="space-y-14 md:space-y-20">
