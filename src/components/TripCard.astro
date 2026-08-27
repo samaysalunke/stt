@@ -19,6 +19,8 @@ interface Props {
   multiPrice?: boolean;
   spotsLeft?: number | null;
   soldOut?: boolean;
+  hasComingSoon?: boolean;
+  allComingSoon?: boolean;
   departures?: ResolvedDeparture[];
 }
 
@@ -38,6 +40,8 @@ const {
   multiPrice = false,
   spotsLeft = null,
   soldOut = false,
+  hasComingSoon = false,
+  allComingSoon = false,
   departures = [],
 } = Astro.props;
 
@@ -80,14 +84,17 @@ const departureSummary = getDepartureSummary(departures);
           {departureSummary.displayed.map((departure) => (
             <span
               data-sold-out={String(departure.soldOut)}
+              data-coming-soon={String(departure.comingSoon)}
               class:list={[
                 'flex flex-none flex-col justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold leading-tight text-white shadow-md backdrop-blur-sm',
-                departure.soldOut ? 'border border-white/20 bg-[#1B2B3A]/60 opacity-70' : '',
+                departure.soldOut ? 'border border-white/20 bg-[#1B2B3A]/60 opacity-70'
+                  : departure.comingSoon ? 'border border-white/20 bg-[#1B2B3A]/70' : '',
               ]}
-              style={departure.soldOut ? undefined : 'background-color: var(--color-cta);'}
+              style={departure.soldOut || departure.comingSoon ? undefined : 'background-color: var(--color-cta);'}
             >
               <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
-              {departure.soldOut && <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>}
+              {departure.soldOut ? <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>
+                : departure.comingSoon ? <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span> : null}
             </span>
           ))}
           {departureSummary.moreAvailable > 0 && (
@@ -115,13 +122,23 @@ const departureSummary = getDepartureSummary(departures);
         )}
       </div>
       <div class="shrink-0 text-right">
-        {originalFromPrice != null && (
-          <p class="text-sm leading-none line-through" style="color: var(--color-gray-text);">₹{originalFromPrice.toLocaleString('en-IN')}</p>
-        )}
-        <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
-        <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
-        {originalFromPrice != null && discountEndsAt && (
-          <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1 block text-[10px] font-semibold" client:load />
+        {allComingSoon && formattedPrice == null ? (
+          <>
+            <p class="font-display text-2xl leading-none select-none" style="color: var(--color-coral); filter: blur(6px);" aria-hidden="true">₹ ••,•••</p>
+            <span class="sr-only">Pricing revealed when booking opens</span>
+            <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">pricing soon</p>
+          </>
+        ) : (
+          <>
+            {originalFromPrice != null && (
+              <p class="text-sm leading-none line-through" style="color: var(--color-gray-text);">₹{originalFromPrice.toLocaleString('en-IN')}</p>
+            )}
+            <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
+            <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
+            {originalFromPrice != null && discountEndsAt && (
+              <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1 block text-[10px] font-semibold" client:load />
+            )}
+          </>
         )}
       </div>
     </div>
@@ -139,9 +156,11 @@ const departureSummary = getDepartureSummary(departures);
         >
           View Details
         </a>
-        {showLowStock && (
+        {showLowStock ? (
           <p class="text-center text-xs" style="color: var(--color-coral);">Only {spotsLeft} spots left</p>
-        )}
+        ) : hasComingSoon ? (
+          <p class="text-center text-xs" style="color: var(--color-coral);">New dates — wishlist inside</p>
+        ) : null}
       </div>
     )}
   </div>

@@ -58,7 +58,8 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect('/login?error=oauth_token');
   }
 
-  const { sub: googleId, email, name: displayName, picture: avatarUrl } = claims!;
+  const { sub: googleId, email, picture: avatarUrl } = claims!;
+  const displayName: string = claims!.name ?? '';
 
   let token: string;
   try {
@@ -77,14 +78,33 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
       // (assignAutoUsername is a no-op if one is already set).
       assignAutoUsername(user.id, displayName);
     } else {
-      const id = crypto.randomUUID();
-      db.prepare(`
-        INSERT INTO users (id, email, displayName, avatarUrl, googleId, lastLoginAt)
-        VALUES (?, ?, ?, ?, ?, unixepoch())
-      `).run(id, email, displayName, avatarUrl, googleId);
-      user = { id };
-      // Auto-assign a username on first sign-in
-      assignAutoUsername(id, displayName);
+      // A row may already exist for this verified email — e.g. a "contact"
+      // account created by a signed-out wishlist submission. Adopt it instead of
+      // hitting the users.email UNIQUE constraint (which would throw and bounce
+      // the user to /login?error=oauth_server, locking them out permanently).
+      const byEmail = db
+        .prepare('SELECT id FROM users WHERE lower(email) = lower(?)')
+        .get(email) as { id: string } | undefined;
+      if (byEmail) {
+        db.prepare(`
+          UPDATE users SET
+            googleId = ?, accountState = 'active',
+            displayName = CASE WHEN displayNameOverride = 1 THEN displayName ELSE COALESCE(displayName, ?) END,
+            avatarUrl = COALESCE(?, avatarUrl), lastLoginAt = unixepoch()
+          WHERE id = ?
+        `).run(googleId, displayName, avatarUrl, byEmail.id);
+        user = { id: byEmail.id };
+        assignAutoUsername(byEmail.id, displayName);
+      } else {
+        const id = crypto.randomUUID();
+        db.prepare(`
+          INSERT INTO users (id, email, displayName, avatarUrl, googleId, accountState, lastLoginAt)
+          VALUES (?, ?, ?, ?, ?, 'active', unixepoch())
+        `).run(id, email, displayName, avatarUrl, googleId);
+        user = { id };
+        // Auto-assign a username on first sign-in
+        assignAutoUsername(id, displayName);
+      }
     }
 
     // Create session

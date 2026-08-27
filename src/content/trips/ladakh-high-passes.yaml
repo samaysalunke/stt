@@ -29,6 +29,12 @@ batches:
     status: booking-open
     offers:
       - { tierId: standard, price: 35000, cap: 15, booked: 0 }
+  - id: ladakh-sep-2026
+    startDate: 2026-09-12
+    endDate: 2026-09-20
+    status: coming-soon
+    offers:
+      - { tierId: standard, price: 37000, cap: 15, booked: 0 }
 highlights:
   - Khardung La — one of the highest motorable roads in the world
   - Turtuk — a culturally unique border village with Balti culture

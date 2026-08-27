@@ -1,0 +1,24 @@
+title: QA Test — Coming Soon Trip
+publicationStatus: test
+slug: qa-test-coming-soon
+status: booking-open
+duration: 4 Days, 3 Nights
+description: Automated QA fixture — one bookable date, one coming-soon date. Do not delete.
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: ""
+batches:
+  - id: qa-cs-open-2099
+    startDate: 2099-02-01
+    endDate: 2099-02-04
+    status: booking-open
+    offers:
+      - { tierId: standard, price: 12000, cap: 15, booked: 0 }
+  - id: qa-cs-soon-2099
+    startDate: 2099-06-01
+    endDate: 2099-06-04
+    status: coming-soon
+    offers:
+      - { tierId: standard, price: 9000, cap: 15, booked: 0 }
+paymentAmount: 2000

@@ -166,21 +166,6 @@ const globalFaqs = listFaqs();
         </div>
 
         <div class="field full">
-          <label class="flabel">SEO Title</label>
-          <input name="seoTitle" class="finput" maxlength="70" value={trip.seoTitle ?? ''} placeholder="Optional; falls back to trip name" />
-        </div>
-
-        <div class="field full">
-          <label class="flabel">SEO Description</label>
-          <textarea name="seoDescription" class="finput" rows="3" maxlength="170" placeholder="Search result summary">{trip.seoDescription ?? ''}</textarea>
-        </div>
-
-        <div class="field full">
-          <label class="flabel">Featured Image Alt Text</label>
-          <input name="imageAlt" class="finput" maxlength="180" value={trip.imageAlt ?? ''} placeholder="Describe the destination and scene" />
-        </div>
-
-        <div class="field full">
           <label class="flabel">Who Should Join?</label>
           <textarea name="whoShouldJoin" class="finput" rows="4" placeholder="Describe the ideal traveler for this trip...">{trip.whoShouldJoin ?? ''}</textarea>
           <span class="fhint">Shown as a highlighted box on the trip page.</span>
@@ -1119,7 +1104,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
 <!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
 <script define:vars={{ editorCatalog, editorDepartures }}>
 (function () {
-  const STATUSES = ['booking-open', 'filling_fast', 'sold-out', 'draft', 'completed'];
+  const STATUSES = ['booking-open', 'filling_fast', 'coming-soon', 'sold-out', 'draft', 'completed'];
   // Working state (deep-cloned from server data).
   let catalog = JSON.parse(JSON.stringify(editorCatalog || []));
   let departures = JSON.parse(JSON.stringify(editorDepartures || []));

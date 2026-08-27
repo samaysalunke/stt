@@ -84,6 +84,28 @@ export function deleteTrip(slug: string): void {
   fs.unlinkSync(filePath);
 }
 
+/**
+ * The departure `status` values the admin editor offers. There is no CHECK
+ * constraint — `parseEditorBooking` stores the string as-is — so this is the
+ * single source the UI and Badge should read instead of re-listing literals.
+ * `coming-soon`: the date is public but not yet open for booking; its price is
+ * concealed and the CTA becomes "Wishlist now".
+ */
+export const DEPARTURE_STATUSES = [
+  'booking-open',
+  'filling_fast',
+  'coming-soon',
+  'sold-out',
+  'draft',
+  'completed',
+] as const;
+
+/** True for a departure that is published-but-not-yet-sellable. */
+export function isComingSoon(status: unknown): boolean {
+  const s = String(status ?? '').toLowerCase();
+  return s === 'coming-soon' || s === 'coming_soon';
+}
+
 export function upcomingBatches(trip: Record<string, any>): Array<Record<string, any>> {
   const batches = Array.isArray(trip?.batches) ? trip.batches : [];
   const today = new Date();
@@ -128,6 +150,8 @@ export interface ResolvedDeparture {
   totalCap: number | null;
   spotsLeft: number | null;
   soldOut: boolean;
+  /** Published but not open for booking — price concealed, wishlist instead. */
+  comingSoon: boolean;
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
@@ -263,8 +287,9 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
     const totalCap = metered
       ? offers.reduce((sum, o) => sum + (o.cap as number), 0)
       : null;
+    const comingSoon = isComingSoon(b.status);
     const statusSoldOut = b.status === 'sold-out' || b.status === 'sold_out';
-    const soldOut = statusSoldOut || (spotsLeft != null && spotsLeft <= 0);
+    const soldOut = !comingSoon && (statusSoldOut || (spotsLeft != null && spotsLeft <= 0));
     return {
       id: String(b.id),
       startDate: String(b.startDate),
@@ -274,15 +299,19 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
       totalCap,
       spotsLeft,
       soldOut,
+      comingSoon,
       discountAmount,
       discountEndsAt: discountAmount > 0 && b.discountEndsAt ? String(b.discountEndsAt) : null,
       discountActive: discountAmount > 0,
     };
   });
 
+  // Coming-soon departures never contribute to the public "from ₹X" — their
+  // price is concealed everywhere it would otherwise surface.
   const availablePrices: number[] = [];
   const allPrices: number[] = [];
   for (const d of departures) {
+    if (d.comingSoon) continue;
     for (const o of d.offers) {
       allPrices.push(o.price);
       if (!d.soldOut && o.available) availablePrices.push(o.price);
@@ -310,12 +339,19 @@ export function tripCardSummary(trip: Record<string, any>): {
   multiPrice: boolean;
   spotsLeft: number | null;
   soldOut: boolean;
+  /** At least one upcoming departure is coming-soon. */
+  hasComingSoon: boolean;
+  /** Every upcoming departure is coming-soon (so there is no public price). */
+  allComingSoon: boolean;
 } {
   const booking = resolveBooking(trip);
+  // Coming-soon departures are excluded from every price computation — the card
+  // must not reveal a number sourced from a not-yet-open date.
+  const sellable = booking.departures.filter((d) => !d.comingSoon);
   const prices = new Set<number>();
   const candidates: Array<{ price: number; originalPrice: number | null; discountEndsAt: string | null }> = [];
-  for (const d of booking.departures) for (const o of d.offers) prices.add(o.price);
-  for (const d of booking.departures) {
+  for (const d of sellable) for (const o of d.offers) prices.add(o.price);
+  for (const d of sellable) {
     if (d.soldOut) continue;
     for (const o of d.offers) if (o.available) candidates.push({
       price: o.price,
@@ -324,15 +360,18 @@ export function tripCardSummary(trip: Record<string, any>): {
     });
   }
   if (candidates.length === 0) {
-    for (const d of booking.departures) for (const o of d.offers) candidates.push({
+    for (const d of sellable) for (const o of d.offers) candidates.push({
       price: o.price,
       originalPrice: o.originalPrice,
       discountEndsAt: d.discountEndsAt ?? null,
     });
   }
   const lead = candidates.sort((a, b) => a.price - b.price)[0] ?? null;
-  const soonest = booking.departures.find((d) => !d.soldOut) ?? booking.departures[0] ?? null;
-  const allSoldOut = booking.departures.length > 0 && booking.departures.every((d) => d.soldOut);
+  const soonest = sellable.find((d) => !d.soldOut) ?? sellable[0] ?? null;
+  const comingSoonCount = booking.departures.filter((d) => d.comingSoon).length;
+  // "Sold out" only when there is genuinely nothing to do: sellable dates exist,
+  // all are full, and there is no coming-soon date left to wishlist.
+  const allSoldOut = sellable.length > 0 && sellable.every((d) => d.soldOut) && comingSoonCount === 0;
   return {
     fromPrice: booking.fromPrice,
     originalFromPrice: lead?.originalPrice ?? null,
@@ -340,6 +379,8 @@ export function tripCardSummary(trip: Record<string, any>): {
     multiPrice: prices.size > 1,
     spotsLeft: soonest?.spotsLeft ?? null,
     soldOut: allSoldOut,
+    hasComingSoon: comingSoonCount > 0,
+    allComingSoon: booking.departures.length > 0 && comingSoonCount === booking.departures.length,
   };
 }
 

@@ -155,6 +155,19 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('CREATE INDEX IF NOT EXISTS registrations_email_lower ON registrations(lower(trim(email)))'); } catch {}
   try { db.exec('CREATE INDEX IF NOT EXISTS registrations_batch_id ON registrations(batch_id)'); } catch {}
 
+  // feature/coming-soon — wishlists on coming-soon departures
+  //  - users.phone: the profile phone (until now only ever stored per-registration)
+  //  - users.accountState: 'active' for Google-authenticated accounts, 'contact' for
+  //    stubs created by a signed-out wishlist submission (claimed on first real login)
+  //  - registrations.wishlisted_at: set when a row is created as status='wishlist';
+  //    preserved when the row later upgrades to lead/pending
+  //  - registrations.wishlist_notified_at: stamped when ops emails the wishlister that
+  //    the date has opened for booking
+  try { db.exec('ALTER TABLE users ADD COLUMN phone TEXT'); } catch {}
+  try { db.exec("ALTER TABLE users ADD COLUMN accountState TEXT DEFAULT 'active'"); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN wishlisted_at DATETIME'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN wishlist_notified_at DATETIME'); } catch {}
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS geocode_cache (
       query TEXT PRIMARY KEY,

@@ -50,6 +50,7 @@ const albumSchema = {
   image={album.socialImage || ogImage}
   imageAlt={album.socialImageAlt || `${name} group trip photo album`}
   type="article"
+  robots="noindex, follow"
   nav="none"
 >
   <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(albumSchema)} /></Fragment>

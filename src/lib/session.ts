@@ -6,6 +6,7 @@ export interface SessionUser {
   email: string;
   displayName: string | null;
   avatarUrl: string | null;
+  phone: string | null;
 }
 
 const SESSION_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
@@ -25,7 +26,7 @@ export function getUserBySession(token: string): SessionUser | null {
   const db = getDb();
   const now = Math.floor(Date.now() / 1000);
   const row = db.prepare(`
-    SELECT u.id, u.email, u.displayName, u.avatarUrl
+    SELECT u.id, u.email, u.displayName, u.avatarUrl, u.phone
     FROM user_sessions s
     JOIN users u ON u.id = s.userId
     WHERE s.token = ? AND s.expiresAt > ?

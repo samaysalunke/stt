@@ -7,7 +7,6 @@ Seek the Thrill is an India-based travel company founded by Zahra Shakir. It org
 - [Upcoming trips](https://seekthethrill.in/trips/)
 - [About Seek the Thrill](https://seekthethrill.in/about/)
 - [Frequently asked questions](https://seekthethrill.in/faq/)
-- [Photo vault](https://seekthethrill.in/photo-vault/)
 - [Contact](https://seekthethrill.in/contact/)
 
 ## Policies

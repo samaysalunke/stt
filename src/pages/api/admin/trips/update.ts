@@ -4,6 +4,7 @@ import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
+import { generateTripSeo } from '../../../../lib/tripSeo';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -58,6 +59,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     : parseTripFaqs(JSON.stringify(existing.tripFaqOverrides ?? {}), JSON.stringify(existing.tripFaqs ?? []));
 
   const tripName = sanitizeInput(body.get('name'));
+  const location = sanitizeInput(body.get('location')) || null;
+  const shortDescription = sanitizeInput(body.get('shortDescription')) || null;
+  const description = sanitizeInput(body.get('description')) || null;
+  const generatedSeo = generateTripSeo({ name: tripName, location, shortDescription, description });
   // NOTE: writeTrip does a full overwrite — every field that must survive a save
   // MUST be listed here. Any YAML field absent from this object is destroyed on
   // save. See the round-trip test in the admin trips suite.
@@ -66,13 +71,11 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     name: tripName,
     title: tripName,
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || existing.publicationStatus || 'draft',
-    location: sanitizeInput(body.get('location')) || null,
+    location,
     duration: sanitizeInput(body.get('duration')) || null,
-    shortDescription: sanitizeInput(body.get('shortDescription')) || null,
-    description: sanitizeInput(body.get('description')) || null,
-    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
-    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
-    imageAlt: sanitizeInput(body.get('imageAlt')) || null,
+    shortDescription,
+    description,
+    ...generatedSeo,
     whoShouldJoin: sanitizeInput(body.get('whoShouldJoin')) || null,
     highlights,
     included,

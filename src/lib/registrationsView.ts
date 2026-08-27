@@ -31,6 +31,7 @@ export interface RegTrip {
 }
 
 export interface RegStats {
+  wishlist: number;
   lead: number;
   pending: number;
   confirmed: number;
@@ -47,10 +48,11 @@ export interface RegistrationsView {
   historyCount: number;
 }
 
-const ACTIVE_STATUSES = ['booking-open', 'booking_open', 'filling-fast', 'filling_fast', 'upcoming'];
+const ACTIVE_STATUSES = ['booking-open', 'booking_open', 'filling-fast', 'filling_fast', 'coming-soon', 'coming_soon', 'upcoming'];
 
 export function regStats(rs: Reg[]): RegStats {
   return {
+    wishlist: rs.filter((r) => r.status === 'wishlist').length,
     lead: rs.filter((r) => r.status === 'lead').length,
     pending: rs.filter((r) => r.status === 'pending').length,
     confirmed: rs.filter((r) => r.status === 'confirmed').length,
@@ -162,7 +164,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const total = registrations.length;
   const totals = regStats(registrations);
   const revenue = registrations
-    .filter((r) => r.status !== 'rejected')
+    .filter((r) => r.status !== 'rejected' && r.status !== 'wishlist')
     .reduce((n, r) => n + Number(r.amount_paid || 0), 0);
   const historyCount =
     trips.reduce((n, t) => n + t.departures.filter((d) => d.historical).length, 0) + (legacyRegs.length ? 1 : 0);

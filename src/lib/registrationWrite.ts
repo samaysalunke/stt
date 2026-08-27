@@ -5,7 +5,7 @@ import { sendRegistrationStatusConfirmed } from './email';
 import { recordPayment, zohoMode } from './paymentLedger';
 import { processZohoDocument } from './zohoBooks';
 
-export type RegStatus = 'lead' | 'pending' | 'confirmed' | 'rejected';
+export type RegStatus = 'wishlist' | 'lead' | 'pending' | 'confirmed' | 'rejected';
 
 /** The advance (paymentAmount) configured on the trip — the amount collected on confirm. */
 export function tripAdvanceAmountBySlug(tripSlug: string): number {

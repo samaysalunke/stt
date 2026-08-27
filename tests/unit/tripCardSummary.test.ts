@@ -166,3 +166,40 @@ describe('soldOut detection', () => {
     expect(tripCardSummary(trip).soldOut).toBe(false);
   });
 });
+
+describe('coming-soon flags', () => {
+  test('all-coming-soon trip: no price, allComingSoon true, not sold out', () => {
+    const trip = makeTrip([
+      { id: 'cs-1', startDate: FAR, endDate: FAR_END, status: 'coming-soon',
+        offers: [{ tierId: 'dorm', price: 5000, cap: 10, booked: 0 }] },
+    ]);
+    const s = tripCardSummary(trip);
+    expect(s.fromPrice).toBeNull();
+    expect(s.allComingSoon).toBe(true);
+    expect(s.hasComingSoon).toBe(true);
+    expect(s.soldOut).toBe(false);
+  });
+
+  test('mixed trip: price from the bookable date, hasComingSoon true, allComingSoon false', () => {
+    const trip = makeTrip([
+      { id: 'open-1', startDate: FAR, endDate: FAR_END, status: 'booking-open',
+        offers: [{ tierId: 'dorm', price: 8000, cap: 10, booked: 0 }] },
+      { id: 'cs-2', startDate: '2099-03-01', endDate: '2099-03-05', status: 'coming-soon',
+        offers: [{ tierId: 'dorm', price: 4000, cap: 10, booked: 0 }] },
+    ]);
+    const s = tripCardSummary(trip);
+    expect(s.fromPrice).toBe(8000);
+    expect(s.hasComingSoon).toBe(true);
+    expect(s.allComingSoon).toBe(false);
+  });
+
+  test('sold-out bookable date + a coming-soon date → not marked soldOut', () => {
+    const trip = makeTrip([
+      { id: 'open-1', startDate: FAR, endDate: FAR_END, status: 'booking-open',
+        offers: [{ tierId: 'dorm', price: 5000, cap: 5, booked: 5 }] },
+      { id: 'cs-2', startDate: '2099-03-01', endDate: '2099-03-05', status: 'coming-soon',
+        offers: [{ tierId: 'dorm', price: 6000, cap: 10, booked: 0 }] },
+    ]);
+    expect(tripCardSummary(trip).soldOut).toBe(false);
+  });
+});

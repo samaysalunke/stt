@@ -76,5 +76,6 @@ export function regStatusStyle(status: string): string {
   if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
   if (status === 'rejected')  return 'background:#FEE2E2;color:#991B1B;';
   if (status === 'lead')      return 'background:#FEF9C3;color:#78350F;';
+  if (status === 'wishlist')  return 'background:#E0E7FF;color:#3730A3;';
   return 'background:#FEF3C7;color:#92400E;';
 }

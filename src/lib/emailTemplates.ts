@@ -216,6 +216,30 @@ export async function sendNewsletterWelcome(email: string, unsubscribeToken: str
   await sendEmail(email, "You're on the list 🏔️", html, { template: 'newsletter-welcome' });
 }
 
+export async function sendWishlistOpened(data: {
+  firstName: string;
+  email: string;
+  tripName: string;
+  tripSlug: string;
+  batchId: string;
+  startDate: string;
+  endDate: string;
+}) {
+  const whatsappLink = getWhatsappLink();
+  const bookUrl = `${siteUrl(`/trips/${data.tripSlug}/book`)}?batch=${encodeURIComponent(data.batchId)}`;
+  const html = wrapEmail(`
+    <h2 style="color:#1B2B3A;margin-top:0;">It's open — book your spot</h2>
+    <p style="margin:0 0 16px;">Hi ${escapeHtml(data.firstName || 'there')},</p>
+    <p style="margin:0 0 16px;">You asked us to tell you the moment <strong>${escapeHtml(data.tripName)}</strong> opened for this departure. It just did:</p>
+    <p style="background:#FDF0EC;padding:12px 16px;border-radius:8px;margin:0 0 24px;"><strong>Dates:</strong> ${escapeHtml(data.startDate)} – ${escapeHtml(data.endDate)}</p>
+    <p style="margin:0 0 24px;">Spots are first-come, first-served. If you're still keen, book now:</p>
+    <p style="margin:0 0 24px;"><a href="${bookUrl}" style="display:inline-block;background:#E8725A;color:white;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px;">Book this date →</a></p>
+    <p style="margin:0;font-size:14px;color:#6B7280;">Questions? <a href="${escapeHtml(whatsappLink)}" style="color:#E8725A;font-weight:600;">WhatsApp us.</a></p>
+  `);
+
+  await sendEmail(data.email, `Now open: ${data.tripName} (${data.startDate})`, html, { template: 'wishlist-opened' });
+}
+
 export async function sendBroadcastToSubscriber(params: {
   email: string;
   firstName: string;

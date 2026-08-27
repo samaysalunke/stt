@@ -546,3 +546,39 @@ test('empty batches array → no departures, null fromPrice', () => {
   expect(b.departures).toHaveLength(0);
   expect(b.fromPrice).toBeNull();
 });
+
+// ── coming-soon departures ───────────────────────────────────────────────────
+
+describe('coming-soon departures', () => {
+  test('a coming-soon-only trip resolves the departure but hides its price', () => {
+    const trip = makeSingleTierTrip({
+      batches: [{
+        id: 'cs-1', startDate: FAR_FUTURE, endDate: FAR_FUTURE_END, status: 'coming-soon',
+        offers: [{ tierId: 'standard', price: 35000, cap: 15, booked: 0 }],
+      }],
+    });
+    const b = resolveBooking(trip);
+    expect(b.departures).toHaveLength(1);
+    expect(b.departures[0].comingSoon).toBe(true);
+    expect(b.departures[0].soldOut).toBe(false);
+    expect(b.fromPrice).toBeNull();
+  });
+
+  test('mixed trip: fromPrice reflects only the bookable departure', () => {
+    const trip = makeSingleTierTrip({
+      batches: [
+        {
+          id: 'open-1', startDate: FAR_FUTURE, endDate: FAR_FUTURE_END, status: 'booking-open',
+          offers: [{ tierId: 'standard', price: 40000, cap: 15, booked: 0 }],
+        },
+        {
+          id: 'cs-2', startDate: '2099-03-01', endDate: '2099-03-05', status: 'coming-soon',
+          offers: [{ tierId: 'standard', price: 30000, cap: 15, booked: 0 }],
+        },
+      ],
+    });
+    const b = resolveBooking(trip);
+    expect(b.fromPrice).toBe(40000); // the cheaper coming-soon 30000 is excluded
+    expect(b.departures.find((d) => d.id === 'cs-2')!.comingSoon).toBe(true);
+  });
+});

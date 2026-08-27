@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { listTrips, listAlbums, isTripListable, isAlbumPublic, contentLastmod } from '../lib/content';
+import { listTrips, isTripListable, contentLastmod } from '../lib/content';
 import { SITE_ORIGIN } from '../lib/siteUrl';
 
 const SITE = SITE_ORIGIN;
@@ -24,11 +24,6 @@ export const GET: APIRoute = () => {
     .filter(isTripListable)
     .map((t) => url(`/trips/${encodeURIComponent(t.slug)}/`, '0.8', 'weekly', contentLastmod('trips', t.slug)));
 
-  // Published albums only.
-  const albumPages = listAlbums()
-    .filter(isAlbumPublic)
-    .map((a) => url(`/photo-vault/${encodeURIComponent(a.slug)}/`, '0.5', 'monthly', contentLastmod('albums', a.slug)));
-
   const staticPages = [
     url('/', '1.0', 'weekly'),
     url('/trips/', '0.9', 'daily'),
@@ -36,14 +31,13 @@ export const GET: APIRoute = () => {
     url('/contact/', '0.6', 'monthly'),
     url('/faq/', '0.6', 'monthly'),
     url('/custom-itineraries/', '0.6', 'monthly'),
-    url('/photo-vault/', '0.5', 'monthly'),
     url('/privacy/', '0.3', 'yearly'),
     url('/terms/', '0.3', 'yearly'),
     url('/cancellation/', '0.3', 'yearly'),
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticPages, ...tripPages, ...albumPages].join('')}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${[...staticPages, ...tripPages].join('')}
 </urlset>`;
 
   return new Response(xml, {

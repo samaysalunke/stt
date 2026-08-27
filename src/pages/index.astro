@@ -5,11 +5,11 @@ import TestimonialCard from '../components/TestimonialCard.astro';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking } from '../lib/content';
 
 const allTrips = listTrips();
-// Visibility derives from departures: feature trips that have an upcoming,
-// not-fully-sold-out departure (trip-level status was removed).
-const featuredTrips = allTrips
-  .filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut)
-  .slice(0, 3);
+// Visibility derives from departures: feature every trip that has an upcoming,
+// not-fully-sold-out departure (trip-level status was removed). No cap — the
+// section scrolls horizontally when there are more than fit on screen.
+const featuredTrips = allTrips.filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut);
+const showCarouselArrows = featuredTrips.length > 3;
 
 const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());
 
@@ -98,32 +98,53 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </h2>
       <div class="mt-10 mb-8 flex items-end justify-between gap-6">
         <h3 class="font-display text-2xl" style="color: var(--color-navy);">Featured Trips</h3>
-        <a href="/trips/" class="text-sm font-medium hover:underline" style="color: var(--color-coral);">See All →</a>
+        <div class="flex items-center gap-3">
+          {showCarouselArrows && (
+            <div class="hidden gap-2 lg:flex">
+              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-9 w-9 place-items-center rounded-full border transition-opacity disabled:opacity-30" style="border-color: var(--color-peach); color: var(--color-navy);">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <button id="featured-next" type="button" aria-label="More trips" class="grid h-9 w-9 place-items-center rounded-full border transition-opacity disabled:opacity-30" style="border-color: var(--color-peach); color: var(--color-navy);">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          )}
+          <a href="/trips/" class="text-sm font-medium hover:underline" style="color: var(--color-coral);">See All →</a>
+        </div>
       </div>
 
       {featuredTrips.length > 0 ? (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div
+          id="featured-carousel"
+          tabindex="0"
+          aria-label="Featured trips"
+          class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {featuredTrips.map((trip) => {
             const card = tripCardSummary(trip);
             return (
-              <TripCard
-                slug={trip.slug}
-                title={trip.title}
-                name={trip.name}
-                coverImage={trip.coverImage}
-                featuredImage={trip.featuredImage}
-                description={trip.description}
-                shortDescription={trip.shortDescription}
-                location={trip.location}
-                duration={trip.duration}
-                fromPrice={card.fromPrice}
-                originalFromPrice={card.originalFromPrice}
-                discountEndsAt={card.discountEndsAt}
-                multiPrice={card.multiPrice}
-                spotsLeft={card.spotsLeft}
-                soldOut={card.soldOut}
-                departures={resolveBooking(trip).departures}
-              />
+              <div class="w-[86%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]">
+                <TripCard
+                  slug={trip.slug}
+                  title={trip.title}
+                  name={trip.name}
+                  coverImage={trip.coverImage}
+                  featuredImage={trip.featuredImage}
+                  description={trip.description}
+                  shortDescription={trip.shortDescription}
+                  location={trip.location}
+                  duration={trip.duration}
+                  fromPrice={card.fromPrice}
+                  originalFromPrice={card.originalFromPrice}
+                  discountEndsAt={card.discountEndsAt}
+                  multiPrice={card.multiPrice}
+                  spotsLeft={card.spotsLeft}
+                  soldOut={card.soldOut}
+                  hasComingSoon={card.hasComingSoon}
+                  allComingSoon={card.allComingSoon}
+                  departures={resolveBooking(trip).departures}
+                />
+              </div>
             );
           })}
         </div>
@@ -132,6 +153,32 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       )}
     </div>
   </section>
+
+  <script>
+    // Featured-trips carousel: arrow + keyboard scrolling over the CSS scroll-snap
+    // row. Native touch/trackpad swipe already works; this adds desktop affordances.
+    const row = document.getElementById('featured-carousel');
+    const prev = document.getElementById('featured-prev') as HTMLButtonElement | null;
+    const next = document.getElementById('featured-next') as HTMLButtonElement | null;
+    if (row) {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const step = () => row.querySelector<HTMLElement>(':scope > div')?.offsetWidth ?? row.clientWidth * 0.8;
+      const go = (dir: number) => row.scrollBy({ left: dir * (step() + 24), behavior: reduce ? 'auto' : 'smooth' });
+      const sync = () => {
+        const max = row.scrollWidth - row.clientWidth - 1;
+        if (prev) prev.disabled = row.scrollLeft <= 0;
+        if (next) next.disabled = row.scrollLeft >= max;
+      };
+      prev?.addEventListener('click', () => go(-1));
+      next?.addEventListener('click', () => go(1));
+      row.addEventListener('scroll', sync, { passive: true });
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      });
+      sync();
+    }
+  </script>
 
   <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
   <section class="py-16 lg:py-20" style="background-color: var(--color-navy);">

@@ -27,9 +27,11 @@ const tierParam  = Astro.url.searchParams.get('tier')  ?? '';
 
 const selectedDeparture = batchParam
   ? departures.find((d) => d.id === batchParam && !d.soldOut)
-  : departures.find((d) => !d.soldOut) ?? null;
+  : departures.find((d) => !d.soldOut && !d.comingSoon) ?? null;
 
 if (!selectedDeparture) return Astro.redirect(`/trips/${slug}/`);
+// Coming-soon dates aren't for sale — a guessed ?batch=… lands back on the trip page.
+if (selectedDeparture.comingSoon) return Astro.redirect(`/trips/${slug}/#dates`);
 
 const availableOffers = selectedDeparture.offers.filter((o) => o.available);
 if (availableOffers.length === 0) return Astro.redirect(`/trips/${slug}/`);

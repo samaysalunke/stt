@@ -4,6 +4,7 @@ import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
+import { generateTripSeo } from '../../../../lib/tripSeo';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -47,18 +48,21 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     body.get('tripFaqOverrides_json'), body.get('tripFaqs_json'),
   );
 
+  const location = sanitizeInput(body.get('location')) || null;
+  const shortDescription = sanitizeInput(body.get('shortDescription')) || null;
+  const description = sanitizeInput(body.get('description')) || null;
+  const generatedSeo = generateTripSeo({ name, location, shortDescription, description });
+
   const data: Record<string, any> = withAdminTripUpdate({
     // Keep both fields in sync: editor posts `name`, content/public read `title`.
     name,
     title: name,
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
-    location: sanitizeInput(body.get('location')) || null,
+    location,
     duration: sanitizeInput(body.get('duration')) || null,
-    shortDescription: sanitizeInput(body.get('shortDescription')) || null,
-    description: sanitizeInput(body.get('description')) || null,
-    seoTitle: sanitizeInput(body.get('seoTitle')) || null,
-    seoDescription: sanitizeInput(body.get('seoDescription')) || null,
-    imageAlt: sanitizeInput(body.get('imageAlt')) || null,
+    shortDescription,
+    description,
+    ...generatedSeo,
     whoShouldJoin: sanitizeInput(body.get('whoShouldJoin')) || null,
     highlights,
     included,

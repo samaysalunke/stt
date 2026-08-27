@@ -23,9 +23,14 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
   emergencyName: string; emergencyPhone: string; whyJoin: string;
   sharingOption: string | null; totalAmount: number; batchId: string; tierId: string;
 }): { id: number; isNew: boolean } {
+  // Adopt an existing lead row, OR a wishlist row for the same identity+departure
+  // (the traveller wishlisted this date and it has since opened — upgrade the same
+  // row in place, keeping created_at and wishlisted_at as history).
   const existing = db.prepare(`
     SELECT id FROM registrations
-    WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ? AND status = 'lead'
+    WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ?
+      AND status IN ('lead', 'wishlist')
+    ORDER BY CASE status WHEN 'lead' THEN 0 ELSE 1 END
     LIMIT 1
   `).get(p.email, p.tripSlug, p.batchId) as { id: number } | undefined;
 
@@ -35,6 +40,8 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
         trip_name=?, trip_date=?, full_name=?, email=?, phone=?, gender=?,
         age=?, city=?, instagram=?, emergency_name=?, emergency_phone=?,
         why_join=?, sharing_option=?, total_amount=?, tier_id=?,
+        status='lead',
+        status_changed_at=CASE WHEN status='lead' THEN status_changed_at ELSE CURRENT_TIMESTAMP END,
         updated_at=CURRENT_TIMESTAMP
       WHERE id=?
     `).run(
@@ -109,6 +116,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       ? booking.departures.find((d) => d.id === wantedDeparture)
       : (booking.departures.find((d) => !d.soldOut) ?? booking.departures[0]);
     if (!selectedDeparture) return json({ success: false, error: 'That departure date is no longer available. Please pick another.' }, 400);
+    if (selectedDeparture.comingSoon) return json({ success: false, error: "This date isn't open for booking yet. Join the wishlist and we'll email you when it opens." }, 400);
     if (selectedDeparture.soldOut) return json({ success: false, error: 'This trip is sold out. Please pick another departure.' }, 400);
 
     const batchId = selectedDeparture.id;
@@ -127,6 +135,12 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
     const submittingPayment = !!screenshotUrl;
     const detailsOnly = sanitizeInput(body.intent) === 'details';
     const db = getDb();
+
+    // Capture the traveller's phone onto their profile the first time we see it —
+    // until now phone only ever lived on the registration row.
+    if (locals.user?.id && required.phone) {
+      try { db.prepare('UPDATE users SET phone = COALESCE(phone, ?) WHERE id = ?').run(required.phone, locals.user.id); } catch {}
+    }
 
     const existingPaid = db.prepare(`
       SELECT id, status FROM registrations

@@ -55,6 +55,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
         SUM(CASE WHEN r.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
         SUM(CASE WHEN r.status='pending'   THEN 1 ELSE 0 END) AS pending,
         SUM(CASE WHEN r.status='lead'      THEN 1 ELSE 0 END) AS lead,
+        SUM(CASE WHEN r.status='wishlist'  THEN 1 ELSE 0 END) AS wishlist,
         SUM(CASE WHEN r.status='rejected'  THEN 1 ELSE 0 END) AS rejected,
         SUM(COALESCE(r.amount_paid, 0)) AS total_paid,
         max(r.payment_date) AS last_payment_date,

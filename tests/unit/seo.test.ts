@@ -35,6 +35,23 @@ describe('SEO publication controls', () => {
     expect(isAlbumPublic({ publicationStatus: 'test', published: true })).toBe(false);
   });
 
+  it('keeps the photo vault out of public discovery while preserving direct routes', () => {
+    const header = fs.readFileSync('src/components/Header.astro', 'utf8');
+    const footer = fs.readFileSync('src/components/Footer.astro', 'utf8');
+    const sitemap = fs.readFileSync('src/pages/sitemap.xml.ts', 'utf8');
+    const llms = fs.readFileSync('public/llms.txt', 'utf8');
+    const vaultIndex = fs.readFileSync('src/pages/photo-vault/index.astro', 'utf8');
+    const vaultAlbum = fs.readFileSync('src/pages/photo-vault/[slug].astro', 'utf8');
+
+    expect(header).not.toContain("href: '/photo-vault/'");
+    expect(footer).not.toContain('href="/photo-vault/"');
+    expect(sitemap).not.toContain("url('/photo-vault/");
+    expect(sitemap).not.toContain('`/photo-vault/${');
+    expect(llms).not.toContain('/photo-vault/');
+    expect(vaultIndex).toContain('robots="noindex, follow"');
+    expect(vaultAlbum).toContain('robots="noindex, follow"');
+  });
+
   it('canonicalizes host, protocol, case, and trailing slash in one hop', () => {
     const middleware = fs.readFileSync('src/middleware.ts', 'utf8');
     // Only GET/HEAD navigations get the path-shape redirect (never form posts).

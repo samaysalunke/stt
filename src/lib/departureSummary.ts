@@ -27,14 +27,20 @@ export function formatDepartureRange(startValue: string, endValue?: string): str
 
 export function getDepartureSummary(departures: ResolvedDeparture[]) {
   const chronological = (a: ResolvedDeparture, b: ResolvedDeparture) => a.startDate.localeCompare(b.startDate);
-  const bookingOpen = departures.filter((departure) => departure.status === 'booking-open');
-  const available = bookingOpen.filter((departure) => !departure.soldOut).sort(chronological);
-  const soldOut = bookingOpen.filter((departure) => departure.soldOut).sort(chronological);
-  const displayed = available.slice(0, 2);
+  // Show open dates AND coming-soon dates (the latter labelled, not sold-out styled).
+  const relevant = departures.filter((d) => d.status === 'booking-open' || d.comingSoon);
+  const available = relevant.filter((d) => !d.soldOut && !d.comingSoon).sort(chronological);
+  const comingSoon = relevant.filter((d) => d.comingSoon).sort(chronological);
+  const soldOut = relevant.filter((d) => d.soldOut && !d.comingSoon).sort(chronological);
+
+  const displayed: ResolvedDeparture[] = available.slice(0, 2);
+  if (displayed.length < 2) displayed.push(...comingSoon.slice(0, 2 - displayed.length));
   if (displayed.length < 2) displayed.push(...soldOut.slice(0, 2 - displayed.length));
 
+  const shownAvailable = displayed.filter((d) => !d.soldOut && !d.comingSoon).length;
+  const shownComingSoon = displayed.filter((d) => d.comingSoon).length;
   return {
     displayed,
-    moreAvailable: Math.max(0, available.length - displayed.filter((departure) => !departure.soldOut).length),
+    moreAvailable: Math.max(0, available.length - shownAvailable) + Math.max(0, comingSoon.length - shownComingSoon),
   };
 }

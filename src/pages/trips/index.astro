@@ -59,6 +59,8 @@ const trips = [...available, ...soldOut];
                 multiPrice={card.multiPrice}
                 spotsLeft={card.spotsLeft}
                 soldOut={card.soldOut}
+                hasComingSoon={card.hasComingSoon}
+                allComingSoon={card.allComingSoon}
                 departures={resolveBooking(trip).departures}
               />
             );

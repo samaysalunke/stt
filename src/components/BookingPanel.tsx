@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 
@@ -23,6 +23,9 @@ interface Departure {
   totalCap: number | null;
   spotsLeft: number | null;
   soldOut: boolean;
+  /** Published but not open for booking — price concealed, wishlist instead. */
+  comingSoon?: boolean;
+  priceConcealed?: boolean;
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
@@ -36,6 +39,8 @@ interface Props {
   fromDiscountEndsAt?: string | null;
   whatsappLink: string;
   slug: string;
+  /** Present when a signed-in traveller is viewing — prefills the wishlist form. */
+  wishlistUser?: { name: string; email: string; phone: string } | null;
 }
 
 const C = {
@@ -60,12 +65,22 @@ export default function BookingPanel({
   fromDiscountEndsAt = null,
   whatsappLink,
   slug,
+  wishlistUser = null,
 }: Props) {
-  const allSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-  const [departureId, setDepartureId] = useState<string>('');
+  const bookable = departures.filter((d) => !d.comingSoon);
+  const anyComingSoon = departures.some((d) => d.comingSoon);
+  // Only short-circuit to the waitlist block when there is genuinely nothing to
+  // do — every bookable date is full AND there's no coming-soon date to wishlist.
+  const allSoldOut = bookable.length > 0 && bookable.every((d) => d.soldOut) && !anyComingSoon;
+  // Booking flow always starts with nothing selected (explicit choice). The one
+  // exception: an all-coming-soon trip pre-selects its (only kind of) date so the
+  // wishlist form is immediately visible.
+  const initialDeparture = bookable.length === 0 ? (departures[0]?.id ?? '') : '';
+  const [departureId, setDepartureId] = useState<string>(initialDeparture);
   const [tierId, setTierId] = useState<string>('');
 
   const selectedDeparture = departures.find((d) => d.id === departureId) ?? null;
+  const selectedComingSoon = !!selectedDeparture?.comingSoon;
   const selectedOffer = selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ?? null;
   const selectedDiscountActive = useDiscountActive(selectedDeparture?.discountEndsAt, !!selectedDeparture?.discountActive);
 
@@ -75,13 +90,57 @@ export default function BookingPanel({
   const advanceDue = Math.min(advanceAmount, perPerson);
   const balance = Math.max(0, perPerson - advanceDue);
 
+  // ── Wishlist (coming-soon dates) ──────────────────────────────────────────
+  const [wlName, setWlName] = useState(wishlistUser?.name ?? '');
+  const [wlEmail, setWlEmail] = useState(wishlistUser?.email ?? '');
+  const [wlPhone, setWlPhone] = useState(wishlistUser?.phone ?? '');
+  const [wlState, setWlState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
+  const [wlError, setWlError] = useState('');
+
+  async function submitWishlist(e: FormEvent) {
+    e.preventDefault();
+    if (!selectedDeparture) return;
+    setWlState('submitting');
+    setWlError('');
+    try {
+      const res = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripSlug: slug,
+          batchId: selectedDeparture.id,
+          name: wlName,
+          email: wlEmail,
+          phone: wlPhone,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setWlState('done');
+        if (typeof (window as any).gtag === 'function') {
+          (window as any).gtag('event', 'wishlist_join', { batch_id: selectedDeparture.id });
+        }
+      } else {
+        setWlState('error');
+        setWlError(data.error || 'Something went wrong. Please try again.');
+      }
+    } catch {
+      setWlState('error');
+      setWlError('Network error. Please try again.');
+    }
+  }
+
   // A new date always requires an explicit occupancy choice.
   function selectDeparture(dep: Departure) {
     if (dep.soldOut) return;
     setDepartureId(dep.id);
     setTierId('');
+    if (dep.comingSoon) {
+      setWlState('idle');
+      setWlError('');
+    }
     if (typeof (window as any).gtag === 'function') {
-      (window as any).gtag('event', 'select_batch', { batch_id: dep.id });
+      (window as any).gtag('event', dep.comingSoon ? 'wishlist_view' : 'select_batch', { batch_id: dep.id });
     }
   }
 
@@ -110,8 +169,23 @@ export default function BookingPanel({
 
   return (
     <div>
-      {/* Price header — the "from" floor (never contradicted; summary is the truth) */}
-      {fromPrice != null && (
+      {/* Price header — concealed for coming-soon dates, otherwise the "from" floor */}
+      {selectedComingSoon ? (
+        <div className="mb-5">
+          <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
+          <span
+            aria-hidden="true"
+            className="text-3xl font-bold select-none"
+            style={{ fontFamily: 'var(--font-display)', color: C.coral, filter: 'blur(6px)' }}
+          >
+            ₹ ••,•••
+          </span>
+          <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
+          <span className="block text-xs mt-1" style={{ color: C.gray }}>
+            Pricing is announced when this date opens for booking.
+          </span>
+        </div>
+      ) : fromPrice != null ? (
         <div className="mb-5">
           {originalFromPrice != null && (
             <span className="text-sm mr-2 line-through" style={{ color: C.gray }}>{formatINR(originalFromPrice)}</span>
@@ -125,7 +199,7 @@ export default function BookingPanel({
             <DiscountCountdown endsAt={fromDiscountEndsAt} reloadOnExpire className="block mt-1 text-xs font-semibold" />
           )}
         </div>
-      )}
+      ) : null}
 
       {/* ── Dates ─────────────────────────────────────────────────────────── */}
       {departures.length > 0 && (
@@ -162,13 +236,15 @@ export default function BookingPanel({
                   <div className="font-semibold text-sm" style={{ color: C.navy, fontFamily: 'var(--font-display)' }}>
                     {dateRange(dep)}
                   </div>
-                  {dep.discountActive && (
+                  {dep.discountActive && !dep.comingSoon && (
                     <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>
                       Save {formatINR(dep.discountAmount ?? 0)} on every stay
                       {dep.discountEndsAt && <DiscountCountdown endsAt={dep.discountEndsAt} reloadOnExpire className="block mt-0.5" />}
                     </div>
                   )}
-                  {isSoldOut ? (
+                  {dep.comingSoon ? (
+                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>Coming soon · wishlist to hear first</div>
+                  ) : isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
                   ) : showSpotsLeft ? (
                     <div className="mt-3">
@@ -193,8 +269,8 @@ export default function BookingPanel({
         </div>
       )}
 
-      {/* ── Occupancy (reactive to the selected date) ─────────────────────── */}
-      {selectedDeparture && (
+      {/* ── Occupancy (reactive to the selected date; hidden for coming-soon) ─ */}
+      {selectedDeparture && !selectedComingSoon && (
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: C.gray }}>
             Choose occupancy
@@ -271,24 +347,77 @@ export default function BookingPanel({
       )}
 
       {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <a
-        id="booking-panel-cta"
-        href={selectedDeparture && selectedOffer ? `/trips/${slug}/book?batch=${departureId}&tier=${tierId}` : undefined}
-        aria-disabled={!selectedDeparture || !selectedOffer}
-        tabIndex={selectedDeparture && selectedOffer ? 0 : -1}
-        onClick={(event) => {
-          if (!selectedDeparture || !selectedOffer) event.preventDefault();
-        }}
-        className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all"
-        style={{
-          background: C.cta,
-          opacity: selectedDeparture && selectedOffer ? 1 : 0.5,
-          cursor: selectedDeparture && selectedOffer ? 'pointer' : 'not-allowed',
-        }}
-        title={selectedDeparture && selectedOffer ? undefined : 'Choose your dates and occupancy first'}
-      >
-        Save my spot →
-      </a>
+      {selectedComingSoon ? (
+        wlState === 'done' ? (
+          <div
+            data-testid="wishlist-confirmation"
+            className="rounded-xl border p-4 text-center text-sm"
+            style={{ borderColor: C.peach, background: C.blush, color: C.navy }}
+          >
+            <p className="font-semibold mb-1">You're on the list.</p>
+            <p style={{ color: C.gray }}>We'll email you the moment {dateRange(selectedDeparture!)} opens for booking.</p>
+          </div>
+        ) : (
+          <form id="wishlist-form" onSubmit={submitWishlist} className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: C.gray }}>
+              Join the wishlist
+            </p>
+            <input
+              type="text" required placeholder="Your name" value={wlName}
+              onChange={(e) => setWlName(e.target.value)}
+              readOnly={!!wishlistUser?.name}
+              className="w-full rounded-xl border px-4 py-2.5 text-sm"
+              style={{ borderColor: C.peach, background: wishlistUser?.name ? C.blush : 'white' }}
+            />
+            <input
+              type="email" required placeholder="Email" value={wlEmail}
+              onChange={(e) => setWlEmail(e.target.value)}
+              readOnly={!!wishlistUser?.email}
+              className="w-full rounded-xl border px-4 py-2.5 text-sm"
+              style={{ borderColor: C.peach, background: wishlistUser?.email ? C.blush : 'white' }}
+            />
+            <input
+              type="tel" required placeholder="Phone" value={wlPhone}
+              onChange={(e) => setWlPhone(e.target.value)}
+              className="w-full rounded-xl border px-4 py-2.5 text-sm"
+              style={{ borderColor: C.peach }}
+            />
+            {wlState === 'error' && (
+              <p className="text-xs" style={{ color: C.coral }}>{wlError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={wlState === 'submitting'}
+              className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all"
+              style={{ background: C.cta, opacity: wlState === 'submitting' ? 0.6 : 1 }}
+            >
+              {wlState === 'submitting' ? 'Adding you…' : 'Wishlist now →'}
+            </button>
+            <p className="text-xs text-center" style={{ color: C.gray }}>
+              No spam — one email when this date opens.
+            </p>
+          </form>
+        )
+      ) : (
+        <a
+          id="booking-panel-cta"
+          href={selectedDeparture && selectedOffer ? `/trips/${slug}/book?batch=${departureId}&tier=${tierId}` : undefined}
+          aria-disabled={!selectedDeparture || !selectedOffer}
+          tabIndex={selectedDeparture && selectedOffer ? 0 : -1}
+          onClick={(event) => {
+            if (!selectedDeparture || !selectedOffer) event.preventDefault();
+          }}
+          className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all"
+          style={{
+            background: C.cta,
+            opacity: selectedDeparture && selectedOffer ? 1 : 0.5,
+            cursor: selectedDeparture && selectedOffer ? 'pointer' : 'not-allowed',
+          }}
+          title={selectedDeparture && selectedOffer ? undefined : 'Choose your dates and occupancy first'}
+        >
+          Save my spot →
+        </a>
+      )}
     </div>
   );
 }

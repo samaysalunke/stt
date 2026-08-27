@@ -79,6 +79,7 @@ const bookings = db.prepare(`
 }[];
 
 const statusLabel: Record<string, { label: string; color: string }> = {
+  wishlist:  { label: 'Wishlisted',  color: '#6366F1' },
   lead:      { label: 'Registered',  color: 'var(--color-gray-text)' },
   pending:   { label: 'Pending',     color: '#F59E0B' },
   confirmed: { label: 'Confirmed',   color: '#10B981' },

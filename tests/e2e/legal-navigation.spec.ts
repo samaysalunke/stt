@@ -55,4 +55,15 @@ test.describe('legal pages and navigation drawer', () => {
     await expect(drawer).not.toBeVisible();
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeFocused();
   });
+
+  test('photo vault stays directly accessible but is excluded from public navigation', async ({ page }) => {
+    await page.goto('/photo-vault/');
+    await expect(page.getByRole('heading', { level: 1, name: 'The Vault' })).toBeVisible();
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, follow');
+
+    await page.goto('/trips/');
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(page.getByRole('dialog', { name: 'Site navigation' }).getByRole('link', { name: /Photo vault/i })).toHaveCount(0);
+    await expect(page.locator('footer').getByRole('link', { name: /Photo vault/i })).toHaveCount(0);
+  });
 });

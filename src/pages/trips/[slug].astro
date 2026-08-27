@@ -7,6 +7,7 @@ import TestimonialCard from '../../components/TestimonialCard.astro';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
+import { generateTripSeo } from '../../lib/tripSeo';
 
 export const prerender = false;
 
@@ -33,6 +34,7 @@ const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
+const generatedSeo = generateTripSeo(trip);
 
 // ── Photos strip ──────────────────────────────────────────────────────────
 // Photos come from the trip's curated `gallery` (album-picked + trip-only
@@ -78,9 +80,30 @@ const noUpcomingDates = hasBatchArray && departures.length === 0;
 // First departure is used for the trip-level group-size summary only.
 const firstDeparture = departures.find((d) => !d.soldOut) ?? departures[0] ?? null;
 
-const isSoldOut = departures.length > 0 && departures.every((d) => d.soldOut);
-const isOpen = !isSoldOut && departures.length > 0;
+// "coming-soon" departures are public but not sellable — their price is never
+// serialized to the client, and the panel/CTA switch to wishlist mode.
+const bookableDepartures = departures.filter((d) => !d.comingSoon);
+const hasComingSoonDate = departures.some((d) => d.comingSoon);
+const allComingSoon = departures.length > 0 && bookableDepartures.length === 0;
+const isSoldOut = bookableDepartures.length > 0 && bookableDepartures.every((d) => d.soldOut) && !hasComingSoonDate;
+const isOpen = bookableDepartures.some((d) => !d.soldOut);
+// Show the interactive panel whenever there is something to do — book or wishlist.
+const showBookingPanel = isOpen || hasComingSoonDate;
 const departureSummary = getDepartureSummary(departures);
+
+// Strip all pricing from coming-soon departures before they cross to the island.
+const departuresForPanel = departures.map((d) =>
+  d.comingSoon
+    ? {
+        id: d.id, startDate: d.startDate, endDate: d.endDate, status: d.status,
+        comingSoon: true, priceConcealed: true,
+        offers: [], totalCap: null, spotsLeft: null, soldOut: false,
+      }
+    : d,
+);
+const wishlistUser = Astro.locals.user
+  ? { name: Astro.locals.user.displayName ?? '', email: Astro.locals.user.email, phone: Astro.locals.user.phone ?? '' }
+  : null;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({
@@ -131,7 +154,7 @@ const eventSchemas = departures.map((departure) => {
     startDate: departure.startDate, ...(departure.endDate ? { endDate: departure.endDate } : {}),
     organizer: { '@id': `${SITE_ORIGIN}/#organization` },
     ...(trip.location ? { location: { '@type': 'Place', name: trip.location, address: { '@type': 'PostalAddress', addressRegion: trip.location, addressCountry: 'IN' } } } : {}),
-    ...(cheapestOffer ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),
+    ...(cheapestOffer && !departure.comingSoon ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),
   };
 });
 const tripSchema: Record<string, any> = {
@@ -153,10 +176,10 @@ const tripSchema: Record<string, any> = {
 ---
 
 <BaseLayout
-  title={trip.seoTitle || `${tripName} — Seek the Thrill`}
-  description={trip.seoDescription || description || `Join ${tripName} — an offbeat group trip with Seek the Thrill.`}
+  title={trip.seoTitle || generatedSeo.seoTitle}
+  description={trip.seoDescription || generatedSeo.seoDescription}
   image={trip.socialImage || heroImg}
-  imageAlt={trip.socialImageAlt || trip.imageAlt || `${tripName} group trip in ${trip.location || 'India'}`}
+  imageAlt={trip.socialImageAlt || trip.imageAlt || generatedSeo.imageAlt}
   nav="back"
   backFallback="/trips/"
   hideWhatsApp={true}
@@ -176,7 +199,7 @@ const tripSchema: Record<string, any> = {
     class="relative min-w-0 overflow-hidden"
     style="height: clamp(360px, 70svh, 680px); max-height: 100svh;"
   >
-    <img src={heroImg} alt={trip.imageAlt || `${tripName} group trip in ${trip.location || 'India'}`} width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
+    <img src={heroImg} alt={trip.imageAlt || generatedSeo.imageAlt} width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
     <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(27,43,58,0.9) 0%, rgba(27,43,58,0.3) 55%, rgba(0,0,0,0.1) 100%);"></div>
 
     <div class="absolute inset-x-0 bottom-0 py-4 sm:pb-8">
@@ -209,14 +232,19 @@ const tripSchema: Record<string, any> = {
               <span
                 data-testid={`hero-departure-${departure.id}`}
                 data-sold-out={String(departure.soldOut)}
+                data-coming-soon={String(departure.comingSoon)}
                 class:list={[
                   'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1 text-[11px] leading-tight text-white sm:px-3 sm:text-xs',
-                  departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/45 opacity-65' : 'border-white/30 bg-[#1B2B3A]/75',
+                  departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/45 opacity-65'
+                    : departure.comingSoon ? 'border-white/25 bg-[#1B2B3A]/55'
+                    : 'border-white/30 bg-[#1B2B3A]/75',
                 ]}
               >
                 <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
                 {departure.soldOut ? (
                   <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>
+                ) : departure.comingSoon ? (
+                  <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span>
                 ) : null}
               </span>
             ))}
@@ -226,13 +254,17 @@ const tripSchema: Record<string, any> = {
           </div>
         )}
         <div class="mt-2 flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
-          {fromPrice != null && (
+          {fromPrice != null ? (
             <span class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm" style="background-color: rgba(232,114,90,0.85);">
               {priceSummary.originalFromPrice != null && <span class="line-through opacity-80">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
               from {formattedLead} / person
               {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="ml-1" client:load />}
             </span>
-          )}
+          ) : allComingSoon ? (
+            <span class="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
+              Dates announced · pricing soon
+            </span>
+          ) : null}
         </div>
       </div>
     </div>
@@ -395,9 +427,9 @@ const tripSchema: Record<string, any> = {
         <div id="booking-panel" class="bg-white rounded-2xl overflow-hidden scroll-mt-24" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
           <div class="p-6">
 
-            {isOpen ? (
+            {showBookingPanel ? (
               <BookingPanel
-                departures={departures}
+                departures={departuresForPanel}
                 advanceAmount={paymentAmount}
                 balanceDueRule={balanceDueRule}
                 fromPrice={fromPrice}
@@ -405,6 +437,7 @@ const tripSchema: Record<string, any> = {
                 fromDiscountEndsAt={priceSummary.discountEndsAt}
                 whatsappLink={whatsappLink}
                 slug={slug!}
+                wishlistUser={wishlistUser}
                 client:load
               />
             ) : (
@@ -464,7 +497,7 @@ const tripSchema: Record<string, any> = {
     </div>
 
     <!-- ── CLOSED / SOLD-OUT STATE ────────────────────────── -->
-    {!isOpen && (
+    {!showBookingPanel && (
       <div class="mt-16">
         <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl" style="box-shadow: var(--shadow-card);">
           <p class="text-base font-medium mb-4" style="color: var(--color-navy);">
@@ -498,7 +531,7 @@ const tripSchema: Record<string, any> = {
   </div>
 
   <!-- Mobile sticky booking bar -->
-  {isOpen && (
+  {showBookingPanel && (
     <div id="booking-sticky" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 transition-all duration-300" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
       <a
         id="sticky-cta"
@@ -506,7 +539,7 @@ const tripSchema: Record<string, any> = {
         class="block w-full text-center font-semibold text-white px-7 py-3 rounded-full text-sm"
         style="background-color: var(--color-cta);"
       >
-        Save my spot →
+        {isOpen ? 'Save my spot →' : 'Wishlist now →'}
       </a>
     </div>
   )}
