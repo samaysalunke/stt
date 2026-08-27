@@ -85,19 +85,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
       </a>
 
       <!-- Social proof -->
-      <div class="anim-fade-up anim-delay-4 flex items-center gap-3">
-        <div class="flex -space-x-2">
-          {[
-            'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face&q=80',
-            'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face&q=80',
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&crop=face&q=80',
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&crop=face&q=80',
-          ].map((src, i) => (
-            <img src={src} alt="Traveller" class="w-8 h-8 rounded-full object-cover border-2 border-white/80" style={`z-index: ${4 - i};`} loading="eager" />
-          ))}
-        </div>
-        <p class="text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
-      </div>
+      <p class="anim-fade-up anim-delay-4 text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
 
     </div>
   </section>
