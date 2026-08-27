@@ -97,7 +97,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   });
 
   if (newSlug !== oldSlug) {
-    deleteTrip(oldSlug);
+    // keepImages: the renamed trip carries the same featuredImage/gallery URLs,
+    // so only the old YAML goes — deleting the shared image files would 404 them.
+    deleteTrip(oldSlug, { keepImages: true });
     // Keep the old URL alive: 301 it to the new slug from now on.
     recordTripSlugAlias(oldSlug, newSlug);
   }

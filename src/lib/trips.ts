@@ -73,14 +73,18 @@ export function writeTrip(slug: string, data: Record<string, any>): void {
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
 }
 
-export function deleteTrip(slug: string): void {
+export function deleteTrip(slug: string, opts: { keepImages?: boolean } = {}): void {
   assertSafeSlug(slug);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);
   if (!fs.existsSync(filePath)) return;
-  try {
-    const data = readTrip(slug);
-    if (data) for (const url of collectImageUrls(data)) deleteImageByUrl(url);
-  } catch { /* best-effort */ }
+  // On a slug rename the renamed trip reuses the same image files, so the
+  // caller passes keepImages to drop only the YAML.
+  if (!opts.keepImages) {
+    try {
+      const data = readTrip(slug);
+      if (data) for (const url of collectImageUrls(data)) deleteImageByUrl(url);
+    } catch { /* best-effort */ }
+  }
   fs.unlinkSync(filePath);
 }
 
