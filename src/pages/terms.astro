@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import LegalPageLayout from '../components/LegalPageLayout.astro';
 import { readSiteSettings } from '../lib/content';
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -8,19 +8,18 @@ const email = settings.email ?? 'zahra@seekthethrill.in';
 const override = (settings.termsAndConditions ?? '').trim();
 ---
 
-<BaseLayout
-  title="Terms & Conditions — Seek the Thrill"
+<LegalPageLayout
+  title="Terms & Conditions"
   description="Terms and conditions for booking and traveling with Seek the Thrill."
+  eyebrow="Before you book"
+  intro="The practical terms that keep bookings clear, trips safe, and expectations fair for everyone."
+  lastUpdated="June 2025"
 >
-  <div class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
-    <div class="container-app max-w-2xl">
-      <h1 class="text-4xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Terms &amp; Conditions</h1>
-      <p class="text-sm mb-10" style="color: var(--color-gray-text);">Last updated June 2025</p>
-
-      {override ? (
-      <div class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-navy);">{override}</div>
-      ) : (
-      <div class="space-y-10 text-sm leading-relaxed" style="color: var(--color-navy);">
+  <div class="legal-content-card">
+    {override ? (
+      <div class="legal-override">{override}</div>
+    ) : (
+      <div class="legal-prose">
 
         <section>
           <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Booking &amp; Registration</h2>
@@ -38,19 +37,19 @@ const override = (settings.termsAndConditions ?? '').trim();
         <section>
           <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Cancellation &amp; Refunds</h2>
           <p>Please refer to our <a href="/cancellation/" class="underline" style="color: var(--color-coral);">Cancellation Policy</a> for full details. In summary:</p>
-          <ul class="mt-3 space-y-1.5 list-disc list-inside">
+          <ul>
             <li>30+ days before departure: full refund minus ₹500 processing fee</li>
             <li>15–29 days before: 50% refund</li>
             <li>7–14 days before: 25% refund</li>
             <li>Under 7 days: no refund</li>
           </ul>
-          <p class="mt-3">All cancellation requests must be submitted in writing to <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a>.</p>
+          <p>All cancellation requests must be submitted in writing to <a href={`mailto:${email}`}>{email}</a>.</p>
         </section>
 
         <section>
           <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Liability</h2>
           <p>Adventure travel involves inherent risks. By participating in an STT trip, you acknowledge these risks and agree that Seek the Thrill, its founders, and trip leaders are not liable for injury, illness, loss of property, or other damages arising from participation.</p>
-          <p class="mt-3">We strongly recommend purchasing comprehensive travel insurance before your trip.</p>
+          <p>We strongly recommend purchasing comprehensive travel insurance before your trip.</p>
         </section>
 
         <section>
@@ -74,7 +73,6 @@ const override = (settings.termsAndConditions ?? '').trim();
         </section>
 
       </div>
-      )}
-    </div>
+    )}
   </div>
-</BaseLayout>
+</LegalPageLayout>

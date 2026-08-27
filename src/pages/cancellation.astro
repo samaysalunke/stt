@@ -1,78 +1,177 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import LegalPageLayout from '../components/LegalPageLayout.astro';
 import { readSiteSettings } from '../lib/content';
+
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
+
 const email = settings.email ?? 'zahra@seekthethrill.in';
-// Admin override: if set in Settings, it replaces the default page below.
+const lastUpdated = 'August 2026';
+// Admin copy can replace the policy while retaining the polished page shell.
 const override = (settings.cancellationPolicy ?? '').trim();
+
+const refundWindows = [
+  { period: '30+ days', label: 'Before departure', refund: 'Full refund', detail: 'Minus a ₹500 processing fee', tone: 'positive' },
+  { period: '15–29 days', label: 'Before departure', refund: '50% refund', detail: 'Of the eligible amount paid', tone: 'positive' },
+  { period: '7–14 days', label: 'Before departure', refund: '25% refund', detail: 'Of the eligible amount paid', tone: 'partial' },
+  { period: 'Under 7 days', label: 'Before departure', refund: 'No refund', detail: 'The booking is non-refundable', tone: 'none' },
+];
 ---
 
-<BaseLayout
-  title="Cancellation Policy — Seek the Thrill"
-  description="Seek the Thrill's cancellation and refund policy."
+<LegalPageLayout
+  title="Cancellation Policy"
+  description="Understand Seek the Thrill's cancellation windows, refund eligibility, and how to cancel a trip booking."
+  eyebrow="Booking support"
+  intro="A straightforward guide to refund windows, timelines, and what to do when your plans change."
+  {lastUpdated}
+  supportTitle="Let’s sort out your booking."
+  supportCopy="Tell us what changed and we’ll walk you through the next step."
 >
-  <div class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
-    <div class="container-app max-w-2xl">
-      <h1 class="text-4xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Cancellation Policy</h1>
-      <p class="text-sm mb-10" style="color: var(--color-gray-text);">Last updated June 2025</p>
-
       {override ? (
-      <div class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-navy);">{override}</div>
-      ) : (
-      <div class="space-y-8 text-sm leading-relaxed" style="color: var(--color-navy);">
-
-        <p>We know plans change. Here's how refunds work:</p>
-
-        <!-- Refund table -->
-        <div class="rounded-xl overflow-hidden border" style="border-color: var(--color-border);">
-          <div class="grid grid-cols-2 text-xs font-semibold uppercase tracking-widest px-5 py-3" style="background-color: var(--color-blush); color: var(--color-gray-text); border-bottom: 1px solid var(--color-border);">
-            <span>Notice period</span>
-            <span>Refund</span>
-          </div>
-          {[
-            { period: '30+ days before departure', refund: 'Full refund minus ₹500 processing fee' },
-            { period: '15–29 days before departure', refund: '50% of total amount paid' },
-            { period: '7–14 days before departure', refund: '25% of total amount paid' },
-            { period: 'Under 7 days', refund: 'No refund' },
-          ].map((row, i) => (
-            <div
-              class="grid grid-cols-2 px-5 py-4"
-              style={`border-bottom: ${i < 3 ? '1px solid var(--color-border)' : 'none'}; background: white;`}
-            >
-              <span style="color: var(--color-navy);">{row.period}</span>
-              <span style={row.refund === 'No refund' ? 'color: var(--color-danger);' : 'color: #22A654;'}>{row.refund}</span>
+        <div class="legal-content-card">
+          <div class="policy-section-heading">
+            <span class="policy-step">Policy</span>
+            <div>
+              <h2>Your cancellation terms</h2>
+              <p>Please read these terms before submitting a cancellation request.</p>
             </div>
-          ))}
+          </div>
+          <div class="policy-override-copy whitespace-pre-line">{override}</div>
         </div>
+      ) : (
+        <div class="space-y-14 md:space-y-20">
+          <section aria-labelledby="refund-heading" class="anim-fade-up anim-delay-1">
+            <div class="policy-section-heading">
+              <span class="policy-step">01</span>
+              <div>
+                <h2 id="refund-heading">Find your refund window</h2>
+                <p>The applicable window is based on when your written request reaches us.</p>
+              </div>
+            </div>
 
-        <section>
-          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">How to cancel</h2>
-          <p>Email us at <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a> with your name, trip name, and the reason for cancellation. Cancellations are processed once we receive your written request. The date of your email is considered the cancellation date.</p>
-        </section>
+            <div class="refund-grid">
+              {refundWindows.map((window) => (
+                <article class={`refund-card refund-card-${window.tone}`}>
+                  <div class="refund-card-top">
+                    <span class="refund-period">{window.period}</span>
+                    <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  </div>
+                  <p class="refund-label">{window.label}</p>
+                  <div class="refund-divider"></div>
+                  <h3>{window.refund}</h3>
+                  <p class="refund-detail">{window.detail}</p>
+                </article>
+              ))}
+            </div>
+          </section>
 
-        <section>
-          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">If STT cancels the trip</h2>
-          <p>If we cancel a trip for any reason — weather, safety, force majeure, insufficient registrations — you'll receive a full refund of everything you've paid, or a full trip credit for a future trip of equal value. Your choice.</p>
-          <p class="mt-3">We don't cover flights, hotels, or any travel arrangements you've made independently. Please factor that into your travel insurance decisions.</p>
-        </section>
+          <section aria-labelledby="details-heading" class="anim-fade-up anim-delay-2">
+            <div class="policy-section-heading">
+              <span class="policy-step">02</span>
+              <div>
+                <h2 id="details-heading">What else to know</h2>
+                <p>A few important details about cancellations and refunds.</p>
+              </div>
+            </div>
 
-        <section>
-          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Advance amount</h2>
-          <p>The advance you pay to confirm your spot is non-refundable in all cancellations initiated by the traveler — the refund percentages above apply to the remaining balance you've paid. The advance is refundable only if STT cancels the trip.</p>
-        </section>
+            <div class="details-grid">
+              <article class="detail-card detail-card-featured">
+                <div class="detail-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4 4 16 0v12H8l-4 4V4Z" />
+                    <path stroke-linecap="round" d="M8 9h8m-8 3h5" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>How to cancel</h3>
+                  <p>Email us with your name, trip name, and reason for cancellation. The date we receive your written request is considered the cancellation date.</p>
+                  <a href={`mailto:${email}?subject=Trip cancellation request`} class="text-link">Email {email}<span aria-hidden="true">→</span></a>
+                </div>
+              </article>
 
-        <section>
-          <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Refund timeline</h2>
-          <p>Refunds are processed within 7–10 business days of your cancellation request being confirmed. They are issued to the original payment method where possible.</p>
-        </section>
+              <article class="detail-card">
+                <div class="detail-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m5-14.5H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H7" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>Advance amount</h3>
+                  <p>The booking advance is non-refundable when a traveler cancels. The percentages above apply to the remaining balance paid. If STT cancels, the advance is refundable.</p>
+                </div>
+              </article>
 
-        <div class="rounded-xl p-5" style="background-color: var(--color-blush);">
-          <p>Questions about a specific booking? Reach us at <a href={`mailto:${email}`} class="underline" style="color: var(--color-coral);">{email}</a> or on WhatsApp — we'll sort it out.</p>
+              <article class="detail-card">
+                <div class="detail-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2.5 1.5M4.9 19.1a10 10 0 1 1 2.2 1.4M3 16v4h4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>Refund timeline</h3>
+                  <p>Approved refunds are processed within 7–10 business days and returned to the original payment method wherever possible.</p>
+                </div>
+              </article>
+
+              <article class="detail-card">
+                <div class="detail-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3 3.5 7.5v5c0 4.6 3.6 7.2 8.5 8.5 4.9-1.3 8.5-3.9 8.5-8.5v-5L12 3Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3>If STT cancels</h3>
+                  <p>Choose a full refund of everything paid or an equal-value credit for a future trip. Independent flights, hotels, and other arrangements are not covered.</p>
+                </div>
+              </article>
+            </div>
+          </section>
         </div>
-
-      </div>
       )}
-    </div>
-  </div>
-</BaseLayout>
+
+
+</LegalPageLayout>
+
+<style>
+  .policy-section-heading { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.75rem; }
+  .policy-step { flex: 0 0 auto; display: inline-grid; place-items: center; min-width: 2.5rem; height: 2.5rem; padding-inline: 0.65rem; border-radius: 999px; background: var(--color-navy); color: white; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; }
+  .policy-section-heading h2 { font-size: clamp(1.55rem, 3vw, 2.1rem); font-weight: 700; line-height: 1.15; }
+  .policy-section-heading p { margin-top: 0.35rem; color: var(--color-gray-text); font-size: 0.925rem; line-height: 1.55; }
+  .refund-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; }
+  .refund-card { position: relative; min-height: 15.5rem; padding: 1.35rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: white; box-shadow: 0 8px 30px rgba(27, 43, 58, 0.05); overflow: hidden; }
+  .refund-card::after { content: ''; position: absolute; inset: auto -2rem -3.5rem auto; width: 8rem; height: 8rem; border-radius: 50%; background: var(--card-accent); opacity: 0.08; }
+  .refund-card-positive { --card-accent: #16834a; }
+  .refund-card-partial { --card-accent: #c97816; }
+  .refund-card-none { --card-accent: #c84236; }
+  .refund-card-top { display: flex; align-items: center; justify-content: space-between; color: var(--card-accent); }
+  .refund-period { font-size: 1.05rem; font-weight: 700; color: var(--color-navy); }
+  .refund-label { margin-top: 0.15rem; font-size: 0.75rem; color: var(--color-gray-text); }
+  .refund-divider { width: 2.5rem; height: 2px; margin: 2rem 0 1.25rem; background: var(--card-accent); }
+  .refund-card h3 { position: relative; z-index: 1; font-size: 1.4rem; font-weight: 700; color: var(--card-accent); }
+  .refund-detail { position: relative; z-index: 1; margin-top: 0.45rem; font-size: 0.8rem; line-height: 1.5; color: var(--color-gray-text); }
+  .details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .detail-card { display: flex; gap: 1rem; padding: 1.5rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: rgba(255, 255, 255, 0.72); }
+  .detail-card-featured { background: var(--color-blush); border-color: var(--color-peach); }
+  .detail-icon { flex: 0 0 auto; display: grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 0.8rem; background: white; color: var(--color-cta); box-shadow: var(--shadow-card); }
+  .detail-icon svg { width: 1.25rem; height: 1.25rem; }
+  .detail-card h3 { font-size: 1.08rem; font-weight: 700; }
+  .detail-card p { margin-top: 0.5rem; color: var(--color-gray-text); font-size: 0.85rem; line-height: 1.65; }
+  .text-link { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 0.85rem; color: var(--color-cta); font-size: 0.8rem; font-weight: 700; }
+  .text-link:hover { text-decoration: underline; }
+  .policy-override-copy { padding-top: 1.5rem; border-top: 1px solid var(--color-border); color: var(--color-navy); font-size: 0.95rem; line-height: 1.9; }
+  @media (max-width: 860px) {
+    .refund-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .refund-card { min-height: 13.5rem; }
+  }
+  @media (max-width: 600px) {
+    .policy-section-heading { gap: 0.75rem; }
+    .policy-step { min-width: 2.2rem; height: 2.2rem; }
+    .refund-grid, .details-grid { grid-template-columns: 1fr; }
+    .refund-card { min-height: auto; }
+    .refund-divider { margin: 1.4rem 0 1rem; }
+    .detail-card { padding: 1.25rem; }
+  }
+</style>

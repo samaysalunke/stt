@@ -1,0 +1,110 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { readSiteSettings } from '../lib/content';
+
+interface Props {
+  title: string;
+  description: string;
+  eyebrow?: string;
+  intro: string;
+  lastUpdated: string;
+  supportTitle?: string;
+  supportCopy?: string;
+}
+
+const {
+  title,
+  description,
+  eyebrow = 'The essentials',
+  intro,
+  lastUpdated,
+  supportTitle = 'Questions? We’re here to help.',
+  supportCopy = 'Tell us what you need and we’ll point you in the right direction.',
+} = Astro.props;
+
+let settings: any = {};
+try { settings = readSiteSettings(); } catch (e) {}
+const email = settings.email ?? 'zahra@seekthethrill.in';
+const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
+---
+
+<BaseLayout title={`${title} — Seek the Thrill`} {description}>
+  <section class="legal-hero relative overflow-hidden">
+    <span class="legal-orbit legal-orbit-one" aria-hidden="true"></span>
+    <span class="legal-orbit legal-orbit-two" aria-hidden="true"></span>
+    <div class="container-app relative z-10 max-w-4xl pt-28 pb-16 md:pt-32 md:pb-20">
+      <p class="legal-eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p class="legal-intro">{intro}</p>
+      <div class="legal-date">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 2v3m8-3v3M3.5 9.5h17M5.5 4h13a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+        </svg>
+        Last updated {lastUpdated}
+      </div>
+    </div>
+  </section>
+
+  <section class="legal-body">
+    <div class="container-app max-w-4xl">
+      <slot />
+
+      <aside class="legal-support" aria-label="Policy support">
+        <div>
+          <p class="legal-support-label">Need a hand?</p>
+          <h2>{supportTitle}</h2>
+          <p>{supportCopy}</p>
+        </div>
+        <div class="legal-support-actions">
+          <a href={`mailto:${email}?subject=Question about ${title}`} class="legal-support-primary">Email us <span aria-hidden="true">→</span></a>
+          <a href={whatsappLink} target="_blank" rel="noopener noreferrer" class="legal-support-secondary">WhatsApp</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<style is:global>
+  .legal-hero {
+    background:
+      radial-gradient(circle at 82% 18%, rgba(232, 114, 90, 0.14), transparent 28%),
+      linear-gradient(135deg, #fdf8f5 0%, var(--color-blush) 56%, var(--color-gray-soft) 100%);
+  }
+  .legal-orbit { position: absolute; border: 1px solid rgba(232, 114, 90, 0.18); border-radius: 999px; pointer-events: none; }
+  .legal-orbit-one { width: 25rem; height: 25rem; right: -8rem; top: -14rem; }
+  .legal-orbit-two { width: 14rem; height: 14rem; right: 12%; bottom: -11rem; }
+  .legal-eyebrow { margin-bottom: 0.8rem; color: var(--color-cta); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+  .legal-hero h1 { max-width: 48rem; color: var(--color-navy); font-family: var(--font-display); font-size: clamp(2.65rem, 7vw, 4.8rem); font-weight: 700; line-height: 1.02; letter-spacing: -0.025em; }
+  .legal-intro { max-width: 39rem; margin-top: 1.25rem; color: var(--color-gray-text); font-size: clamp(0.95rem, 2vw, 1.1rem); line-height: 1.7; }
+  .legal-date { display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; padding: 0.55rem 0.85rem; border: 1px solid var(--color-peach); border-radius: 999px; background: rgba(255,255,255,0.78); color: var(--color-navy); box-shadow: var(--shadow-card); font-size: 0.72rem; font-weight: 600; }
+  .legal-date svg { width: 0.95rem; height: 0.95rem; color: var(--color-coral); }
+  .legal-body { padding: 3.5rem 0 5rem; background: var(--color-gray-soft); }
+  .legal-content-card { padding: clamp(1.4rem, 4vw, 2.5rem); border: 1px solid var(--color-border); border-radius: 1.4rem; background: white; box-shadow: 0 12px 40px rgba(27,43,58,0.055); }
+  .legal-override { color: var(--color-navy); font-size: 0.95rem; line-height: 1.9; white-space: pre-line; }
+  .legal-prose > section + section { margin-top: 2.35rem; padding-top: 2.35rem; border-top: 1px solid var(--color-border); }
+  .legal-prose h2 { margin-bottom: 0.8rem; color: var(--color-navy); font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
+  .legal-prose h2:not(:first-child) { margin-top: 2.35rem; padding-top: 2.35rem; border-top: 1px solid var(--color-border); }
+  .legal-prose p, .legal-prose li { color: var(--color-gray-text); font-size: 0.9rem; line-height: 1.78; }
+  .legal-prose p + p { margin-top: 0.75rem; }
+  .legal-prose ul { margin-top: 0.75rem; padding-left: 1.2rem; list-style: disc; }
+  .legal-prose li + li { margin-top: 0.4rem; }
+  .legal-prose strong { color: var(--color-navy); font-weight: 650; }
+  .legal-prose a { color: var(--color-cta); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .legal-support { display: flex; align-items: center; justify-content: space-between; gap: 2rem; margin-top: 3.5rem; padding: clamp(1.5rem, 4vw, 2.35rem); border-radius: 1.4rem; background: var(--color-navy); color: white; box-shadow: 0 18px 45px rgba(27,43,58,0.15); }
+  .legal-support-label { margin-bottom: 0.45rem; color: var(--color-peach) !important; font-size: 0.68rem !important; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+  .legal-support h2 { color: white; font-family: var(--font-display); font-size: clamp(1.35rem, 3vw, 1.8rem); font-weight: 700; }
+  .legal-support > div > p:last-child { max-width: 31rem; margin-top: 0.45rem; color: rgba(255,255,255,0.62); font-size: 0.82rem; line-height: 1.6; }
+  .legal-support-actions { display: flex; flex: 0 0 auto; gap: 0.6rem; }
+  .legal-support-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0.7rem 1rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; transition: transform 160ms ease, background 160ms ease; }
+  .legal-support-actions a:hover { transform: translateY(-2px); }
+  .legal-support-primary { gap: 0.45rem; background: var(--color-coral); color: white; }
+  .legal-support-primary:hover { background: var(--color-cta); }
+  .legal-support-secondary { border: 1px solid rgba(255,255,255,0.23); color: white; }
+  .legal-support-secondary:hover { background: rgba(255,255,255,0.08); }
+  @media (max-width: 700px) {
+    .legal-body { padding-top: 2.5rem; }
+    .legal-support { align-items: flex-start; flex-direction: column; }
+    .legal-support-actions { width: 100%; flex-direction: column; }
+    .legal-support-actions a { width: 100%; }
+  }
+</style>

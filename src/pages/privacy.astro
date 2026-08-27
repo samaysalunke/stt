@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import LegalPageLayout from '../components/LegalPageLayout.astro';
 import { readSiteSettings } from '../lib/content';
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -11,25 +11,18 @@ const phone = settings.phone ?? '+91-7975027491';
 const override = (settings.privacyPolicy ?? '').trim();
 ---
 
-<BaseLayout
-  title="Privacy Policy — Seek the Thrill"
+<LegalPageLayout
+  title="Privacy Policy"
   description="Learn how Seek the Thrill collects, uses, and protects your personal information when you book trips with us."
+  eyebrow="Your information"
+  intro="A clear account of what we collect, why we need it, and the choices you have."
+  {lastUpdated}
 >
-  <!-- Hero -->
-  <section class="relative flex items-center justify-center overflow-hidden" style="height: 28vh; min-height: 180px; background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);">
-    <div class="relative z-10 text-center px-4">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3" style="font-family: var(--font-display);">Privacy Policy</h1>
-      <p class="text-white/70 text-sm">Last updated: {lastUpdated}</p>
-    </div>
-  </section>
-
-  <!-- Content -->
-  <section class="py-16">
-    <div class="container-app max-w-3xl">
-      {override ? (
-      <div class="text-sm leading-relaxed whitespace-pre-line" style="color: var(--color-navy);">{override}</div>
-      ) : (
-      <div class="prose-style">
+  <div class="legal-content-card">
+    {override ? (
+      <div class="legal-override">{override}</div>
+    ) : (
+      <div class="legal-prose">
 
         <p class="text-base leading-relaxed mb-8" style="color: var(--color-text-secondary);">
           Seek the Thrill ("we", "us", "our") is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.
@@ -136,39 +129,6 @@ const override = (settings.privacyPolicy ?? '').trim();
         </p>
 
       </div>
-      )}
-    </div>
-  </section>
-</BaseLayout>
-
-<style>
-  .prose-style h2 {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin: 2rem 0 0.75rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid var(--color-border);
-  }
-  .prose-style p,
-  .prose-style li {
-    font-size: 0.925rem;
-    line-height: 1.75;
-    color: var(--color-text-secondary);
-    margin-bottom: 0.6rem;
-  }
-  .prose-style ul {
-    padding-left: 1.25rem;
-    margin-bottom: 1rem;
-    list-style: disc;
-  }
-  .prose-style a {
-    color: var(--color-primary);
-    text-decoration: underline;
-  }
-  .prose-style strong {
-    color: var(--color-text-primary);
-    font-weight: 600;
-  }
-</style>
+    )}
+  </div>
+</LegalPageLayout>
