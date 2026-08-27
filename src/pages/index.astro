@@ -123,7 +123,7 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
           {featuredTrips.map((trip) => {
             const card = tripCardSummary(trip);
             return (
-              <div class="w-[86%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]">
+              <div class="flex w-[86%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]">
                 <TripCard
                   slug={trip.slug}
                   title={trip.title}
