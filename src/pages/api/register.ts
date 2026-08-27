@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../lib/db';
 import { readTrip, readSiteSettings, resolveBooking } from '../../lib/content';
-import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAdminRegistrationNotification } from '../../lib/email';
+import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending } from '../../lib/email';
 import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
@@ -282,19 +282,6 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
       console.error('[Register payment email error]', emailErr);
       try { db.prepare('UPDATE registrations SET email_error = ? WHERE id = ?').run(String(emailErr?.message ?? emailErr), leadId); } catch {}
     });
-
-    sendAdminRegistrationNotification({
-      trip_name: tripName,
-      full_name: required.fullName,
-      email: required.email,
-      phone: required.phone,
-      gender: sanitizeInput(body.gender) || '-',
-      city: required.city,
-      emergency_name: required.emergencyName,
-      emergency_phone: required.emergencyPhone,
-      why_join: required.whyJoin,
-      screenshot_url: screenshotUrl || '-',
-    }).catch(console.error);
 
     if (required.city) geocodeCity(required.city).catch(() => {});
     return json({ success: true, status: 'pending', registrationId: leadId });
