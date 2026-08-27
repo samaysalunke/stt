@@ -33,7 +33,7 @@ export async function sendAdminRegistrationNotification(data: Record<string, any
 </body>
 </html>`;
 
-  await sendEmail(ADMIN_EMAIL, `New Trip Registration — ${data.trip_name}`, html);
+  await sendEmail(ADMIN_EMAIL, `New Trip Registration — ${data.trip_name}`, html, { template: 'admin-registration-notification' });
 }
 
 export async function sendRegistrationStatusConfirmed(data: {
@@ -60,7 +60,7 @@ export async function sendRegistrationStatusConfirmed(data: {
     <p style="margin:0;font-size:14px;color:#6B7280;">Questions? <a href="${escapeHtml(whatsappLink)}" style="color:#E8725A;font-weight:600;">WhatsApp us.</a></p>
   `);
 
-  await sendEmail(data.email, `Booking Confirmed — ${data.trip_name} | Seek the Thrill`, html);
+  await sendEmail(data.email, `Booking Confirmed — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-confirmed' });
 }
 
 export async function sendRegistrationStatusRejected(data: {
@@ -84,7 +84,7 @@ export async function sendRegistrationStatusRejected(data: {
     <p style="color:#6B7280;font-size:13px;margin:24px 0 0;">If you believe this is a mistake or have questions, please reach out — we'd love to help.</p>
   `);
 
-  await sendEmail(data.email, `Booking Update — ${data.trip_name} | Seek the Thrill`, html);
+  await sendEmail(data.email, `Booking Update — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-rejected' });
 }
 
 export async function sendRegistrationPaymentReceived(data: {
@@ -116,7 +116,7 @@ export async function sendRegistrationPaymentReceived(data: {
     <p style="margin: 0; font-size: 14px; color: #1B2B3A;">Questions? <a href="${escapeHtml(data.whatsappLink)}" style="color: #E8725A; font-weight: 600;">WhatsApp us.</a></p>
   `);
 
-  await sendEmail(data.email, `You're in! 🎉 ${data.tripName} — spot saved`, html);
+  await sendEmail(data.email, `You're in! 🎉 ${data.tripName} — spot saved`, html, { template: 'registration-payment-received' });
 }
 
 export async function sendRegistrationPaymentPending(data: {
@@ -154,7 +154,7 @@ export async function sendRegistrationPaymentPending(data: {
     <p style="margin: 0; font-size: 14px; color: #1B2B3A;">Questions? <a href="${escapeHtml(data.whatsappLink)}" style="color: #E8725A; font-weight: 600;">WhatsApp us.</a></p>
   `);
 
-  await sendEmail(data.email, `Almost there — complete your payment for ${data.tripName}`, html);
+  await sendEmail(data.email, `Almost there — complete your payment for ${data.tripName}`, html, { template: 'registration-payment-pending' });
 }
 
 export async function sendNewsletterWelcome(email: string, unsubscribeToken: string) {
@@ -166,7 +166,7 @@ export async function sendNewsletterWelcome(email: string, unsubscribeToken: str
     <p style="margin: 0; font-size: 12px; color: #9CA3AF;"><a href="https://seekthethrill.in/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
   `);
 
-  await sendEmail(email, "You're on the list 🏔️", html);
+  await sendEmail(email, "You're on the list 🏔️", html, { template: 'newsletter-welcome' });
 }
 
 export async function sendBroadcastToSubscriber(params: {
@@ -184,5 +184,5 @@ export async function sendBroadcastToSubscriber(params: {
     <p style="margin: 0; font-size: 12px; color: #9CA3AF;">You're getting this because you signed up at seekthethrill.in.<br><a href="https://seekthethrill.in/unsubscribe?token=${encodeURIComponent(params.unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
   `);
 
-  await sendEmail(params.email, params.subject, html);
+  await sendEmail(params.email, params.subject, html, { template: 'newsletter-broadcast' });
 }

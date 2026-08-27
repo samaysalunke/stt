@@ -157,6 +157,7 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
       '/admin/registrations/new',
       '/admin/registrations/import',
       '/api/admin/registrations',
+      '/admin/email-logs',
     ];
 
     if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {

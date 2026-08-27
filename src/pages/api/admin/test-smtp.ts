@@ -40,6 +40,7 @@ export const GET: APIRoute = async ({ url }) => {
       to,
       'Email test — Seek the Thrill',
       `<p>Resend HTTPS delivery OK at ${new Date().toISOString()}.</p>`,
+      { template: 'diagnostic-test' },
     );
     return json({ ok: true, config, sent: true, to, result });
   } catch (err: any) {

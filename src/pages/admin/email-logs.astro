@@ -1,0 +1,245 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+
+export const prerender = false;
+
+const adminUser = Astro.locals.adminUser;
+if (!adminUser || adminUser.role === 'trip_lead') {
+  return Astro.redirect('/admin/');
+}
+
+type Status = 'triggered' | 'sent' | 'failed' | 'skipped';
+type EmailLogRow = {
+  id: string;
+  template: string;
+  recipient: string;
+  subject: string;
+  status: Status;
+  provider_id: string | null;
+  error_summary: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+const PAGE_SIZE = 50;
+const statuses: Status[] = ['sent', 'failed', 'skipped', 'triggered'];
+const requestedStatus = Astro.url.searchParams.get('status') ?? '';
+const status = statuses.includes(requestedStatus as Status) ? requestedStatus as Status : '';
+const template = (Astro.url.searchParams.get('template') ?? '').trim().slice(0, 100);
+const search = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 200);
+const requestedPage = Math.max(1, Number.parseInt(Astro.url.searchParams.get('page') ?? '1', 10) || 1);
+
+const db = getDb();
+const where: string[] = [];
+const params: string[] = [];
+
+if (status) {
+  where.push('status = ?');
+  params.push(status);
+}
+if (template) {
+  where.push('template = ?');
+  params.push(template);
+}
+if (search) {
+  where.push('(lower(recipient) LIKE ? OR lower(subject) LIKE ?)');
+  const term = `%${search.toLowerCase()}%`;
+  params.push(term, term);
+}
+
+const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+const total = (db.prepare(`SELECT COUNT(*) AS count FROM email_delivery_log ${whereSql}`).get(...params) as { count: number }).count;
+const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const page = Math.min(requestedPage, totalPages);
+const offset = (page - 1) * PAGE_SIZE;
+
+const rows = db.prepare(`
+  SELECT id, template, recipient, subject, status, provider_id, error_summary, created_at, completed_at
+  FROM email_delivery_log
+  ${whereSql}
+  ORDER BY datetime(created_at) DESC, rowid DESC
+  LIMIT ? OFFSET ?
+`).all(...params, PAGE_SIZE, offset) as EmailLogRow[];
+
+const templates = db.prepare(`
+  SELECT DISTINCT template
+  FROM email_delivery_log
+  ORDER BY template
+`).all() as Array<{ template: string }>;
+
+const counts = Object.fromEntries(
+  (db.prepare(`
+    SELECT status, COUNT(*) AS count
+    FROM email_delivery_log
+    GROUP BY status
+  `).all() as Array<{ status: Status; count: number }>).map((row) => [row.status, row.count]),
+) as Partial<Record<Status, number>>;
+
+const last24Hours = (db.prepare(`
+  SELECT COUNT(*) AS count
+  FROM email_delivery_log
+  WHERE datetime(created_at) >= datetime('now', '-24 hours')
+`).get() as { count: number }).count;
+
+const statusStyles: Record<Status, string> = {
+  sent: 'background:#DCFCE7;color:#166534;',
+  failed: 'background:#FEE2E2;color:#991B1B;',
+  skipped: 'background:#FEF3C7;color:#92400E;',
+  triggered: 'background:#DBEAFE;color:#1E40AF;',
+};
+
+const templateLabels: Record<string, string> = {
+  'admin-registration-notification': 'New registration (admin)',
+  'registration-confirmed': 'Registration confirmed',
+  'registration-rejected': 'Registration rejected',
+  'registration-payment-received': 'Payment received',
+  'registration-payment-pending': 'Payment pending',
+  'newsletter-welcome': 'Newsletter welcome',
+  'newsletter-broadcast': 'Newsletter broadcast',
+  'custom-itinerary-admin': 'Custom itinerary (admin)',
+  'custom-itinerary-acknowledgement': 'Custom itinerary acknowledgement',
+  'diagnostic-test': 'Diagnostic test',
+  unspecified: 'Unspecified',
+};
+
+function formatTemplate(value: string) {
+  return templateLabels[value] ?? value.replace(/-/g, ' ');
+}
+
+function formatDate(value: string | null) {
+  if (!value) return '—';
+  const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function pageHref(nextPage: number) {
+  const query = new URLSearchParams();
+  if (status) query.set('status', status);
+  if (template) query.set('template', template);
+  if (search) query.set('q', search);
+  query.set('page', String(nextPage));
+  return `?${query.toString()}`;
+}
+---
+
+<AdminLayout title="Email Logs" page="email-logs">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold" style="font-family:var(--font-display);color:var(--color-navy);">Email Logs</h1>
+    <p class="text-sm mt-1" style="color:var(--color-gray-text);">
+      Delivery metadata only. Email bodies and template payloads are never stored.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+    {statuses.map((item) => (
+      <a href={`?status=${item}`} class="bg-white rounded-2xl p-4" style="border:1px solid rgba(245,221,215,0.8);">
+        <div class="text-xs uppercase tracking-widest font-semibold" style="color:var(--color-gray-text);">{item}</div>
+        <div class="text-2xl font-bold mt-1" style="color:var(--color-navy);">{counts[item] ?? 0}</div>
+      </a>
+    ))}
+    <div class="bg-white rounded-2xl p-4" style="border:1px solid rgba(245,221,215,0.8);">
+      <div class="text-xs uppercase tracking-widest font-semibold" style="color:var(--color-gray-text);">Last 24h</div>
+      <div class="text-2xl font-bold mt-1" style="color:var(--color-navy);">{last24Hours}</div>
+    </div>
+  </div>
+
+  <form method="GET" class="bg-white rounded-2xl p-4 mb-5 grid grid-cols-1 md:grid-cols-[1fr_220px_180px_auto] gap-3 items-end"
+        style="border:1px solid rgba(245,221,215,0.8);">
+    <label class="text-xs font-semibold" style="color:var(--color-navy);">
+      Recipient or subject
+      <input name="q" value={search} placeholder="Search email or subject"
+             class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm"
+             style="border:1px solid var(--color-peach);" />
+    </label>
+    <label class="text-xs font-semibold" style="color:var(--color-navy);">
+      Email type
+      <select name="template" class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm" style="border:1px solid var(--color-peach);">
+        <option value="">All types</option>
+        {templates.map((item) => <option value={item.template} selected={template === item.template}>{formatTemplate(item.template)}</option>)}
+      </select>
+    </label>
+    <label class="text-xs font-semibold" style="color:var(--color-navy);">
+      Status
+      <select name="status" class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm" style="border:1px solid var(--color-peach);">
+        <option value="">All statuses</option>
+        {statuses.map((item) => <option value={item} selected={status === item}>{item}</option>)}
+      </select>
+    </label>
+    <div class="flex gap-2">
+      <button type="submit" class="rounded-full px-5 py-2.5 text-sm font-semibold text-white" style="background:var(--color-coral);">Filter</button>
+      <a href="/admin/email-logs/" class="rounded-full px-4 py-2.5 text-sm font-medium" style="border:1px solid var(--color-peach);color:var(--color-navy);">Clear</a>
+    </div>
+  </form>
+
+  <div class="mb-3 text-sm" style="color:var(--color-gray-text);">
+    {total} matching email attempt{total === 1 ? '' : 's'}
+  </div>
+
+  <div class="bg-white rounded-[2rem] overflow-hidden" style="border:1px solid rgba(245,221,215,0.8);">
+    {rows.length === 0 ? (
+      <div class="px-6 py-14 text-center">
+        <p class="font-semibold" style="color:var(--color-navy);">No email attempts found.</p>
+        <p class="text-sm mt-1" style="color:var(--color-gray-text);">New sends will appear here automatically.</p>
+      </div>
+    ) : (
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="background:rgba(245,221,215,0.2);">
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Time</th>
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Type</th>
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Recipient</th>
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Subject</th>
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Status</th>
+              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr class="border-t align-top" style="border-color:var(--color-peach);">
+                <td class="px-4 py-3 whitespace-nowrap text-xs" style="color:var(--color-gray-text);">{formatDate(row.created_at)}</td>
+                <td class="px-4 py-3 min-w-44">
+                  <div class="font-medium" style="color:var(--color-navy);">{formatTemplate(row.template)}</div>
+                  <code class="text-[11px]" style="color:var(--color-gray-text);">{row.template}</code>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap">{row.recipient}</td>
+                <td class="px-4 py-3 min-w-64">{row.subject}</td>
+                <td class="px-4 py-3">
+                  <span class="inline-block rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={statusStyles[row.status]}>{row.status}</span>
+                </td>
+                <td class="px-4 py-3 min-w-52 text-xs" style="color:var(--color-gray-text);">
+                  {row.error_summary ? (
+                    <span style="color:#991B1B;">{row.error_summary}</span>
+                  ) : row.provider_id ? (
+                    <span>Provider ID: <code>{row.provider_id}</code></span>
+                  ) : row.status === 'triggered' ? (
+                    <span>Awaiting completion</span>
+                  ) : (
+                    <span>Completed {formatDate(row.completed_at)}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  {totalPages > 1 && (
+    <div class="flex items-center justify-center gap-3 mt-6">
+      {page > 1 && <a href={pageHref(page - 1)} class="px-4 py-2 rounded-full text-sm font-medium" style="border:1px solid var(--color-peach);">← Prev</a>}
+      <span class="text-sm" style="color:var(--color-gray-text);">Page {page} of {totalPages}</span>
+      {page < totalPages && <a href={pageHref(page + 1)} class="px-4 py-2 rounded-full text-sm font-medium" style="border:1px solid var(--color-peach);">Next →</a>}
+    </div>
+  )}
+</AdminLayout>

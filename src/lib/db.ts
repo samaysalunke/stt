@@ -273,6 +273,25 @@ function initializeSchema(db: Database.Database) {
     );
   `);
 
+  // Metadata-only delivery history. Email bodies and template payloads are
+  // deliberately never persisted here.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS email_delivery_log (
+      id TEXT PRIMARY KEY,
+      template TEXT NOT NULL,
+      recipient TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('triggered','sent','failed','skipped')),
+      provider_id TEXT,
+      error_summary TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME
+    );
+    CREATE INDEX IF NOT EXISTS email_delivery_log_created_at ON email_delivery_log(created_at DESC);
+    CREATE INDEX IF NOT EXISTS email_delivery_log_status ON email_delivery_log(status);
+    CREATE INDEX IF NOT EXISTS email_delivery_log_template ON email_delivery_log(template);
+  `);
+
   // Soft-delete tombstones for trips. The YAML file stays on disk (on the
   // content volume); a row here hides the trip everywhere. Restore = delete
   // the row. Lives on the DATA_DIR volume so it survives deploys/re-seeds.

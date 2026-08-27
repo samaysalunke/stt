@@ -10,6 +10,8 @@
 //                     delivers to the account owner's address.
 //   ADMIN_EMAIL     — Reply-To + destination for internal notifications.
 
+import { finishEmailLog, startEmailLog, type EmailLogMeta } from './emailLogs';
+
 const env = (k: string) => (import.meta.env as any)[k] || process.env[k];
 
 export const RESEND_API_KEY = env('RESEND_API_KEY');
@@ -62,29 +64,39 @@ export function wrapEmail(body: string): string {
 </html>`;
 }
 
-export async function sendEmail(to: string, subject: string, html: string) {
+export async function sendEmail(to: string, subject: string, html: string, meta: EmailLogMeta = {}) {
+  const logId = startEmailLog(to, subject, meta.template);
   if (!RESEND_API_KEY) {
     console.log(`[Email Mock] To: ${to}\nSubject: ${subject}\n`);
-    return;
+    const error = new Error('Email delivery skipped: RESEND_API_KEY is not configured');
+    finishEmailLog(logId, 'skipped', { error });
+    throw error;
   }
-  const res = await fetch(RESEND_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: EMAIL_FROM,
-      to: [to],
-      reply_to: ADMIN_EMAIL,
-      subject,
-      html,
-      text: htmlToText(html),
-    }),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Resend send failed (${res.status}): ${detail}`);
+  try {
+    const res = await fetch(RESEND_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: EMAIL_FROM,
+        to: [to],
+        reply_to: ADMIN_EMAIL,
+        subject,
+        html,
+        text: htmlToText(html),
+      }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      throw new Error(`Resend send failed (${res.status}): ${detail}`);
+    }
+    const result: any = await res.json().catch(() => ({}));
+    finishEmailLog(logId, 'sent', { providerId: result?.id });
+    return result;
+  } catch (error) {
+    finishEmailLog(logId, 'failed', { error });
+    throw error;
   }
-  return res.json().catch(() => ({}));
 }

@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
           ${row('Budget', budget)}
           ${row('Message', message)}
         </table>`);
-      await sendEmail(ADMIN_EMAIL, `New custom-itinerary enquiry — ${name}`, html);
+      await sendEmail(ADMIN_EMAIL, `New custom-itinerary enquiry — ${name}`, html, { template: 'custom-itinerary-admin' });
     } catch (mailErr) {
       console.error('[Leads API] team notification email failed (lead was saved):', mailErr);
     }
@@ -106,7 +106,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
           If you’d like to add anything in the meantime, reply straight to this email.
         </p>
         <p style="margin:0;font-size:14px;line-height:1.6;color:#1F2A44;">— Team Seek the Thrill</p>`);
-      await sendEmail(email, 'We’ve got your custom-trip enquiry — Seek the Thrill', ack);
+      await sendEmail(email, 'We’ve got your custom-trip enquiry — Seek the Thrill', ack, {
+        template: 'custom-itinerary-acknowledgement',
+      });
     } catch (mailErr) {
       console.error('[Leads API] submitter acknowledgement email failed (lead was saved):', mailErr);
     }
