@@ -415,6 +415,8 @@ export default function BookingCheckout({
   const [submitError, setSubmitError] = useState('');
   const [payTab, setPayTab] = useState<'upi' | 'bank'>('upi');
   const [uploadError, setUploadError] = useState('');
+  const [submittedAt, setSubmittedAt] = useState<Date | null>(null);
+  const [registrationId, setRegistrationId] = useState<number | null>(initialRegistration?.id ?? null);
   const initialSubmitted =
     initialRegistration?.status === 'lead' || initialRegistration?.status === 'pending' || initialRegistration?.status === 'confirmed'
       ? initialRegistration.status
@@ -622,7 +624,12 @@ export default function BookingCheckout({
         if (typeof (window as any).gtag === 'function') {
           (window as any).gtag('event', 'submit_registration', { trip_slug: slug });
         }
-        setSubmitted((data.status === 'pending' || data.status === 'confirmed' || data.status === 'lead') ? data.status : (withPayment ? 'pending' : 'lead'));
+        if (typeof data.registrationId === 'number') setRegistrationId(data.registrationId);
+        const next = (data.status === 'pending' || data.status === 'confirmed' || data.status === 'lead')
+          ? data.status
+          : (withPayment ? 'pending' : 'lead');
+        if (next === 'pending') setSubmittedAt(new Date());
+        setSubmitted(next);
       } else {
         setSubmitError(data.error ?? 'Something went wrong. Please try again.');
         setSubmitting(null);
@@ -808,39 +815,128 @@ export default function BookingCheckout({
   // ── Step 3: Pay & Confirm ─────────────────────────────────────────────────────
   const firstName = (form.fullName || initialRegistration?.fullName || 'Traveller').trim().split(/\s+/)[0] || 'Traveller';
 
+  const timeStr = (d: Date) =>
+    d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+  // The balance is due N days before the start date; derive the date when the
+  // configured rule leads with a day count ("15 days before trip").
+  const balanceDueDate = (() => {
+    const m = /^(\d+)\s*days?\s*before/i.exec(String(balanceDueRule).trim());
+    if (!m || !departure.startDate) return null;
+    const d = new Date(departure.startDate + 'T00:00:00');
+    d.setDate(d.getDate() - parseInt(m[1], 10));
+    return Number.isNaN(d.getTime()) ? null : d;
+  })();
+  const balanceDueText = balanceDueDate
+    ? `Due ${formatDateIN(balanceDueDate.toISOString().slice(0, 10))} · ${balanceDueRule}`
+    : `Due ${balanceDueRule}`;
+  const expectedBy = submittedAt ? new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000) : null;
+  const bookingRef = registrationId ?? initialRegistration?.id ?? null;
+
   // Pending confirmation state
   if (submitted === 'pending') return (
-    <div>
-      <StepBar current={3} />
-      <div className="py-4">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: C.blush }}>
-          <svg className="w-8 h-8" style={{ color: C.coral }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold mb-2 text-center" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Got it — we're verifying your payment.</h2>
-        <p className="text-sm mb-5 text-center" style={{ color: C.gray }}>Your screenshot is in. Zahra checks these in order of receipt and confirms on WhatsApp, usually within a few hours.</p>
-        <div className="rounded-xl px-5 py-4 mb-6 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
-          <p className="font-semibold mb-1" style={{ color: C.navy }}>{tripName}</p>
-          <p style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
-          <p className="mt-3 text-sm font-semibold" style={{ color: '#D97706' }}>Status: Payment under review</p>
-        </div>
-        <p className="text-sm leading-relaxed mb-2" style={{ color: C.navy }}>
-          Your spot is confirmed only once we've verified the transfer — we'll message you the moment it's done.
-        </p>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm mt-6" style={{ background: '#25D366' }}>
-          Message Zahra on WhatsApp
-        </a>
-        {!isLoggedIn && (
-          <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
-            <p className="text-xs mb-3" style={{ color: C.gray }}>Sign in to see your km from home and join the leaderboard.</p>
-            <a href="/api/auth/google" className="inline-block text-sm font-semibold px-5 py-2 rounded-full text-white" style={{ background: C.coral }}>
-              Sign in with Google →
-            </a>
+    <div className="py-4">
+      <div className="rounded-full flex items-center justify-center mx-auto mb-4" style={{ width: 60, height: 60, background: C.coral, boxShadow: `0 0 0 8px ${C.blush}` }}>
+        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth={2.6} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold mb-1.5 text-center" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Payment received</h2>
+      <p className="text-sm mb-6 text-center mx-auto" style={{ color: C.gray, maxWidth: '30ch' }}>Your transfer screenshot is in. Nothing more to do right now.</p>
+
+      {/* Booking card */}
+      <div className="rounded-xl px-4 py-4 mb-5 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}`, borderLeft: `3px solid ${C.coral}` }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-semibold" style={{ color: C.navy }}>{tripName}</p>
+            <p className="text-xs mt-0.5" style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
           </div>
+          <span className="shrink-0 font-bold uppercase tracking-wide px-2 py-1 rounded-full" style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E' }}>Under review</span>
+        </div>
+        <hr className="my-3" style={{ borderColor: C.peach }} />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="font-semibold uppercase tracking-wider mb-0.5" style={{ fontSize: '0.62rem', color: 'rgba(27,43,58,0.45)' }}>Paid</p>
+            <p className="font-semibold" style={{ color: C.navy }}>{formatINR(advanceDue)}<span className="block text-xs font-normal" style={{ color: C.gray }}>Advance</span></p>
+          </div>
+          <div>
+            <p className="font-semibold uppercase tracking-wider mb-0.5" style={{ fontSize: '0.62rem', color: 'rgba(27,43,58,0.45)' }}>Balance</p>
+            <p className="font-semibold" style={{ color: C.navy }}>{formatINR(balance)}<span className="block text-xs font-normal" style={{ color: C.gray }}>{balanceDueText}</span></p>
+          </div>
+        </div>
+        {(bookingRef || submittedAt) && (
+          <>
+            <hr className="my-3" style={{ borderColor: C.peach }} />
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs" style={{ color: 'rgba(27,43,58,0.5)' }}>
+              {bookingRef && <span><b style={{ color: C.gray }}>Ref</b> STT-{bookingRef}</span>}
+              {submittedAt && <span><b style={{ color: C.gray }}>Uploaded</b> {timeStr(submittedAt)}</span>}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Status timeline */}
+      <div className="mb-2">
+        {[
+          { state: 'done', label: 'Payment sent', sub: submittedAt ? `Screenshot uploaded ${timeStr(submittedAt)}` : 'Screenshot uploaded' },
+          { state: 'now', label: 'Under review', sub: 'Our team checks every transfer by hand. This can take up to 24 hours.' },
+          { state: 'wait', label: 'Spot confirmed', sub: expectedBy ? `Expected by ${formatDateIN(expectedBy.toISOString().slice(0, 10))}` : 'Usually within 24 hours' },
+        ].map((n, i, arr) => (
+          <div key={n.label} className="grid gap-3 relative pb-4 last:pb-0" style={{ gridTemplateColumns: '20px 1fr' }}>
+            {i < arr.length - 1 && (
+              <span className="absolute w-0.5" style={{ left: 9, top: 20, bottom: 0, background: n.state === 'done' ? C.coral : C.peach }} />
+            )}
+            <span className="w-5 h-5 rounded-full grid place-items-center mt-0.5" style={{
+              zIndex: 1,
+              ...(n.state === 'done'
+                ? { background: C.coral }
+                : n.state === 'now'
+                  ? { background: '#E8A05A', boxShadow: '0 0 0 4px #FEF3C7' }
+                  : { border: `2px solid ${C.peach}` }),
+            }}>
+              {n.state === 'done' && (
+                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5" />
+                </svg>
+              )}
+            </span>
+            <span className="text-sm font-semibold" style={{ color: n.state === 'wait' ? 'rgba(27,43,58,0.5)' : C.navy }}>
+              {n.label}
+              <span className="block font-normal text-xs mt-0.5" style={{ color: n.state === 'wait' ? 'rgba(27,43,58,0.45)' : C.gray }}>{n.sub}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs mb-6 ml-8" style={{ color: C.gray }}>
+        We'll message you on WhatsApp and email the moment it's confirmed.
+      </p>
+
+      {/* Actions */}
+      <div className="flex flex-col gap-2.5">
+        {isLoggedIn && (
+          <a href="/profile" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: C.cta }}>
+            View my bookings
+          </a>
+        )}
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full text-center font-semibold py-3.5 rounded-full text-sm"
+          style={isLoggedIn ? { color: C.navy, border: `1.5px solid ${C.peach}` } : { background: C.cta, color: '#fff' }}
+        >
+          Message the team on WhatsApp
+        </a>
+      </div>
+
+      {!isLoggedIn && (
+        <div className="mt-6 rounded-xl px-5 py-4 text-center" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: C.navy }}>Track your adventures</p>
+          <p className="text-xs mb-3" style={{ color: C.gray }}>Sign in to see your km from home and join the leaderboard.</p>
+          <a href="/api/auth/google" className="inline-block text-sm font-semibold px-5 py-2 rounded-full text-white" style={{ background: C.coral }}>
+            Sign in with Google →
+          </a>
+        </div>
+      )}
     </div>
   );
 
