@@ -70,6 +70,27 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
           .all(...allowedBatchIds)
       : []) as Reg[];
 
+  // Attach accounting metadata without exposing OAuth credentials or persisted
+  // billing snapshots to the browser.
+  if (registrations.length) {
+    const ids = registrations.map((r) => Number(r.id));
+    const documents = getDb().prepare(`
+      SELECT id, registration_id, document_type, mode, status, zoho_document_id,
+             zoho_document_number, zoho_status, attempts, last_error, issued_at,
+             sent_at, updated_at
+      FROM invoice_documents
+      WHERE registration_id IN (${ids.map(() => '?').join(',')})
+      ORDER BY created_at
+    `).all(...ids) as any[];
+    const byRegistration = new Map<number, any[]>();
+    for (const document of documents) {
+      const list = byRegistration.get(Number(document.registration_id)) || [];
+      list.push(document);
+      byRegistration.set(Number(document.registration_id), list);
+    }
+    for (const registration of registrations) registration.accounting_documents = byRegistration.get(Number(registration.id)) || [];
+  }
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 

@@ -28,7 +28,7 @@ interface Props {
   whatsappLink?: string;
   isLoggedIn?: boolean;
   prefill?: Partial<Record<
-    'fullName' | 'email' | 'phone' | 'age' | 'gender' | 'city' | 'instagram' | 'emergencyName' | 'emergencyPhone' | 'whyJoin',
+    'fullName' | 'email' | 'phone' | 'age' | 'gender' | 'city' | 'state' | 'instagram' | 'emergencyName' | 'emergencyPhone' | 'whyJoin',
     string
   >> | null;
   prefilledFromHistory?: boolean;
@@ -306,7 +306,7 @@ export default function BookingCheckout({
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', age: '', gender: '',
-    city: '', instagram: '', emergencyName: '', emergencyPhone: '', whyJoin: '',
+    city: '', state: '', instagram: '', emergencyName: '', emergencyPhone: '', whyJoin: '',
     // Returning travellers get their details prefilled (whyJoin stays per-trip).
     ...(prefill ?? {}),
   });
@@ -337,7 +337,7 @@ export default function BookingCheckout({
   const balance = Math.max(0, perPerson - advanceDue);
   const dateStr = `${formatDateIN(departure.startDate)} – ${formatDateIN(departure.endDate)}`;
 
-  function set(field: string, value: string) {
+  function set(field: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
   }
@@ -346,13 +346,13 @@ export default function BookingCheckout({
   // on blur so travellers get feedback as they go, not just on submit.
   const LABELS: Record<string, string> = {
     fullName: 'Full Name', email: 'Email', phone: 'WhatsApp Number', age: 'Age',
-    city: 'City', emergencyName: 'Emergency Contact Name',
+    city: 'City', state: 'State', emergencyName: 'Emergency Contact Name',
     emergencyPhone: 'Emergency Contact Number', whyJoin: 'Why do you want to join?',
   };
-  const REQUIRED = ['fullName', 'email', 'phone', 'age', 'city', 'emergencyName', 'emergencyPhone', 'whyJoin'];
+  const REQUIRED = ['fullName', 'email', 'phone', 'age', 'city', 'state', 'emergencyName', 'emergencyPhone', 'whyJoin'];
 
-  function fieldError(field: string, raw: string): string {
-    const value = (raw ?? '').trim();
+  function fieldError(field: string, raw: unknown): string {
+    const value = String(raw ?? '').trim();
     if (REQUIRED.includes(field) && !value) return `${LABELS[field]} is required`;
     if (!value) return ''; // optional + empty → ok
 
@@ -373,6 +373,7 @@ export default function BookingCheckout({
         return Number.isInteger(n) && n >= 16 && n <= 100 ? '' : 'Enter a valid age (16–100)';
       }
       case 'city':
+      case 'state':
         return value.length >= 2 ? '' : 'Enter a valid city';
       case 'instagram':
         return /^@?[A-Za-z0-9._]{1,30}$/.test(value) ? '' : 'Enter a valid Instagram handle';
@@ -637,6 +638,9 @@ export default function BookingCheckout({
             </Field>
             <Field label="City" required error={errors.city}>
               <CitySelect value={form.city} onChange={(v) => set('city', v)} onBlur={() => handleBlur('city')} error={!!errors.city} />
+            </Field>
+            <Field label="State" required error={errors.state}>
+              <input type="text" placeholder="e.g. Maharashtra" value={form.state} onChange={(e) => set('state', e.target.value)} onBlur={() => handleBlur('state')} className={inputCls} style={{ borderColor: errors.state ? C.coral : C.peach }} />
             </Field>
             <Field label="Instagram Handle (optional)" error={errors.instagram}>
               <input type="text" placeholder="@yourhandle" value={form.instagram} onChange={(e) => set('instagram', e.target.value)} onBlur={() => handleBlur('instagram')} className={inputCls} style={{ borderColor: errors.instagram ? C.coral : C.peach }} />

@@ -27,6 +27,7 @@ const CAP_BASE = {
   phone:          '9876543210',
   age:            '28',
   city:           'Delhi',
+  state:          'Delhi',
   instagram:      '@qa_cap',
   emergencyName:  'QA Emergency',
   emergencyPhone: '9123456789',

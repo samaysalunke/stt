@@ -2,6 +2,8 @@ import { getDb } from './db';
 import { listTrips, readTrip, writeTrip, findTripByName } from './content';
 import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationStatusConfirmed } from './email';
+import { recordPayment, zohoMode } from './paymentLedger';
+import { processZohoDocument } from './zohoBooks';
 
 export type RegStatus = 'lead' | 'pending' | 'confirmed' | 'rejected';
 
@@ -180,15 +182,24 @@ export function createRegistration(
       input.emergency_name ?? '', input.emergency_phone ?? '',
       input.why_join ?? null, input.sharing_option, input.total_amount,
       input.batch_id, input.tier_id,
-      advance, advance > 0 ? (input.created_at ?? new Date().toISOString()) : null,
+      0, null,
       input.status, input.admin_notes ?? null, 'admin', input.created_at ?? new Date().toISOString(), input.consent_at ?? null,
     );
     const id = Number(res.lastInsertRowid);
 
     if (input.status === 'confirmed') {
+      if (advance > 0) {
+        const recorded = recordPayment({
+          registrationId: id, amount: advance, receivedAt: input.created_at ?? new Date().toISOString(),
+          method: 'other', eventType: 'advance', idempotencyKey: `registration-created-confirmed:${id}`,
+          source: opts.skipCapacity ? 'historical-admin' : 'admin-create',
+          documentType: opts.skipCapacity ? undefined : 'advance',
+        });
+        if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((e) => console.error('[Zoho advance]', e));
+      }
       adjustBookingCount(input.trip_name, input.batch_id, 1, input.tier_id);
       recalculateUserLeaderboard(input.email).catch((e) => console.error('[leaderboard recalc]', e));
-      if (opts.sendEmail) {
+      if (opts.sendEmail && zohoMode() === 'disabled') {
         sendRegistrationStatusConfirmed({
           full_name: input.full_name,
           email: input.email,

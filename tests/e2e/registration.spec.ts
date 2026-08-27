@@ -97,13 +97,16 @@ async function fillStep2AndAdvance(page: any) {
   await page.locator('text=Continue to your details').click();
   await expect(page.locator('text=Full Name').first()).toBeVisible({ timeout: 10_000 });
 
-  // text inputs in DOM order: Full Name, Age, City, Instagram, Emergency Name
+  // text inputs in DOM order: Full Name, Age, State, Instagram, Emergency Name
   const textInputs = page.locator('input[type="text"]');
   await textInputs.nth(0).fill('QA Playwright User'); // Full Name
   await textInputs.nth(1).fill('25');                  // Age
-  await textInputs.nth(2).fill('Mumbai');              // City
-  await textInputs.nth(3).fill('@qa_pw');              // Instagram
-  await textInputs.nth(4).fill('QA Emergency');        // Emergency Name
+  await page.getByRole('button', { name: 'Select your city' }).click();
+  await page.getByPlaceholder('Search city…').fill('Mumbai');
+  await page.getByRole('option', { name: 'Mumbai', exact: true }).click();
+  await textInputs.nth(3).fill('Maharashtra');          // State (nth 2 is city search)
+  await textInputs.nth(4).fill('@qa_pw');               // Instagram
+  await textInputs.nth(5).fill('QA Emergency');         // Emergency Name
 
   // email + tel
   await page.locator('input[type="email"]').first().fill('qa-pw@example.invalid');

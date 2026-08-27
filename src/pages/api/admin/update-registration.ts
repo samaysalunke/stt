@@ -6,6 +6,8 @@ import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
 import { tripAdvanceAmountBySlug, adjustBookingCount } from '../../../lib/registrationWrite';
 import { requireRole } from '../../../lib/requireRole';
+import { recordPayment, zohoMode } from '../../../lib/paymentLedger';
+import { processZohoDocument } from '../../../lib/zohoBooks';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
 
@@ -79,7 +81,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const advance = Number.isFinite(total) && total > 0 ? Math.min(configuredAdvance, total) : configuredAdvance;
         const currentPaid = Number(reg.amount_paid) || 0;
         if (currentPaid <= 0 && advance > 0) {
-          getDb().prepare('UPDATE registrations SET amount_paid=?, payment_date=COALESCE(payment_date, CURRENT_TIMESTAMP) WHERE id=?').run(advance, id);
+          const recorded = recordPayment({
+            registrationId: id,
+            amount: advance,
+            receivedAt: new Date().toISOString(),
+            method: reg.payment_method || 'bank_transfer',
+            transactionReference: reg.transaction_id,
+            eventType: 'advance',
+            idempotencyKey: `registration-confirmed:${id}`,
+            actorUserId: locals.adminUser?.userId,
+            actorEmail: locals.adminUser?.email,
+            source: 'status-confirmation',
+            documentType: 'advance',
+          });
+          if (recorded.document?.status === 'queued') {
+            void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho advance]', err));
+          }
         }
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, -1, tierId);
@@ -87,12 +104,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // ── Email notifications ───────────────────────────────────────────────
       if (newStatus === 'confirmed') {
-        sendRegistrationStatusConfirmed({
-          full_name: reg.full_name,
-          email: reg.email,
-          trip_name: tripName,
-          trip_date: reg.trip_date ?? '',
-        }).catch(err => console.error('[Email confirmed]', err));
+        // Live mode sends one combined branded email with the Zoho PDF. Draft
+        // mode never emails customers; disabled preserves the legacy email.
+        if (zohoMode() === 'disabled') {
+          sendRegistrationStatusConfirmed({
+            full_name: reg.full_name,
+            email: reg.email,
+            trip_name: tripName,
+            trip_date: reg.trip_date ?? '',
+          }).catch(err => console.error('[Email confirmed]', err));
+        }
       } else if (newStatus === 'rejected') {
         sendRegistrationStatusRejected({
           full_name: reg.full_name,

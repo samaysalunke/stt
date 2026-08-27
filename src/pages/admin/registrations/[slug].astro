@@ -244,6 +244,15 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
     return res.ok ? data : { success: false, error: data?.error || 'Payment update failed.' };
   }
 
+  async function requestDocument(id, type, action) {
+    const res = await fetch('/api/admin/registrations/document', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registrationId: Number(id), type, action }),
+    });
+    const data = await res.json().catch(() => null);
+    return res.ok ? data : { success: false, error: data?.error || 'Document request failed.' };
+  }
+
   // ── Per-row actions ──
   document.getElementById('departures-container')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-action]');
@@ -263,6 +272,34 @@ const allDepStats = { count: trip.regCount, lead: s.lead, pending: s.pending, co
       const data = await requestPaymentUpdate([Number(id)], value);
       if (!data.success || data.failed) alert(data.error || data.results?.find((r) => !r.success)?.error || 'Payment update failed.');
       else reloadWithFilters();
+      return;
+    }
+    if (btn.dataset.action === 'record-payment') {
+      const amount = Number(document.getElementById('payment-amount-' + id)?.value);
+      const date = document.getElementById('payment-date-' + id)?.value || '';
+      const method = document.getElementById('payment-method-' + id)?.value || '';
+      const transactionReference = document.getElementById('payment-reference-' + id)?.value || '';
+      if (!Number.isInteger(amount) || amount <= 0 || !date || !method) { alert('Enter a valid amount, received date, and method.'); return; }
+      if (!confirm(`Record ₹${amount.toLocaleString('en-IN')} received on ${date}?`)) return;
+      btn.disabled = true;
+      const res = await fetch('/api/admin/registrations/payment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [Number(id)], action: 'record', amount, receivedAt: `${date}T12:00:00+05:30`, method, transactionReference, requestId: crypto.randomUUID() }),
+      });
+      const data = await res.json().catch(() => null);
+      btn.disabled = false;
+      if (!res.ok || !data?.success || data.failed) alert(data?.error || data?.results?.find((r) => !r.success)?.error || 'Payment update failed.');
+      else reloadWithFilters();
+      return;
+    }
+    if (btn.dataset.action === 'retry-document' || btn.dataset.action === 'generate-document' || btn.dataset.action === 'refresh-document') {
+      const action = btn.dataset.action === 'retry-document' ? 'retry' : btn.dataset.action === 'generate-document' ? 'generate' : 'refresh';
+      const verb = action === 'retry' ? 'Retry' : action === 'generate' ? 'Generate' : 'Refresh';
+      if (!confirm(`${verb} the ${value} document for registration #${id}?`)) return;
+      btn.disabled = true;
+      const data = await requestDocument(id, value, action);
+      btn.disabled = false;
+      if (!data.success) alert(data.error || 'Document request failed.'); else reloadWithFilters();
       return;
     }
     if (btn.dataset.action === 'save-notes') {

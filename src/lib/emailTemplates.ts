@@ -1,4 +1,5 @@
 import { escapeHtml, wrapEmail, sendEmail, ADMIN_EMAIL } from './emailTransport';
+import type { EmailAttachment } from './emailTransport';
 import { readSiteSettings } from './settings';
 
 function getWhatsappLink(): string {
@@ -61,6 +62,51 @@ export async function sendRegistrationStatusConfirmed(data: {
   `);
 
   await sendEmail(data.email, `Booking Confirmed — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-confirmed' });
+}
+
+export async function sendFinancialDocument(data: {
+  fullName: string;
+  email: string;
+  tripName: string;
+  documentType: 'advance' | 'final';
+  documentNumber: string;
+  attachment: EmailAttachment;
+}) {
+  const isFinal = data.documentType === 'final';
+  const html = wrapEmail(`
+    <h2 style="color:#1B2B3A;margin-top:0;">${isFinal ? 'Full payment received' : 'Your spot is confirmed'}</h2>
+    <p style="margin:0 0 16px;">Hi <strong>${escapeHtml(data.fullName)}</strong>,</p>
+    <p style="margin:0 0 16px;">${isFinal
+      ? `We've received your full payment for <strong>${escapeHtml(data.tripName)}</strong>.`
+      : `We've verified your advance for <strong>${escapeHtml(data.tripName)}</strong> and confirmed your seat.`}</p>
+    <p style="background:#FDF0EC;padding:14px 16px;border-radius:8px;margin:0 0 20px;">
+      ${isFinal ? 'Paid invoice' : 'Advance document'}: <strong>${escapeHtml(data.documentNumber)}</strong>
+    </p>
+    <p style="margin:0;color:#6B7280;font-size:14px;">Your Zoho Books PDF is attached for your records.</p>
+  `);
+  await sendEmail(
+    data.email,
+    `${isFinal ? 'Paid invoice' : 'Booking confirmed'} — ${data.tripName} | Seek the Thrill`,
+    html,
+    { template: isFinal ? 'registration-final-invoice' : 'registration-advance-document' },
+    [data.attachment],
+  );
+}
+
+export async function sendFinancialConfirmationWithoutDocument(data: {
+  fullName: string;
+  email: string;
+  tripName: string;
+  documentType: 'advance' | 'final';
+}) {
+  const final = data.documentType === 'final';
+  const html = wrapEmail(`
+    <h2 style="color:#1B2B3A;margin-top:0;">${final ? 'Full payment received' : 'Your spot is confirmed'}</h2>
+    <p>Hi <strong>${escapeHtml(data.fullName)}</strong>,</p>
+    <p>${final ? 'Your balance payment has been recorded.' : `Your advance has been verified and your seat on <strong>${escapeHtml(data.tripName)}</strong> is confirmed.`}</p>
+    <p style="color:#6B7280;font-size:14px;">Our accounting document service is taking longer than expected. We'll send the PDF separately as soon as it is ready.</p>
+  `);
+  await sendEmail(data.email, `${final ? 'Full payment received' : 'Booking confirmed'} — ${data.tripName} | Seek the Thrill`, html, { template: `${data.documentType}-confirmation-pdf-delayed` });
 }
 
 export async function sendRegistrationStatusRejected(data: {

@@ -17,6 +17,7 @@ const V2_BASE = {
   age:            '25',
   gender:         'prefer-not-to-say',
   city:           'Mumbai',
+  state:          'Maharashtra',
   instagram:      '@qa_v2_user',
   emergencyName:  'QA Emergency',
   emergencyPhone: '9123456789',

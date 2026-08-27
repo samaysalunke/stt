@@ -134,3 +134,8 @@ test('TC-198 forwarded same-origin multipart upload is allowed', async () => {
   assert.equal(res.status, 200, `Expected 200, got ${res.status}: ${JSON.stringify(data)}`);
   assert.equal(data.success, true);
 });
+
+test('TC-199 Zoho document worker rejects requests without its bearer secret', async () => {
+  const res = await fetch(`${BASE}/api/jobs/zoho-documents`, { method: 'POST' });
+  assert.equal(res.status, 401);
+});

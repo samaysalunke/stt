@@ -292,6 +292,56 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS email_delivery_log_template ON email_delivery_log(template);
   `);
 
+  // Append-only payment truth plus idempotent Zoho document jobs. amount_paid on
+  // registrations remains a maintained projection for existing reports/exports.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_events (
+      id TEXT PRIMARY KEY,
+      registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK(event_type IN ('advance','balance','payment','reversal','adjustment')),
+      amount INTEGER NOT NULL,
+      received_at TEXT NOT NULL,
+      payment_method TEXT,
+      transaction_reference TEXT,
+      source TEXT NOT NULL DEFAULT 'admin',
+      actor_user_id TEXT,
+      actor_email TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS payment_events_registration ON payment_events(registration_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS invoice_documents (
+      id TEXT PRIMARY KEY,
+      registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+      document_type TEXT NOT NULL CHECK(document_type IN ('advance','final')),
+      external_reference TEXT NOT NULL UNIQUE,
+      billing_snapshot TEXT NOT NULL,
+      payment_event_id TEXT REFERENCES payment_events(id),
+      mode TEXT NOT NULL CHECK(mode IN ('disabled','draft','live')),
+      status TEXT NOT NULL CHECK(status IN ('queued','processing','draft','paid','emailed','failed','disabled')),
+      zoho_customer_id TEXT,
+      zoho_document_id TEXT,
+      zoho_document_number TEXT,
+      zoho_status TEXT,
+      zoho_payment_id TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      next_attempt_at TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      issued_at TEXT,
+      sent_at TEXT,
+      completed_at TEXT,
+      retainer_applied_at TEXT,
+      balance_recorded_at TEXT,
+      UNIQUE(registration_id, document_type)
+    );
+    CREATE INDEX IF NOT EXISTS invoice_documents_status ON invoice_documents(status, next_attempt_at);
+  `);
+  try { db.exec('ALTER TABLE invoice_documents ADD COLUMN retainer_applied_at TEXT'); } catch {}
+  try { db.exec('ALTER TABLE invoice_documents ADD COLUMN balance_recorded_at TEXT'); } catch {}
+
   // Soft-delete tombstones for trips. The YAML file stays on disk (on the
   // content volume); a row here hides the trip everywhere. Restore = delete
   // the row. Lives on the DATA_DIR volume so it survives deploys/re-seeds.

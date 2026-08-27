@@ -54,6 +54,7 @@ export const VALID_REG = {
   age:            '25',
   gender:         'prefer-not-to-say',
   city:           'Mumbai',
+  state:          'Maharashtra',
   instagram:      '@qa_test_user',
   emergencyName:  'QA Emergency Contact',
   emergencyPhone: '9123456789',

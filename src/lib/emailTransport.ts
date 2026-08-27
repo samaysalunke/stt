@@ -64,7 +64,19 @@ export function wrapEmail(body: string): string {
 </html>`;
 }
 
-export async function sendEmail(to: string, subject: string, html: string, meta: EmailLogMeta = {}) {
+export interface EmailAttachment {
+  filename: string;
+  content: string; // Base64, as required by Resend's API.
+  contentType?: string;
+}
+
+export async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  meta: EmailLogMeta = {},
+  attachments: EmailAttachment[] = [],
+) {
   const logId = startEmailLog(to, subject, meta.template);
   if (!RESEND_API_KEY) {
     console.log(`[Email Mock] To: ${to}\nSubject: ${subject}\n`);
@@ -86,6 +98,13 @@ export async function sendEmail(to: string, subject: string, html: string, meta:
         subject,
         html,
         text: htmlToText(html),
+        ...(attachments.length ? {
+          attachments: attachments.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            ...(attachment.contentType ? { content_type: attachment.contentType } : {}),
+          })),
+        } : {}),
       }),
     });
     if (!res.ok) {

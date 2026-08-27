@@ -1,81 +1,82 @@
+import { randomUUID } from 'node:crypto';
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../../lib/db';
 import { logAction } from '../../../../lib/audit';
 import { tripAdvanceAmountBySlug } from '../../../../lib/registrationWrite';
 import { paymentState } from '../../../../lib/payment';
 import { jsonOk as json } from '../../../../lib/apiResponse';
+import { recordPayment, sanitizePaymentMethod, validReceivedAt } from '../../../../lib/paymentLedger';
+import { processZohoDocument } from '../../../../lib/zohoBooks';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    if (!locals.adminUser || locals.adminUser.role === 'trip_lead') {
-      return json({ success: false, error: 'Access denied' }, 403);
-    }
-
+    if (!locals.adminUser || locals.adminUser.role === 'trip_lead') return json({ success: false, error: 'Access denied' }, 403);
     const body = await request.json();
-    const action = String(body.action || '');
-    const ids = Array.isArray(body.ids)
+    const action = String(body.action || 'record');
+    const ids: number[] = Array.isArray(body.ids)
       ? [...new Set(body.ids.map(Number).filter((n: number) => Number.isInteger(n) && n > 0))]
+          .map(Number)
       : [];
+    if (!ids.length || !['record', 'unpaid', 'advance', 'full'].includes(action)) return json({ success: false, error: 'Invalid payment action or registration IDs.' }, 400);
+    if (ids.length > 500) return json({ success: false, error: 'Too many registrations (max 500).' }, 400);
 
-    if (!ids.length || !['unpaid', 'advance', 'full'].includes(action)) {
-      return json({ success: false, error: 'Invalid payment action or registration IDs.' }, 400);
-    }
-    if (ids.length > 500) {
-      return json({ success: false, error: 'Too many registrations (max 500).' }, 400);
-    }
+    const receivedAt = String(body.receivedAt || body.received_at || new Date().toISOString());
+    const method = sanitizePaymentMethod(body.method || body.paymentMethod || (action === 'unpaid' ? 'other' : 'bank_transfer'));
+    if (!validReceivedAt(receivedAt)) return json({ success: false, error: 'Received date is invalid or in the future.' }, 400);
+    if (action !== 'unpaid' && !method) return json({ success: false, error: 'Choose a valid payment method.' }, 400);
+    const requestedAmount = body.amount === undefined || body.amount === null || body.amount === '' ? null : Number(body.amount);
+    if (requestedAmount !== null && (!Number.isInteger(requestedAmount) || requestedAmount <= 0)) return json({ success: false, error: 'Amount must be a positive whole rupee value.' }, 400);
 
     const db = getDb();
+    const requestId = String(body.requestId || randomUUID());
     const results: Record<string, any>[] = [];
-
     for (const id of ids) {
-      const reg = db.prepare(
-        'SELECT id, trip_slug, amount_paid, total_amount, payment_date FROM registrations WHERE id = ?'
-      ).get(id) as any;
+      try {
+        const reg = db.prepare('SELECT * FROM registrations WHERE id=?').get(id) as any;
+        if (!reg) throw new Error('Registration not found');
+        const total = Number(reg.total_amount);
+        const previousAmount = Number(reg.amount_paid) || 0;
+        if (action !== 'unpaid' && (!Number.isFinite(total) || total <= 0)) throw new Error('Valid total amount is required');
+        const advance = Math.min(tripAdvanceAmountBySlug(String(reg.trip_slug || '')), total || Infinity);
+        const idempotencyKey = `admin-payment:${requestId}:${id}`;
+        const existingEvent = db.prepare('SELECT id FROM payment_events WHERE idempotency_key=?').get(idempotencyKey);
+        if (existingEvent) {
+          results.push({ id, success: true, amountPaid: previousAmount, paymentDate: reg.payment_date, state: paymentState(previousAmount, total, advance), duplicate: true });
+          continue;
+        }
+        let amount: number;
+        if (action === 'unpaid') amount = -previousAmount;
+        else if (requestedAmount !== null) amount = requestedAmount;
+        else if (action === 'advance') amount = Math.max(0, advance - previousAmount);
+        else amount = Math.max(0, total - previousAmount);
+        if (!amount) throw new Error(action === 'unpaid' ? 'No recorded payment to reverse' : 'No remaining amount to record');
 
-      if (!reg) {
-        results.push({ id, success: false, error: 'Registration not found' });
-        continue;
+        const nextAmount = previousAmount + amount;
+        const isAdvance = amount > 0 && previousAmount === 0 && nextAmount === advance;
+        const isFull = amount > 0 && nextAmount === total;
+        const recorded = recordPayment({
+          registrationId: id, amount, receivedAt, method,
+          transactionReference: body.transactionReference || body.transaction_reference,
+          eventType: amount < 0 ? 'reversal' : isAdvance ? 'advance' : previousAmount > 0 ? 'balance' : 'payment',
+          idempotencyKey,
+          actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
+          source: ids.length > 1 ? 'admin-bulk' : 'admin',
+          documentType: isAdvance ? 'advance' : isFull ? 'final' : undefined,
+        });
+        if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
+        const state = paymentState(nextAmount, total, advance);
+        logAction({
+          actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email, actorRole: locals.adminUser.role,
+          action: amount < 0 ? 'booking.payment_reversed' : 'booking.payment_recorded', targetType: 'registration', targetId: String(id),
+          previousValue: { amount: previousAmount, state: paymentState(previousAmount, total, advance) },
+          newValue: { amount: nextAmount, delta: amount, state, receivedAt, method, transactionReference: body.transactionReference || undefined },
+        });
+        results.push({ id, success: true, amountPaid: nextAmount, paymentDate: receivedAt, state, documentId: recorded.document?.id });
+      } catch (error: any) {
+        results.push({ id, success: false, error: String(error?.message || error) });
       }
-
-      const total = Number(reg.total_amount);
-      const previousAmount = Number(reg.amount_paid) || 0;
-
-      if (action !== 'unpaid' && (!Number.isFinite(total) || total <= 0)) {
-        results.push({ id, success: false, error: 'Valid total amount is required' });
-        continue;
-      }
-
-      const advance = tripAdvanceAmountBySlug(String(reg.trip_slug || ''));
-      const amount = action === 'unpaid' ? 0 : action === 'full' ? total : Math.min(advance, total);
-      const paymentDate = action === 'unpaid' ? null : new Date().toISOString();
-
-      db.prepare(
-        'UPDATE registrations SET amount_paid = ?, payment_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).run(amount, paymentDate, id);
-
-      const previousState = paymentState(previousAmount, total, advance);
-      const newState = paymentState(amount, total, advance);
-
-      logAction({
-        actorUserId: locals.adminUser.userId,
-        actorEmail: locals.adminUser.email,
-        actorRole: locals.adminUser.role,
-        action: 'booking.payment_updated',
-        targetType: 'registration',
-        targetId: String(id),
-        previousValue: { amount: previousAmount, state: previousState, paymentDate: reg.payment_date },
-        newValue: { amount, state: newState, paymentDate },
-      });
-
-      results.push({ id, success: true, amountPaid: amount, paymentDate, state: newState });
     }
-
-    return json({
-      success: true,
-      results,
-      succeeded: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length,
-    });
+    return json({ success: true, results, succeeded: results.filter((r) => r.success).length, failed: results.filter((r) => !r.success).length });
   } catch (err) {
     console.error('[registrations/payment]', err);
     return json({ success: false, error: 'Server error.' }, 500);

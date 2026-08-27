@@ -26,6 +26,7 @@ async function fillAllStep2(page: any, overrides: Record<string, string> = {}) {
     fullName: 'Journey Tester',
     age: '27',
     city: 'Pune',
+    state: 'Maharashtra',
     instagram: '@journey_tester',
     emergencyName: 'Emergency Person',
     email: 'journey@example.invalid',
@@ -38,9 +39,14 @@ async function fillAllStep2(page: any, overrides: Record<string, string> = {}) {
   const ti = page.locator('input[type="text"]');
   if (vals.fullName)       await ti.nth(0).fill(vals.fullName);
   if (vals.age)            await ti.nth(1).fill(vals.age);
-  if (vals.city)           await ti.nth(2).fill(vals.city);
-  if (vals.instagram)      await ti.nth(3).fill(vals.instagram);
-  if (vals.emergencyName)  await ti.nth(4).fill(vals.emergencyName);
+  if (vals.city) {
+    await page.getByRole('button', { name: 'Select your city' }).click();
+    await page.getByPlaceholder('Search city…').fill(vals.city);
+    await page.getByRole('option', { name: vals.city, exact: true }).click();
+  }
+  if (vals.state)          await ti.nth(3).fill(vals.state); // nth 2 is city search
+  if (vals.instagram)      await ti.nth(4).fill(vals.instagram);
+  if (vals.emergencyName)  await ti.nth(5).fill(vals.emergencyName);
 
   await page.locator('input[type="email"]').first().fill(vals.email);
 
@@ -147,6 +153,11 @@ test.describe('WF-2: Step 2 field-level validation', () => {
   test('blank City shows "City is required"', async ({ page }) => {
     await submitBlank(page, { city: '' });
     await expect(page.locator('text=City is required')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('blank State shows "State is required"', async ({ page }) => {
+    await submitBlank(page, { state: '' });
+    await expect(page.locator('text=State is required')).toBeVisible({ timeout: 5_000 });
   });
 
   test('blank Instagram is optional — proceeds to payment step', async ({ page }) => {

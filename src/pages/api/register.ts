@@ -62,6 +62,10 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
   return { id: Number(insert.lastInsertRowid), isNew: true };
 }
 
+function saveState(db: ReturnType<typeof getDb>, id: number, travellerState: string) {
+  db.prepare('UPDATE registrations SET state=? WHERE id=?').run(travellerState, id);
+}
+
 export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
   if (!rateLimit(`register:${clientAddress}`, 30, 60 * 60 * 1000)) {
     return json({ success: false, error: 'Too many requests. Please try again later.' }, 429);
@@ -81,6 +85,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       phone:          sanitizeInput(body.phone),
       age:            sanitizeInput(body.age),
       city:           sanitizeInput(body.city),
+      state:          sanitizeInput(body.state),
       emergencyName:  sanitizeInput(body.emergencyName),
       emergencyPhone: sanitizeInput(body.emergencyPhone),
       whyJoin:        sanitizeInput(body.whyJoin),
@@ -91,7 +96,6 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
     }
     if (!isValidEmail(required.email)) return json({ success: false, error: 'Invalid email address.' }, 400);
     if (!isValidPhone(required.phone)) return json({ success: false, error: 'Invalid phone number.' }, 400);
-
     const ageNum = Number(required.age);
     if (!Number.isInteger(ageNum) || ageNum < 16 || ageNum > 100) {
       return json({ success: false, error: 'Please enter a valid age (16–100).' }, 400);
@@ -135,12 +139,12 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       // returning traveller editing a typo'd detail shouldn't have it silently dropped.
       db.prepare(`
         UPDATE registrations SET
-          full_name=?, phone=?, gender=?, age=?, city=?, instagram=?,
+          full_name=?, phone=?, gender=?, age=?, city=?, state=?, instagram=?,
           emergency_name=?, emergency_phone=?, why_join=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
       `).run(
         required.fullName, required.phone, sanitizeInput(body.gender) || null,
-        required.age, required.city, instagram, required.emergencyName, required.emergencyPhone,
+        required.age, required.city, required.state, instagram, required.emergencyName, required.emergencyPhone,
         required.whyJoin, existingPaid.id,
       );
       return json({ success: true, status: existingPaid.status, registrationId: existingPaid.id });
@@ -160,6 +164,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
         emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
         sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
       });
+      saveState(db, leadId, required.state);
 
       if (isNew) {
         let whatsappLink = 'https://wa.me/917975027491';
@@ -227,6 +232,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       screenshotUrl, required.whyJoin, sharingOption, totalAmount,
       selectedOffer.tierId, leadId,
     );
+    saveState(db, leadId, required.state);
 
     let whatsappLink = 'https://wa.me/917975027491';
     try {

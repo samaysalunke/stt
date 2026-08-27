@@ -41,6 +41,12 @@ test('TC-031 missing city → 400', async () => {
   assert.match(data.error, /city/i);
 });
 
+test('TC-031 missing state → 400', async () => {
+  const { status, data } = await reg({ state: '' });
+  assert.equal(status, 400);
+  assert.match(data.error, /state/i);
+});
+
 test('TC-031 missing emergencyName → 400', async () => {
   const { status, data } = await reg({ emergencyName: '' });
   assert.equal(status, 400);

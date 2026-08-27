@@ -228,12 +228,17 @@ test('TC-215 payment actions do not change status and status changes preserve pa
   });
   assert.equal(made.status, 200, JSON.stringify(made.data));
   const id = made.data.id;
-  const full = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'full' });
+  const paymentRequestId = `qa-full-${id}`;
+  const full = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'full', requestId: paymentRequestId, method: 'upi', transactionReference: 'QA-TXN-1' });
   assert.equal(full.status, 200, JSON.stringify(full.data));
   assert.equal(full.data.results[0].state, 'full');
   let reg = await getRegByEmail(email);
   assert.equal(reg.status, 'pending');
   assert.equal(reg.amount_paid, 5000);
+  const duplicate = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'full', requestId: paymentRequestId, method: 'upi', transactionReference: 'QA-TXN-1' });
+  assert.equal(duplicate.status, 200);
+  assert.equal(duplicate.data.results[0].duplicate, true);
+  assert.equal((await getRegByEmail(email)).amount_paid, 5000, 'idempotent retry must not overstate payment');
 
   assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'confirmed' })).status, 200);
   reg = await getRegByEmail(email);

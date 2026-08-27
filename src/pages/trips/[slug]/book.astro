@@ -50,7 +50,7 @@ let prefilledFromHistory = false;
 let existingRegistration: Record<string, any> | null = null;
 if (user) {
   existingRegistration = getDb().prepare(`
-    SELECT id, status, full_name, email, phone, age, gender, city, instagram,
+    SELECT id, status, full_name, email, phone, age, gender, city, state, instagram,
            emergency_name, emergency_phone, why_join, tier_id, sharing_option,
            total_amount, amount_paid
     FROM registrations
@@ -58,7 +58,7 @@ if (user) {
     ORDER BY id DESC LIMIT 1
   `).get(user.email, slug, selectedDeparture.id) as Record<string, any> | undefined ?? null;
   const prev = getDb().prepare(`
-    SELECT full_name, phone, age, gender, city, instagram, emergency_name, emergency_phone
+    SELECT full_name, phone, age, gender, city, state, instagram, emergency_name, emergency_phone
     FROM registrations WHERE email = ? ORDER BY id DESC LIMIT 1
   `).get(user.email) as Record<string, any> | undefined;
   prefilledFromHistory = !!prev || !!existingRegistration;
@@ -69,6 +69,7 @@ if (user) {
     age:            existingRegistration?.age ?? prev?.age ?? '',
     gender:         existingRegistration?.gender ?? prev?.gender ?? '',
     city:           existingRegistration?.city ?? prev?.city ?? '',
+    state:          existingRegistration?.state ?? prev?.state ?? '',
     instagram:      existingRegistration?.instagram ?? prev?.instagram ?? '',
     emergencyName:  existingRegistration?.emergency_name ?? prev?.emergency_name ?? '',
     emergencyPhone: existingRegistration?.emergency_phone ?? prev?.emergency_phone ?? '',
