@@ -65,6 +65,62 @@ export async function sendRegistrationStatusConfirmed(data: {
   await sendEmail(data.email, `Booking Confirmed — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-confirmed' });
 }
 
+/**
+ * One branded confirmation email sent by us (Resend) whenever a booking is
+ * confirmed with a payment recorded. Carries the Zoho invoice PDF when the
+ * accounting worker produced one; degrades to a no-attachment email otherwise.
+ */
+export async function sendRegistrationPaymentConfirmed(data: {
+  full_name: string;
+  email: string;
+  trip_name: string;
+  trip_date?: string;
+  kind: 'advance' | 'full';
+  amountPaid: number;
+  totalAmount: number;
+  balanceDue: number;
+  whatsappLink?: string;
+  attachment?: EmailAttachment;
+}) {
+  const whatsappLink = data.whatsappLink || getWhatsappLink();
+  const inr = (n: number) => `₹${(Math.round(Number(n)) || 0).toLocaleString('en-IN')}`;
+  const isFull = data.kind === 'full';
+  const paidInFull = isFull || data.balanceDue <= 0;
+  const balanceRow = paidInFull
+    ? `<tr><td style="padding:8px 0;color:#6B7280;">Balance due</td><td style="padding:8px 0;font-weight:700;color:#065F46;text-align:right;">Paid in full</td></tr>`
+    : `<tr><td style="padding:8px 0;color:#6B7280;">Balance due before departure</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;">${inr(data.balanceDue)}</td></tr>`;
+  const html = wrapEmail(`
+    <h2 style="color: #1B2B3A; margin-top: 0;">Your booking is confirmed!</h2>
+    <p style="margin: 0 0 16px;">Hi <strong>${escapeHtml(data.full_name)}</strong>,</p>
+    <p style="margin: 0 0 24px;">Great news — your booking for <strong>${escapeHtml(data.trip_name)}</strong> has been <strong style="color:#E8725A;">confirmed</strong>${paidInFull ? ' and paid in full' : ''}.</p>
+    ${data.trip_date ? `<p style="background:#FDF0EC;padding:12px 16px;border-radius:8px;margin:0 0 24px;"><strong>Trip Date:</strong> ${escapeHtml(data.trip_date)}</p>` : ''}
+    <table style="width:100%;border-collapse:collapse;margin:0 0 24px;font-size:14px;">
+      <tr><td style="padding:8px 0;color:#6B7280;">Amount received</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;">${inr(data.amountPaid)}</td></tr>
+      <tr><td style="padding:8px 0;color:#6B7280;border-top:1px solid #F5DDD7;">Trip total</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;border-top:1px solid #F5DDD7;">${inr(data.totalAmount)}</td></tr>
+      ${balanceRow}
+    </table>
+    <div style="background:#FDF0EC;border-radius:8px;padding:20px;margin:0 0 24px;">
+      <h3 style="color:#E8725A;margin-top:0;font-size:15px;">What happens next:</h3>
+      <ul style="color:#1B2B3A;padding-left:20px;margin:0;line-height:1.8;">
+        <li>You'll receive a detailed trip preparation guide shortly</li>
+        <li>You'll be added to the trip WhatsApp group</li>
+        <li>Pre-trip briefing details will be shared a few days before departure</li>
+        ${paidInFull ? '' : '<li>Ensure your remaining balance is paid before departure</li>'}
+      </ul>
+    </div>
+    ${data.attachment ? `<p style="margin:0 0 16px;font-size:14px;color:#1B2B3A;">Your invoice is attached to this email for your records.</p>` : ''}
+    <p style="margin:0;font-size:14px;color:#6B7280;">Questions? <a href="${escapeHtml(whatsappLink)}" style="color:#E8725A;font-weight:600;">WhatsApp us.</a></p>
+  `);
+
+  await sendEmail(
+    data.email,
+    `Booking Confirmed — ${data.trip_name} | Seek the Thrill`,
+    html,
+    { template: 'registration-payment-confirmed' },
+    data.attachment ? [data.attachment] : [],
+  );
+}
+
 export async function sendFinancialDocument(data: {
   fullName: string;
   email: string;

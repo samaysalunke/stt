@@ -136,6 +136,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       <div>
         <strong id="selected-count">0 selected</strong>
         <select id="bulk-status"><option value="">Choose new status…</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option></select>
+        <select id="bulk-confirm-kind" style="display:none"><option value="advance">Advance</option><option value="full">Full payment</option></select>
         <button id="apply-bulk-status" disabled>Update status</button>
         <select id="bulk-payment"><option value="">Payment action…</option><option value="unpaid">Unpaid</option><option value="advance">Advance paid</option><option value="full">Fully paid</option></select>
         <button id="apply-bulk-payment" disabled>Update payment</button>
@@ -276,11 +277,50 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const id = btn.dataset.id || '';
     const value = btn.dataset.value || '';
     if (btn.dataset.action === 'toggle-detail') { toggleDetail(id); return; }
+    if (btn.dataset.action === 'open-confirm') {
+      const panel = document.getElementById('confirm-entry-' + id);
+      if (panel) {
+        panel.open = true;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('confirm-kind-' + id)?.focus();
+      }
+      return;
+    }
+    if (btn.dataset.action === 'confirm-booking') {
+      const kind = document.getElementById('confirm-kind-' + id)?.value || '';
+      const amount = Number(document.getElementById('confirm-amount-' + id)?.value);
+      const date = document.getElementById('confirm-date-' + id)?.value || '';
+      const method = document.getElementById('confirm-method-' + id)?.value || '';
+      const transactionReference = document.getElementById('confirm-reference-' + id)?.value || '';
+      const notes = document.getElementById('notes-' + id)?.value ?? '';
+      if (!kind) { alert('Choose what payment was received.'); return; }
+      if (kind !== 'none' && (!Number.isInteger(amount) || amount <= 0 || !date || !method)) {
+        alert('Enter a valid amount, received date, and method.');
+        return;
+      }
+      if (!confirm(kind === 'none'
+        ? 'Confirm this booking with no new payment?'
+        : `Confirm booking and record ₹${amount.toLocaleString('en-IN')} received on ${date}?`)) return;
+      btn.disabled = true;
+      const payment = kind === 'none'
+        ? { kind }
+        : { kind, amount, receivedAt: `${date}T12:00:00+05:30`, method, transactionReference };
+      const res = await fetch('/api/admin/update-registration', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(id), status: 'confirmed', admin_notes: notes, payment }),
+      });
+      const data = await res.json().catch(() => null);
+      btn.disabled = false;
+      if (!res.ok || !data?.success) alert(data?.error || 'Confirmation failed.');
+      else reloadWithFilters();
+      return;
+    }
     if (btn.dataset.action === 'update-status') {
       if (!confirm(`Mark this registration as "${value}"?`)) return;
       const notes = document.getElementById('notes-' + id)?.value ?? '';
       const result = await requestStatusUpdate(Number(id), value, notes);
       if (!result.ok) alert(result.error);
+      else reloadWithFilters();
       return;
     }
     if (btn.dataset.action === 'update-payment') {
@@ -329,6 +369,41 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     }
   });
 
+  // ── Kind → amount pre-fill (confirm panel + record-payment form) ──
+  function prefillAmount(kind, amountEl, meta) {
+    if (!amountEl) return;
+    const advance = Number(meta.advance) || 0;
+    const total = Number(meta.total) || 0;
+    const paid = Number(meta.paid) || 0;
+    const label = amountEl.closest('label');
+    if (kind === 'none') { amountEl.value = ''; amountEl.readOnly = true; if (label) label.style.display = 'none'; return; }
+    if (label) label.style.display = '';
+    if (kind === 'advance') {
+      const target = total > 0 ? Math.min(advance, total) : advance;
+      amountEl.value = Math.max(0, target - paid) || target;
+      amountEl.readOnly = true;
+    } else if (kind === 'full') {
+      amountEl.value = total > 0 ? Math.max(0, total - paid) : '';
+      amountEl.readOnly = true;
+    } else {
+      amountEl.readOnly = false;
+    }
+  }
+
+  document.getElementById('departures-container')?.addEventListener('change', (e) => {
+    const sel = e.target;
+    if (!sel || !sel.id) return;
+    if (sel.id.startsWith('confirm-kind-')) {
+      const id = sel.id.slice('confirm-kind-'.length);
+      const btn = document.querySelector(`button[data-action="confirm-booking"][data-id="${id}"]`);
+      prefillAmount(sel.value, document.getElementById('confirm-amount-' + id), btn?.dataset ?? {});
+    } else if (sel.id.startsWith('payment-kind-')) {
+      const id = sel.id.slice('payment-kind-'.length);
+      const btn = document.querySelector(`button[data-action="record-payment"][data-id="${id}"]`);
+      prefillAmount(sel.value, document.getElementById('payment-amount-' + id), btn?.dataset ?? {});
+    }
+  });
+
   // ── Selection ──
   const boxes = () => [...document.querySelectorAll('.registration-checkbox')];
   const rowOf = (b) => b.closest('.reg-row');
@@ -345,7 +420,9 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const payApply = document.getElementById('apply-bulk-payment');
     const payBulk = document.getElementById('bulk-payment');
     const count = document.getElementById('selected-count');
+    const confirmKind = document.getElementById('bulk-confirm-kind');
     if (count) count.textContent = `${selected.length} selected`;
+    if (confirmKind) confirmKind.style.display = bulk?.value === 'confirmed' ? '' : 'none';
     if (apply) apply.disabled = !selected.length || !bulk?.value;
     if (payApply) payApply.disabled = !selected.length || !payBulk?.value;
     if (all) { const n = matching.filter((b) => b.checked).length; all.checked = matching.length > 0 && n === matching.length; all.indeterminate = n > 0 && n < matching.length; }
@@ -438,8 +515,22 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const selected = visibleBoxes().filter((b) => b.checked);
     const status = document.getElementById('bulk-status').value;
     if (!selected.length || !status || !confirm(`Change ${selected.length} registration(s) to ${status}?`)) return;
+    const confirmKind = document.getElementById('bulk-confirm-kind')?.value || 'advance';
     const failures = [];
-    for (const b of selected) { const id = Number(b.dataset.registrationId); const r = await requestStatusUpdate(id, status); if (!r.ok) failures.push(`#${id}: ${r.error}`); }
+    for (const b of selected) {
+      const id = Number(b.dataset.registrationId);
+      if (status === 'confirmed') {
+        const res = await fetch('/api/admin/update-registration', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: 'confirmed', payment: { kind: confirmKind } }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.success) failures.push(`#${id}: ${data?.error || 'failed'}`);
+      } else {
+        const r = await requestStatusUpdate(id, status);
+        if (!r.ok) failures.push(`#${id}: ${r.error}`);
+      }
+    }
     if (failures.length) alert(failures.join('\n')); else reloadWithFilters();
   });
   document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {

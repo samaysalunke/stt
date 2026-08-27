@@ -1,12 +1,13 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { findTripByName, readTrip } from '../../../lib/content';
-import { sendRegistrationStatusConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
+import { sendRegistrationPaymentConfirmed, sendRegistrationStatusRejected } from '../../../lib/email';
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
 import { tripAdvanceAmountBySlug, adjustBookingCount } from '../../../lib/registrationWrite';
 import { requireRole } from '../../../lib/requireRole';
-import { recordPayment, zohoMode } from '../../../lib/paymentLedger';
+import { recordPayment, sanitizePaymentMethod, validReceivedAt } from '../../../lib/paymentLedger';
+import { paymentState } from '../../../lib/payment';
 import { processZohoDocument } from '../../../lib/zohoBooks';
 
 const VALID_STATUSES = ['lead', 'pending', 'confirmed', 'rejected'];
@@ -39,6 +40,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const batchId = (reg?.batch_id as string) ?? null;
     const tierId = (reg?.tier_id as string) ?? null;
 
+    // Confirm-with-payment selection (honoured only on a lead/pending → confirmed
+    // transition). Absent → the legacy auto-advance path below is preserved.
+    const paymentSel = body.payment && typeof body.payment === 'object' ? body.payment : null;
+    let confirmPayment: { kind: string; amount: number; queuedDoc: boolean } | null = null;
+
     // ── Pre-flight: capacity check BEFORE writing to DB ──────────────────────
     // Must run before the UPDATE so the confirmed count doesn't include this row.
     if (reg && newStatus === 'confirmed' && prevStatus !== 'confirmed' && batchId && tierId) {
@@ -61,6 +67,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } catch { /* non-fatal: proceed with confirm if cap check fails */ }
     }
 
+    // ── Pre-flight: reject an invalid custom payment amount BEFORE any DB write.
+    if (reg && newStatus === 'confirmed' && prevStatus !== 'confirmed'
+        && paymentSel && String(paymentSel.kind) === 'custom') {
+      const total = Number(reg.total_amount);
+      const currentPaid = Number(reg.amount_paid) || 0;
+      const remaining = Number.isFinite(total) && total > 0 ? Math.max(0, total - currentPaid) : Infinity;
+      const amt = Number(paymentSel.amount);
+      if (!Number.isInteger(amt) || amt <= 0 || (Number.isFinite(remaining) && amt > remaining)) {
+        return new Response(JSON.stringify({ success: false, error: 'Custom payment amount is invalid for this booking.' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Update DB
     getDb()
       .prepare(
@@ -75,43 +95,83 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // ── Booking count + revenue adjustment (on the booked departure) ──────
       if (newStatus === 'confirmed' && prevStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, 1, tierId);
-        // Revenue: record the advance collected when the booking is confirmed.
+
+        // Revenue: record the payment received when the booking is confirmed.
         const configuredAdvance = tripAdvanceAmountBySlug(String(reg.trip_slug || ''));
         const total = Number(reg.total_amount);
-        const advance = Number.isFinite(total) && total > 0 ? Math.min(configuredAdvance, total) : configuredAdvance;
+        const hasTotal = Number.isFinite(total) && total > 0;
         const currentPaid = Number(reg.amount_paid) || 0;
-        if (currentPaid <= 0 && advance > 0) {
+        const remaining = hasTotal ? Math.max(0, total - currentPaid) : Infinity;
+
+        // No `payment` field → legacy behaviour: auto-record the configured
+        // advance, but only when nothing has been paid yet.
+        const kind = paymentSel ? String(paymentSel.kind || '') : (currentPaid <= 0 ? 'advance' : 'none');
+
+        let resolvedAmount = 0;
+        if (kind === 'advance') {
+          const target = hasTotal ? Math.min(configuredAdvance, total) : configuredAdvance;
+          resolvedAmount = Math.max(0, target - currentPaid);
+        } else if (kind === 'full') {
+          resolvedAmount = hasTotal ? Math.max(0, total - currentPaid) : 0;
+        } else if (kind === 'custom') {
+          const amt = Number(paymentSel?.amount);
+          if (!Number.isInteger(amt) || amt <= 0 || (Number.isFinite(remaining) && amt > remaining)) {
+            return new Response(JSON.stringify({ success: false, error: 'Custom payment amount is invalid for this booking.' }), {
+              status: 400, headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          resolvedAmount = amt;
+        }
+
+        const documentType = kind === 'full' ? 'final' : (kind === 'advance' || kind === 'custom') ? 'advance' : undefined;
+        const receivedAt = paymentSel?.receivedAt && validReceivedAt(String(paymentSel.receivedAt))
+          ? String(paymentSel.receivedAt) : new Date().toISOString();
+        const method = sanitizePaymentMethod(paymentSel?.method) || reg.payment_method || 'bank_transfer';
+
+        let queuedDoc = false;
+        if (resolvedAmount > 0) {
+          const eventType = currentPaid === 0 && resolvedAmount === configuredAdvance
+            ? 'advance' : currentPaid > 0 ? 'balance' : 'payment';
           const recorded = recordPayment({
             registrationId: id,
-            amount: advance,
-            receivedAt: new Date().toISOString(),
-            method: reg.payment_method || 'bank_transfer',
-            transactionReference: reg.transaction_id,
-            eventType: 'advance',
+            amount: resolvedAmount,
+            receivedAt,
+            method,
+            transactionReference: paymentSel?.transactionReference ?? reg.transaction_id,
+            eventType,
             idempotencyKey: `registration-confirmed:${id}`,
             actorUserId: locals.adminUser?.userId,
             actorEmail: locals.adminUser?.email,
             source: 'status-confirmation',
-            documentType: 'advance',
+            documentType,
           });
           if (recorded.document?.status === 'queued') {
-            void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho advance]', err));
+            queuedDoc = true;
+            void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
           }
         }
+        confirmPayment = { kind, amount: resolvedAmount, queuedDoc };
       } else if (prevStatus === 'confirmed' && newStatus !== 'confirmed') {
         adjustBookingCount(tripName, batchId, -1, tierId);
       }
 
       // ── Email notifications ───────────────────────────────────────────────
       if (newStatus === 'confirmed') {
-        // Live mode sends one combined branded email with the Zoho PDF. Draft
-        // mode never emails customers; disabled preserves the legacy email.
-        if (zohoMode() === 'disabled') {
-          sendRegistrationStatusConfirmed({
+        // When the Zoho worker has a document queued it sends the branded email
+        // itself (with the invoice PDF). Otherwise — disabled mode, or no new
+        // payment — we send the same branded email inline, without an attachment.
+        if (!confirmPayment?.queuedDoc) {
+          const freshPaid = Number((getDb().prepare('SELECT amount_paid FROM registrations WHERE id=?').get(id) as any)?.amount_paid) || 0;
+          const total = Number(reg.total_amount) || 0;
+          sendRegistrationPaymentConfirmed({
             full_name: reg.full_name,
             email: reg.email,
             trip_name: tripName,
             trip_date: reg.trip_date ?? '',
+            kind: confirmPayment?.kind === 'full' ? 'full' : 'advance',
+            amountPaid: freshPaid,
+            totalAmount: total,
+            balanceDue: Math.max(0, total - freshPaid),
           }).catch(err => console.error('[Email confirmed]', err));
         }
       } else if (newStatus === 'rejected') {
@@ -141,7 +201,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         targetType: 'registration',
         targetId: String(id),
         previousValue: { status: prevStatus },
-        newValue: { status: newStatus, admin_notes: adminNotes || undefined },
+        newValue: {
+          status: newStatus,
+          admin_notes: adminNotes || undefined,
+          payment: confirmPayment ? {
+            kind: confirmPayment.kind,
+            amount: confirmPayment.amount,
+            state: paymentState(
+              Number((getDb().prepare('SELECT amount_paid FROM registrations WHERE id=?').get(id) as any)?.amount_paid) || 0,
+              Number(reg?.total_amount) || 0,
+              tripAdvanceAmountBySlug(String(reg?.trip_slug || '')),
+            ),
+          } : undefined,
+        },
       });
     }
 

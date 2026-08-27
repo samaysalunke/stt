@@ -1,4 +1,4 @@
-import { sendFinancialConfirmationWithoutDocument, sendFinancialDocument } from './email';
+import { sendRegistrationPaymentConfirmed } from './email';
 import { getDb } from './db';
 import { billingProblems, type DocumentType } from './paymentLedger';
 
@@ -229,6 +229,21 @@ export async function processZohoDocument(documentId: string) {
     assertZeroTax(current.document_type === 'advance' ? fullDocument.retainerinvoice : fullDocument.invoice);
 
     if (current.mode === 'draft') {
+      // Draft mode never touches Zoho payments, but the customer still gets our
+      // branded confirmation — just without the (undrafted) PDF.
+      const draftReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
+      const draftTotal = Number(draftReg?.total_amount ?? snapshot.totalAmount) || 0;
+      const draftPaid = Number(draftReg?.amount_paid) || 0;
+      await sendRegistrationPaymentConfirmed({
+        full_name: reg.full_name,
+        email: reg.email,
+        trip_name: reg.trip_name,
+        trip_date: reg.trip_date || '',
+        kind: current.document_type === 'final' ? 'full' : 'advance',
+        amountPaid: draftPaid,
+        totalAmount: draftTotal,
+        balanceDue: Math.max(0, draftTotal - draftPaid),
+      }).catch((err) => console.error('[Zoho draft email]', cleanError(err)));
       db.prepare("UPDATE invoice_documents SET status='draft', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(documentId);
       return db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId);
     }
@@ -255,12 +270,18 @@ export async function processZohoDocument(documentId: string) {
 
     const pdf = await downloadPdf(current.document_type, zohoId);
     if (pdf.byteLength > 20 * 1024 * 1024) throw new Error('Zoho PDF exceeds the 20 MB email attachment safety limit');
-    await sendFinancialDocument({
-      fullName: reg.full_name,
+    const paidReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
+    const paidTotal = Number(paidReg?.total_amount ?? snapshot.totalAmount) || 0;
+    const paidAmount = Number(paidReg?.amount_paid) || 0;
+    await sendRegistrationPaymentConfirmed({
+      full_name: reg.full_name,
       email: reg.email,
-      tripName: reg.trip_name,
-      documentType: current.document_type,
-      documentNumber: number,
+      trip_name: reg.trip_name,
+      trip_date: reg.trip_date || '',
+      kind: current.document_type === 'final' ? 'full' : 'advance',
+      amountPaid: paidAmount,
+      totalAmount: paidTotal,
+      balanceDue: Math.max(0, paidTotal - paidAmount),
       attachment: { filename: `${number}.pdf`, content: pdf.toString('base64'), contentType: 'application/pdf' },
     });
     db.prepare("UPDATE invoice_documents SET status='emailed', zoho_status='paid', sent_at=CURRENT_TIMESTAMP, completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(documentId);
@@ -272,9 +293,20 @@ export async function processZohoDocument(documentId: string) {
       .run(message, `+${delayMinutes} minutes`, documentId);
     const failed = db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId) as any;
     if (failed.mode === 'live' && Number(failed.attempts) >= 3 && !failed.sent_at) {
-      const reg = db.prepare('SELECT full_name, email, trip_name FROM registrations WHERE id=?').get(failed.registration_id) as any;
+      const reg = db.prepare('SELECT * FROM registrations WHERE id=?').get(failed.registration_id) as any;
       try {
-        await sendFinancialConfirmationWithoutDocument({ fullName: reg.full_name, email: reg.email, tripName: reg.trip_name, documentType: failed.document_type });
+        const fbTotal = Number(reg?.total_amount) || 0;
+        const fbPaid = Number(reg?.amount_paid) || 0;
+        await sendRegistrationPaymentConfirmed({
+          full_name: reg.full_name,
+          email: reg.email,
+          trip_name: reg.trip_name,
+          trip_date: reg.trip_date || '',
+          kind: failed.document_type === 'final' ? 'full' : 'advance',
+          amountPaid: fbPaid,
+          totalAmount: fbTotal,
+          balanceDue: Math.max(0, fbTotal - fbPaid),
+        });
         db.prepare('UPDATE invoice_documents SET sent_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(documentId);
       } catch (fallbackError) {
         console.error('[Zoho fallback email]', cleanError(fallbackError));

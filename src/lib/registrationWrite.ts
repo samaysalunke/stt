@@ -1,7 +1,7 @@
 import { getDb } from './db';
 import { listTrips, readTrip, writeTrip, findTripByName } from './content';
 import { recalculateUserLeaderboard } from './stats';
-import { sendRegistrationStatusConfirmed } from './email';
+import { sendRegistrationPaymentConfirmed } from './email';
 import { recordPayment, zohoMode } from './paymentLedger';
 import { processZohoDocument } from './zohoBooks';
 
@@ -188,6 +188,7 @@ export function createRegistration(
     const id = Number(res.lastInsertRowid);
 
     if (input.status === 'confirmed') {
+      let queuedDoc = false;
       if (advance > 0) {
         const recorded = recordPayment({
           registrationId: id, amount: advance, receivedAt: input.created_at ?? new Date().toISOString(),
@@ -195,16 +196,26 @@ export function createRegistration(
           source: opts.skipCapacity ? 'historical-admin' : 'admin-create',
           documentType: opts.skipCapacity ? undefined : 'advance',
         });
-        if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((e) => console.error('[Zoho advance]', e));
+        if (recorded.document?.status === 'queued') {
+          queuedDoc = true;
+          void processZohoDocument(recorded.document.id).catch((e) => console.error('[Zoho advance]', e));
+        }
       }
       adjustBookingCount(input.trip_name, input.batch_id, 1, input.tier_id);
       recalculateUserLeaderboard(input.email).catch((e) => console.error('[leaderboard recalc]', e));
-      if (opts.sendEmail && zohoMode() === 'disabled') {
-        sendRegistrationStatusConfirmed({
+      // Worker sends the branded email (with PDF) when a document is queued;
+      // otherwise send it inline, no attachment.
+      if (opts.sendEmail && !(zohoMode() !== 'disabled' && queuedDoc)) {
+        const totalAmount = Number(input.total_amount) || 0;
+        sendRegistrationPaymentConfirmed({
           full_name: input.full_name,
           email: input.email,
           trip_name: input.trip_name,
           trip_date: input.trip_date,
+          kind: 'advance',
+          amountPaid: advance,
+          totalAmount,
+          balanceDue: Math.max(0, totalAmount - advance),
         }).catch((e) => console.error('[Email confirmed]', e));
       }
     }

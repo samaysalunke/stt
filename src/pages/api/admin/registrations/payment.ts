@@ -5,8 +5,9 @@ import { logAction } from '../../../../lib/audit';
 import { tripAdvanceAmountBySlug } from '../../../../lib/registrationWrite';
 import { paymentState } from '../../../../lib/payment';
 import { jsonOk as json } from '../../../../lib/apiResponse';
-import { recordPayment, sanitizePaymentMethod, validReceivedAt } from '../../../../lib/paymentLedger';
+import { recordPayment, sanitizePaymentMethod, validReceivedAt, zohoMode } from '../../../../lib/paymentLedger';
 import { processZohoDocument } from '../../../../lib/zohoBooks';
+import { sendRegistrationPaymentConfirmed } from '../../../../lib/email';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -64,6 +65,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
           documentType: isAdvance ? 'advance' : isFull ? 'final' : undefined,
         });
         if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
+        // Draft/live: the Zoho worker (above) sends the branded email with the
+        // PDF. Disabled mode has no worker, so email the customer inline here.
+        if (amount > 0 && !recorded.duplicate && zohoMode() === 'disabled') {
+          const totalAmount = Number(total) || 0;
+          void sendRegistrationPaymentConfirmed({
+            full_name: reg.full_name,
+            email: reg.email,
+            trip_name: reg.trip_name,
+            trip_date: reg.trip_date ?? '',
+            kind: isFull ? 'full' : 'advance',
+            amountPaid: nextAmount,
+            totalAmount,
+            balanceDue: Math.max(0, totalAmount - nextAmount),
+          }).catch((err) => console.error('[Email payment confirmed]', err));
+        }
         const state = paymentState(nextAmount, total, advance);
         logAction({
           actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email, actorRole: locals.adminUser.role,
