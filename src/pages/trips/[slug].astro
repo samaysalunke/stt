@@ -4,7 +4,7 @@ import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 import { generateTripSeo } from '../../lib/tripSeo';
@@ -13,6 +13,13 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const trip = readTrip(slug!);
+
+// Renamed live trip: its old slug 301s to the current one so shared links,
+// search results and bookmarks keep working.
+if (!trip && !isTripDeleted(slug!)) {
+  const target = resolveTripSlugAlias(slug!);
+  if (target && readTrip(target)) return Astro.redirect(`/trips/${target}/`, 301);
+}
 
 if (!trip || isTripDeleted(slug!) || !isTripPublic({ slug, ...trip })) return new Response('Not Found', { status: 404 });
 

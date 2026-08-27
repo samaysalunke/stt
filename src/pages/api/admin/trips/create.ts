@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { writeTrip, saveImageFile } from '../../../../lib/content';
+import { writeTrip, saveImageFile, clearTripSlugAlias } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
@@ -83,6 +83,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     batches,
   });
 
+  // If this slug used to be a redirect alias, it's a real trip again now.
+  clearTripSlugAlias(slug);
   writeTrip(slug, data);
   await submitToIndexNow([`/trips/${slug}/`]);
   return redirect(`/admin/trips/${slug}`);

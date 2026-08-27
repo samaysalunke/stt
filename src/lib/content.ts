@@ -1,5 +1,6 @@
 export * from './trips';
 export * from './tripDeletions';
+export * from './tripSlugAliases';
 export * from './albums';
 export * from './settings';
 export * from './testimonials';

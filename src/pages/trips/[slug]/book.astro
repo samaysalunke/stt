@@ -1,13 +1,19 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import BookingCheckout from '../../../components/BookingCheckout';
-import { readTrip, readSiteSettings, resolveBooking, isTripPublic, isTripDeleted } from '../../../lib/content';
+import { readTrip, readSiteSettings, resolveBooking, isTripPublic, isTripDeleted, resolveTripSlugAlias } from '../../../lib/content';
 import { getDb } from '../../../lib/db';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
 const trip = readTrip(slug!);
+
+// Renamed live trip: send its old booking URL to the current trip page.
+if (!trip && !isTripDeleted(slug!)) {
+  const target = resolveTripSlugAlias(slug!);
+  if (target && readTrip(target)) return Astro.redirect(`/trips/${target}/`, 301);
+}
 
 if (!trip || isTripDeleted(slug!) || !isTripPublic({ slug, ...trip })) return new Response('Not Found', { status: 404 });
 

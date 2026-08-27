@@ -374,4 +374,15 @@ function initializeSchema(db: Database.Database) {
       actorRole TEXT
     );
   `);
+
+  // Old→current trip slug map. Renaming a live trip leaves the old slug here so
+  // its URL 301s to the new one instead of 404ing. On the DATA_DIR volume so it
+  // survives deploys/re-seeds.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS trip_slug_aliases (
+      alias TEXT PRIMARY KEY,
+      target TEXT NOT NULL,
+      createdAt INTEGER DEFAULT (unixepoch())
+    );
+  `);
 }
