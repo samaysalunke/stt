@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { readAlbum, isAlbumPublic } from '../../lib/content';
+import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 import 'glightbox/dist/css/glightbox.css';
 
 export const prerender = false;
@@ -21,15 +22,15 @@ const subtitle = (album.description as string) || [album.location, formatDate(al
 const year = album.date ? new Date(album.date).getFullYear() : new Date().getFullYear();
 // Richer social share: use the album cover (or first photo) as the OG image.
 const ogImage = (album.coverImage as string) || photos[0]?.image || undefined;
-const canonicalUrl = `https://seekthethrill.in/photo-vault/${slug}/`;
+const canonicalUrl = siteUrl(`/photo-vault/${slug}/`);
 const albumSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://seekthethrill.in/' },
-        { '@type': 'ListItem', position: 2, name: 'Photo Vault', item: 'https://seekthethrill.in/photo-vault/' },
+        { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl('/') },
+        { '@type': 'ListItem', position: 2, name: 'Photo Vault', item: siteUrl('/photo-vault/') },
         { '@type': 'ListItem', position: 3, name, item: canonicalUrl },
       ],
     },
@@ -37,7 +38,7 @@ const albumSchema = {
       '@type': 'ImageGallery', name, url: canonicalUrl,
       description: album.seoDescription || album.description || `Photos from our ${name} adventure.`,
       image: photos.slice(0, 20).map((photo) => photo.image),
-      creator: { '@id': 'https://seekthethrill.in/#organization' },
+      creator: { '@id': `${SITE_ORIGIN}/#organization` },
     },
   ],
 };

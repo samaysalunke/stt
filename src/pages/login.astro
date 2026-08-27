@@ -8,6 +8,14 @@ if (Astro.locals.user) return Astro.redirect('/profile');
 
 const next = Astro.url.searchParams.get('next') ?? '/profile';
 const loginUrl = `/api/auth/google?next=${encodeURIComponent(next)}`;
+
+const errorMessages: Record<string, string> = {
+  oauth_state: 'That sign-in link expired. Please try again.',
+  oauth_token: 'Google sign-in is temporarily unavailable. Please try again in a moment.',
+  oauth_server: 'Something went wrong finishing your sign-in. Please try again.',
+  oauth_config: 'Google sign-in is temporarily unavailable. Please try again in a moment.',
+};
+const errorMessage = errorMessages[Astro.url.searchParams.get('error') ?? ''] ?? null;
 ---
 
 <BaseLayout title="Sign in — Seek the Thrill" description="Sign in to track your adventures with Seek the Thrill." robots="noindex, follow" nav="back">
@@ -19,6 +27,16 @@ const loginUrl = `/api/auth/google?next=${encodeURIComponent(next)}`;
       <p class="text-sm mb-10" style="color: var(--color-gray-text);">
         Track your adventures, see your km from home, and join the leaderboard. New here? Signing in with Google sets you up automatically.
       </p>
+
+      {errorMessage && (
+        <p
+          role="alert"
+          class="text-sm mb-6 px-4 py-3 rounded-2xl"
+          style="background: rgba(232,114,90,0.1); color: var(--color-coral); border: 1px solid var(--color-peach);"
+        >
+          {errorMessage}
+        </p>
+      )}
 
       <a
         href={loginUrl}

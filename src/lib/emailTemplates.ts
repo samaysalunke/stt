@@ -1,6 +1,7 @@
 import { escapeHtml, wrapEmail, sendEmail, ADMIN_EMAIL } from './emailTransport';
 import type { EmailAttachment } from './emailTransport';
 import { readSiteSettings } from './settings';
+import { siteUrl } from './siteUrl';
 
 function getWhatsappLink(): string {
   try {
@@ -124,7 +125,7 @@ export async function sendRegistrationStatusRejected(data: {
       <p style="margin:0;color:#E8725A;font-size:14px;"><strong>What you can do:</strong> Browse our other upcoming trips or contact us on WhatsApp to discuss alternatives.</p>
     </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="https://seekthethrill.in/trips/" style="display:inline-block;background:#1B2B3A;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">Browse Other Trips</a>
+      <a href="${siteUrl('/trips/')}" style="display:inline-block;background:#1B2B3A;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">Browse Other Trips</a>
       <a href="${escapeHtml(whatsappLink)}" style="display:inline-block;background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">WhatsApp Us</a>
     </div>
     <p style="color:#6B7280;font-size:13px;margin:24px 0 0;">If you believe this is a mistake or have questions, please reach out — we'd love to help.</p>
@@ -209,7 +210,7 @@ export async function sendNewsletterWelcome(email: string, unsubscribeToken: str
     <p style="margin: 0 0 16px; color: #1B2B3A;">You're now on the Seek the Thrill list.</p>
     <p style="margin: 0 0 24px; color: #1B2B3A;">We won't spam you. You'll hear from us when there's a new trip, a new batch, or something worth knowing.</p>
     <p style="margin: 0 0 32px; color: #1B2B3A;">That's it.</p>
-    <p style="margin: 0; font-size: 12px; color: #9CA3AF;"><a href="https://seekthethrill.in/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;"><a href="${siteUrl('/unsubscribe')}?token=${encodeURIComponent(unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
   `);
 
   await sendEmail(email, "You're on the list 🏔️", html, { template: 'newsletter-welcome' });
@@ -227,7 +228,7 @@ export async function sendBroadcastToSubscriber(params: {
     <p style="margin: 0 0 16px; color: #1B2B3A;">Hi ${escapeHtml(params.firstName)},</p>
     <div style="color: #1B2B3A; line-height: 1.7; margin-bottom: 24px;">${params.bodyHtml}</div>
     ${params.postUrl ? `<p style="margin: 0 0 32px;"><a href="${escapeHtml(params.postUrl)}" style="display: inline-block; background: #E8725A; color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">Read more →</a></p>` : ''}
-    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">You're getting this because you signed up at seekthethrill.in.<br><a href="https://seekthethrill.in/unsubscribe?token=${encodeURIComponent(params.unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
+    <p style="margin: 0; font-size: 12px; color: #9CA3AF;">You're getting this because you signed up at seekthethrill.in.<br><a href="${siteUrl('/unsubscribe')}?token=${encodeURIComponent(params.unsubscribeToken)}" style="color: #9CA3AF;">Unsubscribe</a></p>
   `);
 
   await sendEmail(params.email, params.subject, html, { template: 'newsletter-broadcast' });

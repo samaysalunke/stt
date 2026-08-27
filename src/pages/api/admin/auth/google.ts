@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
+import { siteUrl } from '../../../../lib/siteUrl';
 
 export const prerender = false;
 
@@ -7,11 +8,16 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
   const clientId = import.meta.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '';
   const redirectUri = import.meta.env.ADMIN_OAUTH_REDIRECT_URI
     ?? process.env.ADMIN_OAUTH_REDIRECT_URI
-    ?? 'http://localhost:4321/api/admin/auth/callback';
+    ?? siteUrl('/api/admin/auth/callback');
+
+  if (!clientId) {
+    return redirect('/admin/login?error=oauth');
+  }
 
   const state = crypto.randomUUID();
   cookies.set('admin_oauth_state', state, {
     httpOnly: true,
+    secure: import.meta.env.PROD,
     sameSite: 'lax',
     path: '/',
     maxAge: 600,

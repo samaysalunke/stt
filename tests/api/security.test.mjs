@@ -123,9 +123,9 @@ test('TC-198 forwarded same-origin multipart upload is allowed', async () => {
   const res = await fetch(`${BASE}/api/upload`, {
     method: 'POST',
     headers: {
-      Origin: 'https://stt-production-2707.up.railway.app',
+      Origin: 'https://www.seekthethrill.in',
       'X-Forwarded-Proto': 'https',
-      'X-Forwarded-Host': 'stt-production-2707.up.railway.app',
+      'X-Forwarded-Host': 'www.seekthethrill.in',
     },
     body: testUploadForm(),
   });

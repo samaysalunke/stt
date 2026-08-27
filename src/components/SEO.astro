@@ -1,4 +1,6 @@
 ---
+import { SITE_ORIGIN } from '../lib/siteUrl';
+
 interface Props {
   title: string;
   description: string;
@@ -19,7 +21,7 @@ const {
   robots = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
 } = Astro.props;
 
-const siteUrl = 'https://seekthethrill.in';
+const siteUrl = SITE_ORIGIN;
 const fullTitle = title.includes('Seek the Thrill') ? title : `${title} | Seek the Thrill`;
 const path = Astro.url.pathname === '/' ? '/' : `${Astro.url.pathname.replace(/\/+$/, '')}/`;
 const canonicalUrl = canonical ?? new URL(path, siteUrl).href;
