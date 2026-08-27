@@ -20,6 +20,8 @@ const VALID_DEPARTURES = JSON.stringify([
     startDate: '2099-01-01',
     endDate: '2099-01-03',
     status: 'booking-open',
+    discountAmount: 1250,
+    discountEndsAt: '2098-12-20T18:30:00+05:30',
     offers: [
       { tierId: 'economy', price: 5000, cap: 20, booked: 0 },
       { tierId: 'premium', price: 8000, cap: 5,  booked: 0 },
@@ -69,6 +71,9 @@ test('TC-100 authenticated update with valid catalog+departures JSON → redirec
     /\/admin\/trips/,
     'Should redirect back to admin trips',
   );
+  const saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.equal(saved.batches[0].discountAmount, 1250);
+  assert.equal(saved.batches[0].discountEndsAt, '2098-12-20T13:00:00.000Z');
 });
 
 test('TC-101 malformed departures_json → rejected without a false success redirect', async () => {

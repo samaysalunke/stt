@@ -200,6 +200,46 @@ describe('parseEditorBooking — valid round-trip', () => {
     expect(batches[0].offers[0].cap).toBeNull();
   });
 
+  test('departure discount amount and expiry round-trip as normalized values', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const depJson = JSON.stringify([{
+      id: 'dep-discount',
+      startDate: '2099-01-01',
+      endDate: '2099-01-05',
+      status: 'booking-open',
+      discountAmount: 1500.4,
+      discountEndsAt: '2098-12-15T18:30:00+05:30',
+      offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }],
+    }]);
+    const { batches } = parseEditorBooking(catJson, depJson);
+    expect(batches[0].discountAmount).toBe(1500);
+    expect(batches[0].discountEndsAt).toBe('2098-12-15T13:00:00.000Z');
+  });
+
+  test('expiry is discarded when no positive discount is configured', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const depJson = JSON.stringify([{
+      id: 'dep-no-discount', startDate: '2099-01-01', endDate: '2099-01-05',
+      discountAmount: 0, discountEndsAt: '2098-12-15T13:00:00.000Z',
+      offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }],
+    }]);
+    const { batches } = parseEditorBooking(catJson, depJson);
+    expect(batches[0].discountAmount).toBeNull();
+    expect(batches[0].discountEndsAt).toBeNull();
+  });
+
+  test('null expiry keeps a positive discount open-ended', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const depJson = JSON.stringify([{
+      id: 'dep-open-sale', startDate: '2099-01-01', endDate: '2099-01-05',
+      discountAmount: 500, discountEndsAt: null,
+      offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }],
+    }]);
+    const { batches } = parseEditorBooking(catJson, depJson);
+    expect(batches[0].discountAmount).toBe(500);
+    expect(batches[0].discountEndsAt).toBeNull();
+  });
+
   test('zero is accepted as an intentional price', () => {
     const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
     const depJson = JSON.stringify([

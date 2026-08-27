@@ -1062,6 +1062,12 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
 
   const slugify = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const localDateTime = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
 
   function ensureTierId(tier, i) {
     if (!tier.id) tier.id = slugify(tier.label) || ('tier-' + i);
@@ -1165,6 +1171,18 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       head.querySelector('.dep-remove').addEventListener('click', () => { departures.splice(di, 1); renderDepartures(); });
       card.appendChild(head);
 
+      const discount = document.createElement('div');
+      discount.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; margin-top:0.75rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-bg-soft, #faf7f5);';
+      discount.innerHTML =
+        '<div style="flex:1; min-width:150px;"><span class="fhint">Departure discount ₹</span>' +
+          '<input type="number" min="0" step="1" class="finput dep-discount" value="' + (dep.discountAmount != null ? dep.discountAmount : '') + '" placeholder="e.g. 2000" /></div>' +
+        '<div style="flex:2; min-width:220px;"><span class="fhint">Valid until (optional)</span>' +
+          '<input type="datetime-local" class="finput dep-discount-end" value="' + esc(localDateTime(dep.discountEndsAt)) + '" /></div>' +
+        '<span class="fhint" style="flex-basis:100%;">This amount is deducted from every selected occupancy price. Leave the validity empty for a discount with no expiry.</span>';
+      discount.querySelector('.dep-discount').addEventListener('input', (e) => { dep.discountAmount = e.target.value === '' ? null : Number(e.target.value); });
+      discount.querySelector('.dep-discount-end').addEventListener('input', (e) => { dep.discountEndsAt = e.target.value ? new Date(e.target.value).toISOString() : ''; });
+      card.appendChild(discount);
+
       const grid = document.createElement('div');
       grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
       if (catalog.length === 0) {
@@ -1216,7 +1234,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
   document.getElementById('add-departure-btn').addEventListener('click', () => {
-    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', offers: [] });
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', offers: [] });
     renderDepartures();
   });
 

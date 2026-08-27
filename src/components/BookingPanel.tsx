@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
+import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 
 // Mirrors the ResolvedBooking shape from src/lib/content.ts. Re-declared here
 // (not imported) so this client island never pulls node `fs` into the bundle.
@@ -8,6 +9,7 @@ interface Offer {
   label: string;
   helperText: string;
   price: number;
+  originalPrice: number | null;
   cap: number | null;
   booked: number;
   available: boolean;
@@ -21,12 +23,17 @@ interface Departure {
   totalCap: number | null;
   spotsLeft: number | null;
   soldOut: boolean;
+  discountAmount?: number;
+  discountEndsAt?: string | null;
+  discountActive?: boolean;
 }
 interface Props {
   departures: Departure[];
   advanceAmount: number;
   balanceDueRule: string;
   fromPrice: number | null;
+  originalFromPrice?: number | null;
+  fromDiscountEndsAt?: string | null;
   whatsappLink: string;
   slug: string;
 }
@@ -49,6 +56,8 @@ export default function BookingPanel({
   advanceAmount,
   balanceDueRule,
   fromPrice,
+  originalFromPrice = null,
+  fromDiscountEndsAt = null,
   whatsappLink,
   slug,
 }: Props) {
@@ -58,9 +67,12 @@ export default function BookingPanel({
 
   const selectedDeparture = departures.find((d) => d.id === departureId) ?? null;
   const selectedOffer = selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ?? null;
+  const selectedDiscountActive = useDiscountActive(selectedDeparture?.discountEndsAt, !!selectedDeparture?.discountActive);
 
-  const perPerson = selectedOffer?.price ?? 0;
-  const advanceDue = Math.min(advanceAmount, perPerson || advanceAmount);
+  const perPerson = selectedOffer
+    ? (selectedDiscountActive ? selectedOffer.price : (selectedOffer.originalPrice ?? selectedOffer.price))
+    : 0;
+  const advanceDue = Math.min(advanceAmount, perPerson);
   const balance = Math.max(0, perPerson - advanceDue);
 
   // A new date always requires an explicit occupancy choice.
@@ -101,11 +113,17 @@ export default function BookingPanel({
       {/* Price header — the "from" floor (never contradicted; summary is the truth) */}
       {fromPrice != null && (
         <div className="mb-5">
+          {originalFromPrice != null && (
+            <span className="text-sm mr-2 line-through" style={{ color: C.gray }}>{formatINR(originalFromPrice)}</span>
+          )}
           <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
           <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
             {formatINR(fromPrice)}
           </span>
           <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
+          {originalFromPrice != null && fromDiscountEndsAt && (
+            <DiscountCountdown endsAt={fromDiscountEndsAt} reloadOnExpire className="block mt-1 text-xs font-semibold" />
+          )}
         </div>
       )}
 
@@ -144,6 +162,12 @@ export default function BookingPanel({
                   <div className="font-semibold text-sm" style={{ color: C.navy, fontFamily: 'var(--font-display)' }}>
                     {dateRange(dep)}
                   </div>
+                  {dep.discountActive && (
+                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>
+                      Save {formatINR(dep.discountAmount ?? 0)} on every stay
+                      {dep.discountEndsAt && <DiscountCountdown endsAt={dep.discountEndsAt} reloadOnExpire className="block mt-0.5" />}
+                    </div>
+                  )}
                   {isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
                   ) : showSpotsLeft ? (
@@ -210,8 +234,9 @@ export default function BookingPanel({
                       ) : null}
                     </span>
                   </span>
-                  <span className="text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
-                    {formatINR(offer.price)}
+                  <span className="text-right text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
+                    {offer.originalPrice != null && <span className="block text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(offer.originalPrice)}</span>}
+                    {formatINR(selectedDiscountActive ? offer.price : (offer.originalPrice ?? offer.price))}
                   </span>
                 </label>
               );
@@ -225,7 +250,10 @@ export default function BookingPanel({
         <div className="mb-5 rounded-xl overflow-hidden border text-sm" style={{ borderColor: C.peach }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <span style={{ color: C.gray }}>Per person</span>
-            <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>{formatINR(perPerson)}</span>
+            <span className="font-semibold text-right" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>
+              {selectedDiscountActive && selectedOffer.originalPrice != null && <span className="mr-2 text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(selectedOffer.originalPrice)}</span>}
+              {formatINR(perPerson)}
+            </span>
           </div>
           <div className="flex items-center justify-between px-4 py-3" style={{ background: C.blush, borderBottom: `1px solid ${C.peach}` }}>
             <span className="font-semibold" style={{ color: C.coral }}>Advance now</span>

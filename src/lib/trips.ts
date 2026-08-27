@@ -112,6 +112,8 @@ export interface ResolvedOffer {
   label: string;
   helperText: string;
   price: number;
+  /** Base price before a currently-active departure discount. */
+  originalPrice: number | null;
   cap: number | null;
   booked: number;
   available: boolean;
@@ -126,6 +128,9 @@ export interface ResolvedDeparture {
   totalCap: number | null;
   spotsLeft: number | null;
   soldOut: boolean;
+  discountAmount?: number;
+  discountEndsAt?: string | null;
+  discountActive?: boolean;
 }
 
 export interface ResolvedBooking {
@@ -177,6 +182,7 @@ function resolveOffers(
   catalog: ResolvedBooking['occupancyCatalog'],
 ): ResolvedOffer[] {
   const labelOf = (tierId: string) => catalog.find((c) => c.id === tierId);
+  const discountAmount = activeDepartureDiscount(batch);
   const mk = (tierId: string, price: number, cap: number | null, booked: number): ResolvedOffer => {
     const meta = labelOf(tierId);
     const c = cap == null ? null : Math.max(0, cap);
@@ -185,7 +191,8 @@ function resolveOffers(
       tierId,
       label: meta?.label ?? tierId,
       helperText: meta?.helperText ?? '',
-      price: Math.round(price),
+      price: Math.max(0, Math.round(price) - discountAmount),
+      originalPrice: discountAmount > 0 ? Math.round(price) : null,
       cap: c,
       booked: b,
       available: c == null ? true : c - b > 0,
@@ -219,6 +226,16 @@ function resolveOffers(
   return [mk('standard', flat, dateCap, dateBooked)];
 }
 
+/** Returns the fixed rupee discount that is active for this departure right now. */
+export function activeDepartureDiscount(batch: Record<string, any>, now = Date.now()): number {
+  const amount = Math.max(0, Math.round(Number(batch?.discountAmount) || 0));
+  if (amount <= 0) return 0;
+  const rawEndsAt = String(batch?.discountEndsAt ?? '').trim();
+  if (!rawEndsAt) return amount;
+  const endsAt = new Date(rawEndsAt).getTime();
+  return Number.isFinite(endsAt) && endsAt > now ? amount : 0;
+}
+
 export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
   const catalog = resolveCatalog(trip);
   const hasBatchArray = Array.isArray(trip?.batches) && trip.batches.length > 0;
@@ -237,6 +254,7 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
     : [];
 
   const departures: ResolvedDeparture[] = rawDepartures.map((b) => {
+    const discountAmount = activeDepartureDiscount(b);
     const offers = resolveOffers(b, trip, catalog);
     const metered = offers.every((o) => o.cap != null);
     const spotsLeft = metered
@@ -256,6 +274,9 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
       totalCap,
       spotsLeft,
       soldOut,
+      discountAmount,
+      discountEndsAt: discountAmount > 0 && b.discountEndsAt ? String(b.discountEndsAt) : null,
+      discountActive: discountAmount > 0,
     };
   });
 
@@ -284,17 +305,38 @@ export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
 
 export function tripCardSummary(trip: Record<string, any>): {
   fromPrice: number | null;
+  originalFromPrice: number | null;
+  discountEndsAt: string | null;
   multiPrice: boolean;
   spotsLeft: number | null;
   soldOut: boolean;
 } {
   const booking = resolveBooking(trip);
   const prices = new Set<number>();
+  const candidates: Array<{ price: number; originalPrice: number | null; discountEndsAt: string | null }> = [];
   for (const d of booking.departures) for (const o of d.offers) prices.add(o.price);
+  for (const d of booking.departures) {
+    if (d.soldOut) continue;
+    for (const o of d.offers) if (o.available) candidates.push({
+      price: o.price,
+      originalPrice: o.originalPrice,
+      discountEndsAt: d.discountEndsAt ?? null,
+    });
+  }
+  if (candidates.length === 0) {
+    for (const d of booking.departures) for (const o of d.offers) candidates.push({
+      price: o.price,
+      originalPrice: o.originalPrice,
+      discountEndsAt: d.discountEndsAt ?? null,
+    });
+  }
+  const lead = candidates.sort((a, b) => a.price - b.price)[0] ?? null;
   const soonest = booking.departures.find((d) => !d.soldOut) ?? booking.departures[0] ?? null;
   const allSoldOut = booking.departures.length > 0 && booking.departures.every((d) => d.soldOut);
   return {
     fromPrice: booking.fromPrice,
+    originalFromPrice: lead?.originalPrice ?? null,
+    discountEndsAt: lead?.originalPrice != null ? lead.discountEndsAt : null,
     multiPrice: prices.size > 1,
     spotsLeft: soonest?.spotsLeft ?? null,
     soldOut: allSoldOut,

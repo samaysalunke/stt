@@ -118,6 +118,52 @@ describe('new schema — multi-tier, both available (Meghalaya pattern)', () => 
   });
 });
 
+describe('departure-wide discounts', () => {
+  test('active fixed discount applies to every accommodation and retains base prices', () => {
+    const trip = makeMultiTierTrip({
+      batches: [{
+        ...makeMultiTierTrip().batches[0],
+        discountAmount: 1200,
+        discountEndsAt: '2026-07-02T00:00:00.000Z',
+      }],
+    });
+    const dep = resolveBooking(trip).departures[0];
+    expect(dep.discountActive).toBe(true);
+    expect(dep.discountAmount).toBe(1200);
+    expect(dep.offers.map((offer) => offer.price)).toEqual([3800, 5800]);
+    expect(dep.offers.map((offer) => offer.originalPrice)).toEqual([5000, 7000]);
+    expect(resolveBooking(trip).fromPrice).toBe(3800);
+  });
+
+  test('expired discount automatically restores base prices', () => {
+    const trip = makeMultiTierTrip({
+      batches: [{
+        ...makeMultiTierTrip().batches[0],
+        discountAmount: 1200,
+        discountEndsAt: '2026-06-30T23:59:59.000Z',
+      }],
+    });
+    const dep = resolveBooking(trip).departures[0];
+    expect(dep.discountActive).toBe(false);
+    expect(dep.offers.map((offer) => offer.price)).toEqual([5000, 7000]);
+    expect(dep.offers.every((offer) => offer.originalPrice === null)).toBe(true);
+  });
+
+  test('discount without an expiry remains active and never makes a price negative', () => {
+    const trip = makeSingleTierTrip({
+      batches: [{
+        ...makeSingleTierTrip().batches[0],
+        discountAmount: 50000,
+      }],
+    });
+    const dep = resolveBooking(trip).departures[0];
+    expect(dep.discountActive).toBe(true);
+    expect(dep.discountEndsAt).toBeNull();
+    expect(dep.offers[0].price).toBe(0);
+    expect(dep.offers[0].originalPrice).toBe(35000);
+  });
+});
+
 // ── New schema — one tier sold out on a departure ────────────────────────────
 
 describe('new schema — one tier sold out (Sahyadri jul1 pattern)', () => {

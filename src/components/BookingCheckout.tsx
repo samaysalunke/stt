@@ -1,17 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import { INDIA_CITIES } from '../lib/indiaCities';
+import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 
 interface Offer {
   tierId: string;
   label: string;
   helperText: string;
   price: number;
+  originalPrice: number | null;
 }
 interface Departure {
   id: string;
   startDate: string;
   endDate: string;
+  discountAmount?: number;
+  discountEndsAt?: string | null;
+  discountActive?: boolean;
 }
 interface Props {
   slug: string;
@@ -329,11 +334,13 @@ export default function BookingCheckout({
 
   // A resumed pending/confirmed registration already locked in an amount when it was
   // paid — show that, not whatever tier the current URL/departure happens to resolve to.
-  const perPerson =
-    (initialRegistration?.status === 'pending' || initialRegistration?.status === 'confirmed') && initialRegistration.totalAmount
-      ? initialRegistration.totalAmount
-      : offer.price;
-  const advanceDue = Math.min(advanceAmount, perPerson || advanceAmount);
+  const amountIsLocked =
+    (initialRegistration?.status === 'pending' || initialRegistration?.status === 'confirmed') && !!initialRegistration.totalAmount;
+  const discountActive = useDiscountActive(departure.discountEndsAt, departure.discountActive && !amountIsLocked);
+  const perPerson = amountIsLocked
+    ? initialRegistration!.totalAmount!
+    : (discountActive ? offer.price : (offer.originalPrice ?? offer.price));
+  const advanceDue = Math.min(advanceAmount, perPerson);
   const balance = Math.max(0, perPerson - advanceDue);
   const dateStr = `${formatDateIN(departure.startDate)} – ${formatDateIN(departure.endDate)}`;
 
@@ -556,6 +563,12 @@ export default function BookingCheckout({
         <div className="px-5 py-4 border-b" style={{ borderColor: C.peach }}>
           <div className="text-xs font-semibold uppercase tracking-wider mb-0.5" style={{ color: C.gray }}>Dates</div>
           <div className="font-medium text-sm" style={{ color: C.navy }}>{dateStr}</div>
+          {discountActive && (departure.discountAmount ?? 0) > 0 && (
+            <div className="text-xs font-semibold mt-1" style={{ color: C.coral }}>
+              Save {formatINR(departure.discountAmount ?? 0)} on this departure
+              {departure.discountEndsAt && <DiscountCountdown endsAt={departure.discountEndsAt} className="block mt-0.5" />}
+            </div>
+          )}
         </div>
         <div className="px-5 py-4 border-b" style={{ borderColor: C.peach }}>
           <div className="text-xs font-semibold uppercase tracking-wider mb-0.5" style={{ color: C.gray }}>Occupancy</div>
@@ -564,7 +577,10 @@ export default function BookingCheckout({
         <div className="divide-y" style={{ borderColor: C.peach }}>
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-sm" style={{ color: C.gray }}>Per person</span>
-            <span className="font-semibold text-sm" style={{ color: C.navy }}>{formatINR(perPerson)}</span>
+            <span className="font-semibold text-sm text-right" style={{ color: C.navy }}>
+              {!amountIsLocked && discountActive && offer.originalPrice != null && <span className="mr-2 text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(offer.originalPrice)}</span>}
+              {formatINR(perPerson)}
+            </span>
           </div>
           <div className="flex items-center justify-between px-5 py-3" style={{ background: C.blush }}>
             <div>

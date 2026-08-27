@@ -2,8 +2,9 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
+import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 
 export const prerender = false;
@@ -66,6 +67,7 @@ const departures = booking.departures;
 const paymentAmount = booking.advanceAmount;
 const balanceDueRule = booking.balanceDueRule;
 const fromPrice = booking.fromPrice;
+const priceSummary = tripCardSummary({ slug, ...trip });
 const formattedLead = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : 'TBD';
 
 // A batches-trip whose dates have all passed has nothing to book.
@@ -225,7 +227,9 @@ const tripSchema: Record<string, any> = {
         <div class="mt-2 flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {fromPrice != null && (
             <span class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm" style="background-color: rgba(232,114,90,0.85);">
+              {priceSummary.originalFromPrice != null && <span class="line-through opacity-80">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
               from {formattedLead} / person
+              {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="ml-1" client:load />}
             </span>
           )}
         </div>
@@ -396,6 +400,8 @@ const tripSchema: Record<string, any> = {
                 advanceAmount={paymentAmount}
                 balanceDueRule={balanceDueRule}
                 fromPrice={fromPrice}
+                originalFromPrice={priceSummary.originalFromPrice}
+                fromDiscountEndsAt={priceSummary.discountEndsAt}
                 whatsappLink={whatsappLink}
                 slug={slug!}
                 client:load
@@ -404,9 +410,11 @@ const tripSchema: Record<string, any> = {
               <>
                 {fromPrice != null && (
                   <div class="mb-5">
+                    {priceSummary.originalFromPrice != null && <span class="mr-2 text-sm line-through" style="color: var(--color-gray-text);">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
                     <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>
                     <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedLead}</span>
                     <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
+                    {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="mt-1 block text-xs font-semibold" client:load />}
                   </div>
                 )}
                 <div class="w-full py-3.5 rounded-full text-center text-sm font-medium" style="background-color: #f3f4f6; color: var(--color-gray-text);">

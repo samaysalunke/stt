@@ -73,6 +73,23 @@ test('fromPrice equals cheapest available price', () => {
   expect(tripCardSummary(trip).fromPrice).toBe(5000);
 });
 
+test('discounted lead price exposes its slashed base price and expiry', () => {
+  const endsAt = '2026-07-02T00:00:00.000Z';
+  const trip = makeTrip([{
+    id: 'dep-sale', startDate: FAR, endDate: FAR_END, status: 'booking-open',
+    discountAmount: 1000, discountEndsAt: endsAt,
+    offers: [
+      { tierId: 'dorm', price: 5000, cap: 10, booked: 0 },
+      { tierId: 'private', price: 7000, cap: 3, booked: 0 },
+    ],
+  }]);
+  expect(tripCardSummary(trip)).toMatchObject({
+    fromPrice: 4000,
+    originalFromPrice: 5000,
+    discountEndsAt: endsAt,
+  });
+});
+
 test('fromPrice is null when no departures', () => {
   const trip = makeTrip([]);
   expect(tripCardSummary(trip).fromPrice).toBeNull();

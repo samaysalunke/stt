@@ -1,6 +1,7 @@
 ---
 import type { ResolvedDeparture } from '../lib/trips';
 import { formatDepartureRange, getDepartureSummary } from '../lib/departureSummary';
+import DiscountCountdown from './DiscountCountdown';
 
 interface Props {
   slug: string;
@@ -13,6 +14,8 @@ interface Props {
   location?: string | null;
   duration?: string | null;
   fromPrice?: number | null;
+  originalFromPrice?: number | null;
+  discountEndsAt?: string | null;
   multiPrice?: boolean;
   spotsLeft?: number | null;
   soldOut?: boolean;
@@ -30,6 +33,8 @@ const {
   location,
   duration,
   fromPrice = null,
+  originalFromPrice = null,
+  discountEndsAt = null,
   multiPrice = false,
   spotsLeft = null,
   soldOut = false,
@@ -110,8 +115,14 @@ const departureSummary = getDepartureSummary(departures);
         )}
       </div>
       <div class="shrink-0 text-right">
+        {originalFromPrice != null && (
+          <p class="text-sm leading-none line-through" style="color: var(--color-gray-text);">₹{originalFromPrice.toLocaleString('en-IN')}</p>
+        )}
         <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle" style="color: var(--color-gray-text);">from </span> : null}{formattedPrice ?? '—'}</p>
         <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">per person</p>
+        {originalFromPrice != null && discountEndsAt && (
+          <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1 block text-[10px] font-semibold" client:load />
+        )}
       </div>
     </div>
 
