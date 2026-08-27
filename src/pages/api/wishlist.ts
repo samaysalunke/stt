@@ -6,6 +6,7 @@ import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { assignAutoUsername } from '../../lib/usernames';
 import { jsonOk, jsonFail } from '../../lib/apiResponse';
+import { attributionSource, readAttribution } from '../../lib/attribution';
 
 export const prerender = false;
 
@@ -18,7 +19,7 @@ export const prerender = false;
  *   sign-in claims (see src/pages/api/auth/callback.ts).
  * Idempotent per (lower(email), trip_slug, batch_id).
  */
-export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
+export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }) => {
   if (!rateLimit(`wishlist:${clientAddress}`, 10, 60 * 60 * 1000)) {
     return jsonFail('Too many requests. Please try again later.', 429);
   }
@@ -54,6 +55,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
   if (!phone || !isValidPhone(phone)) return jsonFail('A valid phone number is required.', 400);
 
   const db = getDb();
+  const attribution = readAttribution(cookies);
+  const marketingSource = attributionSource(attribution.firstTouch);
 
   try {
     // ── Resolve / create the user record ────────────────────────────────────
@@ -94,9 +97,12 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
       INSERT INTO registrations (
         trip_name, trip_slug, trip_date, full_name, email, phone,
         emergency_name, emergency_phone, batch_id, tier_id,
-        source, status, amount_paid, wishlisted_at, consent_at, status_changed_at
-      ) VALUES (?,?,?,?,?,?, '', '', ?, ?, 'wishlist', 'wishlist', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(tripName, tripSlug, tripDate, name, email, phone, batchId, departure.offers[0]?.tierId ?? null);
+        source, source_detail, status, amount_paid, wishlisted_at, consent_at, status_changed_at,
+        first_touch_json, latest_touch_json
+      ) VALUES (?,?,?,?,?,?, '', '', ?, ?, ?, ?, 'wishlist', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, ?)
+    `).run(tripName, tripSlug, tripDate, name, email, phone, batchId, departure.offers[0]?.tierId ?? null,
+      marketingSource.source, marketingSource.detail,
+      JSON.stringify(attribution.firstTouch), JSON.stringify(attribution.latestTouch));
 
     return jsonOk({ success: true, status: 'wishlist' });
   } catch (err) {

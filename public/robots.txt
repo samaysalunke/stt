@@ -6,10 +6,20 @@ Disallow: /keystatic/
 Disallow: /admin/
 Disallow: /api/
 
-# AI search, retrieval, and training crawlers follow the same public-only policy.
+# AI search and user-requested retrieval crawlers.
 User-agent: OAI-SearchBot
 User-agent: ChatGPT-User
 User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+Allow: /
+Disallow: /keystatic/
+Disallow: /admin/
+Disallow: /api/
+
+# Model-training crawlers are kept in a separate group so this policy can be
+# changed independently without accidentally removing search visibility.
 User-agent: GPTBot
 User-agent: ClaudeBot
 Allow: /

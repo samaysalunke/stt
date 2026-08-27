@@ -2,12 +2,13 @@
 import LegalPageLayout from '../components/LegalPageLayout.astro';
 import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
+import { formatPolicyDate } from '../lib/policyDates';
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
 const email = settings.email ?? 'zahra@seekthethrill.in';
-const lastUpdated = 'August 2026';
+const lastUpdated = formatPolicyDate(settings.cancellationUpdatedAt, 'August 2026');
 // Admin copy can replace the policy while retaining the polished page shell.
 const override = (settings.cancellationPolicy ?? '').trim();
 

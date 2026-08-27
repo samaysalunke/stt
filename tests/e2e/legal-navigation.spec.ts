@@ -16,8 +16,8 @@ test.describe('legal pages and navigation drawer', () => {
 
   for (const pageInfo of [
     { path: '/cancellation/', slug: 'cancellation', title: 'Cancellation Policy', date: 'August 2026' },
-    { path: '/terms/', slug: 'terms', title: 'Terms & Conditions', date: 'June 2025' },
-    { path: '/privacy/', slug: 'privacy', title: 'Privacy Policy', date: 'March 2025' },
+    { path: '/terms/', slug: 'terms', title: 'Terms & Conditions', date: 'August 2026' },
+    { path: '/privacy/', slug: 'privacy', title: 'Privacy Policy', date: 'August 2026' },
   ]) {
     test(`${pageInfo.title} uses the shared legal shell`, async ({ page }) => {
       await page.goto(pageInfo.path);

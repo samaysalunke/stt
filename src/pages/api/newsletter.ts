@@ -4,8 +4,9 @@ import { getDb } from '../../lib/db';
 import { isValidEmail } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { sendNewsletterWelcome } from '../../lib/email';
+import { attributionSource, readAttribution } from '../../lib/attribution';
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   if (!rateLimit(`newsletter:${clientAddress}`, 5, 60 * 60 * 1000)) {
     return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
       status: 429,
@@ -27,6 +28,8 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     }
 
     const db = getDb();
+    const attribution = readAttribution(cookies);
+    const marketingSource = attributionSource(attribution.firstTouch);
 
     // Silently succeed for existing subscribers
     const existing = db.prepare('SELECT id FROM newsletter_subscribers WHERE email = ?').get(email);
@@ -39,9 +42,10 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
     const token = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO newsletter_subscribers (email, name, status, source, unsubscribe_token, active)
-      VALUES (?, ?, 'active', ?, ?, 1)
-    `).run(email, name, source, token);
+      INSERT INTO newsletter_subscribers (
+        email, name, status, source, unsubscribe_token, active, first_touch_json, latest_touch_json
+      ) VALUES (?, ?, 'active', ?, ?, 1, ?, ?)
+    `).run(email, name, source || marketingSource.source, token, JSON.stringify(attribution.firstTouch), JSON.stringify(attribution.latestTouch));
 
     sendNewsletterWelcome(email, token).catch(err => console.error('[Newsletter welcome email]', err));
 

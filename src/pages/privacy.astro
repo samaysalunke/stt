@@ -2,10 +2,11 @@
 import LegalPageLayout from '../components/LegalPageLayout.astro';
 import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
+import { formatPolicyDate } from '../lib/policyDates';
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
-const lastUpdated = 'March 2025';
+const lastUpdated = formatPolicyDate(settings.privacyUpdatedAt, 'August 2026');
 const email = settings.email ?? 'zahra@seekthethrill.in';
 const phone = settings.phone ?? '+91-7975027491';
 // Admin override: if set in Settings, it replaces the default page below.
@@ -86,8 +87,11 @@ const override = (settings.privacyPolicy ?? '').trim();
 
         <h2>7. Cookies &amp; Analytics</h2>
         <p>
-          We use essential session cookies for admin authentication. In addition, we use the following third-party
-          analytics services to understand how visitors use our website and to improve it:
+          We use essential session cookies for account and admin authentication. We also use first-party attribution
+          cookies for up to 90 days to remember the landing page, referring site, and any UTM campaign parameters that
+          brought you to us. If you submit an enquiry, wishlist request, newsletter subscription, or registration, we
+          store that attribution with the submission so we can understand which campaigns are useful. In addition, we
+          use the following third-party analytics services to understand how visitors use our website and improve it:
         </p>
         <ul>
           <li>

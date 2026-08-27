@@ -8,8 +8,9 @@ import { sanitizeInput } from '../../../../lib/utils';
 const TEXT_FIELDS = [
   'email', 'phone', 'whatsappLink', 'instagram', 'address',
   'upiId', 'bankAccountName', 'bankAccountNumber', 'bankBranch', 'bankIfsc',
-  'googleAnalyticsId', 'copyrightText',
+  'googleAnalyticsId', 'googleSiteVerification', 'bingSiteVerification', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',
+  'cancellationUpdatedAt', 'termsUpdatedAt', 'privacyUpdatedAt',
   // About page copy (blank = built-in default, like the legal overrides)
   'aboutBylineName', 'aboutCaption', 'aboutQuote',
   'aboutBody', 'aboutPrinciplesHeading', 'aboutSignature', 'aboutSignoff',

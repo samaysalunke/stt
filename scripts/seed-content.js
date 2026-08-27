@@ -57,4 +57,27 @@ function copyDir(src, dest) {
 }
 
 copyDir(SEED_DIR, CONTENT_DIR);
+
+// One-time production content migration: these FAQ files previously exposed
+// payment credentials and hard-coded amounts that no longer match every trip.
+// A marker on the persistent content volume makes this safe for later admin edits.
+const migrationDir = path.join(CONTENT_DIR, '.migrations');
+const paymentFactsMarker = path.join(migrationDir, 'seo-aeo-payment-facts-v1');
+if (!fs.existsSync(paymentFactsMarker)) {
+  const faqFiles = [
+    'what-s-the-booking-advance-amount.yaml',
+    'what-payment-methods-do-you-accept.yaml',
+    'when-is-the-full-payment-due.yaml',
+    'what-if-i-need-to-cancel.yaml',
+    'what-if-you-cancel-the-trip.yaml',
+  ];
+  fs.mkdirSync(path.join(CONTENT_DIR, 'faqs'), { recursive: true });
+  for (const filename of faqFiles) {
+    const source = path.join(SEED_DIR, 'faqs', filename);
+    if (fs.existsSync(source)) fs.copyFileSync(source, path.join(CONTENT_DIR, 'faqs', filename));
+  }
+  fs.mkdirSync(migrationDir, { recursive: true });
+  fs.writeFileSync(paymentFactsMarker, new Date().toISOString());
+  console.log('[seed] Applied seo-aeo-payment-facts-v1');
+}
 console.log('[seed] Seeded content from', SEED_DIR, 'to', CONTENT_DIR);

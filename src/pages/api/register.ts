@@ -5,6 +5,7 @@ import { sendRegistrationPaymentReceived, sendRegistrationPaymentPending, sendAd
 import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
+import { attributionSource, readAttribution } from '../../lib/attribution';
 
 const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
 
@@ -22,6 +23,8 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
   gender: string | null; age: string; city: string; instagram: string | null;
   emergencyName: string; emergencyPhone: string; whyJoin: string;
   sharingOption: string | null; totalAmount: number; batchId: string; tierId: string;
+  firstTouchJson: string; latestTouchJson: string;
+  source: string; sourceDetail: string | null;
 }): { id: number; isNew: boolean } {
   // Adopt an existing lead row, OR a wishlist row for the same identity+departure
   // (the traveller wishlisted this date and it has since opened — upgrade the same
@@ -42,12 +45,15 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
         why_join=?, sharing_option=?, total_amount=?, tier_id=?,
         status='lead',
         status_changed_at=CASE WHEN status='lead' THEN status_changed_at ELSE CURRENT_TIMESTAMP END,
+        source=COALESCE(NULLIF(source, ''), ?), source_detail=COALESCE(source_detail, ?),
+        first_touch_json=COALESCE(first_touch_json, ?), latest_touch_json=?,
         updated_at=CURRENT_TIMESTAMP
       WHERE id=?
     `).run(
       p.tripName, p.tripDateStr, p.fullName, p.email, p.phone, p.gender,
       p.age, p.city, p.instagram, p.emergencyName, p.emergencyPhone,
       p.whyJoin, p.sharingOption, p.totalAmount, p.tierId,
+      p.source, p.sourceDetail, p.firstTouchJson, p.latestTouchJson,
       existing.id,
     );
     return { id: existing.id, isNew: false };
@@ -58,13 +64,13 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
       trip_name, trip_slug, trip_date, full_name, email, phone, gender,
       age, city, instagram, emergency_name, emergency_phone,
       why_join, sharing_option, total_amount, batch_id, tier_id,
-      source, status, status_changed_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'lead', CURRENT_TIMESTAMP)
+      source, source_detail, status, status_changed_at, first_touch_json, latest_touch_json
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'lead', CURRENT_TIMESTAMP, ?, ?)
   `).run(
     p.tripName, p.tripSlug, p.tripDateStr, p.fullName, p.email, p.phone, p.gender,
     p.age, p.city, p.instagram, p.emergencyName, p.emergencyPhone,
     p.whyJoin, p.sharingOption, p.totalAmount, p.batchId, p.tierId,
-    'checkout',
+    p.source, p.sourceDetail, p.firstTouchJson, p.latestTouchJson,
   );
   return { id: Number(insert.lastInsertRowid), isNew: true };
 }
@@ -73,7 +79,7 @@ function saveState(db: ReturnType<typeof getDb>, id: number, travellerState: str
   db.prepare('UPDATE registrations SET state=? WHERE id=?').run(travellerState, id);
 }
 
-export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
+export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }) => {
   if (!rateLimit(`register:${clientAddress}`, 30, 60 * 60 * 1000)) {
     return json({ success: false, error: 'Too many requests. Please try again later.' }, 429);
   }
@@ -135,6 +141,10 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
     const submittingPayment = !!screenshotUrl;
     const detailsOnly = sanitizeInput(body.intent) === 'details';
     const db = getDb();
+    const attribution = readAttribution(cookies);
+    const firstTouchJson = JSON.stringify(attribution.firstTouch);
+    const latestTouchJson = JSON.stringify(attribution.latestTouch);
+    const marketingSource = attributionSource(attribution.firstTouch);
 
     // Capture the traveller's phone onto their profile the first time we see it —
     // until now phone only ever lived on the registration row.
@@ -177,6 +187,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
         gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
         emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
         sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
+        firstTouchJson, latestTouchJson,
+        source: marketingSource.source, sourceDetail: marketingSource.detail,
       });
       saveState(db, leadId, required.state);
 
@@ -230,6 +242,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals }) => {
           gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
           emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
           sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
+          firstTouchJson, latestTouchJson,
+          source: marketingSource.source, sourceDetail: marketingSource.detail,
         }).id;
 
     db.prepare(`

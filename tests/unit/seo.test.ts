@@ -13,6 +13,18 @@ describe('SEO publication controls', () => {
     expect(robots).toContain('Disallow: /api/');
     expect(adminLayout).toContain('noindex, nofollow');
     expect(middleware).toContain("headers.set('X-Robots-Tag', 'noindex, nofollow')");
+    expect(robots).toContain('User-agent: OAI-SearchBot');
+    expect(robots).toContain('User-agent: Claude-SearchBot');
+    expect(robots.indexOf('User-agent: GPTBot')).toBeGreaterThan(robots.indexOf('# Model-training crawlers'));
+  });
+
+  it('supports webmaster verification without hard-coding account tokens', () => {
+    const layout = fs.readFileSync('src/layouts/BaseLayout.astro', 'utf8');
+    const settings = fs.readFileSync('src/pages/admin/settings.astro', 'utf8');
+    expect(layout).toContain('name="google-site-verification"');
+    expect(layout).toContain('name="msvalidate.01"');
+    expect(settings).toContain('name="googleSiteVerification"');
+    expect(settings).toContain('name="bingSiteVerification"');
   });
 
   it('never exposes test or draft trips', () => {

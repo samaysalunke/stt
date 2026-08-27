@@ -46,17 +46,19 @@ const FALLBACK_PHOTOS = [
   'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80',
 ];
 // Primary source: the curated per-trip gallery (album-picked + trip-only uploads).
-let tripPhotos: string[] = (Array.isArray(trip.gallery) ? trip.gallery : [])
-  .map((g: any) => g.image)
-  .filter(Boolean);
+let tripPhotos: Array<{ image: string; width?: number | null; height?: number | null }> =
+  (Array.isArray(trip.gallery) ? trip.gallery : [])
+    .filter((g: any) => g?.image)
+    .map((g: any) => ({ image: g.image, width: g.width ?? null, height: g.height ?? null }));
 // Legacy fallback: trips still on the old linkedAlbumSlug field.
 if (tripPhotos.length === 0 && trip.linkedAlbumSlug) {
   const linkedAlbum = listAlbums().find((a: any) => a.slug === trip.linkedAlbumSlug && isAlbumPublic(a));
   if (linkedAlbum?.photos?.length) {
-    tripPhotos = linkedAlbum.photos.slice(0, 10).map((p: any) => p.image).filter(Boolean);
+    tripPhotos = linkedAlbum.photos.slice(0, 10).filter((p: any) => p?.image)
+      .map((p: any) => ({ image: p.image, width: p.width ?? null, height: p.height ?? null }));
   }
 }
-if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5);
+if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5).map((image) => ({ image }));
 
 // Testimonials are global. tripName is attribution only and featured controls
 // homepage inclusion; neither field limits visibility on a public trip page.
@@ -90,6 +92,16 @@ const isOpen = bookableDepartures.some((d) => !d.soldOut);
 // Show the interactive panel whenever there is something to do — book or wishlist.
 const showBookingPanel = isOpen || hasComingSoonDate;
 const departureSummary = getDepartureSummary(departures);
+const atAGlance = [
+  trip.location && ['Destination', String(trip.location)],
+  trip.duration && ['Duration', String(trip.duration)],
+  departureSummary.displayed.length > 0 && ['Upcoming dates', departureSummary.displayed.map((d) => formatDepartureRange(d.startDate, d.endDate)).join(' · ')],
+  trip.meetingPoint && ['Meeting point', String(trip.meetingPoint)],
+  firstDeparture?.totalCap != null && ['Group size', `Up to ${firstDeparture.totalCap} travellers`],
+  booking.occupancyCatalog.length > 0 && ['Occupancy options', booking.occupancyCatalog.map((tier) => tier.label).join(', ')],
+  allComingSoon ? ['Booking', 'Wishlist open · pricing announced soon'] : ['Booking advance', `₹${paymentAmount.toLocaleString('en-IN')}`],
+  !allComingSoon && balanceDueRule && ['Balance due', balanceDueRule],
+].filter(Boolean) as string[][];
 
 // Strip all pricing from coming-soon departures before they cross to the island.
 const departuresForPanel = departures.map((d) =>
@@ -153,7 +165,12 @@ const eventSchemas = departures.map((departure) => {
     eventStatus: 'https://schema.org/EventScheduled',
     startDate: departure.startDate, ...(departure.endDate ? { endDate: departure.endDate } : {}),
     organizer: { '@id': `${SITE_ORIGIN}/#organization` },
-    ...(trip.location ? { location: { '@type': 'Place', name: trip.location, address: { '@type': 'PostalAddress', addressRegion: trip.location, addressCountry: 'IN' } } } : {}),
+    ...(trip.meetingPoint || trip.location ? {
+      location: {
+        '@type': 'Place', name: trip.meetingPoint || trip.location,
+        address: { '@type': 'PostalAddress', ...(trip.meetingPoint ? { streetAddress: trip.meetingPoint } : {}), ...(trip.location ? { addressRegion: trip.location } : {}), addressCountry: 'IN' },
+      },
+    } : {}),
     ...(cheapestOffer && !departure.comingSoon ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),
   };
 });
@@ -277,6 +294,21 @@ const tripSchema: Record<string, any> = {
       <!-- LEFT COLUMN -->
       <div class="space-y-12">
 
+        {atAGlance.length > 0 && (
+          <section aria-labelledby="trip-at-a-glance" class="rounded-2xl bg-white p-5 sm:p-6" style="box-shadow: var(--shadow-card);">
+            <h2 id="trip-at-a-glance" class="font-display text-2xl font-bold" style="color: var(--color-navy);">Trip at a glance</h2>
+            <dl class="mt-5 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+              {atAGlance.map(([label, value]) => (
+                <div class="border-b pb-3" style="border-color: var(--color-border);">
+                  <dt class="text-xs font-semibold uppercase tracking-wider" style="color: var(--color-gray-text);">{label}</dt>
+                  <dd class="mt-1 text-sm font-medium leading-relaxed" style="color: var(--color-navy);">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <a href="/cancellation/" class="mt-4 inline-flex text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read the cancellation policy →</a>
+          </section>
+        )}
+
         <!-- What this trip feels like -->
         {description && (
           <section>
@@ -318,10 +350,12 @@ const tripSchema: Record<string, any> = {
             <h2 class="font-display text-3xl lg:text-4xl mb-2" style="color: var(--color-navy);">Photos</h2>
             <p class="text-sm mb-4" style="color: var(--color-gray-text);">From the trail. No filters, no staging.</p>
             <div class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {tripPhotos.map((src) => (
+              {tripPhotos.map((photo, index) => (
                 <img
-                  src={src}
-                  alt={`${tripName} travel photo`}
+                  src={photo.image}
+                  alt={`${tripName} group trip${trip.location ? ` in ${trip.location}` : ''} — travel photo ${index + 1}`}
+                  width={photo.width ?? 900}
+                  height={photo.height ?? 675}
                   loading="lazy"
                   class="h-64 w-[78%] flex-none snap-start rounded-2xl object-cover sm:h-72 sm:w-[55%] md:w-[40%]"
                 />

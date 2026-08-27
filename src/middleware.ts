@@ -3,6 +3,7 @@ import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
 import { SITE_HOST, SITE_ORIGIN } from './lib/siteUrl';
+import { attributionCookieNames, attributionFromRequest, hasCampaignTouch } from './lib/attribution';
 
 /** Hosts that only ever appear on the internal proxy hop, never in a browser. */
 function isInternalHost(host: string): boolean {
@@ -110,6 +111,25 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
     }
   }
   if (target.href !== publicHref) return redirect(target.toString(), 308);
+
+  // Server-side first/latest-touch capture survives client navigation and is
+  // available to every conversion API without trusting form-supplied values.
+  const isPublicDocument = request.method === 'GET' &&
+    (request.headers.get('accept') ?? '').includes('text/html') &&
+    !url.pathname.startsWith('/admin') && !url.pathname.startsWith('/api');
+  if (isPublicDocument) {
+    const touch = attributionFromRequest(url, request);
+    const cookieOptions = {
+      path: '/', httpOnly: true, sameSite: 'lax' as const,
+      secure: import.meta.env.PROD, maxAge: 60 * 60 * 24 * 90,
+    };
+    if (!cookies.get(attributionCookieNames.first)) {
+      cookies.set(attributionCookieNames.first, JSON.stringify(touch), cookieOptions);
+    }
+    if (!cookies.get(attributionCookieNames.latest) || hasCampaignTouch(touch, SITE_ORIGIN)) {
+      cookies.set(attributionCookieNames.latest, JSON.stringify(touch), cookieOptions);
+    }
+  }
 
   // Ensure DB is initialized on first request so schema migrations run early
   getDb();

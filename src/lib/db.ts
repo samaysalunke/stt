@@ -167,6 +167,10 @@ function initializeSchema(db: Database.Database) {
   try { db.exec("ALTER TABLE users ADD COLUMN accountState TEXT DEFAULT 'active'"); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN wishlisted_at DATETIME'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN wishlist_notified_at DATETIME'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN first_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN latest_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN first_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN latest_touch_json TEXT'); } catch {}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS geocode_cache (
@@ -285,6 +289,10 @@ function initializeSchema(db: Database.Database) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  try { db.exec('ALTER TABLE custom_itinerary_leads ADD COLUMN first_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE custom_itinerary_leads ADD COLUMN latest_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE contact_submissions ADD COLUMN first_touch_json TEXT'); } catch {}
+  try { db.exec('ALTER TABLE contact_submissions ADD COLUMN latest_touch_json TEXT'); } catch {}
 
   // Metadata-only delivery history. Email bodies and template payloads are
   // deliberately never persisted here.

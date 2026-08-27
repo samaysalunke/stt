@@ -25,12 +25,14 @@ const steps = [
 // TravelAgency + Service JSON-LD with the ₹1,000 consultation offer.
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'TravelAgency',
+  '@type': 'Service',
+  '@id': `${siteUrl('/custom-itineraries/')}#service`,
   name: 'Seek the Thrill — Custom Itineraries',
   url: siteUrl('/custom-itineraries/'),
   description:
     'Bespoke, custom-designed adventure itineraries across India for travellers whose dates, group, or route don’t fit our fixed group departures.',
   areaServed: 'IN',
+  provider: { '@id': `${siteUrl('/')}#organization` },
   makesOffer: {
     '@type': 'Offer',
     name: 'Custom itinerary consultation',
@@ -43,7 +45,7 @@ const jsonLd = {
       '@type': 'Service',
       name: 'Bespoke adventure itinerary design',
       serviceType: 'Custom travel itinerary planning',
-      provider: { '@type': 'TravelAgency', name: 'Seek the Thrill' },
+      provider: { '@id': `${siteUrl('/')}#organization` },
       areaServed: 'IN',
     },
   },

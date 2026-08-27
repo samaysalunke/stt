@@ -38,8 +38,14 @@ export function generateTripSeo(trip: TripSeoSource) {
   const nameIncludesLocation = location
     ? name.toLocaleLowerCase('en-IN').includes(location.toLocaleLowerCase('en-IN'))
     : false;
-  const subject = location && !nameIncludesLocation ? `${name} — ${location}` : name;
-  const seoTitle = `${truncate(subject, 70 - TITLE_SUFFIX.length)}${TITLE_SUFFIX}`;
+  const availableTitleLength = 70 - TITLE_SUFFIX.length;
+  const subjectWithLocation = location && !nameIncludesLocation ? `${name} — ${location}` : name;
+  // Prefer the complete trip name over a truncated destination suffix. This
+  // keeps search titles readable for trips with longer, itinerary-specific names.
+  const titleSubject = subjectWithLocation.length <= availableTitleLength
+    ? subjectWithLocation
+    : name;
+  const seoTitle = `${truncate(titleSubject, availableTitleLength)}${TITLE_SUFFIX}`;
 
   const suppliedDescription = cleanText(trip.shortDescription || trip.description);
   const fallbackDescription = `Join ${name}${location && !nameIncludesLocation ? ` in ${location}` : ''} — an offbeat small-group trip with Seek the Thrill.`;
@@ -52,4 +58,3 @@ export function generateTripSeo(trip: TripSeoSource) {
 
   return { seoTitle, seoDescription, imageAlt };
 }
-

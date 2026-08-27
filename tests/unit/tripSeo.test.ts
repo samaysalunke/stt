@@ -20,6 +20,15 @@ describe('generateTripSeo', () => {
     expect(result.imageAlt).toBe('Winter in Ladakh group trip');
   });
 
+  it('keeps a complete itinerary-specific name instead of truncating an appended location', () => {
+    const result = generateTripSeo({
+      name: 'The Hidden Valleys and Living Root Bridges',
+      location: 'Meghalaya and Assam',
+    });
+    expect(result.seoTitle).toBe('The Hidden Valleys and Living Root Bridges | Seek the Thrill');
+    expect(result.seoTitle).not.toContain('…');
+  });
+
   it('cleans markup and keeps generated fields within their metadata limits', () => {
     const result = generateTripSeo({
       name: '*A Very Long Journey Through the Mountains and Valleys of Northeast India*',

@@ -1,8 +1,5 @@
 question: What payment methods do you accept?
-answer: "UPI or bank transfer. For UPI — send to zahrashakir2002-2@okaxis via GPay,
-  PhonePe, Paytm, or any UPI app. For bank transfer — Account Name: SEEK THE THRILL,
-  Account No: 259370349738, IFSC: INDB0000560 (IndusInd Bank, Byramji Town branch).
-  Screenshot or note your transaction ID and upload it with your registration."
+answer: UPI or bank transfer. The current payment instructions are shown securely during booking and included in your registration communication. Never send money using details copied from an unofficial message or social account.
 category: Payment
 order: 7
 defaultOnTripPages: true

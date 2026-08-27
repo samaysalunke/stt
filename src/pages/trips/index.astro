@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
 import { listTrips, isTripListable, resolveBooking, tripCardSummary } from '../../lib/content';
+import { siteUrl } from '../../lib/siteUrl';
 
 // Visibility derives from departures (trip-level status removed): list trips
 // that have at least one upcoming, non-draft departure.
@@ -11,6 +12,17 @@ const allTrips = listTrips().filter(isTripListable);
 const available = allTrips.filter((t) => !tripCardSummary(t).soldOut);
 const soldOut = allTrips.filter((t) => tripCardSummary(t).soldOut);
 const trips = [...available, ...soldOut];
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  '@id': `${siteUrl('/trips/')}#trip-list`,
+  name: 'Upcoming Seek the Thrill trips',
+  itemListElement: trips.map((trip, index) => ({
+    '@type': 'ListItem', position: index + 1,
+    name: String(trip.title || trip.name || trip.slug),
+    url: siteUrl(`/trips/${trip.slug}/`),
+  })),
+};
 ---
 
 <BaseLayout
@@ -18,6 +30,7 @@ const trips = [...available, ...soldOut];
   description="Small groups. Handpicked routes. Browse STT's upcoming adventures across India."
   nav="header"
 >
+  <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(listingSchema)} /></Fragment>
 
   <!-- Page header -->
   <section class="py-10 lg:py-12" style="background-color: var(--color-blush);">

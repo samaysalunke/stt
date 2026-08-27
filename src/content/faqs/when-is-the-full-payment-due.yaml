@@ -1,6 +1,5 @@
 question: When is the full payment due?
-answer: 15 days before the trip departure date. We'll send a reminder — but it's
-  your responsibility to pay on time or your spot may be released.
+answer: The due date can vary by trip. Check the payment summary on the relevant trip page; we will also include it in your booking communication and send a reminder.
 category: Payment
 order: 6
 defaultOnTripPages: true

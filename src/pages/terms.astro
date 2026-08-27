@@ -2,11 +2,13 @@
 import LegalPageLayout from '../components/LegalPageLayout.astro';
 import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
+import { formatPolicyDate } from '../lib/policyDates';
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 const email = settings.email ?? 'zahra@seekthethrill.in';
 // Admin override: if set in Settings, it replaces the default page below.
 const override = (settings.termsAndConditions ?? '').trim();
+const lastUpdated = formatPolicyDate(settings.termsUpdatedAt, 'August 2026');
 ---
 
 <LegalPageLayout
@@ -14,7 +16,7 @@ const override = (settings.termsAndConditions ?? '').trim();
   description="Terms and conditions for booking and traveling with Seek the Thrill."
   eyebrow="Before you book"
   intro="The practical terms that keep bookings clear, trips safe, and expectations fair for everyone."
-  lastUpdated="June 2025"
+  {lastUpdated}
 >
   <div class="legal-content-card">
     {override ? (
@@ -30,9 +32,9 @@ const override = (settings.termsAndConditions ?? '').trim();
 
         <section>
           <h2 class="text-lg font-bold mb-3" style="font-family: var(--font-display);">Payment Terms</h2>
-          <p>The advance amount (currently ₹3,000) is required to confirm your booking. The remaining balance is due 15 days before the trip departure date.</p>
+          <p>The advance amount and balance due date are shown on the relevant trip page and booking summary. These can vary by trip.</p>
           <p class="mt-3">Failure to pay the balance by the due date may result in your spot being released without a refund of the advance.</p>
-          <p class="mt-3">All payments are currently accepted via UPI only. No credit or debit card payments are accepted at this time.</p>
+          <p class="mt-3">Payments are accepted through the methods displayed in the booking flow. Only use payment details shown on our website or sent through an official Seek the Thrill communication.</p>
         </section>
 
         <section>

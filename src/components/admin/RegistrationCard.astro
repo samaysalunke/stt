@@ -9,6 +9,14 @@ const payState = paymentState(r.amount_paid, r.total_amount, tripAdvanceAmountBy
 const payStyle = payState === 'full' ? 'background:#D1FAE5;color:#065F46;' : payState === 'unpaid' ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
 const documents = Array.isArray(r.accounting_documents) ? r.accounting_documents : [];
 const today = new Date().toISOString().slice(0, 10);
+const parseTouch = (raw: unknown) => {
+  try { return typeof raw === 'string' ? JSON.parse(raw) : null; } catch { return null; }
+};
+const firstTouch = parseTouch(r.first_touch_json);
+const latestTouch = parseTouch(r.latest_touch_json);
+const touchLabel = (touch: any) => touch
+  ? [touch.utmSource || (touch.referrer ? (() => { try { return new URL(touch.referrer).hostname; } catch { return ''; } })() : 'direct'), touch.utmCampaign].filter(Boolean).join(' · ')
+  : '—';
 ---
 <div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-phone={String(r.phone ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status}>
   <div class="reg-summary">
@@ -35,6 +43,8 @@ const today = new Date().toISOString().slice(0, 10);
             ['Instagram', r.instagram ?? '—'], ['Emergency Name', r.emergency_name ?? '—'], ['Emergency Phone', r.emergency_phone ?? '—'],
             ['Why Joining', r.why_join ?? '—'], ['Trip Name', r.trip_name], ['Trip Date', r.trip_date ?? '—'], ['Occupancy', r.sharing_option ?? '—'],
             ['Applied', formatDateIN(r.created_at)], ['Updated', formatDateIN(r.updated_at ?? r.created_at)],
+            ['First touch', touchLabel(firstTouch)], ['First landing page', firstTouch?.landingPage ?? '—'],
+            ['Latest touch', touchLabel(latestTouch)], ['Latest landing page', latestTouch?.landingPage ?? '—'],
             ['Total (selected)', r.total_amount ? formatINR(r.total_amount) : '—'], ['Amount Paid', formatINR(r.amount_paid)], ['Batch ID', r.batch_id ?? '—'],
             ...(r.status === 'wishlist' || r.wishlisted_at ? [['Wishlisted', formatDateIN(r.wishlisted_at ?? r.created_at)], ['Wishlist notified', r.wishlist_notified_at ? formatDateIN(r.wishlist_notified_at) : '—']] : []),
           ].map(([label, value]) => <div><span>{label}:</span> {value}</div>)}

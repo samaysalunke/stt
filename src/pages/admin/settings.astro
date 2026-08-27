@@ -95,14 +95,20 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
         <div>
           <label class={labelCls} style={labelStyle}>Cancellation policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
           <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls} style={inputStyle}>{s.cancellationPolicy ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
+          <input type="date" name="cancellationUpdatedAt" value={s.cancellationUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Terms &amp; conditions <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
           <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls} style={inputStyle}>{s.termsAndConditions ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
+          <input type="date" name="termsUpdatedAt" value={s.termsUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
         </div>
         <div>
           <label class={labelCls} style={labelStyle}>Privacy policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
           <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls} style={inputStyle}>{s.privacyPolicy ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
+          <input type="date" name="privacyUpdatedAt" value={s.privacyUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
         </div>
       </div>
     </section>
@@ -110,7 +116,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- Site -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Site</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Analytics and footer.</p>
+      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Analytics, search-engine verification and footer.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label class={labelCls} style={labelStyle}>Google Analytics ID</label>
@@ -119,6 +125,16 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
         <div>
           <label class={labelCls} style={labelStyle}>Copyright text</label>
           <input type="text" name="copyrightText" value={s.copyrightText ?? ''} class={inputCls} style={inputStyle} />
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Google Search Console verification</label>
+          <input type="text" name="googleSiteVerification" value={s.googleSiteVerification ?? ''} placeholder="Content value only" class={inputCls} style={inputStyle} />
+          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">Paste the content value from Google’s HTML meta tag.</p>
+        </div>
+        <div>
+          <label class={labelCls} style={labelStyle}>Bing Webmaster Tools verification</label>
+          <input type="text" name="bingSiteVerification" value={s.bingSiteVerification ?? ''} placeholder="Content value only" class={inputCls} style={inputStyle} />
+          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">Paste the content value from Bing’s msvalidate.01 meta tag.</p>
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls} style={labelStyle}>Homepage Instagram images</label>

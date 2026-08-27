@@ -55,7 +55,8 @@ const orgSchema = {
       url: siteUrl('/'), publisher: { '@id': orgId }, inLanguage: 'en-IN',
     },
     {
-      '@type': 'Organization', '@id': orgId, name: 'Seek the Thrill',
+      '@type': ['Organization', 'TravelAgency'], '@id': orgId, name: 'Seek the Thrill',
+      alternateName: 'STT',
       url: siteUrl('/'), logo: siteUrl('/logo.jpg'),
       email: settings.email ?? 'zahra@seekthethrill.in',
       founder: { '@id': founderId },
@@ -65,7 +66,7 @@ const orgSchema = {
       },
       sameAs: [settings.instagram, settings.facebook, settings.youtube, settings.linkedin].filter(Boolean),
     },
-    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/') },
+    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/'), worksFor: { '@id': orgId } },
   ],
 };
 ---
@@ -76,6 +77,8 @@ const orgSchema = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    {settings.googleSiteVerification && <meta name="google-site-verification" content={settings.googleSiteVerification} />}
+    {settings.bingSiteVerification && <meta name="msvalidate.01" content={settings.bingSiteVerification} />}
 
     <!-- Fonts: Fraunces (display) + DM Sans (body) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -3,11 +3,12 @@ import { getDb } from '../../lib/db';
 import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { sendEmail, wrapEmail, escapeHtml, ADMIN_EMAIL } from '../../lib/emailTransport';
+import { readAttribution } from '../../lib/attribution';
 
 // Server-rendered endpoint (writes to sqlite) — never prerender.
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, clientAddress }) => {
+export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
   if (!rateLimit(`leads:${clientAddress}`, 5, 60 * 60 * 1000)) {
     return new Response(JSON.stringify({ success: false, error: 'Too many requests. Please try again later.' }), {
       status: 429,
@@ -65,12 +66,15 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     }
 
     const db = getDb();
+    const attribution = readAttribution(cookies);
     const stmt = db.prepare(`
       INSERT INTO custom_itinerary_leads (
-        name, email, phone, destination, travellers, dates, budget, message, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new')
+        name, email, phone, destination, travellers, dates, budget, message, status,
+        first_touch_json, latest_touch_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
     `);
-    stmt.run(name, email, phone, destination, travellers, dates, budget, message);
+    stmt.run(name, email, phone, destination, travellers, dates, budget, message,
+      JSON.stringify(attribution.firstTouch), JSON.stringify(attribution.latestTouch));
 
     // Notify the team. Best-effort: the lead is already persisted, so an email
     // failure must not fail the request.
