@@ -306,10 +306,34 @@ const tripSchema: Record<string, any> = {
 
         <!-- What this trip feels like -->
         {description && (
-          <section>
+          <section data-trip-feels>
             <h2 class="text-2xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">What this trip feels like</h2>
-            <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">{description}</p>
+            <input type="checkbox" id="trip-feels-toggle" class="peer sr-only" />
+            <p data-trip-feels-text class="text-base leading-relaxed line-clamp-3 peer-checked:line-clamp-none" style="color: var(--color-gray-text);">{description}</p>
+            <label for="trip-feels-toggle" data-trip-feels-toggle class="mt-2 inline-flex cursor-pointer text-sm font-semibold hover:underline peer-checked:hidden" style="color: var(--color-coral);">Read more</label>
+            <label for="trip-feels-toggle" data-trip-feels-toggle class="mt-2 hidden cursor-pointer text-sm font-semibold hover:underline peer-checked:inline-flex" style="color: var(--color-coral);">Show less</label>
           </section>
+        )}
+
+        {description && (
+          <script is:inline>
+            (() => {
+              const section = document.querySelector('[data-trip-feels]');
+              if (!section) return;
+              const checkbox = document.getElementById('trip-feels-toggle');
+              const text = section.querySelector('[data-trip-feels-text]');
+              const toggles = section.querySelectorAll('[data-trip-feels-toggle]');
+              const check = () => {
+                // don't re-measure while expanded — <p> is unclamped, would read as fitting
+                if (checkbox.checked) return;
+                // clamped <p> overflows when there are more than 3 lines of copy
+                const overflows = text.scrollHeight - text.clientHeight > 1;
+                toggles.forEach((el) => { el.style.display = overflows ? '' : 'none'; });
+              };
+              check();
+              window.addEventListener('resize', check);
+            })();
+          </script>
         )}
 
         <!-- Trip at a glance — plain facts list. Demoted from a hero card: its
@@ -330,11 +354,11 @@ const tripSchema: Record<string, any> = {
           </section>
         )}
 
-        <!-- Who this is for -->
+        <!-- Who is this for? -->
         {trip.whoShouldJoin && (
           <section>
             <div class="rounded-xl p-5" style="background-color: var(--color-blush); border-left: 4px solid var(--color-coral);">
-              <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Who this is for</h3>
+              <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Who is this for?</h3>
               <p class="text-sm leading-relaxed" style="color: var(--color-navy);">{trip.whoShouldJoin}</p>
             </div>
           </section>
