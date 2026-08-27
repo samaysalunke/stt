@@ -13,6 +13,13 @@ export function listTestimonials(): Array<Record<string, any>> {
     });
 }
 
+export function selectFeaturedTestimonials(
+  testimonials: Array<Record<string, any>>,
+  limit = 4,
+): Array<Record<string, any>> {
+  return testimonials.filter(testimonial => testimonial.featured === true).slice(0, limit);
+}
+
 export function readTestimonial(slug: string): Record<string, any> | null {
   assertSafeSlug(slug);
   const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);

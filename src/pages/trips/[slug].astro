@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
+import TestimonialCard from '../../components/TestimonialCard.astro';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 
@@ -53,14 +54,9 @@ if (tripPhotos.length === 0 && trip.linkedAlbumSlug) {
 }
 if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5);
 
-// ── Per-trip testimonials ─────────────────────────────────────────────────
-// Testimonial YAMLs carry a `tripName` matching the trip title. Fall back to
-// a few general testimonials when none match this trip.
-const allTestimonials = listTestimonials();
-const tripTestimonials = (() => {
-  const matched = allTestimonials.filter((t: any) => t.tripName === tripName).slice(0, 4);
-  return matched.length > 0 ? matched : allTestimonials.slice(0, 3);
-})();
+// Testimonials are global. tripName is attribution only and featured controls
+// homepage inclusion; neither field limits visibility on a public trip page.
+const tripTestimonials = listTestimonials();
 
 // Resolve the whole booking model through the single normalization boundary.
 // `booking` is the one source of truth for departures, occupancy and price —
@@ -297,28 +293,14 @@ const tripSchema: Record<string, any> = {
           </section>
         )}
 
-        <!-- Per-trip testimonials -->
+        <!-- Global testimonials -->
         {tripTestimonials.length > 0 && (
           <section>
             <h2 class="font-display text-3xl lg:text-4xl mb-2" style="color: var(--color-navy);">What they said</h2>
             <p class="text-sm mb-4" style="color: var(--color-gray-text);">Real words. Zero editing.</p>
-            <div class="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {tripTestimonials.map((t: any) => (
-                <figure class="relative flex-none basis-[85%] snap-start rounded-2xl p-5 sm:basis-[60%] md:basis-[45%]" style="background-color: var(--color-blush);">
-                  <span class="absolute right-4 top-3 font-display text-3xl opacity-20" style="color: var(--color-navy);">"</span>
-                  <blockquote class="text-sm leading-relaxed" style="color: var(--color-navy);">{t.quote}</blockquote>
-                  <figcaption class="mt-5 flex items-center gap-3">
-                    {t.photo ? (
-                      <img src={t.photo} alt={t.name} loading="lazy" class="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div class="w-10 h-10 rounded-full grid place-items-center font-display font-bold text-white" style="background-color: var(--color-coral);">{(t.name ?? '?')[0]}</div>
-                    )}
-                    <div>
-                      <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
-                      <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName ?? ''}</p>
-                    </div>
-                  </figcaption>
-                </figure>
+            <div class="flex items-start gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {tripTestimonials.map((t: any, index: number) => (
+                <TestimonialCard testimonial={t} cardId={`trip-${slug}-${t.slug ?? index}`} />
               ))}
             </div>
           </section>

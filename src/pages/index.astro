@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { listTrips, listTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking } from '../lib/content';
+import TestimonialCard from '../components/TestimonialCard.astro';
+import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking } from '../lib/content';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature trips that have an upcoming,
@@ -10,7 +11,7 @@ const featuredTrips = allTrips
   .filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut)
   .slice(0, 3);
 
-const allTestimonials = listTestimonials().slice(0, 4);
+const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -164,59 +165,25 @@ const igImages = Array.isArray(settings.instagramImages) && settings.instagramIm
   </section>
 
   <!-- ── COMMUNITY ─────────────────────────────────────────── -->
-  <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
-    <div class="container-app">
-      <div class="max-w-2xl mx-auto text-center mb-12">
-        <h2 class="text-3xl lg:text-4xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
-          Who comes on these trips
-        </h2>
-        <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">
-          Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out.
-        </p>
+  {featuredTestimonials.length > 0 && (
+    <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
+      <div class="container-app">
+        <div class="max-w-2xl mx-auto text-center mb-12">
+          <h2 class="text-3xl lg:text-4xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
+            Who comes on these trips
+          </h2>
+          <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">
+            Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out.
+          </p>
+        </div>
+        <div class="flex items-start gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
+          {featuredTestimonials.map((t, index) => (
+            <TestimonialCard testimonial={t} cardId={`home-${t.slug ?? index}`} surface="white" />
+          ))}
+        </div>
       </div>
-
-      {allTestimonials.length > 0 ? (
-        <div class="flex gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
-          {allTestimonials.map((t) => (
-            <figure class="reveal flex shrink-0 basis-[84%] snap-start flex-col gap-6 rounded-2xl bg-white p-7 sm:basis-[55%] lg:basis-[28%]" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
-              <blockquote class="font-display text-lg leading-snug" style="color: var(--color-navy);">"{t.quote}"</blockquote>
-              <figcaption class="mt-auto flex items-center gap-3">
-                {t.photo ? (
-                  <img src={t.photo} alt={t.name} loading="lazy" class="h-10 w-10 rounded-full object-cover" />
-                ) : (
-                  <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{(t.name as string)?.[0] ?? '?'}</span>
-                )}
-                <div>
-                  <p class="text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
-                  {t.tripName && <p class="text-xs" style="color: var(--color-gray-text);">{t.tripName}</p>}
-                </div>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      ) : (
-        <!-- Placeholder quotes if no testimonials -->
-        <div class="flex gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
-          {[
-            { name: 'Priya S.', trip: 'Spiti Valley', quote: 'I came alone and left with people I talk to every week. The mountains were just the backdrop.' },
-            { name: 'Rahul M.', trip: 'Gokarna', quote: 'Did not expect to unplug so completely. No agenda, no plans — exactly what I needed.' },
-            { name: 'Ananya K.', trip: 'Meghalaya', quote: 'Solo travel always felt intimidating. This was the nudge I needed. Would do it again tomorrow.' },
-          ].map((q) => (
-            <figure class="reveal flex shrink-0 basis-[84%] snap-start flex-col gap-6 rounded-2xl bg-white p-7 sm:basis-[55%] lg:basis-[28%]" style="box-shadow: 0 1px 4px rgba(0,0,0,0.07);">
-              <blockquote class="font-display text-lg leading-snug" style="color: var(--color-navy);">"{q.quote}"</blockquote>
-              <figcaption class="mt-auto flex items-center gap-3">
-                <span class="grid h-10 w-10 place-items-center rounded-full font-display" style="background-color: rgba(232,114,90,0.15); color: var(--color-coral);">{q.name[0]}</span>
-                <div>
-                  <p class="text-sm font-medium" style="color: var(--color-navy);">{q.name}</p>
-                  <p class="text-xs" style="color: var(--color-gray-text);">{q.trip}</p>
-                </div>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
+    </section>
+  )}
 
   <!-- ── INSTAGRAM ─────────────────────────────────────────── -->
   <section class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">

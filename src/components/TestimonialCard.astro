@@ -1,0 +1,76 @@
+---
+interface Props {
+  testimonial: Record<string, any>;
+  cardId: string;
+  surface?: 'white' | 'blush';
+}
+
+const { testimonial: t, cardId, surface = 'blush' } = Astro.props;
+const quoteId = `testimonial-quote-${cardId}`;
+const background = surface === 'white' ? 'white' : 'var(--color-blush)';
+---
+
+<expandable-testimonial class="block h-56 shrink-0 basis-[85%] snap-start sm:basis-[60%] md:basis-[45%] lg:basis-[32%]">
+  <figure class="testimonial-card relative flex h-full flex-col rounded-2xl p-5" style={`background-color: ${background}; box-shadow: 0 1px 4px rgba(0,0,0,0.07);`}>
+    <span aria-hidden="true" class="absolute right-4 top-3 font-display text-3xl opacity-20" style="color: var(--color-navy);">&ldquo;</span>
+    <blockquote id={quoteId} class="testimonial-quote pr-6 text-sm leading-relaxed" style="color: var(--color-navy);">
+      {t.quote}
+    </blockquote>
+    <button type="button" class="testimonial-toggle mt-2 hidden self-start text-xs font-semibold hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style="color: var(--color-coral);" aria-expanded="false" aria-controls={quoteId}>Read more</button>
+    <figcaption class="mt-auto flex items-center gap-3 pt-4">
+      {t.photo ? (
+        <img src={t.photo} alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-full object-cover" />
+      ) : (
+        <span aria-hidden="true" class="grid h-10 w-10 shrink-0 place-items-center rounded-full font-display font-bold text-white" style="background-color: var(--color-coral);">{(t.name ?? '?')[0]}</span>
+      )}
+      <div class="min-w-0">
+        <p class="truncate text-sm font-medium" style="color: var(--color-navy);">{t.name}</p>
+        {t.tripName && <p class="truncate text-xs" style="color: var(--color-gray-text);">{t.tripName}</p>}
+      </div>
+    </figcaption>
+  </figure>
+</expandable-testimonial>
+
+<script>
+  class ExpandableTestimonial extends HTMLElement {
+    connectedCallback() {
+      const quote = this.querySelector<HTMLElement>('.testimonial-quote');
+      const toggle = this.querySelector<HTMLButtonElement>('.testimonial-toggle');
+      if (!quote || !toggle) return;
+
+      const updateToggleVisibility = () => {
+        if (this.hasAttribute('expanded')) return;
+        toggle.classList.toggle('hidden', quote.scrollHeight <= quote.clientHeight + 1);
+      };
+
+      requestAnimationFrame(updateToggleVisibility);
+      window.addEventListener('resize', updateToggleVisibility, { passive: true });
+      toggle.addEventListener('click', () => {
+        const expanded = this.toggleAttribute('expanded');
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.textContent = expanded ? 'Show less' : 'Read more';
+      });
+    }
+  }
+
+  if (!customElements.get('expandable-testimonial')) customElements.define('expandable-testimonial', ExpandableTestimonial);
+</script>
+
+<style>
+  .testimonial-quote {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+  }
+
+  expandable-testimonial[expanded] {
+    height: auto;
+    min-height: 14rem;
+  }
+
+  expandable-testimonial[expanded] .testimonial-quote {
+    display: block;
+    overflow: visible;
+  }
+</style>

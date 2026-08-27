@@ -19,8 +19,9 @@ const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
         <input type="text" name="location" placeholder="e.g. Delhi, India" class={inputCls} style={inputStyle} />
       </div>
       <div>
-        <label class={labelCls} style={labelStyle}>Trip name</label>
-        <input type="text" name="tripName" placeholder="Match a trip title to show on that trip page" class={inputCls} style={inputStyle} />
+        <label class={labelCls} style={labelStyle}>Trip taken</label>
+        <input type="text" name="tripName" aria-describedby="trip-name-help" placeholder="e.g. Meghalaya Trek" class={inputCls} style={inputStyle} />
+        <p id="trip-name-help" class="mt-1.5 text-xs" style="color: rgba(27,43,58,0.55);">Optional display context only. This does not control where the testimonial appears.</p>
       </div>
       <div>
         <label class={labelCls} style={labelStyle}>Rating</label>

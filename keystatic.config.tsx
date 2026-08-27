@@ -171,7 +171,10 @@ export default config({
         name: fields.slug({ name: { label: 'Traveler Name' } }),
         location: fields.text({ label: 'Location (City, Country)' }),
         rating: fields.integer({ label: 'Rating (1-5)', defaultValue: 5 }),
-        tripName: fields.text({ label: 'Trip Name' }),
+        tripName: fields.text({
+          label: 'Trip taken',
+          description: 'Optional display context only. This does not control where the testimonial appears.',
+        }),
         quote: fields.text({ label: 'Testimonial Quote', multiline: true }),
         photo: fields.image({
           label: 'Traveler Photo',
