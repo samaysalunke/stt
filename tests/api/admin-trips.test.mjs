@@ -39,7 +39,7 @@ const VALID_DEPARTURES = JSON.stringify([
   },
 ]);
 
-async function updateTrip(slug, catalogJson, departuresJson, cookie, faqFields = null) {
+async function updateTrip(slug, catalogJson, departuresJson, cookie, faqFields = null, accommodationField = undefined) {
   const fd = new FormData();
   fd.append('slug', slug);
   fd.append('status', 'booking-open');
@@ -52,6 +52,9 @@ async function updateTrip(slug, catalogJson, departuresJson, cookie, faqFields =
   if (faqFields) {
     fd.append('tripFaqOverrides_json', JSON.stringify(faqFields.tripFaqOverrides));
     fd.append('tripFaqs_json', JSON.stringify(faqFields.tripFaqs));
+  }
+  if (accommodationField !== undefined) {
+    fd.append('accommodationGallery_json', JSON.stringify(accommodationField));
   }
   return fetch(`${BASE}/api/admin/trips/update`, {
     method: 'POST',
@@ -125,6 +128,33 @@ test('TC-103 trip FAQ fields round-trip and survive an older-client update', asy
   saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
   assert.deepEqual(saved.tripFaqOverrides, faqFields.tripFaqOverrides);
   assert.deepEqual(saved.tripFaqs, faqFields.tripFaqs);
+});
+
+test('TC-103a accommodation gallery normalizes, survives an omitted field, and clears explicitly', async () => {
+  const { cookie } = await adminLogin();
+  const submitted = [
+    { image: '/images/trips/qa-test-v2/stay-a.webp', width: '1200', height: 800, source: 'trip' },
+    { image: '/images/trips/qa-test-v2/stay-a.webp', width: 20, height: 20, source: 'album' },
+    { image: '/images/trips/qa-test-v2/stay-b.webp', width: 0, height: 'bad', source: 'album' },
+  ];
+
+  let res = await updateTrip('qa-test-v2', VALID_CATALOG, VALID_DEPARTURES, cookie, null, submitted);
+  assert.ok(res.status >= 300 && res.status < 400);
+  let saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.deepEqual(saved.accommodationGallery, [
+    { image: '/images/trips/qa-test-v2/stay-a.webp', width: 1200, height: 800, source: 'trip' },
+    { image: '/images/trips/qa-test-v2/stay-b.webp', width: null, height: null, source: 'album' },
+  ]);
+
+  res = await updateTrip('qa-test-v2', VALID_CATALOG, VALID_DEPARTURES, cookie);
+  assert.ok(res.status >= 300 && res.status < 400);
+  saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.equal(saved.accommodationGallery.length, 2, 'older clients preserve the stored gallery');
+
+  res = await updateTrip('qa-test-v2', VALID_CATALOG, VALID_DEPARTURES, cookie, null, []);
+  assert.ok(res.status >= 300 && res.status < 400);
+  saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.deepEqual(saved.accommodationGallery, [], 'an explicit empty array clears the gallery');
 });
 
 test('TC-103b itinerary day photos round-trip and are clamped/sanitised on save', async () => {

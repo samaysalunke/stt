@@ -1,5 +1,47 @@
 import { describe, test, expect } from 'vitest';
-import { editableBooking, parseEditorBooking, matchTierFromStay, normalizeTierText } from '../../src/lib/tripEditor';
+import { editableBooking, parseEditorBooking, parseGallery, matchTierFromStay, normalizeTierText } from '../../src/lib/tripEditor';
+
+describe('parseGallery', () => {
+  test('normalizes valid image metadata', () => {
+    expect(parseGallery(JSON.stringify([
+      { image: ' /images/stay/room.webp ', width: '1200', height: 800, source: 'trip' },
+      { image: '/images/stay/camp.webp', width: 0, height: 'nope', source: 'album' },
+    ]), { totalLimit: 10, removeDuplicates: true })).toEqual([
+      { image: '/images/stay/room.webp', width: 1200, height: 800, source: 'trip' },
+      { image: '/images/stay/camp.webp', width: null, height: null, source: 'album' },
+    ]);
+  });
+
+  test('discards malformed JSON and entries without image paths', () => {
+    expect(parseGallery('{broken', { totalLimit: 10, removeDuplicates: true })).toEqual([]);
+    expect(parseGallery(JSON.stringify([{ width: 100 }, { image: '  ' }, null]), {
+      totalLimit: 10,
+      removeDuplicates: true,
+    })).toEqual([]);
+  });
+
+  test('can remove duplicate URLs and enforce a total limit', () => {
+    const input = Array.from({ length: 12 }, (_, index) => ({
+      image: `/images/stay/${Math.min(index, 10)}.webp`,
+      source: index % 2 ? 'trip' : 'album',
+    }));
+    const parsed = parseGallery(JSON.stringify(input), { totalLimit: 10, removeDuplicates: true });
+    expect(parsed).toHaveLength(10);
+    expect(new Set(parsed.map((photo) => photo.image)).size).toBe(10);
+  });
+
+  test('retains Trip Photos defaults: album cap only and duplicate URLs allowed', () => {
+    const input = [
+      ...Array.from({ length: 11 }, (_, index) => ({ image: `/album/${index}.webp`, source: 'album' })),
+      { image: '/trip/upload.webp', source: 'trip' },
+      { image: '/trip/upload.webp', source: 'trip' },
+    ];
+    const parsed = parseGallery(JSON.stringify(input));
+    expect(parsed).toHaveLength(12);
+    expect(parsed.filter((photo) => photo.source === 'album')).toHaveLength(10);
+    expect(parsed.filter((photo) => photo.image === '/trip/upload.webp')).toHaveLength(2);
+  });
+});
 
 describe('matchTierFromStay', () => {
   const catalog = [

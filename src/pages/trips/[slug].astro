@@ -69,6 +69,22 @@ if (tripPhotos.length === 0 && trip.linkedAlbumSlug) {
 }
 if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5).map((image) => ({ image }));
 
+// Accommodation photos are intentionally independent: no album or stock fallback.
+const accommodationPhotoUrls = new Set<string>();
+const accommodationPhotos: Array<{ image: string; width: number | null; height: number | null }> = [];
+for (const photo of (Array.isArray(trip.accommodationGallery) ? trip.accommodationGallery : [])) {
+  const image = String(photo?.image ?? '').trim();
+  if (!image || accommodationPhotoUrls.has(image) || accommodationPhotos.length >= 10) continue;
+  accommodationPhotoUrls.add(image);
+  const width = Number(photo.width);
+  const height = Number(photo.height);
+  accommodationPhotos.push({
+    image,
+    width: Number.isFinite(width) && width > 0 ? width : null,
+    height: Number.isFinite(height) && height > 0 ? height : null,
+  });
+}
+
 // Testimonials are global. tripName is attribution only and featured controls
 // homepage inclusion; neither field limits visibility on a public trip page.
 const tripTestimonials = listTestimonials();
@@ -421,6 +437,59 @@ const tripSchema: Record<string, any> = {
           </section>
         )}
 
+        {accommodationPhotos.length > 0 && (
+          <section data-testid="accommodation-gallery">
+            <button
+              type="button"
+              id="accommodation-gallery-toggle"
+              data-testid="accommodation-gallery-toggle"
+              aria-expanded="false"
+              aria-controls="accommodation-gallery-region"
+              class="flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white px-5 py-4 text-left text-xl font-semibold"
+              style="border-color: var(--color-border); color: var(--color-navy); font-family: var(--font-display);"
+            >
+              <span>Where will you stay?</span>
+              <svg data-accommodation-chevron class="h-5 w-5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              id="accommodation-gallery-region"
+              data-testid="accommodation-gallery-region"
+              role="region"
+              aria-labelledby="accommodation-gallery-toggle"
+              hidden
+              class="pt-4"
+            >
+              <div
+                data-testid="accommodation-gallery-carousel"
+                tabindex="0"
+                class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {accommodationPhotos.map((photo, index) => (
+                  <div
+                    data-testid="accommodation-gallery-card"
+                    class="w-[85%] flex-none snap-start sm:w-[62%] md:w-[48%]"
+                  >
+                    <img
+                      src={photo.image}
+                      alt={`Accommodation for ${tripName} — photo ${index + 1}.`}
+                      width={photo.width ?? 900}
+                      height={photo.height ?? 675}
+                      loading="lazy"
+                      class="h-64 w-full rounded-2xl object-cover sm:h-72"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div class="mt-3 flex justify-end gap-2">
+                <button type="button" data-testid="accommodation-gallery-previous" aria-label="Previous accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40" style="border-color: var(--color-border); color: var(--color-navy);">Previous</button>
+                <button type="button" data-testid="accommodation-gallery-next" aria-label="Next accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40" style="border-color: var(--color-border); color: var(--color-navy);">Next</button>
+              </div>
+            </div>
+          </section>
+        )}
+
         <!-- Itinerary -->
         {itinerary.length > 0 && (
           <section>
@@ -638,6 +707,54 @@ const tripSchema: Record<string, any> = {
 </BaseLayout>
 
 <script>
+  const accommodationToggle = document.querySelector<HTMLButtonElement>('[data-testid="accommodation-gallery-toggle"]');
+  const accommodationRegion = document.querySelector<HTMLElement>('[data-testid="accommodation-gallery-region"]');
+  const accommodationCarousel = document.querySelector<HTMLElement>('[data-testid="accommodation-gallery-carousel"]');
+  const accommodationPrevious = document.querySelector<HTMLButtonElement>('[data-testid="accommodation-gallery-previous"]');
+  const accommodationNext = document.querySelector<HTMLButtonElement>('[data-testid="accommodation-gallery-next"]');
+  const accommodationChevron = document.querySelector<HTMLElement>('[data-accommodation-chevron]');
+
+  const updateAccommodationBoundaries = () => {
+    if (!accommodationCarousel || !accommodationPrevious || !accommodationNext) return;
+    const end = Math.max(0, accommodationCarousel.scrollWidth - accommodationCarousel.clientWidth);
+    accommodationPrevious.disabled = accommodationCarousel.scrollLeft <= 2;
+    accommodationNext.disabled = accommodationCarousel.scrollLeft >= end - 2;
+  };
+
+  const setAccommodationOpen = (open: boolean, returnFocus = false) => {
+    if (!accommodationToggle || !accommodationRegion) return;
+    accommodationToggle.setAttribute('aria-expanded', String(open));
+    accommodationRegion.hidden = !open;
+    accommodationChevron?.classList.toggle('rotate-180', open);
+    if (open) requestAnimationFrame(updateAccommodationBoundaries);
+    if (!open && returnFocus) accommodationToggle.focus();
+  };
+
+  accommodationToggle?.addEventListener('click', () => {
+    const opening = accommodationToggle.getAttribute('aria-expanded') !== 'true';
+    setAccommodationOpen(opening, !opening);
+  });
+  accommodationCarousel?.addEventListener('scroll', updateAccommodationBoundaries, { passive: true });
+  window.addEventListener('resize', updateAccommodationBoundaries);
+
+  const moveAccommodationCard = (direction: -1 | 1) => {
+    if (!accommodationCarousel) return;
+    const cards = Array.from(accommodationCarousel.querySelectorAll<HTMLElement>('[data-testid="accommodation-gallery-card"]'));
+    if (!cards.length) return;
+    const carouselRect = accommodationCarousel.getBoundingClientRect();
+    const positions = cards.map((card) => card.getBoundingClientRect().left - carouselRect.left + accommodationCarousel.scrollLeft);
+    const current = positions.reduce((best, position, index) =>
+      Math.abs(position - accommodationCarousel.scrollLeft) < Math.abs(positions[best] - accommodationCarousel.scrollLeft) ? index : best, 0);
+    const target = Math.max(0, Math.min(cards.length - 1, current + direction));
+    accommodationCarousel.scrollTo({ left: positions[target], behavior: 'smooth' });
+  };
+  accommodationPrevious?.addEventListener('click', () => moveAccommodationCard(-1));
+  accommodationNext?.addEventListener('click', () => moveAccommodationCard(1));
+
+  // A bfcache restore must behave like a fresh render: always start collapsed.
+  window.addEventListener('pageshow', () => setAccommodationOpen(false));
+  setAccommodationOpen(false);
+
   const stickyBar = document.getElementById('booking-sticky');
   const stickyCta = document.getElementById('sticky-cta');
   const bookingPanel = document.getElementById('booking-panel');
