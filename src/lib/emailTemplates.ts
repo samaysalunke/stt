@@ -86,6 +86,13 @@ export async function sendRegistrationPaymentConfirmed(data: {
   const inr = (n: number) => `₹${(Math.round(Number(n)) || 0).toLocaleString('en-IN')}`;
   const isFull = data.kind === 'full';
   const paidInFull = isFull || data.balanceDue <= 0;
+  // A "paid in full" confirmation must never show ₹0 received. If the caller
+  // couldn't resolve the paid amount (e.g. the ledger row was reset after the
+  // invoice job was queued), fall back to the trip total so the figure and the
+  // "paid in full" wording agree.
+  const amountReceived = paidInFull && (Math.round(Number(data.amountPaid)) || 0) <= 0
+    ? data.totalAmount
+    : data.amountPaid;
   const balanceRow = paidInFull
     ? `<tr><td style="padding:8px 0;color:#6B7280;">Balance due</td><td style="padding:8px 0;font-weight:700;color:#065F46;text-align:right;">Paid in full</td></tr>`
     : `<tr><td style="padding:8px 0;color:#6B7280;">Balance due before departure</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;">${inr(data.balanceDue)}</td></tr>`;
@@ -95,7 +102,7 @@ export async function sendRegistrationPaymentConfirmed(data: {
     <p style="margin: 0 0 24px;">Great news — your booking for <strong>${escapeHtml(data.trip_name)}</strong> has been <strong style="color:#E8725A;">confirmed</strong>${paidInFull ? ' and paid in full' : ''}.</p>
     ${data.trip_date ? `<p style="background:#FDF0EC;padding:12px 16px;border-radius:8px;margin:0 0 24px;"><strong>Trip Date:</strong> ${escapeHtml(data.trip_date)}</p>` : ''}
     <table style="width:100%;border-collapse:collapse;margin:0 0 24px;font-size:14px;">
-      <tr><td style="padding:8px 0;color:#6B7280;">Amount received</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;">${inr(data.amountPaid)}</td></tr>
+      <tr><td style="padding:8px 0;color:#6B7280;">Amount received</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;">${inr(amountReceived)}</td></tr>
       <tr><td style="padding:8px 0;color:#6B7280;border-top:1px solid #F5DDD7;">Trip total</td><td style="padding:8px 0;font-weight:700;color:#1B2B3A;text-align:right;border-top:1px solid #F5DDD7;">${inr(data.totalAmount)}</td></tr>
       ${balanceRow}
     </table>

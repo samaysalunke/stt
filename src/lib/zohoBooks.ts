@@ -194,6 +194,37 @@ async function downloadPdf(invoiceId: string): Promise<Buffer> {
   return request(`/invoices/${invoiceId}`, { headers: { Accept: 'application/pdf' } }, true);
 }
 
+/**
+ * Build the confirmation-email payload from the live registration row and the
+ * frozen billing snapshot. The paid figure is clamped to [0, invoice total] and
+ * the "full vs advance" wording follows from whether the ledger actually covers
+ * the total — so the email can never contradict itself (e.g. "paid in full · ₹0")
+ * and always matches what we recorded against the Zoho invoice.
+ */
+export function confirmedEmailPayload(
+  reg: any,
+  snapshot: any,
+  paidRaw: number,
+  attachment?: { filename: string; content: string; contentType: string },
+) {
+  const total = Number(reg?.total_amount ?? snapshot?.totalAmount) || 0;
+  const paid = Math.min(
+    Math.max(0, Number(paidRaw) || 0),
+    total > 0 ? total : Number.MAX_SAFE_INTEGER,
+  );
+  return {
+    full_name: reg.full_name,
+    email: reg.email,
+    trip_name: reg.trip_name,
+    trip_date: reg.trip_date || '',
+    kind: (total > 0 && paid >= total ? 'full' : 'advance') as 'full' | 'advance',
+    amountPaid: paid,
+    totalAmount: total,
+    balanceDue: Math.max(0, total - paid),
+    ...(attachment ? { attachment } : {}),
+  };
+}
+
 /** Process one job. Safe to call repeatedly: creation is recovered by reference. */
 export async function processZohoDocument(documentId: string) {
   const db = getDb();
@@ -242,50 +273,42 @@ export async function processZohoDocument(documentId: string) {
       // Draft mode never touches Zoho payments, but the customer still gets our
       // branded confirmation — just without the (undrafted) PDF.
       const draftReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
-      const draftTotal = Number(draftReg?.total_amount ?? snapshot.totalAmount) || 0;
-      const draftPaid = Number(draftReg?.amount_paid) || 0;
-      await sendRegistrationPaymentConfirmed({
-        full_name: reg.full_name,
-        email: reg.email,
-        trip_name: reg.trip_name,
-        trip_date: reg.trip_date || '',
-        kind: 'full',
-        amountPaid: draftPaid,
-        totalAmount: draftTotal,
-        balanceDue: Math.max(0, draftTotal - draftPaid),
-      }).catch((err) => console.error('[Zoho draft email]', cleanError(err)));
+      await sendRegistrationPaymentConfirmed(
+        confirmedEmailPayload(draftReg || reg, snapshot, Number(draftReg?.amount_paid) || 0),
+      ).catch((err) => console.error('[Zoho draft email]', cleanError(err)));
       db.prepare("UPDATE invoice_documents SET status='draft', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(documentId);
       return db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId);
     }
 
-    // One invoice for the whole trip, paid in full in one customer payment
-    // (no retainer to apply). Idempotent on the payment event's reference.
-    if (!current.balance_recorded_at) {
-      const paymentResult = await recordInvoicePayment(customerId, zohoId, Number(snapshot.totalAmount), event);
+    // One invoice for the whole trip. We apply exactly what our ledger has
+    // received (clamped to the invoice total) — never a blind "full total" — so
+    // Zoho's recorded payment matches reality and the customer email agrees.
+    // Idempotent on the payment event's reference.
+    const paidReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
+    const invoiceTotal = Number(snapshot.totalAmount) || 0;
+    const paidToApply = Math.min(Math.max(0, Number(paidReg?.amount_paid) || 0), invoiceTotal);
+
+    if (!current.balance_recorded_at && paidToApply > 0) {
+      const paymentResult = await recordInvoicePayment(customerId, zohoId, paidToApply, event);
       db.prepare('UPDATE invoice_documents SET balance_recorded_at=CURRENT_TIMESTAMP, zoho_payment_id=COALESCE(?,zoho_payment_id), updated_at=CURRENT_TIMESTAMP WHERE id=?')
         .run(paymentResult?.payment?.payment_id || null, documentId);
     }
     const verified = await request(`/invoices/${zohoId}`);
     const balance = Number(verified.invoice?.balance);
-    if (!Number.isFinite(balance) || Math.abs(balance) > 0.01) throw new Error(`Zoho invoice still has a balance of ${Number.isFinite(balance) ? balance : 'unknown'}`);
+    const expectedBalance = Math.max(0, invoiceTotal - paidToApply);
+    if (!Number.isFinite(balance) || Math.abs(balance - expectedBalance) > 0.01) {
+      throw new Error(`Zoho invoice balance ${Number.isFinite(balance) ? balance : 'unknown'} does not match the expected ₹${expectedBalance.toLocaleString('en-IN')}`);
+    }
 
     const pdf = await downloadPdf(zohoId);
     if (pdf.byteLength > 20 * 1024 * 1024) throw new Error('Zoho PDF exceeds the 20 MB email attachment safety limit');
-    const paidReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
-    const paidTotal = Number(paidReg?.total_amount ?? snapshot.totalAmount) || 0;
-    const paidAmount = Number(paidReg?.amount_paid) || 0;
-    await sendRegistrationPaymentConfirmed({
-      full_name: reg.full_name,
-      email: reg.email,
-      trip_name: reg.trip_name,
-      trip_date: reg.trip_date || '',
-      kind: 'full',
-      amountPaid: paidAmount,
-      totalAmount: paidTotal,
-      balanceDue: Math.max(0, paidTotal - paidAmount),
-      attachment: { filename: `${number}.pdf`, content: pdf.toString('base64'), contentType: 'application/pdf' },
-    });
-    db.prepare("UPDATE invoice_documents SET status='emailed', zoho_status='paid', sent_at=CURRENT_TIMESTAMP, completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(documentId);
+    await sendRegistrationPaymentConfirmed(
+      confirmedEmailPayload(paidReg, snapshot, paidToApply, {
+        filename: `${number}.pdf`, content: pdf.toString('base64'), contentType: 'application/pdf',
+      }),
+    );
+    db.prepare("UPDATE invoice_documents SET status='emailed', zoho_status=?, sent_at=CURRENT_TIMESTAMP, completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?")
+      .run(verified.invoice?.status || (paidToApply >= invoiceTotal ? 'paid' : 'partially_paid'), documentId);
     return db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId);
   } catch (error) {
     const message = cleanError(error);
@@ -296,18 +319,11 @@ export async function processZohoDocument(documentId: string) {
     if (failed.mode === 'live' && Number(failed.attempts) >= 3 && !failed.sent_at) {
       const reg = db.prepare('SELECT * FROM registrations WHERE id=?').get(failed.registration_id) as any;
       try {
-        const fbTotal = Number(reg?.total_amount) || 0;
-        const fbPaid = Number(reg?.amount_paid) || 0;
-        await sendRegistrationPaymentConfirmed({
-          full_name: reg.full_name,
-          email: reg.email,
-          trip_name: reg.trip_name,
-          trip_date: reg.trip_date || '',
-          kind: 'full',
-          amountPaid: fbPaid,
-          totalAmount: fbTotal,
-          balanceDue: Math.max(0, fbTotal - fbPaid),
-        });
+        let fbSnapshot: any = {};
+        try { fbSnapshot = JSON.parse(failed.billing_snapshot); } catch { /* snapshot optional here */ }
+        await sendRegistrationPaymentConfirmed(
+          confirmedEmailPayload(reg, fbSnapshot, Number(reg?.amount_paid) || 0),
+        );
         db.prepare('UPDATE invoice_documents SET sent_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(documentId);
       } catch (fallbackError) {
         console.error('[Zoho fallback email]', cleanError(fallbackError));
