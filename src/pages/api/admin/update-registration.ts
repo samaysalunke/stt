@@ -86,7 +86,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ── Pre-flight: confirm amount resolution (before any DB write) ────────
     let resolvedAmount = 0;
-    let confirmDocType: 'advance' | 'final' | undefined;
+    // Only a fully-paid confirmation issues a Zoho document (the final invoice).
+    // Advance confirmations record the payment and send the branded email, but
+    // no retainer invoice — that needs a paid Zoho plan.
+    let confirmDocType: 'final' | undefined;
     if (newStatus === 'confirmed') {
       // assertTransition guaranteed requestedPaymentStatus ∈ {advance_paid,fully_paid} and totalAmount > 0.
       const total = totalAmount as number;
@@ -107,7 +110,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return bad(`For a full payment the amount must be the ₹${remainingToTotal.toLocaleString('en-IN')} remaining balance.`);
         }
       } else {
-        confirmDocType = 'advance';
         if (hasOverride) {
           if (!Number.isInteger(override as number) || (override as number) < 1 || (override as number) > remainingToTotal) {
             return bad(`Advance amount must be between ₹1 and the ₹${remainingToTotal.toLocaleString('en-IN')} balance.`);

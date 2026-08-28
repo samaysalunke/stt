@@ -17,6 +17,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!Number.isInteger(registrationId) || registrationId <= 0 || !['advance', 'final'].includes(type) || !['retry', 'generate', 'refresh'].includes(action)) {
       return jsonFail('Invalid document request.');
     }
+    // Advance/retainer invoices are no longer issued; only legacy rows can be
+    // retried (they self-retire) or refreshed. Generation is final-invoice only.
+    if (action === 'generate' && type !== 'final') {
+      return jsonFail('Only the final invoice can be generated — it needs the booking to be fully paid.');
+    }
     if (action === 'refresh') {
       const existing = getDb().prepare('SELECT id FROM invoice_documents WHERE registration_id=? AND document_type=?').get(registrationId, type) as any;
       if (!existing) return jsonFail('No document exists for this registration.', 404);

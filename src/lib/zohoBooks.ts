@@ -1,6 +1,6 @@
 import { sendRegistrationPaymentConfirmed } from './email';
 import { getDb } from './db';
-import { billingProblems, type DocumentType } from './paymentLedger';
+import { billingProblems } from './paymentLedger';
 
 const env = (key: string) => (import.meta.env as any)[key] || process.env[key];
 const dc = () => {
@@ -96,44 +96,31 @@ async function findOrCreateCustomer(snapshot: any, registrationId: number): Prom
   return id;
 }
 
-async function findDocument(type: DocumentType, reference: string): Promise<any | null> {
-  const path = type === 'advance' ? '/retainerinvoices' : '/invoices';
-  const result = await request(`${path}?reference_number=${encodeURIComponent(reference)}`);
-  const rows = type === 'advance' ? result.retainerinvoices : result.invoices;
-  return (rows || []).find((row: any) => row.reference_number === reference) || null;
+async function findDocument(reference: string): Promise<any | null> {
+  const result = await request(`/invoices?reference_number=${encodeURIComponent(reference)}`);
+  return (result.invoices || []).find((row: any) => row.reference_number === reference) || null;
 }
 
-async function createDocument(type: DocumentType, customerId: string, snapshot: any, reference: string, amount: number) {
-  const path = type === 'advance' ? '/retainerinvoices' : '/invoices';
-  const template = type === 'advance' ? env('ZOHO_RETAINER_TEMPLATE_ID') : env('ZOHO_INVOICE_TEMPLATE_ID');
-  // Advance/retainer docs carry the price / paid / balance line in BOTH notes and
-  // the line-item description — Zoho's default retainer template renders at least one.
-  const total = Number(snapshot.totalAmount) || 0;
-  const balanceLine =
-    type === 'advance'
-      ? `Trip total: ₹${total.toLocaleString('en-IN')} · Advance received: ₹${Number(amount).toLocaleString('en-IN')} · Balance due before departure: ₹${Math.max(0, total - Number(amount)).toLocaleString('en-IN')}`
-      : '';
-  const baseNotes = `${type === 'advance' ? 'Advance for' : 'Final invoice for'} ${snapshot.tripName} (${snapshot.tripDate}) · STT registration #${snapshot.registrationId}`;
-  const created = await request(path, {
+async function createDocument(customerId: string, snapshot: any, reference: string, amount: number) {
+  const baseNotes = `Invoice for ${snapshot.tripName} (${snapshot.tripDate}) · STT registration #${snapshot.registrationId}`;
+  const created = await request('/invoices', {
     method: 'POST',
     body: JSON.stringify({
       customer_id: customerId,
       reference_number: reference,
       date: new Date().toISOString().slice(0, 10),
-      template_id: template || undefined,
-      notes: balanceLine ? `${baseNotes}\n${balanceLine}` : baseNotes,
+      template_id: env('ZOHO_INVOICE_TEMPLATE_ID') || undefined,
+      notes: baseNotes,
       line_items: [{
         item_id: String(env('ZOHO_BOOKS_ITEM_ID')),
         name: snapshot.tripName,
-        description: balanceLine
-          ? `${snapshot.tripName} · ${snapshot.tripDate}\n${balanceLine}`
-          : `${snapshot.tripName} · ${snapshot.tripDate}`,
+        description: `${snapshot.tripName} · ${snapshot.tripDate}`,
         rate: amount,
         quantity: 1,
       }],
     }),
   });
-  return type === 'advance' ? created.retainerinvoice : created.invoice;
+  return created.invoice;
 }
 
 function assertZeroTax(document: any) {
@@ -150,32 +137,13 @@ function assertZeroTax(document: any) {
   }
 }
 
-async function markAdvancePaid(customerId: string, documentId: string, amount: number, event: any) {
-  const reference = event.transaction_reference || event.id;
-  const existing = await request(`/customerpayments?reference_number=${encodeURIComponent(reference)}`);
-  const found = (existing.customer_payments || []).find((payment: any) => payment.reference_number === reference);
-  if (found) return { payment: found };
-  return request('/customerpayments', {
-    method: 'POST',
-    body: JSON.stringify({
-      customer_id: customerId,
-      retainerinvoice_id: documentId,
-      amount,
-      date: isoDate(event.received_at),
-      payment_mode: event.payment_method || 'banktransfer',
-      reference_number: reference,
-    }),
-  });
-}
+// Our ledger's payment_method values → Zoho's accepted payment_mode values.
+const ZOHO_PAYMENT_MODE: Record<string, string> = {
+  upi: 'banktransfer', bank_transfer: 'banktransfer', cash: 'cash',
+  card: 'creditcard', cheque: 'check', other: 'others',
+};
 
-async function applyAdvance(retainerId: string, invoiceId: string, amount: number) {
-  return request(`/retainerinvoices/${retainerId}/invoices`, {
-    method: 'POST',
-    body: JSON.stringify({ invoice_payments: [{ invoice_id: invoiceId, amount_applied: amount, apply_date: new Date().toISOString().slice(0, 10) }] }),
-  });
-}
-
-async function recordBalance(customerId: string, invoiceId: string, amount: number, event: any) {
+async function recordInvoicePayment(customerId: string, invoiceId: string, amount: number, event: any) {
   if (amount <= 0) return null;
   const reference = event.transaction_reference || event.id;
   const existing = await request(`/customerpayments?reference_number=${encodeURIComponent(reference)}`);
@@ -185,7 +153,7 @@ async function recordBalance(customerId: string, invoiceId: string, amount: numb
     method: 'POST',
     body: JSON.stringify({
       customer_id: customerId,
-      payment_mode: event.payment_method || 'banktransfer',
+      payment_mode: ZOHO_PAYMENT_MODE[String(event.payment_method || '')] || 'banktransfer',
       amount,
       date: isoDate(event.received_at),
       reference_number: reference,
@@ -194,9 +162,8 @@ async function recordBalance(customerId: string, invoiceId: string, amount: numb
   });
 }
 
-async function downloadPdf(type: DocumentType, id: string): Promise<Buffer> {
-  const path = type === 'advance' ? `/retainerinvoices/${id}` : `/invoices/${id}`;
-  return request(path, { headers: { Accept: 'application/pdf' } }, true);
+async function downloadPdf(invoiceId: string): Promise<Buffer> {
+  return request(`/invoices/${invoiceId}`, { headers: { Accept: 'application/pdf' } }, true);
 }
 
 /** Process one job. Safe to call repeatedly: creation is recovered by reference. */
@@ -205,6 +172,12 @@ export async function processZohoDocument(documentId: string) {
   const job = db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId) as any;
   if (!job) throw new Error('Document job not found');
   if (['emailed', 'disabled'].includes(job.status)) return job;
+  // Legacy advance/retainer jobs are no longer issued — retire them quietly so
+  // the retry cron stops hitting the paid-plan retainer endpoints.
+  if (job.document_type === 'advance') {
+    db.prepare("UPDATE invoice_documents SET status='disabled', last_error='Advance receipts are no longer issued.', completed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?").run(documentId);
+    return db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId);
+  }
   const claimed = db.prepare(`
     UPDATE invoice_documents
     SET status='processing', attempts=attempts+1, last_error=NULL, updated_at=CURRENT_TIMESTAMP
@@ -224,19 +197,18 @@ export async function processZohoDocument(documentId: string) {
     if (!event) throw new Error('No payment event is linked to this document');
 
     const customerId = current.zoho_customer_id || await findOrCreateCustomer(snapshot, current.registration_id);
-    let zohoDoc = current.zoho_document_id ? null : await findDocument(current.document_type, current.external_reference);
+    let zohoDoc = current.zoho_document_id ? null : await findDocument(current.external_reference);
     if (!current.zoho_document_id && !zohoDoc) {
-      const amount = current.document_type === 'advance' ? Number(event.amount) : Number(snapshot.totalAmount);
-      zohoDoc = await createDocument(current.document_type, customerId, snapshot, current.external_reference, amount);
+      zohoDoc = await createDocument(customerId, snapshot, current.external_reference, Number(snapshot.totalAmount));
     }
-    const zohoId = current.zoho_document_id || zohoDoc?.retainerinvoice_id || zohoDoc?.invoice_id;
-    const number = current.zoho_document_number || zohoDoc?.retainerinvoice_number || zohoDoc?.invoice_number || current.external_reference;
-    if (!zohoId) throw new Error('Zoho document returned no ID');
+    const zohoId = current.zoho_document_id || zohoDoc?.invoice_id;
+    const number = current.zoho_document_number || zohoDoc?.invoice_number || current.external_reference;
+    if (!zohoId) throw new Error('Zoho invoice returned no ID');
     db.prepare(`UPDATE invoice_documents SET zoho_customer_id=?, zoho_document_id=?, zoho_document_number=?, zoho_status=?, issued_at=COALESCE(issued_at,CURRENT_TIMESTAMP), updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .run(customerId, zohoId, number, zohoDoc?.status || current.zoho_status || 'draft', documentId);
 
-    const fullDocument = await request(current.document_type === 'advance' ? `/retainerinvoices/${zohoId}` : `/invoices/${zohoId}`);
-    assertZeroTax(current.document_type === 'advance' ? fullDocument.retainerinvoice : fullDocument.invoice);
+    const fullDocument = await request(`/invoices/${zohoId}`);
+    assertZeroTax(fullDocument.invoice);
 
     if (current.mode === 'draft') {
       // Draft mode never touches Zoho payments, but the customer still gets our
@@ -249,7 +221,7 @@ export async function processZohoDocument(documentId: string) {
         email: reg.email,
         trip_name: reg.trip_name,
         trip_date: reg.trip_date || '',
-        kind: current.document_type === 'final' ? 'full' : 'advance',
+        kind: 'full',
         amountPaid: draftPaid,
         totalAmount: draftTotal,
         balanceDue: Math.max(0, draftTotal - draftPaid),
@@ -258,27 +230,18 @@ export async function processZohoDocument(documentId: string) {
       return db.prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId);
     }
 
-    if (current.document_type === 'advance') {
-      if (fullDocument.retainerinvoice?.status !== 'paid') await markAdvancePaid(customerId, zohoId, Number(event.amount), event);
-    } else {
-      const advanceDoc = db.prepare("SELECT * FROM invoice_documents WHERE registration_id=? AND document_type='advance'").get(current.registration_id) as any;
-      const advanceRow = db.prepare("SELECT COALESCE(SUM(amount),0) amount FROM payment_events WHERE registration_id=? AND event_type='advance'").get(current.registration_id) as { amount: number } | undefined;
-      const advanceAmount = advanceDoc?.zoho_document_id ? Number(advanceRow?.amount || 0) : 0;
-      if (!current.retainer_applied_at && advanceDoc?.zoho_document_id && advanceAmount > 0) {
-        await applyAdvance(advanceDoc.zoho_document_id, zohoId, advanceAmount);
-        db.prepare('UPDATE invoice_documents SET retainer_applied_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(documentId);
-      }
-      if (!current.balance_recorded_at) {
-        const paymentResult = await recordBalance(customerId, zohoId, Math.max(0, Number(snapshot.totalAmount) - advanceAmount), event);
-        db.prepare('UPDATE invoice_documents SET balance_recorded_at=CURRENT_TIMESTAMP, zoho_payment_id=COALESCE(?,zoho_payment_id), updated_at=CURRENT_TIMESTAMP WHERE id=?')
-          .run(paymentResult?.payment?.payment_id || null, documentId);
-      }
-      const verified = await request(`/invoices/${zohoId}`);
-      const balance = Number(verified.invoice?.balance);
-      if (!Number.isFinite(balance) || Math.abs(balance) > 0.01) throw new Error(`Zoho final invoice still has a balance of ${Number.isFinite(balance) ? balance : 'unknown'}`);
+    // One invoice for the whole trip, paid in full in one customer payment
+    // (no retainer to apply). Idempotent on the payment event's reference.
+    if (!current.balance_recorded_at) {
+      const paymentResult = await recordInvoicePayment(customerId, zohoId, Number(snapshot.totalAmount), event);
+      db.prepare('UPDATE invoice_documents SET balance_recorded_at=CURRENT_TIMESTAMP, zoho_payment_id=COALESCE(?,zoho_payment_id), updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .run(paymentResult?.payment?.payment_id || null, documentId);
     }
+    const verified = await request(`/invoices/${zohoId}`);
+    const balance = Number(verified.invoice?.balance);
+    if (!Number.isFinite(balance) || Math.abs(balance) > 0.01) throw new Error(`Zoho invoice still has a balance of ${Number.isFinite(balance) ? balance : 'unknown'}`);
 
-    const pdf = await downloadPdf(current.document_type, zohoId);
+    const pdf = await downloadPdf(zohoId);
     if (pdf.byteLength > 20 * 1024 * 1024) throw new Error('Zoho PDF exceeds the 20 MB email attachment safety limit');
     const paidReg = db.prepare('SELECT * FROM registrations WHERE id=?').get(current.registration_id) as any;
     const paidTotal = Number(paidReg?.total_amount ?? snapshot.totalAmount) || 0;
@@ -288,7 +251,7 @@ export async function processZohoDocument(documentId: string) {
       email: reg.email,
       trip_name: reg.trip_name,
       trip_date: reg.trip_date || '',
-      kind: current.document_type === 'final' ? 'full' : 'advance',
+      kind: 'full',
       amountPaid: paidAmount,
       totalAmount: paidTotal,
       balanceDue: Math.max(0, paidTotal - paidAmount),
@@ -312,7 +275,7 @@ export async function processZohoDocument(documentId: string) {
           email: reg.email,
           trip_name: reg.trip_name,
           trip_date: reg.trip_date || '',
-          kind: failed.document_type === 'final' ? 'full' : 'advance',
+          kind: 'full',
           amountPaid: fbPaid,
           totalAmount: fbTotal,
           balanceDue: Math.max(0, fbTotal - fbPaid),

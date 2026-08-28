@@ -85,7 +85,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           idempotencyKey,
           actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
           source: ids.length > 1 ? 'admin-bulk' : 'admin',
-          documentType: isAdvance ? 'advance' : isFull ? 'final' : undefined,
+          // Advance payments no longer generate a Zoho document (retainer
+          // invoices need a paid plan) — the customer still gets the branded
+          // email. Only a fully-paid booking issues the final invoice.
+          documentType: isFull ? 'final' : undefined,
           setPaymentStatus: nextPaymentStatus,
         });
         // Single-row admin action: await the Zoho worker so we know whether it

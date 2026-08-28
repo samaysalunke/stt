@@ -241,7 +241,14 @@ const attributionFields = [
                 ) : document.last_error && <small class="document-error">{document.last_error}</small>}
               </div>
             ))}
-            {!documents.length && <div class="document-empty"><span>No documents generated.</span>{r.status === 'confirmed' && <button type="button" data-action="generate-document" data-id={r.id} data-value={payStatus === 'fully_paid' ? 'final' : 'advance'}>Generate document</button>}</div>}
+            {!documents.length && (
+              <div class="document-empty">
+                <span>No invoice generated.</span>
+                {r.status === 'confirmed' && payStatus === 'fully_paid'
+                  ? <button type="button" data-action="generate-document" data-id={r.id} data-value="final">Generate invoice</button>
+                  : r.status === 'confirmed' && <span>The invoice is generated once the booking is fully paid.</span>}
+              </div>
+            )}
           </div>
         </div>
       )}
