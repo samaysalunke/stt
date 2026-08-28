@@ -88,10 +88,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
           documentType: isAdvance ? 'advance' : isFull ? 'final' : undefined,
           setPaymentStatus: nextPaymentStatus,
         });
-        if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
-        // Draft/live: the Zoho worker (above) sends the branded email with the
-        // PDF. Disabled mode has no worker, so email the customer inline here.
-        if (amount > 0 && !recorded.duplicate && zohoMode() === 'disabled') {
+        // Single-row admin action: await the Zoho worker so we know whether it
+        // emailed the customer (branded mail, + PDF on live). Bulk stays
+        // fire-and-forget to avoid N synchronous Zoho round-trips.
+        let docHandled = false;
+        if (recorded.document?.status === 'queued') {
+          if (ids.length === 1) {
+            try {
+              const done = await processZohoDocument(recorded.document.id) as any;
+              docHandled = done?.status === 'emailed' || done?.status === 'draft';
+            } catch (err) {
+              console.error('[Zoho document]', err);
+            }
+          } else {
+            void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
+          }
+        }
+        // Send an inline confirmation when the Zoho worker didn't email the
+        // customer — it failed, or Zoho is disabled. Skipped for bulk in
+        // draft/live (there the worker/retry cron is the only sender).
+        if (amount > 0 && !recorded.duplicate && !docHandled && (ids.length === 1 || zohoMode() === 'disabled')) {
           const totalAmount = Number(total) || 0;
           void sendRegistrationPaymentConfirmed({
             full_name: reg.full_name,

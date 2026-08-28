@@ -1,26 +1,21 @@
 ---
-import { tripAdvanceAmountBySlug } from '../../lib/registrationWrite';
 import { formatDateIN, formatINR } from '../../lib/utils';
 import {
   regStatusStyle,
   paymentStatusLabel,
   paymentStatusStyle,
   derivePaymentStatus,
-  REFUND_PAYMENT_STATUSES,
   assertTransition,
 } from '../../lib/registrationStatus';
 import { zohoOpenUrl } from '../../lib/zohoBooks';
 interface Props { registration: Record<string, any>; readOnly?: boolean }
 const { registration: r, readOnly = false } = Astro.props;
-const advanceAmount = tripAdvanceAmountBySlug(String(r.trip_slug || ''));
 // Stored payment_status is authoritative; derive only as a legacy fallback.
 const payStatus: string = r.payment_status || derivePaymentStatus(r);
 const payStyle = paymentStatusStyle(payStatus);
 const amountRefunded = Number(r.amount_refunded) || 0;
-const isRefunded = (REFUND_PAYMENT_STATUSES as readonly string[]).includes(payStatus);
-const remaining = Math.max(0, Number(r.total_amount || 0) - Number(r.amount_paid || 0));
-// Status targets this row can move to. For 'confirmed' we only need the button
-// enabled — the picker <select> supplies payment_status — so probe with a
+// Status targets this row can move to. For 'confirmed' we only need the option
+// enabled — the payment <select> supplies payment_status — so probe with a
 // placeholder that clears the payment guard.
 const statusButtons = ['lead', 'pending', 'confirmed', 'rejected', 'cancelled'];
 const canTransition = (to: string) => {
@@ -36,9 +31,12 @@ const canTransition = (to: string) => {
   }
 };
 const documents = Array.isArray(r.accounting_documents) ? r.accounting_documents : [];
-const transitionButtons = statusButtons.filter((s) => s !== r.status && canTransition(s));
+const statusOptions = statusButtons.map((s) => ({
+  value: s,
+  label: s.charAt(0).toUpperCase() + s.slice(1),
+  disabled: s !== r.status && !canTransition(s),
+}));
 const showDocsTab = r.status !== 'wishlist' && (documents.length > 0 || r.status === 'confirmed');
-const today = new Date().toISOString().slice(0, 10);
 const parseTouch = (raw: unknown) => {
   try { return typeof raw === 'string' ? JSON.parse(raw) : null; } catch { return null; }
 };
@@ -91,7 +89,7 @@ const attributionFields = [
 ---
 <div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-phone={String(r.phone ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status}>
   <div class="reg-summary">
-    {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} /></label>}
+    {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} data-paid={Number(r.amount_paid) || 0} /></label>}
     <div class="reg-primary">
       <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={regStatusStyle(r.status)}>{r.status}</span>{r.payment_screenshot_url && <span class="screenshot-chip">📎 Screenshot</span>}</div>
       <div class="reg-contact">#{r.id} · {r.email}</div><div class="reg-contact">{r.phone}</div>
@@ -163,86 +161,60 @@ const attributionFields = [
       </div>
 
       <div class="tab-panel" data-id={r.id} data-tab="status" hidden>
-        <div class="admin-actions">
-          <div class="current-status"><span>Current status</span><span class="status-badge" style={regStatusStyle(r.status)}>{r.status}</span></div>
-          {transitionButtons.length > 0 ? (
-            <div class="status-actions">{transitionButtons.map(s => {
-              const action = s === 'confirmed' ? 'open-confirm' : s === 'cancelled' ? 'open-cancel' : 'update-status';
-              return <button type="button" data-action={action} data-id={r.id} data-value={s}>{s}</button>;
-            })}</div>
-          ) : <p class="status-tab-empty">No status changes available from “{r.status}”.</p>}
+        <div
+          class="sp-wrap"
+          data-sp
+          data-id={r.id}
+          data-current-status={r.status}
+          data-current-payment={payStatus}
+          data-paid={Number(r.amount_paid) || 0}
+          data-total={Number(r.total_amount) || 0}
+        >
+          <div class="sp-hero">
+            <span class="sp-hero-label">Current status</span>
+            <span class="sp-hero-status" style={regStatusStyle(r.status)}>{r.status}</span>
+            {r.status !== 'wishlist' && (
+              <span class="sp-hero-pay">
+                {paymentStatusLabel(payStatus)} · {formatINR(r.amount_paid)}{Number(r.total_amount) > 0 ? ` of ${formatINR(r.total_amount)}` : ''}{amountRefunded > 0 ? ` · refunded ${formatINR(amountRefunded)}` : ''}
+              </span>
+            )}
+          </div>
 
-          {r.status !== 'confirmed' && canTransition('confirmed') && (
-            <details class="confirm-entry" id={`confirm-entry-${r.id}`}>
-              <summary>Confirm booking + record payment</summary>
-              <div class="payment-fields">
-                <label>Payment received
-                  <select id={`confirm-kind-${r.id}`} required>
-                    <option value="" disabled selected>Choose…</option>
-                    <option value="advance_paid">Advance paid{advanceAmount ? ` — ${formatINR(Math.min(advanceAmount, Number(r.total_amount) || advanceAmount))}` : ''}</option>
-                    <option value="fully_paid">Fully paid{r.total_amount ? ` — ${formatINR(remaining)}` : ''}</option>
-                  </select>
-                </label>
-                <label>Amount (₹)<input id={`confirm-amount-${r.id}`} type="number" min="1" step="1" value={advanceAmount || ''} /></label>
-                <label>Received date<input id={`confirm-date-${r.id}`} type="date" max={today} value={today} /></label>
-                <label>Method<select id={`confirm-method-${r.id}`}><option value="upi">UPI</option><option value="bank_transfer" selected>Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="cheque">Cheque</option><option value="other">Other</option></select></label>
-                <label>Transaction reference (optional)<input id={`confirm-reference-${r.id}`} type="text" maxlength="100" /></label>
-                <button type="button" data-action="confirm-booking" data-id={r.id} data-advance={advanceAmount} data-total={r.total_amount ?? 0} data-paid={r.amount_paid ?? 0}>Confirm &amp; record payment</button>
-              </div>
-            </details>
-          )}
+          <div class="sp-controls">
+            <label class="sp-field">
+              <span>Status</span>
+              <select id={`sp-status-${r.id}`}>
+                {statusOptions.map((o) => (
+                  <option value={o.value} selected={o.value === r.status} disabled={o.disabled}>{o.label}</option>
+                ))}
+              </select>
+            </label>
 
-          {(r.status === 'pending' || r.status === 'confirmed') && (
-            <details class="confirm-entry" id={`cancel-entry-${r.id}`}>
-              <summary>Cancel booking</summary>
-              <div class="payment-fields">
-                {Number(r.amount_paid || 0) > 0 ? <>
-                  <label>Refund<select id={`cancel-refundkind-${r.id}`}>
-                    <option value="none">No refund</option>
-                    <option value="partial">Partial refund</option>
-                    <option value="full">Full refund — {formatINR(r.amount_paid)}</option>
-                  </select></label>
-                  <label class="refund-amount" id={`cancel-amount-wrap-${r.id}`} style="display:none">Refund amount (₹)<input id={`cancel-amount-${r.id}`} type="number" min="1" step="1" max={r.amount_paid} /></label>
-                  <label class="refund-amount" id={`cancel-date-wrap-${r.id}`} style="display:none">Refund date<input id={`cancel-date-${r.id}`} type="date" max={today} value={today} /></label>
-                  <label class="refund-amount" id={`cancel-method-wrap-${r.id}`} style="display:none">Method<select id={`cancel-method-${r.id}`}><option value="upi">UPI</option><option value="bank_transfer" selected>Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="cheque">Cheque</option><option value="other">Other</option></select></label>
-                  <label class="refund-amount" id={`cancel-ref-wrap-${r.id}`} style="display:none">Transaction reference (optional)<input id={`cancel-reference-${r.id}`} type="text" maxlength="100" /></label>
-                </> : <p class="wishlist-note">Nothing has been paid — this cancellation records no refund.</p>}
-                <button type="button" data-action="cancel-booking" data-id={r.id} data-paid={r.amount_paid ?? 0}>Cancel booking</button>
-              </div>
-            </details>
-          )}
+            <label class="sp-field" id={`sp-confirm-wrap-${r.id}`} hidden={r.status !== 'confirmed'}>
+              <span>Payment</span>
+              <select id={`sp-confirm-kind-${r.id}`}>
+                <option value="advance_paid" selected={payStatus !== 'fully_paid'}>Advance paid</option>
+                <option value="fully_paid" selected={payStatus === 'fully_paid'}>Fully paid</option>
+              </select>
+            </label>
 
-          {r.status === 'cancelled' && !isRefunded && Number(r.amount_paid || 0) > 0 && (
-            <details class="confirm-entry" id={`refund-entry-${r.id}`}>
-              <summary>Record refund</summary>
-              <div class="payment-fields">
-                <label>Refund<select id={`refund-kind-${r.id}`}>
-                  <option value="partial">Partial refund</option>
-                  <option value="full">Full refund — {formatINR(r.amount_paid)}</option>
-                </select></label>
-                <label>Refund amount (₹)<input id={`refund-amount-${r.id}`} type="number" min="1" step="1" max={r.amount_paid} value={r.amount_paid} /></label>
-                <label>Refund date<input id={`refund-date-${r.id}`} type="date" max={today} value={today} /></label>
-                <label>Method<select id={`refund-method-${r.id}`}><option value="upi">UPI</option><option value="bank_transfer" selected>Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="cheque">Cheque</option><option value="other">Other</option></select></label>
-                <label>Transaction reference (optional)<input id={`refund-reference-${r.id}`} type="text" maxlength="100" /></label>
-                <button type="button" data-action="record-refund" data-id={r.id} data-paid={r.amount_paid ?? 0}>Record refund</button>
-              </div>
-            </details>
-          )}
-          {r.status === 'wishlist' && <p class="wishlist-note">Wishlist entry — payment &amp; documents appear once this converts to a booking.</p>}
-          {r.status !== 'wishlist' && r.status !== 'cancelled' && <>
-          <p>Payment</p>
-          <details class="payment-entry">
-            <summary>Record a payment</summary>
-            <div class="payment-fields">
-              <label>Payment type<select id={`payment-kind-${r.id}`}><option value="full">Full / remaining balance</option><option value="advance">Advance</option><option value="custom">Custom amount</option></select></label>
-              <label>Amount (₹)<input id={`payment-amount-${r.id}`} type="number" min="1" step="1" value={Math.max(0, Number(r.total_amount || 0) - Number(r.amount_paid || 0)) || ''} /></label>
-              <label>Received date<input id={`payment-date-${r.id}`} type="date" max={today} value={today} /></label>
-              <label>Method<select id={`payment-method-${r.id}`}><option value="upi">UPI</option><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="card">Card</option><option value="cheque">Cheque</option><option value="other">Other</option></select></label>
-              <label>Transaction reference (optional)<input id={`payment-reference-${r.id}`} type="text" maxlength="100" /></label>
-              <button type="button" data-action="record-payment" data-id={r.id} data-advance={advanceAmount} data-total={r.total_amount ?? 0} data-paid={r.amount_paid ?? 0}>Save payment</button>
-            </div>
-          </details>
-          </>}
+            <label class="sp-field" id={`sp-cancel-wrap-${r.id}`} hidden={r.status !== 'cancelled'}>
+              <span>Payment</span>
+              <select id={`sp-cancel-kind-${r.id}`}>
+                <option value="none" selected>No refund</option>
+                <option value="refunded">Refund</option>
+              </select>
+            </label>
+
+            <label class="sp-field" id={`sp-refund-wrap-${r.id}`} hidden>
+              <span>Refund amount (₹)</span>
+              <input id={`sp-refund-amount-${r.id}`} type="number" min="1" step="1" max={Number(r.amount_paid) || 0} value={Number(r.amount_paid) || 0} />
+            </label>
+          </div>
+
+          {r.status === 'wishlist' && <p class="wishlist-note">Wishlist entry — record payment after moving it to Confirmed.</p>}
+
+          <button type="button" class="sp-save" data-action="save-status-payment" data-id={r.id} disabled>Update</button>
         </div>
       </div>
 
@@ -284,5 +256,5 @@ const attributionFields = [
 </div>
 
 <style>
-  .reg-row{background:#fff;border:1px solid var(--color-border);border-radius:.75rem;padding:.9rem 1rem}.reg-summary{display:grid;grid-template-columns:auto minmax(220px,1.6fr) minmax(150px,1fr) minmax(130px,.8fr) auto;gap:1.25rem;align-items:center}.name-line{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}.name-line strong{color:var(--color-navy)}.status-badge,.payment-badge{display:inline-block;padding:.2rem .6rem;border-radius:9999px;font-size:.72rem;font-weight:700}.status-badge{text-transform:capitalize}.screenshot-chip{display:inline-block;padding:.2rem .5rem;border-radius:9999px;font-size:.68rem;font-weight:700;background:var(--color-gray-soft);color:var(--color-text-secondary)}.reg-contact{overflow:hidden;margin-top:.15rem;color:var(--color-text-secondary);font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}.reg-meta{display:flex;min-width:0;flex-direction:column;gap:.15rem;color:var(--color-text-secondary);font-size:.76rem}.reg-meta strong{color:var(--color-navy);font-size:.86rem}.reg-meta-label{font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.row-select{display:inline-flex;align-items:center;justify-content:center}.row-select input{width:1rem;height:1rem;accent-color:var(--color-coral)}.details-btn{border:0;background:none;color:var(--color-coral);cursor:pointer;font-weight:700;padding:.3rem 0;white-space:nowrap}.details-btn::after{content:" ▾"}.reg-row.open .details-btn::after{content:" ▴"}.detail-row{display:none;margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--color-border)}.detail-grid{display:grid;grid-template-columns:1fr 340px;gap:1.5rem}.detail-grid h3,.tab-panel h3{margin:0 0 .75rem;font-size:.8rem;text-transform:uppercase}.fields{display:grid;grid-template-columns:1fr 1fr;gap:.4rem 1rem;font-size:.82rem;margin-bottom:.6rem}.fields span,.admin-actions p{color:var(--color-text-secondary);font-weight:600}.detail-grid h3,.tab-panel h3{margin-top:.4rem}.detail-grid h3:first-child,.tab-panel h3:first-child{margin-top:0}.tabs-bar{display:flex;gap:.25rem;flex-wrap:wrap;border-bottom:1px solid var(--color-border);margin-bottom:1rem}.tab-btn{padding:.45rem .8rem;border:0;background:none;font-weight:700;font-size:.8rem;color:var(--color-text-secondary);border-bottom:2px solid transparent;cursor:pointer;text-transform:capitalize}.tab-btn.active{color:var(--color-navy);border-bottom-color:var(--color-coral)}.tab-panel{display:block}.tab-panel[hidden]{display:none}.tab-panel .admin-actions{background:none;border:0;padding:0}.current-status{display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem}.current-status>span:first-child{font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--color-text-secondary)}.status-tab-empty{font-size:.8rem;color:var(--color-text-secondary)}.attribution{margin:.2rem 0 .6rem}.attribution summary{cursor:pointer;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--color-text-secondary)}.attribution .fields{margin-top:.5rem}.screenshot{margin:.4rem 0 0}.screenshot img{max-height:120px;border-radius:8px;display:block}.admin-actions{background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:.75rem;padding:1.25rem}.admin-actions p{font-size:.8rem;margin:.6rem 0 .4rem}.status-actions{display:flex;gap:.35rem;flex-wrap:wrap}.status-actions button{padding:.35rem .55rem;border:1px solid var(--color-border);border-radius:.4rem;background:#fff;text-transform:capitalize}.status-actions button:disabled{opacity:.4;cursor:not-allowed}.status-actions .current{border-color:var(--color-coral);color:var(--color-coral)}.refunded{color:var(--color-text-secondary);font-weight:600}textarea{width:100%;box-sizing:border-box;padding:.5rem;border:1px solid var(--color-border);border-radius:.5rem}.save-notes{margin-top:.5rem;width:100%;padding:.5rem;background:var(--color-primary);color:#fff;border:0;border-radius:.5rem;font-weight:700}.saved{display:none!important;color:var(--color-success)!important;text-align:center}.read-only-note{font-weight:400!important}.wishlist-note{font-weight:400!important;font-size:.75rem;font-style:italic}.reg-actions{justify-self:end}.payment-entry,.confirm-entry{margin-top:.55rem}.payment-entry summary,.confirm-entry summary{cursor:pointer;color:var(--color-coral);font-size:.8rem;font-weight:700}.confirm-entry input[readonly]{background:var(--color-gray-soft);color:var(--color-text-secondary)}.payment-fields{display:grid;gap:.5rem;margin-top:.6rem}.payment-fields label{display:grid;gap:.2rem;color:var(--color-text-secondary);font-size:.72rem;font-weight:700}.payment-fields input,.payment-fields select{box-sizing:border-box;width:100%;padding:.45rem;border:1px solid var(--color-border);border-radius:.4rem;background:#fff}.payment-fields button,.document-actions button,.document-empty button{padding:.4rem .6rem;border:0;border-radius:.4rem;background:var(--color-primary);color:#fff;font-weight:700}.documents{display:grid;gap:.5rem}.document-row{display:grid;gap:.25rem;padding:.55rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff}.document-row>div:first-child{display:flex;justify-content:space-between;gap:.5rem}.document-row span,.document-row small,.document-empty{font-size:.7rem;color:var(--color-text-secondary)}.document-actions{display:flex;gap:.4rem}.document-actions a{font-size:.72rem;font-weight:700;color:var(--color-coral)}.document-error{color:var(--color-danger)!important}.state-fix{display:grid;gap:.35rem;margin-top:.4rem;padding:.5rem;border:1px solid var(--color-border);border-radius:.4rem;background:var(--color-gray-soft)}.state-fix-row{display:flex;gap:.4rem}.state-fix-row input{flex:1;min-width:0;padding:.35rem;border:1px solid var(--color-border);border-radius:.4rem}.document-empty{display:flex;align-items:center;justify-content:space-between;gap:.5rem}@media(max-width:900px){.reg-summary{grid-template-columns:auto 1fr 1fr}.reg-primary{grid-column:2/-1}.reg-actions{grid-column:2/-1;justify-self:start}.detail-grid{grid-template-columns:1fr}}@media(max-width:600px){.reg-summary{grid-template-columns:auto 1fr}.reg-meta{grid-column:2}.fields{grid-template-columns:1fr}}
+  .reg-row{background:#fff;border:1px solid var(--color-border);border-radius:.75rem;padding:.9rem 1rem}.reg-summary{display:grid;grid-template-columns:auto minmax(220px,1.6fr) minmax(150px,1fr) minmax(130px,.8fr) auto;gap:1.25rem;align-items:center}.name-line{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}.name-line strong{color:var(--color-navy)}.status-badge,.payment-badge{display:inline-block;padding:.2rem .6rem;border-radius:9999px;font-size:.72rem;font-weight:700}.status-badge{text-transform:capitalize}.screenshot-chip{display:inline-block;padding:.2rem .5rem;border-radius:9999px;font-size:.68rem;font-weight:700;background:var(--color-gray-soft);color:var(--color-text-secondary)}.reg-contact{overflow:hidden;margin-top:.15rem;color:var(--color-text-secondary);font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}.reg-meta{display:flex;min-width:0;flex-direction:column;gap:.15rem;color:var(--color-text-secondary);font-size:.76rem}.reg-meta strong{color:var(--color-navy);font-size:.86rem}.reg-meta-label{font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.row-select{display:inline-flex;align-items:center;justify-content:center}.row-select input{width:1rem;height:1rem;accent-color:var(--color-coral)}.details-btn{border:0;background:none;color:var(--color-coral);cursor:pointer;font-weight:700;padding:.3rem 0;white-space:nowrap}.details-btn::after{content:" ▾"}.reg-row.open .details-btn::after{content:" ▴"}.detail-row{display:none;margin-top:.9rem;padding-top:.9rem;border-top:1px solid var(--color-border)}.detail-grid{display:grid;grid-template-columns:1fr 340px;gap:1.5rem}.detail-grid h3,.tab-panel h3{margin:0 0 .75rem;font-size:.8rem;text-transform:uppercase}.fields{display:grid;grid-template-columns:1fr 1fr;gap:.4rem 1rem;font-size:.82rem;margin-bottom:.6rem}.fields span,.admin-actions p{color:var(--color-text-secondary);font-weight:600}.detail-grid h3,.tab-panel h3{margin-top:.4rem}.detail-grid h3:first-child,.tab-panel h3:first-child{margin-top:0}.tabs-bar{display:flex;gap:.25rem;flex-wrap:wrap;border-bottom:1px solid var(--color-border);margin-bottom:1rem}.tab-btn{padding:.45rem .8rem;border:0;background:none;font-weight:700;font-size:.8rem;color:var(--color-text-secondary);border-bottom:2px solid transparent;cursor:pointer;text-transform:capitalize}.tab-btn.active{color:var(--color-navy);border-bottom-color:var(--color-coral)}.tab-panel{display:block}.tab-panel[hidden]{display:none}.sp-wrap{display:flex;flex-direction:column;gap:1rem;max-width:460px}.sp-hero{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}.sp-hero-label{width:100%;font-size:.65rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-secondary)}.sp-hero-status{font:800 1.4rem/1 var(--font-display);padding:.55rem 1rem;border-radius:.6rem;text-transform:capitalize}.sp-hero-pay{font-size:.8rem;font-weight:600;color:var(--color-text-secondary)}.sp-controls{display:flex;gap:.75rem;flex-wrap:wrap}.sp-field{display:grid;gap:.25rem;flex:1;min-width:150px}.sp-field>span{font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-secondary)}.sp-field[hidden]{display:none}.sp-field select,.sp-field input{width:100%;box-sizing:border-box;padding:.5rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy);font-size:.875rem}.sp-save{align-self:flex-start;padding:.55rem 1.4rem;border:0;border-radius:.5rem;background:var(--color-navy);color:#fff;font-weight:700;font-size:.85rem;cursor:pointer}.sp-save:disabled{opacity:.4;cursor:not-allowed}.attribution{margin:.2rem 0 .6rem}.attribution summary{cursor:pointer;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--color-text-secondary)}.attribution .fields{margin-top:.5rem}.screenshot{margin:.4rem 0 0}.screenshot img{max-height:120px;border-radius:8px;display:block}.admin-actions{background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:.75rem;padding:1.25rem}.admin-actions p{font-size:.8rem;margin:.6rem 0 .4rem}.refunded{color:var(--color-text-secondary);font-weight:600}textarea{width:100%;box-sizing:border-box;padding:.5rem;border:1px solid var(--color-border);border-radius:.5rem}.save-notes{margin-top:.5rem;width:100%;padding:.5rem;background:var(--color-primary);color:#fff;border:0;border-radius:.5rem;font-weight:700}.saved{display:none!important;color:var(--color-success)!important;text-align:center}.read-only-note{font-weight:400!important}.wishlist-note{font-weight:400!important;font-size:.75rem;font-style:italic}.reg-actions{justify-self:end}.document-actions button,.document-empty button{padding:.4rem .6rem;border:0;border-radius:.4rem;background:var(--color-primary);color:#fff;font-weight:700}.documents{display:grid;gap:.5rem}.document-row{display:grid;gap:.25rem;padding:.55rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff}.document-row>div:first-child{display:flex;justify-content:space-between;gap:.5rem}.document-row span,.document-row small,.document-empty{font-size:.7rem;color:var(--color-text-secondary)}.document-actions{display:flex;gap:.4rem}.document-actions a{font-size:.72rem;font-weight:700;color:var(--color-coral)}.document-error{color:var(--color-danger)!important}.state-fix{display:grid;gap:.35rem;margin-top:.4rem;padding:.5rem;border:1px solid var(--color-border);border-radius:.4rem;background:var(--color-gray-soft)}.state-fix-row{display:flex;gap:.4rem}.state-fix-row input{flex:1;min-width:0;padding:.35rem;border:1px solid var(--color-border);border-radius:.4rem}.document-empty{display:flex;align-items:center;justify-content:space-between;gap:.5rem}@media(max-width:900px){.reg-summary{grid-template-columns:auto 1fr 1fr}.reg-primary{grid-column:2/-1}.reg-actions{grid-column:2/-1;justify-self:start}.detail-grid{grid-template-columns:1fr}}@media(max-width:600px){.reg-summary{grid-template-columns:auto 1fr}.reg-meta{grid-column:2}.fields{grid-template-columns:1fr}}
 </style>
