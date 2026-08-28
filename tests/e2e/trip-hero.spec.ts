@@ -3,6 +3,60 @@ import { test, expect } from '@playwright/test';
 const TRIP_URL = '/trips/qa-test-booking-panel/';
 
 test.describe('trip departure hero', () => {
+  test('renders the compact trip-at-a-glance band directly below the hero', async ({ page }) => {
+    await page.goto(TRIP_URL);
+
+    const band = page.getByTestId('trip-at-a-glance');
+    await expect(band).toBeVisible();
+    await expect(band.locator('dl > div')).toHaveCount(4);
+    await expect(band.locator('h2')).toHaveClass(/sr-only/);
+    await expect(band.getByRole('link', { name: /cancellation policy/i })).toHaveCount(0);
+    await expect(page.getByTestId('glance-duration')).toContainText('3 Days, 2 Nights');
+    await expect(page.getByTestId('glance-departures')).toContainText('Mar 1 – 3 +2 more');
+    await expect(page.getByTestId('glance-price')).toContainText('Starting from');
+    await expect(page.getByTestId('glance-price')).toContainText('₹5,000 / person');
+    await expect(page.getByTestId('glance-group-size')).toContainText('Up to 15 travellers');
+
+    expect(await band.evaluate((section) => section.previousElementSibling?.getAttribute('data-testid'))).toBe('trip-hero');
+  });
+
+  test('uses two columns on mobile and four columns on desktop without overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto(TRIP_URL);
+    const metrics = page.getByTestId('trip-at-a-glance').locator('dl > div');
+    const mobileTops = await metrics.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top));
+    expect(mobileTops[0]).toBe(mobileTops[1]);
+    expect(mobileTops[2]).toBe(mobileTops[3]);
+    expect(mobileTops[2]).toBeGreaterThan(mobileTops[0]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const desktopTops = await metrics.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top));
+    expect(new Set(desktopTops).size).toBe(1);
+  });
+
+  test('keeps sold-out prices and no-upcoming-date fallbacks informative', async ({ page }) => {
+    await page.goto('/trips/qa-test-sold-out/');
+    await expect(page.getByTestId('glance-price')).toContainText('₹5,000 / person');
+    await expect(page.getByTestId('glance-group-size')).toContainText('Up to 20 travellers');
+
+    await page.goto('/trips/qa-test-backfill/');
+    await expect(page.getByTestId('glance-departures')).toContainText('New dates soon');
+    await expect(page.getByTestId('glance-price')).toContainText('To be announced');
+    await expect(page.getByTestId('glance-group-size')).toContainText('To be announced');
+  });
+
+  test('uses the lowest public price and ignores concealed coming-soon offers', async ({ page }) => {
+    await page.goto('/trips/qa-test-coming-soon/');
+    const price = page.getByTestId('glance-price');
+    await expect(price).toContainText('₹12,000 / person');
+    await expect(price).not.toContainText('₹9,000');
+
+    await page.goto('/trips/qa-test-v2/');
+    await expect(page.getByTestId('glance-duration')).toContainText('To be announced');
+    await expect(page.getByTestId('glance-price')).toContainText('₹5,000 / person');
+  });
+
   test('uses back navigation chrome and renders an informational summary', async ({ page }) => {
     await page.goto(TRIP_URL);
 

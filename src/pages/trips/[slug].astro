@@ -101,16 +101,16 @@ const isOpen = bookableDepartures.some((d) => !d.soldOut);
 // Show the interactive panel whenever there is something to do — book or wishlist.
 const showBookingPanel = isOpen || hasComingSoonDate;
 const departureSummary = getDepartureSummary(departures);
-const atAGlance = [
-  trip.location && ['Destination', String(trip.location)],
-  trip.duration && ['Duration', String(trip.duration)],
-  departureSummary.displayed.length > 0 && ['Upcoming dates', departureSummary.displayed.map((d) => formatDepartureRange(d.startDate, d.endDate)).join(' · ')],
-  trip.meetingPoint && ['Meeting point', String(trip.meetingPoint)],
-  firstDeparture?.totalCap != null && ['Group size', `Up to ${firstDeparture.totalCap} travellers`],
-  booking.occupancyCatalog.length > 0 && ['Occupancy options', booking.occupancyCatalog.map((tier) => tier.label).join(', ')],
-  allComingSoon ? ['Booking', 'Coming soon'] : ['Booking advance', `₹${paymentAmount.toLocaleString('en-IN')}`],
-  !allComingSoon && balanceDueRule && ['Balance due', balanceDueRule],
-].filter(Boolean) as string[][];
+const chronologicalDepartures = [...departures].sort((a, b) => a.startDate.localeCompare(b.startDate));
+const nearestDeparture = chronologicalDepartures[0] ?? null;
+const departureAtAGlance = nearestDeparture
+  ? `${formatDepartureRange(nearestDeparture.startDate, nearestDeparture.endDate)}${chronologicalDepartures.length > 1 ? ` +${chronologicalDepartures.length - 1} more` : ''}`
+  : 'New dates soon';
+const durationAtAGlance = String(trip.duration ?? '').trim() || 'To be announced';
+const groupSizeAtAGlance = firstDeparture?.totalCap != null
+  ? `Up to ${firstDeparture.totalCap} travellers`
+  : 'To be announced';
+const priceAtAGlance = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')} / person` : 'To be announced';
 
 // Strip all pricing from coming-soon departures before they cross to the island.
 const departuresForPanel = departures.map((d) =>
@@ -297,6 +297,42 @@ const tripSchema: Record<string, any> = {
   </section>
 
   <!-- ── MAIN LAYOUT ──────────────────────────────────────── -->
+  <!-- Compact, semantic trip summary. The visually hidden heading preserves a
+       useful section name for assistive technology without adding visual bulk. -->
+  <section data-testid="trip-at-a-glance" aria-labelledby="trip-at-a-glance-heading" style="background-color: #f7f5f1;">
+    <h2 id="trip-at-a-glance-heading" class="sr-only">Trip at a glance</h2>
+    <dl class="container-app grid grid-cols-2 py-3 sm:py-4 md:grid-cols-4">
+      <div data-testid="glance-duration" class="min-w-0 border-b border-r px-3 py-3 sm:px-5 md:border-b-0 md:px-6" style="border-color: var(--color-border);">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
+          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          Duration
+        </dt>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{durationAtAGlance}</dd>
+      </div>
+      <div data-testid="glance-departures" class="min-w-0 border-b px-3 py-3 sm:px-5 md:border-b-0 md:border-r md:px-6" style="border-color: var(--color-border);">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
+          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>
+          Departures
+        </dt>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{departureAtAGlance}</dd>
+      </div>
+      <div data-testid="glance-price" class="min-w-0 border-r px-3 py-3 sm:px-5 md:px-6" style="border-color: var(--color-border);">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
+          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m-6 4h6m-5 10l-4-4 4-4h1a5 5 0 000-10H6" /></svg>
+          {allComingSoon ? 'Coming soon' : 'Starting from'}
+        </dt>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{allComingSoon ? 'Join the waitlist' : priceAtAGlance}</dd>
+      </div>
+      <div data-testid="glance-group-size" class="min-w-0 px-3 py-3 sm:px-5 md:px-6">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
+          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m7-10a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 010 7.75" /></svg>
+          Group size
+        </dt>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{groupSizeAtAGlance}</dd>
+      </div>
+    </dl>
+  </section>
+
   <div class="container-app py-10 lg:py-14">
     <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] gap-12 items-start">
 
@@ -341,24 +377,6 @@ const tripSchema: Record<string, any> = {
               window.addEventListener('resize', check);
             })();
           </script>
-        )}
-
-        <!-- Trip at a glance — plain facts list. Demoted from a hero card: its
-             job now is clean key/value text that answer engines can lift. The
-             same fields also feed the Event/Offer JSON-LD in <head>. -->
-        {atAGlance.length > 0 && (
-          <section aria-labelledby="trip-at-a-glance">
-            <h2 id="trip-at-a-glance" class="text-2xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">Trip at a glance</h2>
-            <dl class="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-              {atAGlance.map(([label, value]) => (
-                <div class="flex flex-col gap-0.5 border-b pb-2.5 sm:flex-row sm:justify-between sm:gap-4" style="border-color: var(--color-border);">
-                  <dt class="text-sm" style="color: var(--color-gray-text);">{label}</dt>
-                  <dd class="text-sm font-medium sm:text-right" style="color: var(--color-navy);">{value}</dd>
-                </div>
-              ))}
-            </dl>
-            <a href="/cancellation/" class="mt-3 inline-flex text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read the cancellation policy →</a>
-          </section>
         )}
 
         <!-- Highlights -->
