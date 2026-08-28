@@ -108,7 +108,7 @@ const atAGlance = [
   trip.meetingPoint && ['Meeting point', String(trip.meetingPoint)],
   firstDeparture?.totalCap != null && ['Group size', `Up to ${firstDeparture.totalCap} travellers`],
   booking.occupancyCatalog.length > 0 && ['Occupancy options', booking.occupancyCatalog.map((tier) => tier.label).join(', ')],
-  allComingSoon ? ['Booking', 'Wishlist open · pricing announced soon'] : ['Booking advance', `₹${paymentAmount.toLocaleString('en-IN')}`],
+  allComingSoon ? ['Booking', 'Coming soon'] : ['Booking advance', `₹${paymentAmount.toLocaleString('en-IN')}`],
   !allComingSoon && balanceDueRule && ['Balance due', balanceDueRule],
 ].filter(Boolean) as string[][];
 
@@ -288,7 +288,7 @@ const tripSchema: Record<string, any> = {
             </span>
           ) : allComingSoon ? (
             <span class="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
-              Dates announced · pricing soon
+              Coming soon
             </span>
           ) : null}
         </div>

@@ -127,11 +127,7 @@ const departureSummary = getDepartureSummary(departures);
       </div>
       <div data-testid="trip-card-price" class="trip-card-price shrink-0 text-right">
         {allComingSoon && formattedPrice == null ? (
-          <>
-            <p class="font-display text-2xl leading-none select-none" style="color: var(--color-coral); filter: blur(6px);" aria-hidden="true">₹ ••,•••</p>
-            <span class="sr-only">Pricing revealed when booking opens</span>
-            <p class="mt-1.5 text-xs" style="color: var(--color-gray-text);">pricing soon</p>
-          </>
+          <p class="font-display text-2xl leading-none" style="color: var(--color-coral);">Coming soon</p>
         ) : (
           <>
             {originalFromPrice != null && (

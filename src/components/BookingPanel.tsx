@@ -169,20 +169,14 @@ export default function BookingPanel({
 
   return (
     <div>
-      {/* Price header — concealed for coming-soon dates, otherwise the "from" floor */}
+      {/* Price header — status for coming-soon dates, otherwise the "from" floor */}
       {selectedComingSoon ? (
         <div className="mb-5">
-          <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
           <span
-            aria-hidden="true"
-            className="text-3xl font-bold select-none"
-            style={{ fontFamily: 'var(--font-display)', color: C.coral, filter: 'blur(6px)' }}
+            className="text-3xl font-bold"
+            style={{ fontFamily: 'var(--font-display)', color: C.coral }}
           >
-            ₹ ••,•••
-          </span>
-          <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
-          <span className="block text-xs mt-1" style={{ color: C.gray }}>
-            Pricing is announced when this date opens for booking.
+            Coming soon
           </span>
         </div>
       ) : fromPrice != null ? (
