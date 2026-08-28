@@ -67,11 +67,31 @@ async function request(path: string, init: RequestInit = {}, pdf = false): Promi
 
 const isoDate = (value: string) => new Date(value).toISOString().slice(0, 10);
 
+async function findContactByEmail(email: string): Promise<string | null> {
+  if (!email) return null;
+  const listed = await request(`/contacts?email=${encodeURIComponent(email)}`);
+  const match = (listed.contacts || []).find((c: any) =>
+    String(c.email || '').toLowerCase() === email.toLowerCase());
+  return match?.contact_id || null;
+}
+
+async function findContactByName(name: string): Promise<string | null> {
+  if (!name) return null;
+  const listed = await request(`/contacts?contact_name_contains=${encodeURIComponent(name)}`);
+  const match = (listed.contacts || []).find((c: any) =>
+    String(c.contact_name || '').trim().toLowerCase() === name.trim().toLowerCase());
+  return match?.contact_id || null;
+}
+
 async function findOrCreateCustomer(snapshot: any, registrationId: number): Promise<string> {
-  const listed = await request(`/contacts?email=${encodeURIComponent(snapshot.email)}`);
-  const existing = (listed.contacts || []).find((contact: any) =>
-    String(contact.email || '').toLowerCase() === snapshot.email.toLowerCase());
-  if (existing?.contact_id) return existing.contact_id;
+  // Zoho enforces a unique contact_name, so an existing contact whose email
+  // doesn't match ours (created manually, or with a different address) would
+  // otherwise collide on create. Check both, and recover by name on 3062.
+  const byEmail = await findContactByEmail(snapshot.email);
+  if (byEmail) return byEmail;
+  const byName = await findContactByName(snapshot.customerName);
+  if (byName) return byName;
+
   const billingAddress = {
     address: snapshot.address || undefined,
     city: snapshot.city || undefined,
@@ -79,21 +99,29 @@ async function findOrCreateCustomer(snapshot: any, registrationId: number): Prom
     zip: snapshot.pincode || undefined,
     country: snapshot.country || 'India',
   };
-  const created = await request('/contacts', {
-    method: 'POST',
-    body: JSON.stringify({
-      contact_name: snapshot.customerName,
-      company_name: snapshot.business ? snapshot.customerName : undefined,
-      contact_type: 'customer',
-      email: snapshot.email,
-      phone: snapshot.phone,
-      billing_address: billingAddress,
-      notes: `STT customer; first linked registration #${registrationId}`,
-    }),
-  });
-  const id = created.contact?.contact_id;
-  if (!id) throw new Error('Zoho customer creation returned no customer ID');
-  return id;
+  try {
+    const created = await request('/contacts', {
+      method: 'POST',
+      body: JSON.stringify({
+        contact_name: snapshot.customerName,
+        company_name: snapshot.business ? snapshot.customerName : undefined,
+        contact_type: 'customer',
+        email: snapshot.email,
+        phone: snapshot.phone,
+        billing_address: billingAddress,
+        notes: `STT customer; first linked registration #${registrationId}`,
+      }),
+    });
+    const id = created.contact?.contact_id;
+    if (!id) throw new Error('Zoho customer creation returned no customer ID');
+    return id;
+  } catch (err: any) {
+    if (/already exists|"code"\s*:\s*3062/i.test(String(err?.message || ''))) {
+      const reuse = await findContactByName(snapshot.customerName);
+      if (reuse) return reuse;
+    }
+    throw err;
+  }
 }
 
 async function findDocument(reference: string): Promise<any | null> {
