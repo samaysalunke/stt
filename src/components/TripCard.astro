@@ -58,7 +58,7 @@ const departureSummary = getDepartureSummary(departures);
 
 <article
   data-testid="trip-card"
-  class="group flex h-full flex-col overflow-hidden rounded-3xl bg-white transition-all hover:-translate-y-0.5"
+  class="trip-card-shell group flex h-full flex-col overflow-hidden rounded-3xl bg-white transition-all hover:-translate-y-0.5"
   style="box-shadow: 0 4px 30px -12px rgba(27,43,58,0.18);"
 >
   <!-- Cover image -->
@@ -111,13 +111,13 @@ const departureSummary = getDepartureSummary(departures);
 
   <!-- Card body -->
   <div class="flex flex-1 flex-col gap-5 p-6">
-    <div class="flex items-start justify-between gap-4">
-      <div class="min-w-0">
+    <div data-testid="trip-card-summary" class="trip-card-summary flex items-start justify-between gap-4">
+      <div data-testid="trip-card-info" class="min-w-0">
         <a href={`/trips/${slug}/`}>
-          <h3 class="font-display text-2xl leading-tight transition-colors group-hover:text-[color:var(--color-coral)]" style="color: var(--color-navy);">{tripName}</h3>
+          <h3 data-testid="trip-card-title" class="font-display text-2xl leading-tight transition-colors group-hover:text-[color:var(--color-coral)]" style="color: var(--color-navy);">{tripName}</h3>
         </a>
         {location && (
-          <p class="mt-2 inline-flex items-center gap-1.5 text-sm" style="color: var(--color-gray-text);">
+          <p data-testid="trip-card-location" class="mt-2 inline-flex items-center gap-1.5 text-sm" style="color: var(--color-gray-text);">
             <svg class="h-4 w-4" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             </svg>
@@ -125,7 +125,7 @@ const departureSummary = getDepartureSummary(departures);
           </p>
         )}
       </div>
-      <div class="shrink-0 text-right">
+      <div data-testid="trip-card-price" class="trip-card-price shrink-0 text-right">
         {allComingSoon && formattedPrice == null ? (
           <>
             <p class="font-display text-2xl leading-none select-none" style="color: var(--color-coral); filter: blur(6px);" aria-hidden="true">₹ ••,•••</p>
@@ -169,3 +169,30 @@ const departureSummary = getDepartureSummary(departures);
     )}
   </div>
 </article>
+
+<style>
+  .trip-card-shell {
+    container-name: trip-card;
+    container-type: inline-size;
+  }
+
+  @container trip-card (max-width: 420px) {
+    .trip-card-summary {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .trip-card-price {
+      display: flex;
+      width: 100%;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.375rem 0.5rem;
+      text-align: left;
+    }
+
+    .trip-card-price > :global(*) {
+      margin-top: 0;
+    }
+  }
+</style>

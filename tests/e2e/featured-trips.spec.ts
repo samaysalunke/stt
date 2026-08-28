@@ -1,5 +1,38 @@
 import { test, expect } from '@playwright/test';
 
+for (const width of [320, 375, 390]) {
+  test(`trip cards stack cleanly at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+
+    for (const path of ['/', '/trips/']) {
+      await page.goto(path);
+
+      const cards = page.locator('[data-testid="trip-card"]');
+      expect(await cards.count()).toBeGreaterThan(0);
+
+      for (const card of await cards.all()) {
+        await expect(card.locator('[data-testid="trip-card-summary"]')).toHaveCSS('flex-direction', 'column');
+        const info = await card.locator('[data-testid="trip-card-info"]').boundingBox();
+        const price = await card.locator('[data-testid="trip-card-price"]').boundingBox();
+        expect(info).not.toBeNull();
+        expect(price).not.toBeNull();
+        expect((price?.y ?? 0)).toBeGreaterThanOrEqual((info?.y ?? 0) + (info?.height ?? 0));
+      }
+
+      const pageWidth = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+      expect(pageWidth.scroll).toBeLessThanOrEqual(pageWidth.client);
+    }
+  });
+}
+
+test('wide listing cards retain the two-column summary', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/trips/');
+
+  const summary = page.locator('[data-testid="trip-card-summary"]').first();
+  await expect(summary).toHaveCSS('flex-direction', 'row');
+});
+
 test('mobile featured trip cards share one height', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
