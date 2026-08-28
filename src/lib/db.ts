@@ -211,7 +211,14 @@ function initializeSchema(db: Database.Database) {
       tripsCount INTEGER DEFAULT 0,
       updatedAt INTEGER DEFAULT (unixepoch())
     );
+
+    CREATE TABLE IF NOT EXISTS username_aliases (
+      username TEXT PRIMARY KEY COLLATE NOCASE,
+      userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      createdAt INTEGER DEFAULT (unixepoch())
+    );
   `);
+  try { db.exec('CREATE INDEX IF NOT EXISTS username_aliases_user ON username_aliases(userId)'); } catch {}
 
   // feature/rbac — roles, admin sessions, audit log
   db.exec(`

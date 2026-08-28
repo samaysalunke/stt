@@ -1,253 +1,81 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProfileChrome from '../../components/ProfileChrome.astro';
 import MapIndia from '../../components/MapIndia.astro';
 import { getDb } from '../../lib/db';
-import { readTrip } from '../../lib/content';
+import { canonicalizeProfileTrips, shapePublicTrips, type ProfileRegistrationRow } from '../../lib/profileTrips';
 
 export const prerender = false;
-
-const { username } = Astro.params;
-if (!username) return new Response('Not Found', { status: 404 });
-
+const requestedUsername = Astro.params.username;
+if (!requestedUsername) return new Response('Not Found', { status: 404 });
 const db = getDb();
-
-const profileUser = db.prepare(`
-  SELECT id, email, displayName, avatarUrl, username, leaderboardOptOut, showTripsPublicly, createdAt
-  FROM users WHERE username = ?
-`).get(username) as {
-  id: string;
-  email: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  username: string;
-  leaderboardOptOut: number;
-  showTripsPublicly: number;
-  createdAt: number;
+let profileUser = db.prepare(`SELECT id, displayName, avatarUrl, username, leaderboardOptOut, showTripsPublicly, createdAt FROM users WHERE username = ? COLLATE NOCASE`).get(requestedUsername) as {
+  id: string; displayName: string | null; avatarUrl: string | null; username: string;
+  leaderboardOptOut: number; showTripsPublicly: number; createdAt: number;
 } | undefined;
-
 if (!profileUser) {
+  const alias = db.prepare(`SELECT u.id, u.displayName, u.avatarUrl, u.username, u.leaderboardOptOut, u.showTripsPublicly, u.createdAt FROM username_aliases a JOIN users u ON u.id = a.userId WHERE a.username = ? COLLATE NOCASE`).get(requestedUsername) as typeof profileUser;
+  if (alias) return Astro.redirect(`/u/${alias.username}`, 308);
   return new Response('Not Found', { status: 404 });
 }
-
-// Stats from leaderboard cache
-const stats = db.prepare(
-  'SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?'
-).get(profileUser.id) as {
-  kmsFromHome: number;
-  daysOutdoors: number;
-  destinationsCount: number;
-  tripsCount: number;
-} | undefined;
-
-// Leaderboard rank (km from home tab), shown unless opted out
+// Email is used only as a bound database parameter. It is deliberately kept out
+// of the public user/view-model objects rendered below.
+const owner = db.prepare('SELECT email FROM users WHERE id = ?').get(profileUser.id) as { email: string };
+const stats = db.prepare('SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?').get(profileUser.id) as { kmsFromHome:number; daysOutdoors:number; destinationsCount:number; tripsCount:number } | undefined;
 let kmRank: number | null = null;
 if (!profileUser.leaderboardOptOut && stats) {
-  const rankRow = db.prepare(
-    'SELECT COUNT(*) + 1 as rank FROM leaderboard_cache WHERE kmsFromHome > ?'
-  ).get(stats.kmsFromHome) as { rank: number };
-  kmRank = rankRow.rank;
+  kmRank = (db.prepare(`SELECT COUNT(*) + 1 rank FROM leaderboard_cache c JOIN users u ON u.id=c.userId AND u.leaderboardOptOut=0 WHERE c.kmsFromHome > ?`).get(stats.kmsFromHome) as { rank:number }).rank;
 }
-
-// Confirmed registrations (used for map + trip list)
-const confirmedRegs = db.prepare(`
-  SELECT trip_name, trip_slug, batch_id
-  FROM registrations
-  WHERE email = ? AND status = 'confirmed'
-  ORDER BY created_at DESC
-`).all(profileUser.email) as { trip_name: string; trip_slug: string | null; batch_id: string | null }[];
-
-// Build map pins from geocode_cache
-type PinStatus = 'completed' | 'ongoing' | 'upcoming';
-
-interface Pin {
-  lat: number;
-  lng: number;
-  status: PinStatus;
-  label: string;
-}
-
-function getBatchStatus(tripSlug: string, batchId: string | null): PinStatus {
-  if (!batchId) return 'completed';
-  try {
-    const trip = readTrip(tripSlug);
-    const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);
-    if (!batch?.startDate) return 'completed';
-    const today = Date.now();
-    const start = new Date(batch.startDate).getTime();
-    const end = batch.endDate ? new Date(batch.endDate).getTime() : start;
-    if (end < today) return 'completed';
-    if (start <= today) return 'ongoing';
-    return 'upcoming';
-  } catch {
-    return 'completed';
-  }
-}
-
-const pins: Pin[] = [];
-const destinationsSeen = new Set<string>();
-
-for (const reg of confirmedRegs) {
-  const slug = reg.trip_slug;
-  if (!slug) continue;
-  const trip = readTrip(slug);
-  const location = (trip?.location as string | undefined)?.trim();
-  if (!location || destinationsSeen.has(location.toLowerCase())) continue;
-
-  const coords = db.prepare('SELECT lat, lng FROM geocode_cache WHERE query = ?')
-    .get(location.toLowerCase()) as { lat: number; lng: number } | undefined;
-  if (!coords) continue;
-
-  destinationsSeen.add(location.toLowerCase());
-  pins.push({ lat: coords.lat, lng: coords.lng, status: getBatchStatus(slug, reg.batch_id), label: location });
-}
-
-// Public trip list (only if opted in)
-interface PublicTrip {
-  tripName: string;
-  location: string;
-  status: PinStatus;
-}
-
-let publicTrips: PublicTrip[] | null = null;
+let publicTrips: ReturnType<typeof shapePublicTrips> = [];
 if (profileUser.showTripsPublicly) {
-  publicTrips = confirmedRegs.map((reg) => {
-    const slug = reg.trip_slug;
-    const trip = slug ? readTrip(slug) : null;
-    const location = (trip?.location as string | undefined) ?? '';
-    return {
-      tripName: reg.trip_name,
-      location,
-      status: slug ? getBatchStatus(slug, reg.batch_id) : 'completed',
-    };
-  });
+  const confirmed = db.prepare(`SELECT id, trip_name, trip_slug, trip_date, batch_id, status, created_at, updated_at, status_changed_at FROM registrations WHERE lower(trim(email))=lower(trim(?)) AND status='confirmed' ORDER BY created_at DESC, id DESC`).all(owner.email) as ProfileRegistrationRow[];
+  publicTrips = shapePublicTrips(canonicalizeProfileTrips(confirmed));
 }
-
-const firstName = profileUser.displayName?.split(' ')[0] ?? 'Traveller';
+type Pin = { lat:number; lng:number; status:'completed'|'ongoing'|'upcoming'; label:string };
+const pins: Pin[] = [];
+const seenLocations = new Set<string>();
+for (const trip of publicTrips) {
+  const key = trip.location?.toLowerCase().trim();
+  if (!key || seenLocations.has(key)) continue;
+  const coords = db.prepare('SELECT lat, lng FROM geocode_cache WHERE query = ?').get(key) as { lat:number; lng:number } | undefined;
+  if (!coords) continue;
+  seenLocations.add(key);
+  pins.push({ ...coords, status: trip.status, label: trip.location! });
+}
+const grouped = {
+  ongoing: publicTrips.filter((trip) => trip.status === 'ongoing'),
+  upcoming: publicTrips.filter((trip) => trip.status === 'upcoming'),
+  completed: publicTrips.filter((trip) => trip.status === 'completed'),
+};
+const firstName = profileUser.displayName?.trim().split(/\s+/)[0] || 'Traveller';
 const joinYear = new Date(profileUser.createdAt * 1000).getFullYear();
 const tripsCount = stats?.tripsCount ?? 0;
-const tagline = tripsCount > 0
-  ? `${tripsCount} trip${tripsCount !== 1 ? 's' : ''} with Seek the Thrill`
-  : `Explorer since ${joinYear}`;
-
 const pageTitle = `${firstName}'s trips with Seek the Thrill`;
-const pageDesc = `${tripsCount} trip${tripsCount !== 1 ? 's' : ''} · ${stats?.destinationsCount ?? 0} destinations · ${stats?.kmsFromHome ?? 0} km from home`;
-
-const statusMeta: Record<PinStatus, { label: string; color: string }> = {
-  completed: { label: 'Completed', color: '#10B981' },
-  ongoing:   { label: 'Ongoing',   color: '#F59E0B' },
-  upcoming:  { label: 'Upcoming',  color: 'var(--color-coral)' },
-};
+const pageDesc = `${tripsCount} trips · ${stats?.destinationsCount ?? 0} destinations · ${stats?.kmsFromHome ?? 0} km from home`;
+const statusLabel = { ongoing: 'Ongoing', upcoming: 'Upcoming', completed: 'Completed' } as const;
 ---
-
-<BaseLayout title={pageTitle} description={pageDesc} robots="noindex, follow" nav="back">
-  <Fragment slot="head">
-    <meta property="og:title" content={`${firstName} on Seek the Thrill`} />
-    <meta property="og:description" content={`${tripsCount} trips across India with @seekthethrill_`} />
-  </Fragment>
-
-  <div class="container-app py-10 max-w-lg mx-auto">
-
-    <!-- Avatar + name + tagline -->
-    <div class="flex items-center gap-4 mb-8">
-      {profileUser.avatarUrl ? (
-        <img src={profileUser.avatarUrl} alt={firstName}
-             class="w-16 h-16 rounded-full object-cover" referrerpolicy="no-referrer" />
-      ) : (
-        <div class="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
-             style="background: var(--color-coral);">
-          {firstName[0].toUpperCase()}
-        </div>
-      )}
-      <div>
-        <h1 class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">{firstName}</h1>
-        <p class="text-sm" style="color: var(--color-gray-text);">@{profileUser.username}</p>
-        <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{tagline}</p>
+<BaseLayout title={pageTitle} description={pageDesc} robots="noindex, follow" nav="none" hideWhatsApp={true}>
+  <Fragment slot="head"><meta property="og:title" content={`${firstName} on Seek the Thrill`} /><meta property="og:description" content={`${tripsCount} trips across India with @seekthethrill_`} /></Fragment>
+  <ProfileChrome>
+    <main class="profile-shell public-profile">
+      <div class={`profile-composition ${profileUser.showTripsPublicly ? '' : 'without-map'}`}>
+        <section class="public-identity">
+          {profileUser.avatarUrl ? <img src={profileUser.avatarUrl} alt="" referrerpolicy="no-referrer" /> : <span class="public-avatar" aria-hidden="true">{firstName[0].toUpperCase()}</span>}
+          <div><h1>{firstName}</h1><p class="handle">@{profileUser.username}</p><p>{tripsCount ? `${tripsCount} trip${tripsCount === 1 ? '' : 's'} with Seek the Thrill` : `Explorer since ${joinYear}`}</p></div>
+          {kmRank !== null && <a class="rank" href="/leaderboard?tab=km">#{kmRank} on the km from home board →</a>}
+        </section>
+        {profileUser.showTripsPublicly && <section class="map-card" aria-labelledby="map-title"><h2 id="map-title">Adventures across India</h2>{pins.length ? <><MapIndia pins={pins} class="india-map" /><div class="legend"><span><i class="completed"></i>Completed</span><span><i class="ongoing"></i>Ongoing</span><span><i class="upcoming"></i>Upcoming</span></div></> : <div class="map-empty"><strong>Destinations are being mapped.</strong><p>Confirmed trips will appear here when their locations are available.</p></div>}</section>}
       </div>
-    </div>
-
-    <!-- Stats strip -->
-    {stats && (
-      <div class="grid grid-cols-3 gap-3 mb-8">
-        {[
-          { value: String(stats.tripsCount),                                 label: 'trips'        },
-          { value: String(stats.destinationsCount),                          label: 'destinations' },
-          { value: `${stats.kmsFromHome.toLocaleString('en-IN')} km`,       label: 'from home'    },
-        ].map((s) => (
-          <div class="rounded-xl p-4 text-center" style="background: var(--color-blush);">
-            <p class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">{s.value}</p>
-            <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{s.label}</p>
-          </div>
-        ))}
-      </div>
-    )}
-
-    <!-- Leaderboard rank -->
-    {kmRank !== null && (
-      <a href="/leaderboard?tab=km" class="flex items-center gap-2 mb-8 text-sm font-medium hover:opacity-80"
-         style="color: var(--color-coral);">
-        <span>#{kmRank} on the km from home board</span>
-        <span>→</span>
-      </a>
-    )}
-
-    <!-- India map -->
-    <div class="mb-8">
-      <MapIndia pins={pins} class="w-full max-w-xs mx-auto block" />
-      {pins.length > 0 && (
-        <div class="flex items-center justify-center gap-5 mt-3">
-          <span class="flex items-center gap-1.5 text-xs" style="color: var(--color-gray-text);">
-            <span class="w-3 h-3 rounded-full flex-shrink-0" style="background: var(--color-coral);"></span>
-            Visited
-          </span>
-          <span class="flex items-center gap-1.5 text-xs" style="color: var(--color-gray-text);">
-            <span class="w-3 h-3 rounded-full border-2 flex-shrink-0" style="border-color: var(--color-coral); background: white;"></span>
-            Upcoming
-          </span>
-        </div>
-      )}
-    </div>
-
-    <!-- Trip list (opt-in only) -->
-    {publicTrips && publicTrips.length > 0 && (
-      <div class="mb-10">
-        <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Trips</h2>
-        <div class="flex flex-col gap-3">
-          {publicTrips.map((t) => {
-            const meta = statusMeta[t.status];
-            return (
-              <div class="rounded-xl px-4 py-4 flex items-center justify-between"
-                   style="background: white; border: 1px solid var(--color-peach);">
-                <div>
-                  <p class="font-medium text-sm" style="color: var(--color-navy);">{t.tripName}</p>
-                  {t.location && (
-                    <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{t.location}</p>
-                  )}
-                </div>
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 ml-3"
-                      style={`color: ${meta.color}; background: ${meta.color}1a;`}>
-                  {meta.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    )}
-
-    <!-- CTA -->
-    <div class="rounded-2xl p-8 text-center mt-4" style="background: var(--color-blush);">
-      <p class="text-lg font-bold mb-1" style="font-family: var(--font-display); color: var(--color-navy);">
-        Travel with Seek the Thrill
-      </p>
-      <p class="text-sm mb-5" style="color: var(--color-gray-text);">
-        Group travel across India, small groups, handpicked hosts.
-      </p>
-      <a href="/trips/"
-         class="inline-block px-8 py-3 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-80"
-         style="background: var(--color-coral);">
-        Explore trips →
-      </a>
-    </div>
-
-  </div>
+      <section class="public-stats" aria-label="Travel statistics"><div><strong>{tripsCount}</strong><span>trips</span></div><div><strong>{stats?.destinationsCount ?? 0}</strong><span>destinations</span></div><div><strong>{stats?.daysOutdoors ?? 0}</strong><span>days outdoors</span></div><div><strong>{(stats?.kmsFromHome ?? 0).toLocaleString('en-IN')} km</strong><span>from home</span></div></section>
+      {profileUser.showTripsPublicly && <section class="trip-timeline"><h2>Confirmed trips</h2>{publicTrips.length ? (['ongoing','upcoming','completed'] as const).map((status) => grouped[status].length > 0 && <div class="trip-group"><h3>{statusLabel[status]}</h3><div>{grouped[status].map((trip) => <article><div><strong>{trip.tripName}</strong>{trip.location && <p>{trip.location}</p>}</div><span class={status}>{statusLabel[status]}</span></article>)}</div></div>) : <div class="empty"><strong>No public trips yet.</strong><p>Confirmed trips will appear here when available.</p></div>}</section>}
+      <section class="explore-cta"><div><h2>Travel with Seek the Thrill</h2><p>Small-group adventures across offbeat India.</p></div><a href="/trips/">Explore trips →</a></section>
+    </main>
+  </ProfileChrome>
 </BaseLayout>
+
+<style>
+  .public-profile{padding-top:2.5rem}.profile-composition{display:grid;grid-template-columns:minmax(16rem,.8fr) minmax(20rem,1.2fr);gap:2rem;align-items:stretch}.profile-composition.without-map{grid-template-columns:1fr}.public-identity,.map-card,.public-stats,.trip-timeline,.explore-cta{border:1px solid var(--color-peach);border-radius:1.25rem;background:#fff}.public-identity{padding:2rem;display:flex;align-items:center;align-content:center;flex-wrap:wrap;gap:1rem}.public-identity img,.public-avatar{width:5rem;height:5rem;border-radius:50%;object-fit:cover;flex:0 0 auto}.public-avatar{display:grid;place-items:center;background:var(--color-coral);color:#fff;font-size:1.7rem;font-weight:800}.public-identity h1{font-family:var(--font-display);font-size:2rem;font-weight:700}.public-identity p{color:var(--color-gray-text);font-size:.78rem}.public-identity .handle{color:var(--color-coral);font-family:monospace;font-size:.88rem}.rank{width:100%;min-height:44px;display:flex;align-items:center;color:var(--color-coral);font-size:.8rem;font-weight:700}.map-card{min-height:24rem;padding:1.25rem}.map-card h2,.trip-timeline>h2,.explore-cta h2{font-family:var(--font-display);font-size:1.2rem;font-weight:700}.india-map{width:100%;height:18rem;display:block}.legend{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap}.legend span{display:flex;align-items:center;gap:.35rem;color:var(--color-gray-text);font-size:.68rem}.legend i{width:.65rem;height:.65rem;border-radius:50%;background:#10b981}.legend i.ongoing{background:#f59e0b}.legend i.upcoming{background:var(--color-coral)}.map-empty,.empty{margin-top:1rem;padding:3rem 1rem;border-radius:1rem;background:var(--color-blush);text-align:center}.map-empty p,.empty p{color:var(--color-gray-text);font-size:.78rem}
+  .public-stats{margin-top:1rem;padding:1rem;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem}.public-stats div{min-width:0;text-align:center}.public-stats strong{display:block;font-family:var(--font-display);font-size:1.3rem;overflow-wrap:anywhere}.public-stats span{display:block;color:var(--color-gray-text);font-size:.68rem}.trip-timeline{margin-top:1rem;padding:1.25rem}.trip-group{margin-top:1rem}.trip-group h3{margin-bottom:.45rem;color:var(--color-gray-text);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}.trip-group>div{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}.trip-group article{min-width:0;padding:.9rem;border:1px solid var(--color-peach);border-radius:.85rem;display:flex;justify-content:space-between;align-items:center;gap:.75rem}.trip-group strong{font-size:.82rem;overflow-wrap:anywhere}.trip-group p{color:var(--color-gray-text);font-size:.7rem}.trip-group article>span{padding:.28rem .5rem;border-radius:999px;background:#d1fae5;color:#065f46;font-size:.64rem;font-weight:700;flex:0 0 auto}.trip-group span.ongoing{background:#fef3c7;color:#92400e}.trip-group span.upcoming{background:var(--color-blush);color:var(--color-coral)}.explore-cta{margin-top:1rem;padding:1.4rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--color-blush)}.explore-cta p{color:var(--color-gray-text);font-size:.78rem}.explore-cta a{min-height:44px;padding:.7rem 1rem;border-radius:.8rem;display:flex;align-items:center;background:var(--color-coral);color:#fff;font-size:.8rem;font-weight:700;white-space:nowrap}a:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
+  @media(max-width:760px){.profile-composition{grid-template-columns:1fr}.public-stats{grid-template-columns:1fr 1fr}.trip-group>div{grid-template-columns:1fr}}
+  @media(max-width:480px){.public-profile{padding-top:1.25rem}.public-identity{padding:1.25rem}.public-identity img,.public-avatar{width:4rem;height:4rem}.public-identity h1{font-size:1.55rem}.map-card{min-height:20rem}.india-map{height:14rem}.explore-cta{align-items:stretch;flex-direction:column}.explore-cta a{justify-content:center}.trip-group article{align-items:flex-start;flex-direction:column}}
+</style>

@@ -1,0 +1,63 @@
+---
+import type { ProfileTripRecord } from '../lib/profileTrips';
+interface Props { record: ProfileTripRecord; supportHref: string }
+const { record, supportHref } = Astro.props;
+const money = (value: number | null) => value == null ? 'Not recorded' : `₹${value.toLocaleString('en-IN')}`;
+const statusClass = `status-${record.status}`;
+let primary = { href: supportHref, label: 'Contact support' };
+if (record.status === 'lead' && record.bookable && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/book${record.batchId ? `?batch=${encodeURIComponent(record.batchId)}` : ''}`, label: 'Continue booking' };
+else if (['confirmed', 'wishlist'].includes(record.status) && record.tripExists && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/`, label: 'View trip' };
+const travellerFields = [
+  ['Traveller', record.details.traveller.name], ['Phone', record.details.traveller.phone],
+  ['Age', record.details.traveller.age], ['Gender', record.details.traveller.gender],
+  ['City / state', record.details.traveller.cityState], ['Instagram', record.details.traveller.instagram],
+  ['Emergency contact', record.details.traveller.emergencyContact], ['Why I want to join', record.details.traveller.whyJoin],
+].filter(([, value]) => value);
+---
+<article class="trip-card">
+  <div class="trip-card-summary">
+    <div class="trip-card-copy">
+      <h3>{record.tripName}</h3>
+      <p>{record.dateLabel}</p>
+      <div class="badges">
+        <span class={`badge ${statusClass}`}>{record.statusLabel}</span>
+        <span class="badge payment">{record.paymentLabel}</span>
+      </div>
+    </div>
+    <a class="card-action" href={primary.href}>{primary.label}</a>
+  </div>
+  <details>
+    <summary>Booking and traveller details</summary>
+    <div class="detail-grid">
+      <div><span>Stay choice</span><strong>{record.details.occupancy ?? 'Not recorded'}</strong></div>
+      <div><span>Total price</span><strong>{money(record.details.totalAmount)}</strong></div>
+      <div><span>Amount paid</span><strong>{money(record.details.amountPaid)}</strong></div>
+      <div><span>Remaining balance</span><strong>{money(record.details.balance)}</strong></div>
+      <div><span>Payment status</span><strong>{record.paymentLabel}</strong></div>
+      {(record.details.amountRefunded > 0 || record.paymentStatus.includes('refund')) &&
+        <div><span>Refund</span><strong>{money(record.details.amountRefunded)} · {record.paymentLabel}</strong></div>}
+    </div>
+    {travellerFields.length > 0 && <>
+      <h4>Saved traveller details</h4>
+      <dl>{travellerFields.map(([label, value]) => <div><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+    </>}
+    <div class="detail-actions">
+      {record.status === 'confirmed' && <a href="/cancellation/">Read cancellation policy</a>}
+      <a href={supportHref}>Get booking support</a>
+    </div>
+  </details>
+</article>
+
+<style>
+  .trip-card{background:#fff;border:1px solid var(--color-peach);border-radius:1.15rem;overflow:hidden;min-width:0}
+  .trip-card-summary{padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .trip-card-copy{min-width:0}.trip-card h3{font-size:.96rem;font-weight:700;overflow-wrap:anywhere}.trip-card p{margin-top:.18rem;color:var(--color-gray-text);font-size:.78rem}
+  .badges{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.7rem}.badge{padding:.28rem .55rem;border-radius:999px;font-size:.68rem;font-weight:700;background:#f1f5f9;color:#334155}
+  .status-confirmed{background:#d1fae5;color:#065f46}.status-pending{background:#fef3c7;color:#92400e}.status-lead{background:#fef9c3;color:#78350f}.status-wishlist{background:#e0e7ff;color:#3730a3}.status-cancelled,.status-rejected{background:#e2e8f0;color:#334155}
+  .card-action{min-height:44px;padding:.65rem .85rem;border-radius:.8rem;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:var(--color-blush);color:var(--color-coral);font-size:.78rem;font-weight:700}
+  details{border-top:1px solid var(--color-peach)}summary{cursor:pointer;min-height:48px;padding:.8rem 1rem;display:flex;align-items:center;color:var(--color-coral);font-size:.78rem;font-weight:700}summary:focus-visible,.card-action:focus-visible,a:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
+  .detail-grid{padding:0 1rem 1rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.detail-grid div{min-width:0}.detail-grid span,.trip-card dt{display:block;color:var(--color-gray-text);font-size:.68rem}.detail-grid strong,.trip-card dd{font-size:.8rem;overflow-wrap:anywhere}
+  h4{padding:1rem 1rem .5rem;border-top:1px solid var(--color-peach);font-size:.8rem;font-weight:700}.trip-card dl{padding:0 1rem 1rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.trip-card dd{margin:0}.detail-actions{padding:0 1rem 1rem;display:flex;gap:1rem;flex-wrap:wrap}.detail-actions a{min-height:44px;display:inline-flex;align-items:center;color:var(--color-coral);font-size:.78rem;font-weight:700}
+  @media(max-width:600px){.trip-card-summary{align-items:flex-start;flex-direction:column}.card-action{width:100%}.detail-grid,.trip-card dl{grid-template-columns:1fr 1fr}}
+  @media(max-width:360px){.detail-grid,.trip-card dl{grid-template-columns:1fr}}
+</style>

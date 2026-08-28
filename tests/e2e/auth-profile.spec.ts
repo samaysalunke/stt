@@ -122,34 +122,33 @@ test.describe('WF-6: Profile page (authenticated)', () => {
   });
 
   test('WF-6.2 profile shows username section', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile?tab=settings');
     await expect(page.locator('text=Username').first()).toBeVisible({ timeout: 15_000 });
     // Username handle visible in header (@ prefix)
     await expect(page.locator(`text=@${username}`).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('WF-6.3 profile shows leaderboard and show-trips toggles', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile?tab=settings');
     await expect(page.locator('text=Show me on the leaderboard').first()).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('text=Show my trips publicly').first()).toBeVisible();
   });
 
   test('WF-6.4 leaderboard toggle click calls settings API and flips visually', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile?tab=settings');
     await page.waitForSelector('#toggle-leaderboard', { timeout: 15_000 });
 
     const btn = page.locator('#toggle-leaderboard');
-    const initialBg = await btn.evaluate(el => (el as HTMLElement).style.background);
+    const initialOn = await btn.getAttribute('data-on');
 
     // Click to flip
     await btn.click();
 
-    // Background should change (coral ↔ gray)
-    await expect(btn).toHaveJSProperty('dataset.on', initialBg.includes('coral') ? 'false' : 'true', { timeout: 3_000 });
+    await expect(btn).toHaveAttribute('data-on', initialOn === 'true' ? 'false' : 'true', { timeout: 3_000 });
   });
 
   test('WF-6.5 sign out button is present', async ({ page }) => {
-    await page.goto('/profile');
+    await page.goto('/profile?tab=settings');
     await expect(page.locator('button:has-text("Sign out")').first()).toBeVisible({ timeout: 15_000 });
   });
 
@@ -235,10 +234,9 @@ test.describe('WF-8: Public profile page /u/{username}', () => {
     expect(html).not.toContain('Wanderer');
   });
 
-  test('WF-8.3 India SVG map is present on public profile', async ({ page }) => {
+  test('WF-8.3 India SVG map is hidden when public trip sharing is disabled', async ({ page }) => {
     await page.goto(`/u/${username}`);
-    await expect(page.locator('svg[aria-label*="Map of India"]').first())
-      .toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('svg[aria-label*="Map of India"]')).toHaveCount(0);
   });
 
   test('WF-8.4 "Travel with Seek the Thrill" CTA links to /trips/', async ({ page }) => {

@@ -36,15 +36,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (body.action === 'setLeaderboard') {
     const val = body.value ? 0 : 1; // value=true means OPT-IN (optOut=0)
     db.prepare('UPDATE users SET leaderboardOptOut = ? WHERE id = ?').run(val, user.id);
-    if (val === 1) {
-      // opted out — remove from leaderboard cache
-      db.prepare('DELETE FROM leaderboard_cache WHERE userId = ?').run(user.id);
-    } else {
-      // opted back in — repopulate cache from confirmed bookings (non-blocking)
-      recalculateUserLeaderboard(user.email).catch((err) =>
-        console.error('[leaderboard recalc on opt-in]', err)
-      );
-    }
+    // Personal statistics are retained independently of leaderboard privacy.
+    // Recalculate in the background for both directions so an old opt-out row
+    // that predates this behaviour is restored without blocking the request.
+    recalculateUserLeaderboard(user.email).catch((err) =>
+      console.error('[leaderboard recalc after privacy change]', err)
+    );
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

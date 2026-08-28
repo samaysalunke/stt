@@ -67,7 +67,7 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
 
   const user = db
     .prepare(
-      'SELECT id, email, displayName, username, avatarUrl, homeCityLatLng, leaderboardOptOut FROM users WHERE email = ?'
+      'SELECT id, email, displayName, username, avatarUrl, homeCityLatLng FROM users WHERE email = ?'
     )
     .get(email) as {
       id: string;
@@ -76,15 +76,9 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
       username: string | null;
       avatarUrl: string | null;
       homeCityLatLng: string | null;
-      leaderboardOptOut: number;
     } | undefined;
 
   if (!user) return;
-
-  if (user.leaderboardOptOut) {
-    db.prepare('DELETE FROM leaderboard_cache WHERE userId = ?').run(user.id);
-    return;
-  }
 
   const regs = db
     .prepare(

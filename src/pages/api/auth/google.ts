@@ -1,10 +1,11 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { siteUrl } from '../../../lib/siteUrl';
+import { safeProfileReturn } from '../../../lib/authReturn';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ cookies, redirect }) => {
+export const GET: APIRoute = async ({ cookies, redirect, url }) => {
   const clientId = import.meta.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '';
   const redirectUri =
     import.meta.env.USER_AUTH_REDIRECT_URI ??
@@ -18,6 +19,13 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
 
   const state = crypto.randomUUID();
   cookies.set('oauth_state', state, {
+    httpOnly: true,
+    secure: import.meta.env.PROD,
+    sameSite: 'lax',
+    maxAge: 600,
+    path: '/',
+  });
+  cookies.set('oauth_return', JSON.stringify({ state, next: safeProfileReturn(url.searchParams.get('next')) }), {
     httpOnly: true,
     secure: import.meta.env.PROD,
     sameSite: 'lax',

@@ -140,7 +140,7 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
 
   // ── Protect /profile ──────────────────────────────────────────────────────
   if (url.pathname.startsWith('/profile') && !locals.user) {
-    return redirect(`/login?next=${encodeURIComponent(url.pathname)}`);
+    return redirect(`/login?next=${encodeURIComponent(url.pathname + url.search)}`);
   }
 
   // ── Admin auth ─────────────────────────────────────────────────────────────
@@ -235,9 +235,12 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
   // Keep private surfaces out of search indexes.
   const privateRoute =
     url.pathname.startsWith('/admin/') || url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/keystatic/') || url.pathname.startsWith('/profile/') ||
+    url.pathname.startsWith('/keystatic/') || url.pathname === '/profile' || url.pathname.startsWith('/profile/') ||
     url.pathname.startsWith('/login/') || url.pathname.startsWith('/unsubscribe/');
   if (privateRoute) headers.set('X-Robots-Tag', 'noindex, nofollow');
+  if (url.pathname === '/profile' || url.pathname.startsWith('/profile/')) {
+    headers.set('Cache-Control', 'private, no-store');
+  }
 
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 });

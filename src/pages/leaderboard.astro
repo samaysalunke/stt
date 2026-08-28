@@ -33,11 +33,12 @@ type LeaderRow = {
 };
 
 const rows = db.prepare(`
-  SELECT userId, displayName, username, avatarUrl, homeCityLatLng,
-         kmsFromHome, daysOutdoors, destinationsCount, tripsCount,
-         ROW_NUMBER() OVER (ORDER BY ${orderCol} DESC, userId ASC) as rank
-  FROM leaderboard_cache
-  ORDER BY ${orderCol} DESC, userId ASC
+  SELECT c.userId, c.displayName, c.username, c.avatarUrl, c.homeCityLatLng,
+         c.kmsFromHome, c.daysOutdoors, c.destinationsCount, c.tripsCount,
+         ROW_NUMBER() OVER (ORDER BY c.${orderCol} DESC, c.userId ASC) as rank
+  FROM leaderboard_cache c
+  JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0
+  ORDER BY c.${orderCol} DESC, c.userId ASC
   LIMIT 20
 `).all() as LeaderRow[];
 
@@ -45,12 +46,13 @@ const rows = db.prepare(`
 let myEntry: (LeaderRow & { rank: number }) | null = null;
 if (user) {
   const myRankRow = db.prepare(`
-    SELECT COUNT(*) + 1 as rank FROM leaderboard_cache
-    WHERE ${orderCol} > (SELECT ${orderCol} FROM leaderboard_cache WHERE userId = ?)
+    SELECT COUNT(*) + 1 as rank FROM leaderboard_cache c
+    JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0
+    WHERE c.${orderCol} > (SELECT ${orderCol} FROM leaderboard_cache WHERE userId = ?)
   `).get(user.id) as { rank: number } | undefined;
 
   const myCache = db.prepare(
-    'SELECT userId, displayName, username, avatarUrl, homeCityLatLng, kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?'
+    'SELECT c.userId, c.displayName, c.username, c.avatarUrl, c.homeCityLatLng, c.kmsFromHome, c.daysOutdoors, c.destinationsCount, c.tripsCount FROM leaderboard_cache c JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0 WHERE c.userId = ?'
   ).get(user.id) as Omit<LeaderRow, 'rank'> | undefined;
 
   if (myCache && myRankRow) {

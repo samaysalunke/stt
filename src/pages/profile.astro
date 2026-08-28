@@ -1,549 +1,123 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ProfileChrome from '../components/ProfileChrome.astro';
+import ProfileTripCard from '../components/ProfileTripCard.astro';
 import { getDb } from '../lib/db';
 import { readTrip } from '../lib/content';
+import { readSiteSettings } from '../lib/settings';
 import { SITE_HOST, siteUrl } from '../lib/siteUrl';
+import { canonicalizeProfileTrips, groupProfileTrips, type ProfileRegistrationRow } from '../lib/profileTrips';
 
 export const prerender = false;
-
 const user = Astro.locals.user!;
-
 const db = getDb();
-
-const userRow = db.prepare(`
-  SELECT username, usernameChangedAt, leaderboardOptOut, showTripsPublicly
-  FROM users WHERE id = ?
-`).get(user.id) as {
-  username: string | null;
-  usernameChangedAt: number | null;
-  leaderboardOptOut: number;
-  showTripsPublicly: number;
-} | undefined;
-
-const stats = db.prepare(`
-  SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount
-  FROM leaderboard_cache WHERE userId = ?
-`).get(user.id) as {
-  kmsFromHome: number;
-  daysOutdoors: number;
-  destinationsCount: number;
-  tripsCount: number;
-} | undefined;
-
-// Detect "newly completed" trips for share banner:
-// confirmed + sharedAt IS NULL + batch endDate has passed
-const shareCandidates = db.prepare(`
-  SELECT id, trip_name, trip_slug, batch_id
-  FROM registrations
-  WHERE email = ? AND status = 'confirmed' AND sharedAt IS NULL
-  ORDER BY created_at DESC
-`).all(user.email) as { id: number; trip_name: string; trip_slug: string | null; batch_id: string | null }[];
-
-interface ShareBannerTrip { id: number; tripName: string }
-let shareBannerTrip: ShareBannerTrip | null = null;
-
-const now = Date.now();
-for (const reg of shareCandidates) {
-  if (!reg.trip_slug || !reg.batch_id) continue;
-  try {
-    const trip = readTrip(reg.trip_slug);
-    const batch = (trip?.batches as any[])?.find((b: any) => b.id === reg.batch_id);
-    if (batch?.endDate && new Date(batch.endDate).getTime() < now) {
-      shareBannerTrip = { id: reg.id, tripName: reg.trip_name };
-      break;
-    }
-  } catch { /* skip if YAML can't be read */ }
-}
-
+type Tab = 'overview' | 'trips' | 'settings';
+const rawTab = Astro.url.searchParams.get('tab');
+const tab: Tab = ['overview', 'trips', 'settings'].includes(rawTab ?? '') ? rawTab as Tab : 'overview';
+const userRow = db.prepare(`SELECT username, usernameChangedAt, leaderboardOptOut, showTripsPublicly FROM users WHERE id = ?`).get(user.id) as { username: string | null; usernameChangedAt: number | null; leaderboardOptOut: number; showTripsPublicly: number } | undefined;
+const stats = db.prepare(`SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?`).get(user.id) as { kmsFromHome: number; daysOutdoors: number; destinationsCount: number; tripsCount: number } | undefined;
+const rows = db.prepare(`
+  SELECT id, trip_name, trip_slug, trip_date, batch_id, status, created_at, updated_at, status_changed_at,
+         full_name, phone, age, date_of_birth, gender, city, state, instagram,
+         emergency_name, emergency_phone, emergency_relationship, why_join,
+         sharing_option, tier_id, total_amount, amount_paid, amount_refunded, payment_status
+    FROM registrations WHERE lower(trim(email)) = lower(trim(?)) ORDER BY created_at DESC, id DESC
+`).all(user.email) as ProfileRegistrationRow[];
+const canonical = canonicalizeProfileTrips(rows);
+const grouped = groupProfileTrips(canonical);
 const PAGE_SIZE = 10;
-const page = Math.max(1, parseInt(Astro.url.searchParams.get('page') ?? '1'));
-const offset = (page - 1) * PAGE_SIZE;
-
-const { total: totalBookings } = db.prepare(`
-  SELECT COUNT(*) as total FROM registrations WHERE email = ?
-`).get(user.email) as { total: number };
-const totalPages = Math.max(1, Math.ceil(totalBookings / PAGE_SIZE));
-
-const bookings = db.prepare(`
-  SELECT trip_name, trip_date, batch_id, status, created_at
-  FROM registrations
-  WHERE email = ?
-  ORDER BY created_at DESC
-  LIMIT ? OFFSET ?
-`).all(user.email, PAGE_SIZE, offset) as {
-  trip_name: string;
-  trip_date: string | null;
-  batch_id: string | null;
-  status: string;
-  created_at: string;
-}[];
-
-const statusLabel: Record<string, { label: string; color: string }> = {
-  wishlist:  { label: 'Wishlisted',  color: '#6366F1' },
-  lead:      { label: 'Registered',  color: 'var(--color-gray-text)' },
-  pending:   { label: 'Pending',     color: '#F59E0B' },
-  confirmed: { label: 'Confirmed',   color: '#10B981' },
-  rejected:  { label: 'Rejected',    color: 'var(--color-coral)' },
-};
-
-const firstName = user.displayName?.split(' ')[0] ?? 'Traveller';
+const requestedPage = Number.parseInt(Astro.url.searchParams.get('pastPage') ?? '1', 10);
+const totalPastPages = Math.max(1, Math.ceil(grouped.history.length / PAGE_SIZE));
+const pastPage = Math.min(totalPastPages, Math.max(1, Number.isFinite(requestedPage) ? requestedPage : 1));
+const visibleHistory = grouped.history.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
+let settings: any = {};
+try { settings = readSiteSettings(); } catch {}
+const supportEmail = settings.email ?? 'zahra@seekthethrill.in';
+const whatsapp = settings.whatsappLink ?? `https://wa.me/${String(settings.phone ?? '+917975027491').replace(/[^0-9]/g, '')}`;
+const supportHref = `mailto:${supportEmail}?subject=${encodeURIComponent('Booking support request')}`;
+const dataRequestHref = `mailto:${supportEmail}?subject=${encodeURIComponent('Privacy data access or deletion request')}`;
+const shareCandidates = db.prepare(`SELECT id, trip_name, trip_slug, batch_id FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed' AND sharedAt IS NULL ORDER BY created_at DESC`).all(user.email) as { id: number; trip_name: string; trip_slug: string | null; batch_id: string | null }[];
+let shareBannerTrip: { id: number; tripName: string } | null = null;
+const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+for (const reg of shareCandidates) {
+  try {
+    const trip = reg.trip_slug ? readTrip(reg.trip_slug) : null;
+    const batch = Array.isArray(trip?.batches) ? trip.batches.find((b: any) => String(b.id) === String(reg.batch_id)) : null;
+    if (batch?.endDate && String(batch.endDate).slice(0, 10) < today) { shareBannerTrip = { id: reg.id, tripName: reg.trip_name }; break; }
+  } catch {}
+}
+const firstName = user.displayName?.trim().split(/\s+/)[0] || 'Traveller';
 const canChangeUsername = !userRow?.usernameChangedAt;
+const profileUrl = userRow?.username ? siteUrl(`/u/${userRow.username}`) : null;
+const navItems: { id: Tab; label: string }[] = [{ id: 'overview', label: 'Overview' }, { id: 'trips', label: 'My Trips' }, { id: 'settings', label: 'Settings' }];
 ---
+<BaseLayout title={`${firstName}'s account — Seek the Thrill`} description="Your private Seek the Thrill account and bookings." robots="noindex, nofollow" nav="none" hideWhatsApp={true}>
+  <ProfileChrome>
+    <div class="profile-shell dashboard">
+      {shareBannerTrip && userRow?.username && <aside id="share-banner" class="share-banner" aria-label="Share your updated profile">
+        <button id="share-banner-dismiss" aria-label="Dismiss profile sharing message">×</button><strong>{shareBannerTrip.tripName} just wrapped. Your profile is updated.</strong><p>Share your latest travel stats with friends.</p>
+        <div><code id="share-banner-url">{SITE_HOST}/u/{userRow.username}</code><button id="share-banner-copy" data-url={profileUrl} data-reg-id={String(shareBannerTrip.id)}>Copy link</button></div><p id="share-banner-copied" class="live" aria-live="polite"></p>
+      </aside>}
+      <header class="identity">
+        {user.avatarUrl ? <img src={user.avatarUrl} alt="" referrerpolicy="no-referrer" /> : <span class="avatar-fallback" aria-hidden="true">{firstName[0].toUpperCase()}</span>}
+        <div class="identity-copy"><h1>{user.displayName ?? firstName}</h1>{userRow?.username && <p class="username">@{userRow.username}</p>}<p class="email">{user.email}</p><p class="provenance">Avatar and email are provided by your Google account.</p></div>
+      </header>
+      <nav class="profile-tabs" aria-label="Profile sections">{navItems.map((item) => <a href={`/profile?tab=${item.id}`} aria-current={tab === item.id ? 'page' : undefined}>{item.label}</a>)}</nav>
 
-<BaseLayout title={`${firstName}'s Profile — Seek the Thrill`} description="Your trips and adventures with Seek the Thrill." robots="noindex, follow" nav="back">
-  <div class="container-app py-10 max-w-lg mx-auto">
+      {tab === 'overview' && <div class="panel-grid">
+        <main class="main-column">
+          <section aria-labelledby="stats-heading">
+            <div class="section-heading"><div><h2 id="stats-heading">Your travel stats</h2><p>Private stats stay available even if you leave the leaderboard.</p></div><a href="/leaderboard">View leaderboard</a></div>
+            {stats ? <div class="stats-grid"><div><strong>{stats.tripsCount}</strong><span>confirmed trips</span></div><div><strong>{stats.destinationsCount}</strong><span>destinations</span></div><div><strong>{stats.daysOutdoors}</strong><span>days outdoors</span></div><div><strong>{stats.kmsFromHome.toLocaleString('en-IN')} km</strong><span>from home</span></div></div> : rows.some((r) => r.status === 'confirmed') ? <div class="empty-state"><strong>Stats are still being calculated.</strong><p>Your confirmed trips are safe and will appear here soon.</p></div> : <div class="empty-state"><strong>No confirmed trips yet.</strong><p>Your stats begin after your first trip is confirmed.</p><a href="/trips/">Explore trips →</a></div>}
+          </section>
+          <section aria-labelledby="upcoming-heading"><div class="section-heading"><div><h2 id="upcoming-heading">Active &amp; upcoming</h2><p>Your nearest actionable bookings.</p></div><a href="/profile?tab=trips">See all trips</a></div>{grouped.active.length ? <div class="card-stack">{grouped.active.slice(0, 3).map((record) => <ProfileTripCard {record} {supportHref} />)}</div> : rows.length ? <div class="empty-state"><strong>No active or upcoming trips.</strong><p>Past, cancelled, and wishlisted trips are available in My Trips.</p></div> : <div class="empty-state"><strong>No bookings yet.</strong><p>When you register for a departure, it will appear here.</p><a href="/trips/">Explore trips →</a></div>}</section>
+        </main>
+        <aside class="side-column">
+          <section class="action-card"><h2>Share &amp; explore</h2>{profileUrl && <><code id="share-profile-url">{SITE_HOST}/u/{userRow!.username}</code><button id="share-profile-copy" data-url={profileUrl}>Copy profile</button><a href={profileUrl}>View public profile</a></>}<a href="/leaderboard">View leaderboard</a><a href="/trips/">Explore trips</a><p id="share-profile-copied" class="live" aria-live="polite"></p></section>
+          <section class="support-card"><h2>Need help with a booking?</h2><p>Our team can help with payment review, changed plans, or a missing departure.</p><a href={supportHref}>Email support</a><a href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp support</a></section>
+        </aside>
+      </div>}
 
-    <!-- Share banner: shown once after a trip completes -->
-    {shareBannerTrip && userRow?.username && (
-      <div id="share-banner" class="rounded-2xl p-4 mb-8 relative" style="background: var(--color-blush); border: 1px solid var(--color-peach);">
-        <button id="share-banner-dismiss" aria-label="Dismiss"
-                class="absolute top-3 right-3 text-lg leading-none hover:opacity-60"
-                style="color: var(--color-gray-text);">×</button>
-        <p class="text-sm font-semibold mb-0.5" style="color: var(--color-navy);">
-          {shareBannerTrip.tripName} just wrapped. Your profile is updated.
-        </p>
-        <div class="flex items-center gap-2 mt-3">
-          <code id="share-banner-url" class="text-xs px-2 py-1 rounded-lg flex-1 truncate"
-                style="background: white; color: var(--color-navy); border: 1px solid var(--color-peach);">
-            {SITE_HOST}/u/{userRow.username}
-          </code>
-          <button id="share-banner-copy"
-                  data-url={siteUrl(`/u/${userRow.username}`)}
-                  data-reg-id={String(shareBannerTrip.id)}
-                  class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
-                  style="background: var(--color-coral);">
-            Copy link
-          </button>
-        </div>
-        <p id="share-banner-copied" class="text-xs mt-2 hidden" style="color: var(--color-coral);">Copied!</p>
-      </div>
-    )}
+      {tab === 'trips' && <main class="trips-panel"><header class="page-intro"><h2>My Trips</h2><p>Bookings are grouped by their current status and departure date.</p></header>
+        <section aria-labelledby="active-title"><h2 id="active-title">Active &amp; upcoming <span>{grouped.active.length}</span></h2>{grouped.active.length ? <div class="card-stack">{grouped.active.map((record) => <ProfileTripCard {record} {supportHref} />)}</div> : <div class="empty-state"><p>No active bookings right now.</p></div>}</section>
+        <section aria-labelledby="wishlist-title"><h2 id="wishlist-title">Wishlist <span>{grouped.wishlist.length}</span></h2>{grouped.wishlist.length ? <div class="card-stack">{grouped.wishlist.map((record) => <ProfileTripCard {record} {supportHref} />)}</div> : <div class="empty-state"><p>No wishlisted departures.</p></div>}</section>
+        <section aria-labelledby="history-title"><h2 id="history-title">Past &amp; closed <span>{grouped.history.length}</span></h2>{visibleHistory.length ? <div class="card-stack">{visibleHistory.map((record) => <ProfileTripCard {record} {supportHref} />)}</div> : <div class="empty-state"><p>No past or closed bookings.</p></div>}{totalPastPages > 1 && <nav class="pagination" aria-label="Past trips pages">{pastPage > 1 ? <a href={`/profile?tab=trips&pastPage=${pastPage - 1}`}>← Previous</a> : <span></span>}<span>Page {pastPage} of {totalPastPages}</span>{pastPage < totalPastPages ? <a href={`/profile?tab=trips&pastPage=${pastPage + 1}`}>Next →</a> : <span></span>}</nav>}</section>
+        <section class="support-strip"><div><h2>Something look wrong?</h2><p>Contact us about duplicate, legacy, cancelled, or missing trip records.</p></div><a href={supportHref}>Contact support</a></section>
+      </main>}
 
-    <!-- User header -->
-    <div class="flex items-center gap-4 mb-10">
-      {user.avatarUrl ? (
-        <img src={user.avatarUrl} alt={firstName} class="w-14 h-14 rounded-full object-cover" referrerpolicy="no-referrer" />
-      ) : (
-        <div class="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold"
-             style="background: var(--color-coral);">
-          {firstName[0].toUpperCase()}
-        </div>
-      )}
-      <div>
-        <p class="font-semibold text-lg" style="color: var(--color-navy);">{user.displayName ?? firstName}</p>
-        {userRow?.username && (
-          <p class="text-sm font-mono" style="color: var(--color-coral);">@{userRow.username}</p>
-        )}
-        <p class="text-sm" style="color: var(--color-gray-text);">{user.email}</p>
-      </div>
+      {tab === 'settings' && <main class="settings-panel"><header class="page-intro"><h2>Settings</h2><p>Manage your public identity and privacy choices.</p></header>
+        <section><h2>Account</h2><div class="settings-card"><form id="display-name-form"><label for="display-name-input">Display name</label><div class="form-row"><input id="display-name-input" type="text" value={user.displayName ?? ''} maxlength="50" required /><button type="submit">Save</button></div><p id="display-name-msg" class="live" aria-live="polite"></p></form><div class="readonly"><span>Google email</span><strong>{user.email}</strong><small>Read-only. Your email and avatar come from Google.</small></div></div></section>
+        <section><h2>Username</h2><div class="settings-card"><p>Your public profile is <strong>@{userRow?.username ?? 'not set'}</strong>.</p>{canChangeUsername ? <><p class="help">You can change this once. Your old link will continue to redirect, and the new username is permanent.</p><form id="username-form"><label for="username-input">New username</label><div class="form-row"><input id="username-input" type="text" placeholder="new-username" maxlength="30" pattern="[a-z0-9][a-z0-9_\-]{1,28}[a-z0-9]" required /><button type="submit">Review &amp; save</button></div><p id="username-hint" class="live"></p><p id="username-msg" class="live" aria-live="polite"></p></form></> : <p class="help">Your username is locked because the one permitted change has been used.</p>}</div></section>
+        <section><h2>Privacy</h2><div class="settings-card switches"><p>Leaderboard visibility and public trip sharing are independent choices.</p><div class="switch-row"><div><strong>Show me on the leaderboard</strong><small>Your rank and leaderboard entry become public.</small></div><button id="toggle-leaderboard" type="button" role="switch" aria-label="Show me on the leaderboard" aria-checked={userRow?.leaderboardOptOut !== 1} data-on={userRow?.leaderboardOptOut !== 1 ? 'true' : 'false'}><span></span></button></div><div class="switch-row"><div><strong>Show my trips publicly</strong><small>Publishes confirmed trip names and map locations on your public profile.</small></div><button id="toggle-show-trips" type="button" role="switch" aria-label="Show my trips publicly" aria-checked={userRow?.showTripsPublicly === 1} data-on={userRow?.showTripsPublicly === 1 ? 'true' : 'false'}><span></span></button></div><p id="privacy-msg" class="live" aria-live="polite"></p></div></section>
+        <section><h2>Account &amp; support</h2><div class="settings-card account-links"><a href={supportHref}>Contact support</a><a href={dataRequestHref}>Request data access or account deletion</a><form method="POST" action="/api/auth/logout"><button type="submit" class="outline">Sign out</button></form></div></section>
+      </main>}
     </div>
-
-    <!-- Stats (only populated when user has confirmed trips in leaderboard) -->
-    {stats ? (
-      <div class="grid grid-cols-3 gap-3 mb-10">
-        {[
-          { value: `${stats.kmsFromHome.toLocaleString('en-IN')} km`, label: 'from home' },
-          { value: String(stats.daysOutdoors), label: 'days outdoors' },
-          { value: String(stats.destinationsCount), label: 'destinations' },
-        ].map((s) => (
-          <div class="rounded-xl p-4 text-center" style="background: var(--color-blush);">
-            <p class="text-xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">{s.value}</p>
-            <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{s.label}</p>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div class="rounded-xl p-6 text-center mb-10" style="background: var(--color-blush);">
-        <p class="text-sm mb-3" style="color: var(--color-gray-text);">Complete a trip to start tracking your stats.</p>
-        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
-      </div>
-    )}
-
-    <!-- My Trips -->
-    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">My Trips</h2>
-
-    {bookings.length === 0 ? (
-      <div class="rounded-xl p-6 text-center mb-10" style="background: var(--color-blush);">
-        <p class="text-sm mb-3" style="color: var(--color-gray-text);">No trips yet.</p>
-        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
-      </div>
-    ) : (
-      <div class="flex flex-col gap-3 mb-3">
-        {bookings.map((b) => {
-          const s = statusLabel[b.status] ?? { label: b.status, color: 'var(--color-gray-text)' };
-          return (
-            <div class="rounded-xl px-4 py-4 flex items-center justify-between" style="background: white; border: 1px solid var(--color-peach);">
-              <div>
-                <p class="font-medium text-sm" style="color: var(--color-navy);">{b.trip_name}</p>
-                {b.trip_date && (
-                  <p class="text-xs mt-0.5" style="color: var(--color-gray-text);">{b.trip_date}</p>
-                )}
-              </div>
-              <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style={`color: ${s.color}; background: ${s.color}1a;`}>
-                {s.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    )}
-
-    {totalPages > 1 && (
-      <div class="flex items-center justify-between mb-10 text-sm">
-        {page > 1 ? (
-          <a href={`?page=${page - 1}`} class="font-semibold" style="color: var(--color-coral);">← Prev</a>
-        ) : <span />}
-        <span style="color: var(--color-gray-text);">Page {page} of {totalPages}</span>
-        {page < totalPages ? (
-          <a href={`?page=${page + 1}`} class="font-semibold" style="color: var(--color-coral);">Next →</a>
-        ) : <span />}
-      </div>
-    )}
-
-    <!-- Display name -->
-    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Display name</h2>
-    <div class="rounded-xl p-4 mb-10" style="border: 1px solid var(--color-peach);">
-      <form id="display-name-form" class="flex gap-2">
-        <input
-          id="display-name-input"
-          type="text"
-          value={user.displayName ?? ''}
-          maxlength="50"
-          class="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2"
-          style="border-color: var(--color-peach); --tw-ring-color: var(--color-coral);"
-        />
-        <button type="submit"
-                class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-80"
-                style="background: var(--color-coral);">
-          Save
-        </button>
-      </form>
-      <p id="display-name-msg" class="text-xs mt-2 hidden" aria-live="polite"></p>
-    </div>
-
-    <!-- Username -->
-    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Username</h2>
-    <div class="rounded-xl p-4 mb-10" style="border: 1px solid var(--color-peach);">
-      {userRow?.username ? (
-        <div>
-          <p class="text-sm font-mono font-medium mb-1" style="color: var(--color-navy);">@{userRow.username}</p>
-          {canChangeUsername ? (
-            <p class="text-xs mb-3" style="color: var(--color-gray-text);">You can change your username once.</p>
-          ) : (
-            <p class="text-xs mb-3" style="color: var(--color-gray-text);">Your username is locked — it can only be changed once.</p>
-          )}
-        </div>
-      ) : (
-        <p class="text-xs mb-3" style="color: var(--color-gray-text);">No username set yet.</p>
-      )}
-
-      {canChangeUsername && (
-        <form id="username-form" class="flex gap-2">
-          <input
-            id="username-input"
-            type="text"
-            placeholder="new-username"
-            maxlength="30"
-            pattern="[a-z0-9][a-z0-9_\-]{1,28}[a-z0-9]"
-            class="flex-1 px-3 py-2 rounded-xl text-sm border outline-none focus:ring-2"
-            style="border-color: var(--color-peach); font-family: monospace; --tw-ring-color: var(--color-coral);"
-          />
-          <button type="submit"
-                  class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-80"
-                  style="background: var(--color-coral);">
-            Save
-          </button>
-        </form>
-      )}
-      <p id="username-hint" class="text-xs mt-2 hidden" style="color: var(--color-gray-text);"></p>
-      <p id="username-msg" class="text-xs mt-2 hidden" aria-live="polite"></p>
-    </div>
-
-    <!-- Privacy -->
-    <h2 class="text-base font-semibold mb-4" style="color: var(--color-navy);">Privacy</h2>
-    <div class="rounded-xl p-4 mb-10 flex flex-col gap-4" style="border: 1px solid var(--color-peach);">
-      <div class="flex items-center justify-between gap-3">
-        <span class="text-sm" style="color: var(--color-navy);">Show me on the leaderboard</span>
-        <button
-          id="toggle-leaderboard"
-          type="button"
-          role="switch"
-          aria-checked={userRow?.leaderboardOptOut !== 1}
-          data-on={userRow?.leaderboardOptOut !== 1 ? 'true' : 'false'}
-          class="w-10 h-6 rounded-full relative flex-shrink-0 transition-colors"
-          style={`background: ${userRow?.leaderboardOptOut !== 1 ? 'var(--color-coral)' : 'var(--color-gray-text)'};`}
-        >
-          <span
-            class="toggle-knob absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
-            style={`left: ${userRow?.leaderboardOptOut !== 1 ? '1.125rem' : '0.125rem'};`}
-          ></span>
-        </button>
-      </div>
-      <div class="flex items-center justify-between gap-3">
-        <span class="text-sm" style="color: var(--color-navy);">Show my trips publicly</span>
-        <button
-          id="toggle-show-trips"
-          type="button"
-          role="switch"
-          aria-checked={userRow?.showTripsPublicly === 1}
-          data-on={userRow?.showTripsPublicly === 1 ? 'true' : 'false'}
-          class="w-10 h-6 rounded-full relative flex-shrink-0 transition-colors"
-          style={`background: ${userRow?.showTripsPublicly === 1 ? 'var(--color-coral)' : 'var(--color-gray-text)'};`}
-        >
-          <span
-            class="toggle-knob absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
-            style={`left: ${userRow?.showTripsPublicly === 1 ? '1.125rem' : '0.125rem'};`}
-          ></span>
-        </button>
-      </div>
-      <p id="privacy-msg" class="text-xs hidden" aria-live="polite"></p>
-    </div>
-
-    <!-- Share profile -->
-    {userRow?.username && (
-      <div class="rounded-xl p-4 mb-6" style="border: 1px solid var(--color-peach);">
-        <p class="text-sm font-medium mb-3" style="color: var(--color-navy);">Share your profile</p>
-        <div class="flex items-center gap-2">
-          <code id="share-profile-url" class="text-xs px-2 py-1.5 rounded-lg flex-1 truncate"
-                style="background: var(--color-blush); color: var(--color-navy);">
-            {SITE_HOST}/u/{userRow.username}
-          </code>
-          <button id="share-profile-copy"
-                  data-url={siteUrl(`/u/${userRow.username}`)}
-                  class="px-3 py-1.5 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity hover:opacity-80"
-                  style="background: var(--color-coral);">
-            Copy
-          </button>
-        </div>
-        <p id="share-profile-copied" class="text-xs mt-2 hidden" style="color: var(--color-coral);">Copied!</p>
-      </div>
-    )}
-
-    <!-- Leaderboard link -->
-    <a href="/leaderboard" class="flex items-center justify-between px-4 py-4 rounded-xl mb-6 transition-opacity hover:opacity-80"
-       style="background: var(--color-blush);">
-      <span class="text-sm font-medium" style="color: var(--color-navy);">View leaderboard</span>
-      <span style="color: var(--color-coral);">→</span>
-    </a>
-
-    <!-- Sign out -->
-    <form method="POST" action="/api/auth/logout">
-      <button type="submit" class="w-full py-3.5 rounded-full text-sm font-semibold border transition-all hover:opacity-70"
-              style="color: var(--color-coral); border-color: var(--color-coral);">
-        Sign out
-      </button>
-    </form>
-
-  </div>
+  </ProfileChrome>
 </BaseLayout>
 
 <script>
-  // Share banner
-  async function markShareBanner(regId: string, action: 'share' | 'dismiss') {
-    await fetch('/api/profile/share-dismiss', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registrationId: parseInt(regId), action }),
-    });
-  }
-
-  // Copies text to clipboard; on failure, selects codeEl's text so the user can copy manually.
-  async function copyText(text: string, codeEl: HTMLElement | null): Promise<boolean> {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      if (codeEl) {
-        const range = document.createRange();
-        range.selectNodeContents(codeEl);
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-      }
-      return false;
-    }
-  }
-
-  // Share profile (permanent)
-  document.getElementById('share-profile-copy')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    const url = btn.dataset.url ?? '';
-    const ok = await copyText(url, document.getElementById('share-profile-url'));
-    const msg = document.getElementById('share-profile-copied');
-    if (msg) {
-      msg.textContent = ok ? 'Copied!' : 'Could not copy automatically — text selected, press Ctrl/Cmd+C.';
-      msg.classList.remove('hidden');
-      setTimeout(() => msg.classList.add('hidden'), ok ? 2000 : 5000);
-    }
-  });
-
-  // Share banner (post-trip)
-  document.getElementById('share-banner-copy')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget as HTMLButtonElement;
-    const url = btn.dataset.url ?? '';
-    const regId = btn.dataset.regId ?? '';
-    const ok = await copyText(url, document.getElementById('share-banner-url'));
-    const msg = document.getElementById('share-banner-copied');
-    if (msg) {
-      msg.textContent = ok ? 'Copied!' : 'Could not copy automatically — text selected, press Ctrl/Cmd+C.';
-      msg.classList.remove('hidden');
-      setTimeout(() => msg.classList.add('hidden'), ok ? 2000 : 5000);
-    }
-    if (regId) markShareBanner(regId, 'share');
-  });
-
-  document.getElementById('share-banner-dismiss')?.addEventListener('click', () => {
-    const btn = document.getElementById('share-banner-copy') as HTMLButtonElement | null;
-    const regId = btn?.dataset.regId ?? '';
-    document.getElementById('share-banner')?.remove();
-    if (regId) markShareBanner(regId, 'dismiss');
-  });
-
-  // Username form
-  // Keep in sync with USERNAME_RE / validateUsername in src/lib/usernames.ts
-  const USERNAME_RE = /^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$|^[a-z0-9]{1,30}$/;
-  const RESERVED = new Set([
-    'admin', 'owner', 'root', 'api', 'login', 'logout', 'register', 'profile',
-    'leaderboard', 'trips', 'about', 'contact', 'me', 'null', 'undefined',
-    'system', 'support', 'help', 'team', 'seekthethrill', 'stt', 'user', 'users',
-  ]);
-  function validateUsernameClientSide(username: string): string | null {
-    if (!username) return null;
-    if (username.length < 3) return 'Must be at least 3 characters.';
-    if (username.length > 30) return 'Must be 30 characters or fewer.';
-    if (!USERNAME_RE.test(username)) return 'Use only letters, numbers, hyphens, and underscores (start/end with a letter or number).';
-    if (RESERVED.has(username)) return 'That username is reserved.';
-    return null;
-  }
-
-  const usernameForm = document.getElementById('username-form') as HTMLFormElement | null;
-  const usernameInput = document.getElementById('username-input') as HTMLInputElement | null;
-  const usernameHint = document.getElementById('username-hint') as HTMLElement | null;
-  const usernameMsg = document.getElementById('username-msg') as HTMLElement | null;
-
-  usernameInput?.addEventListener('input', () => {
-    const err = validateUsernameClientSide(usernameInput.value.trim().toLowerCase());
-    if (usernameHint) {
-      usernameHint.textContent = err ?? '';
-      usernameHint.classList.toggle('hidden', !err);
-    }
-  });
-
-  usernameForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = usernameInput?.value.trim().toLowerCase() ?? '';
-    if (!username) return;
-
-    const submitBtn = usernameForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) submitBtn.disabled = true;
-    if (usernameInput) usernameInput.disabled = true;
-
-    try {
-      const res = await fetch('/api/profile/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'setUsername', username }),
-      });
-      const data = await res.json();
-
-      if (usernameMsg) {
-        usernameMsg.textContent = data.error ?? 'Username saved!';
-        usernameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
-        usernameMsg.classList.remove('hidden');
-      }
-
-      if (data.success) {
-        setTimeout(() => location.reload(), 800);
-        return;
-      }
-    } finally {
-      if (submitBtn) submitBtn.disabled = false;
-      if (usernameInput) usernameInput.disabled = false;
-    }
-  });
-
-  // Display name form
-  const displayNameForm = document.getElementById('display-name-form') as HTMLFormElement | null;
-  const displayNameInput = document.getElementById('display-name-input') as HTMLInputElement | null;
-  const displayNameMsg = document.getElementById('display-name-msg') as HTMLElement | null;
-
-  displayNameForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const displayName = displayNameInput?.value.trim() ?? '';
-    if (!displayName) return;
-
-    const submitBtn = displayNameForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-    if (submitBtn) submitBtn.disabled = true;
-    if (displayNameInput) displayNameInput.disabled = true;
-
-    try {
-      const res = await fetch('/api/profile/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'setDisplayName', displayName }),
-      });
-      const data = await res.json();
-
-      if (displayNameMsg) {
-        displayNameMsg.textContent = data.error ?? 'Display name saved!';
-        displayNameMsg.style.color = data.success ? 'var(--color-coral)' : '#ef4444';
-        displayNameMsg.classList.remove('hidden');
-      }
-
-      if (data.success) setTimeout(() => location.reload(), 800);
-    } finally {
-      if (submitBtn) submitBtn.disabled = false;
-      if (displayNameInput) displayNameInput.disabled = false;
-    }
-  });
-
-  // Privacy toggles
-  const privacyMsg = document.getElementById('privacy-msg') as HTMLElement | null;
-
-  function showPrivacyMsg(text: string, isError: boolean) {
-    if (!privacyMsg) return;
-    privacyMsg.textContent = text;
-    privacyMsg.style.color = isError ? '#ef4444' : 'var(--color-coral)';
-    privacyMsg.classList.remove('hidden');
-    setTimeout(() => privacyMsg.classList.add('hidden'), 2000);
-  }
-
-  function paintToggle(btn: HTMLButtonElement, on: boolean) {
-    btn.dataset.on = on ? 'true' : 'false';
-    btn.setAttribute('aria-checked', String(on));
-    btn.style.background = on ? 'var(--color-coral)' : 'var(--color-gray-text)';
-    const knob = btn.querySelector('.toggle-knob') as HTMLElement | null;
-    if (knob) knob.style.left = on ? '1.125rem' : '0.125rem';
-  }
-
-  function bindToggle(id: string, action: 'setLeaderboard' | 'setShowTrips') {
-    const btn = document.getElementById(id) as HTMLButtonElement | null;
-    btn?.addEventListener('click', async () => {
-      const nextOn = btn.dataset.on !== 'true';
-      btn.disabled = true;
-      paintToggle(btn, nextOn); // optimistic
-      try {
-        const res = await fetch('/api/profile/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, value: nextOn }),
-        });
-        const data = await res.json();
-        if (!data.success) {
-          paintToggle(btn, !nextOn); // revert
-          showPrivacyMsg(data.error ?? 'Could not save.', true);
-        } else {
-          showPrivacyMsg('Saved!', false);
-        }
-      } catch {
-        paintToggle(btn, !nextOn);
-        showPrivacyMsg('Could not save.', true);
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  }
-
-  bindToggle('toggle-leaderboard', 'setLeaderboard');
-  bindToggle('toggle-show-trips', 'setShowTrips');
+  async function postSettings(body: object) { const res = await fetch('/api/profile/settings', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); return res.json(); }
+  async function copyText(value: string, fallback: HTMLElement | null) { try { await navigator.clipboard.writeText(value); return true; } catch { if(fallback){const r=document.createRange();r.selectNodeContents(fallback);const s=getSelection();s?.removeAllRanges();s?.addRange(r);} return false; } }
+  function setLive(id:string,text:string,error=false){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.classList.toggle('error',error)}
+  document.getElementById('share-profile-copy')?.addEventListener('click',async(e)=>{const b=e.currentTarget as HTMLButtonElement;const ok=await copyText(b.dataset.url??'',document.getElementById('share-profile-url'));setLive('share-profile-copied',ok?'Profile link copied.':'Link selected. Press Ctrl/Cmd+C to copy.',!ok)});
+  document.getElementById('share-banner-copy')?.addEventListener('click',async(e)=>{const b=e.currentTarget as HTMLButtonElement;const ok=await copyText(b.dataset.url??'',document.getElementById('share-banner-url'));setLive('share-banner-copied',ok?'Profile link copied.':'Link selected. Press Ctrl/Cmd+C to copy.',!ok);if(b.dataset.regId)fetch('/api/profile/share-dismiss',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registrationId:Number(b.dataset.regId),action:'share'})})});
+  document.getElementById('share-banner-dismiss')?.addEventListener('click',()=>{const b=document.getElementById('share-banner-copy') as HTMLButtonElement|null;document.getElementById('share-banner')?.remove();if(b?.dataset.regId)fetch('/api/profile/share-dismiss',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({registrationId:Number(b.dataset.regId),action:'dismiss'})})});
+  const displayForm=document.getElementById('display-name-form') as HTMLFormElement|null;displayForm?.addEventListener('submit',async(e)=>{e.preventDefault();const input=document.getElementById('display-name-input') as HTMLInputElement;const button=displayForm.querySelector('button') as HTMLButtonElement;button.disabled=input.disabled=true;try{const data=await postSettings({action:'setDisplayName',displayName:input.value.trim()});setLive('display-name-msg',data.error??'Display name saved.',!data.success);if(data.success)setTimeout(()=>location.reload(),500)}finally{button.disabled=input.disabled=false}});
+  const USERNAME_RE=/^[a-z0-9][a-z0-9_-]{1,28}[a-z0-9]$|^[a-z0-9]{1,30}$/;const RESERVED=new Set(['admin','owner','root','api','login','logout','register','profile','leaderboard','trips','about','contact','me','null','undefined','system','support','help','team','seekthethrill','stt','user','users']);
+  function usernameError(v:string){if(v.length<3)return'Must be at least 3 characters.';if(!USERNAME_RE.test(v))return'Use letters, numbers, hyphens, and underscores; start and end with a letter or number.';if(RESERVED.has(v))return'That username is reserved.';return null}
+  const usernameForm=document.getElementById('username-form') as HTMLFormElement|null;const usernameInput=document.getElementById('username-input') as HTMLInputElement|null;usernameInput?.addEventListener('input',()=>setLive('username-hint',usernameError(usernameInput.value.trim().toLowerCase())??''));usernameForm?.addEventListener('submit',async(e)=>{e.preventDefault();const username=usernameInput?.value.trim().toLowerCase()??'';const error=usernameError(username);if(error){setLive('username-msg',error,true);return}const url=`${location.origin}/u/${username}`;if(!confirm(`Your new public profile will be:\n${url}\n\nThis username change is permanent. Your old link will redirect here. Continue?`))return;const button=usernameForm.querySelector('button') as HTMLButtonElement;button.disabled=true;if(usernameInput)usernameInput.disabled=true;try{const data=await postSettings({action:'setUsername',username});setLive('username-msg',data.error??'Username saved.',!data.success);if(data.success)setTimeout(()=>location.reload(),500)}finally{button.disabled=false;if(usernameInput)usernameInput.disabled=false}});
+  function paintSwitch(button:HTMLButtonElement,on:boolean){button.dataset.on=String(on);button.setAttribute('aria-checked',String(on))}
+  function bindSwitch(id:string,action:string){const button=document.getElementById(id) as HTMLButtonElement|null;button?.addEventListener('click',async()=>{const before=button.dataset.on==='true';paintSwitch(button,!before);button.disabled=true;try{const data=await postSettings({action,value:!before});if(!data.success){paintSwitch(button,before);setLive('privacy-msg',data.error??'Could not save your preference.',true)}else setLive('privacy-msg','Privacy preference saved.')}catch{paintSwitch(button,before);setLive('privacy-msg','Could not save your preference.',true)}finally{button.disabled=false}})}bindSwitch('toggle-leaderboard','setLeaderboard');bindSwitch('toggle-show-trips','setShowTrips');
 </script>
+
+<style>
+  .dashboard{padding-top:2rem}.identity{display:flex;align-items:center;gap:1rem;min-width:0}.identity img,.avatar-fallback{width:4rem;height:4rem;border-radius:50%;object-fit:cover;flex:0 0 auto}.avatar-fallback{display:grid;place-items:center;background:var(--color-coral);color:#fff;font-size:1.35rem;font-weight:800}.identity-copy{min-width:0}.identity h1{font-family:var(--font-display);font-size:clamp(1.45rem,3vw,2rem);font-weight:700;overflow-wrap:anywhere}.identity p{overflow-wrap:anywhere}.username{color:var(--color-coral);font-family:monospace;font-size:.86rem}.email{color:var(--color-gray-text);font-size:.82rem}.provenance{margin-top:.2rem;color:var(--color-gray-text);font-size:.7rem}
+  .profile-tabs{display:flex;gap:.25rem;margin:1.6rem 0 2rem;border-bottom:1px solid var(--color-peach);overflow-x:auto}.profile-tabs a{min-width:max-content;min-height:48px;padding:.8rem 1rem;display:flex;align-items:center;border-bottom:3px solid transparent;color:var(--color-gray-text);font-size:.86rem;font-weight:700}.profile-tabs a[aria-current=page]{border-color:var(--color-coral);color:var(--color-navy)}a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
+  .share-banner{position:relative;margin-bottom:1.5rem;padding:1rem 3rem 1rem 1rem;border:1px solid var(--color-peach);border-radius:1rem;background:var(--color-blush)}.share-banner>button{position:absolute;right:.7rem;top:.45rem;width:44px;height:44px;font-size:1.4rem}.share-banner p{font-size:.78rem;color:var(--color-gray-text)}.share-banner>div{display:flex;gap:.5rem;margin-top:.7rem;min-width:0}.share-banner code,.action-card code{display:block;min-width:0;padding:.6rem;border-radius:.6rem;background:#fff;font-size:.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.share-banner code{flex:1}.share-banner div button,.action-card button,.settings-card button,.support-strip>a{min-height:44px;padding:.65rem .9rem;border-radius:.75rem;background:var(--color-coral);color:#fff;font-size:.78rem;font-weight:700}
+  .panel-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(15rem,1fr);gap:2rem}.main-column,.side-column,.trips-panel,.settings-panel{min-width:0}.main-column>section+section,.trips-panel>section,.settings-panel>section{margin-top:2rem}.section-heading{display:flex;align-items:end;justify-content:space-between;gap:1rem;margin-bottom:.85rem}.section-heading h2,.page-intro h2,.trips-panel section>h2,.settings-panel>section>h2{font-family:var(--font-display);font-size:1.2rem;font-weight:700}.section-heading p,.page-intro p{color:var(--color-gray-text);font-size:.78rem}.section-heading a{min-height:44px;display:flex;align-items:center;color:var(--color-coral);font-size:.78rem;font-weight:700;white-space:nowrap}.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem}.stats-grid div{min-width:0;padding:1rem .65rem;border-radius:1rem;background:var(--color-blush);text-align:center}.stats-grid strong{display:block;font-family:var(--font-display);font-size:clamp(1rem,2vw,1.35rem);overflow-wrap:anywhere}.stats-grid span{display:block;margin-top:.15rem;color:var(--color-gray-text);font-size:.67rem}.empty-state{padding:1.25rem;border-radius:1rem;background:var(--color-blush);color:var(--color-gray-text);font-size:.82rem}.empty-state strong{color:var(--color-navy)}.empty-state a{display:inline-block;margin-top:.6rem;color:var(--color-coral);font-weight:700}.card-stack{display:flex;flex-direction:column;gap:.75rem}
+  .side-column{display:flex;flex-direction:column;gap:1rem}.action-card,.support-card,.support-strip{padding:1.1rem;border:1px solid var(--color-peach);border-radius:1rem;background:#fff}.action-card h2,.support-card h2,.support-strip h2{font-size:.92rem;font-weight:700}.action-card code{margin:.75rem 0}.action-card button{width:100%;margin-bottom:.35rem}.action-card a,.support-card a,.account-links a{min-height:44px;display:flex;align-items:center;color:var(--color-coral);font-size:.78rem;font-weight:700}.support-card p,.support-strip p{margin:.35rem 0;color:var(--color-gray-text);font-size:.77rem}.live{min-height:1rem;margin-top:.4rem;color:#047857;font-size:.72rem}.live.error{color:#b91c1c}
+  .page-intro{margin-bottom:1.5rem}.trips-panel{max-width:52rem}.trips-panel section>h2{margin-bottom:.75rem}.trips-panel section>h2 span{font-family:var(--font-body);font-size:.7rem;color:var(--color-gray-text)}.pagination{min-height:52px;margin-top:.8rem;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;font-size:.76rem;color:var(--color-gray-text)}.pagination a{min-height:44px;display:flex;align-items:center;color:var(--color-coral);font-weight:700}.pagination a:last-child{justify-self:end}.support-strip{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+  .settings-panel{max-width:48rem}.settings-card{padding:1.1rem;border:1px solid var(--color-peach);border-radius:1rem;background:#fff}.settings-panel>section>h2{margin-bottom:.65rem}.settings-card label,.readonly span{display:block;margin-bottom:.35rem;font-size:.76rem;font-weight:700}.form-row{display:flex;gap:.55rem}.settings-card input{min-width:0;min-height:44px;flex:1;padding:.7rem .8rem;border:1px solid var(--color-peach);border-radius:.75rem;background:#fff;font-size:.85rem}.readonly{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--color-peach)}.readonly strong{display:block;font-size:.84rem;overflow-wrap:anywhere}.readonly small,.help,.switch-row small{display:block;color:var(--color-gray-text);font-size:.72rem}.settings-card>p{font-size:.82rem}.help{margin:.35rem 0 1rem}.switches>p{margin-bottom:.5rem;color:var(--color-gray-text)}.switch-row{min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem;border-top:1px solid var(--color-peach)}.switch-row strong{display:block;font-size:.82rem}.switch-row button{position:relative;width:48px;height:28px;min-height:28px;padding:0;border-radius:999px;background:#94a3b8;flex:0 0 auto}.switch-row button span{position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}.switch-row button[data-on=true]{background:var(--color-coral)}.switch-row button[data-on=true] span{transform:translateX(20px)}button:disabled{cursor:wait;opacity:.55}.account-links form{margin-top:.5rem}.settings-card button.outline{width:100%;background:#fff;color:var(--color-coral);border:1px solid var(--color-coral)}
+  @media(max-width:800px){.panel-grid{grid-template-columns:1fr}.side-column{display:grid;grid-template-columns:1fr 1fr}.stats-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.dashboard{padding-top:1.25rem}.side-column{display:flex}.section-heading{align-items:flex-start}.share-banner>div,.form-row,.support-strip{align-items:stretch;flex-direction:column}.share-banner div button,.form-row button{width:100%}.profile-tabs a{flex:1;justify-content:center;padding-inline:.6rem}.identity img,.avatar-fallback{width:3.4rem;height:3.4rem}.support-strip>a{text-align:center;justify-content:center}}
+</style>

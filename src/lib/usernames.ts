@@ -29,6 +29,12 @@ function slugify(name: string): string {
 
 export function isUsernameAvailable(username: string, excludeUserId?: string): boolean {
   const db = getDb();
+  const alias = db.prepare('SELECT userId FROM username_aliases WHERE username = ? COLLATE NOCASE')
+    .get(username) as { userId: string } | undefined;
+  if (alias && alias.userId !== excludeUserId) return false;
+  // An owner's own old alias is also permanently reserved: it must never become
+  // the current name again or be handed to another account.
+  if (alias) return false;
   if (excludeUserId) {
     const row = db
       .prepare('SELECT id FROM users WHERE username = ? AND id != ?')
@@ -99,17 +105,26 @@ export function setUsername(
     return { success: false, error: 'You can only change your username once.' };
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  db.prepare('UPDATE users SET username = ?, usernameChangedAt = ? WHERE id = ?').run(
-    username,
-    now,
-    userId,
-  );
+  if (row.username === username) return { success: true };
 
-  // Keep leaderboard_cache in sync
+  const now = Math.floor(Date.now() / 1000);
   try {
-    db.prepare('UPDATE leaderboard_cache SET username = ? WHERE userId = ?').run(username, userId);
-  } catch { /* non-fatal */ }
+    db.transaction(() => {
+      if (row.username) {
+        db.prepare('INSERT INTO username_aliases (username, userId) VALUES (?, ?)').run(row.username, userId);
+      }
+      db.prepare('UPDATE users SET username = ?, usernameChangedAt = ? WHERE id = ?').run(username, now, userId);
+      db.prepare('UPDATE leaderboard_cache SET username = ? WHERE userId = ?').run(username, userId);
+    })();
+  } catch (error: any) {
+    if (String(error?.code).includes('CONSTRAINT')) return { success: false, error: 'That username is already taken.' };
+    return { success: false, error: 'Could not save that username. Please try again.' };
+  }
 
   return { success: true };
+}
+
+export function resolveUsernameAlias(username: string): { userId: string } | null {
+  return getDb().prepare('SELECT userId FROM username_aliases WHERE username = ? COLLATE NOCASE')
+    .get(username) as { userId: string } | undefined ?? null;
 }

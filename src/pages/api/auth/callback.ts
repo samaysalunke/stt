@@ -5,6 +5,7 @@ import { createUserSession } from '../../../lib/session';
 import { assignAutoUsername } from '../../../lib/usernames';
 import { decodeIdToken, verifyGoogleClaims } from '../../../lib/googleIdToken';
 import { siteUrl } from '../../../lib/siteUrl';
+import { safeProfileReturn } from '../../../lib/authReturn';
 
 export const prerender = false;
 
@@ -12,9 +13,11 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const storedState = cookies.get('oauth_state')?.value;
+  const storedReturn = cookies.get('oauth_return')?.value;
 
   // Clear state cookie regardless
   cookies.delete('oauth_state', { path: '/' });
+  cookies.delete('oauth_return', { path: '/' });
 
   if (!code || !state || state !== storedState) {
     return redirect('/login?error=oauth_state');
@@ -124,5 +127,10 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     secure: isProd,
   });
 
-  return redirect('/profile');
+  let returnTo = '/profile';
+  try {
+    const parsed = JSON.parse(storedReturn ?? '{}');
+    if (parsed.state === state) returnTo = safeProfileReturn(parsed.next);
+  } catch { /* use safe default */ }
+  return redirect(returnTo);
 };

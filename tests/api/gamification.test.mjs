@@ -71,8 +71,21 @@ test('TC-212 POST /api/profile/settings without auth → 401', async () => {
   assert.equal(res.status, 401, `Expected 401, got ${res.status}`);
 });
 
-// ── TC-213: setLeaderboard opt-out removes from leaderboard_cache ─────────────
-test('TC-213 setLeaderboard opt-out removes from leaderboard_cache', async () => {
+test('TC-212a protected profile preserves tab query and authenticated HTML is no-store', async () => {
+  const signedOut = await fetch(`${BASE}/profile?tab=trips&pastPage=2`, { redirect: 'manual' });
+  assert.equal(signedOut.status, 302);
+  const login = new URL(signedOut.headers.get('location'), BASE);
+  assert.equal(login.pathname, '/login');
+  assert.equal(login.searchParams.get('next'), '/profile?tab=trips&pastPage=2');
+
+  const { cookie } = seedUserWithSession();
+  const signedIn = await fetch(`${BASE}/profile?tab=overview`, { headers: { cookie } });
+  assert.equal(signedIn.status, 200);
+  assert.match(signedIn.headers.get('cache-control') ?? '', /private,\s*no-store/i);
+});
+
+// ── TC-213: leaderboard privacy does not destroy personal statistics ─────────
+test('TC-213 setLeaderboard opt-out retains leaderboard_cache personal stats', async () => {
   const { userId, email, cookie } = seedUserWithSession({ leaderboardOptOut: 0 });
   seedLeaderboardEntry({ userId, email, kmsFromHome: 300 });
 
@@ -93,7 +106,30 @@ test('TC-213 setLeaderboard opt-out removes from leaderboard_cache', async () =>
 
   const after = new Database(DB_PATH, { readonly: true })
     .prepare('SELECT COUNT(*) as n FROM leaderboard_cache WHERE userId = ?').get(userId).n;
-  assert.equal(after, 0, 'Entry should be removed from leaderboard_cache after opt-out');
+  assert.equal(after, 1, 'Personal stats should remain cached after opt-out');
+  const privacy = new Database(DB_PATH, { readonly: true })
+    .prepare('SELECT leaderboardOptOut FROM users WHERE id = ?').get(userId).leaderboardOptOut;
+  assert.equal(privacy, 1, 'User should be marked opted out for rank/list queries');
+});
+
+test('TC-213a username change reserves alias and old profile permanently redirects', async () => {
+  const oldName = `old-${crypto.randomBytes(4).toString('hex')}`;
+  const newName = `new-${crypto.randomBytes(4).toString('hex')}`;
+  const { cookie } = seedUserWithSession({ username: oldName });
+  const update = await fetch(`${BASE}/api/profile/settings`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ action: 'setUsername', username: newName }),
+  });
+  assert.equal(update.status, 200);
+  const oldProfile = await fetch(`${BASE}/u/${oldName}`, { redirect: 'manual' });
+  assert.equal(oldProfile.status, 308);
+  assert.equal(new URL(oldProfile.headers.get('location'), BASE).pathname, `/u/${newName}`);
+  const { cookie: otherCookie } = seedUserWithSession();
+  const reuse = await fetch(`${BASE}/api/profile/settings`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', cookie: otherCookie },
+    body: JSON.stringify({ action: 'setUsername', username: oldName }),
+  });
+  assert.equal(reuse.status, 400);
 });
 
 // ── TC-214: setUsername — valid, first-time change succeeds ───────────────────

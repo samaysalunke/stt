@@ -129,6 +129,28 @@ test('TC-235 showTripsPublicly=false hides trip list', async () => {
   assert.equal(res.status, 200);
   const html = await res.text();
   assert.ok(!html.includes(secretTrip), 'Trip list should be hidden when showTripsPublicly=0');
+  assert.ok(!html.includes('Map of India'), 'Map payload should be absent when trip sharing is disabled');
+});
+
+test('TC-235a public HTML excludes private traveller and financial fields', async () => {
+  const Database = require('better-sqlite3');
+  const { username, email } = seedPublicUser({ showTripsPublicly: 1 });
+  const secrets = {
+    phone: `PHONE_${crypto.randomBytes(4).toString('hex')}`,
+    emergency: `EMERGENCY_${crypto.randomBytes(4).toString('hex')}`,
+    why: `WHY_${crypto.randomBytes(4).toString('hex')}`,
+    transaction: `TXN_${crypto.randomBytes(4).toString('hex')}`,
+  };
+  const db = new Database(DB_PATH);
+  db.prepare(`INSERT INTO registrations
+    (trip_name,full_name,email,phone,emergency_name,emergency_phone,why_join,transaction_id,amount_paid,total_amount,status)
+    VALUES ('Safe public trip','Private Surname',?,?,?,?,?,?,9000,20000,'confirmed')`)
+    .run(email,secrets.phone,secrets.emergency,'0000000000',secrets.why,secrets.transaction);
+  db.close();
+  const html = await (await fetch(`${BASE}/u/${username}`)).text();
+  for (const secret of Object.values(secrets)) assert.ok(!html.includes(secret), `Public HTML leaked ${secret}`);
+  assert.ok(!html.includes('Private Surname'));
+  assert.ok(!html.includes('20,000') && !html.includes('20000'));
 });
 
 // ── TC-236: showTripsPublicly=true → trip names appear ───────────────────────
