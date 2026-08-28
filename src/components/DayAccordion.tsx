@@ -99,7 +99,8 @@ export default function DayAccordion({ itinerary, tripName }: Props) {
                           loading="lazy"
                           width={p.width ?? undefined}
                           height={p.height ?? undefined}
-                          className="w-full aspect-[4/3] object-cover rounded-xl"
+                          style={{ aspectRatio: p.width && p.height ? `${p.width} / ${p.height}` : '4 / 3' }}
+                          className="w-full max-h-[75vh] object-contain rounded-xl bg-neutral-100"
                           alt={[tripName, `Day ${day.day}, photo ${i + 1}`].filter(Boolean).join(' — ')}
                         />
                       </a>

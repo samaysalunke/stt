@@ -199,3 +199,8 @@ html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::afte
 .trip-description-collapsed {
   max-height: calc(1.7rem * 3);
 }
+
+/* Collapsed "Things you'll probably talk about later" — ~3 rows, then Read more. */
+.highlights-collapsed {
+  max-height: 7.5rem;
+}

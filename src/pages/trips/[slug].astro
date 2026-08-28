@@ -402,9 +402,9 @@ const tripSchema: Record<string, any> = {
 
         <!-- Highlights -->
         {highlights.length > 0 && (
-          <section>
+          <section data-highlights>
             <h2 class="text-2xl font-bold mb-5" style="font-family: var(--font-display); color: var(--color-navy);">Things you'll probably talk about later</h2>
-            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ul id="highlights-list" data-highlights-list class="highlights-collapsed grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden">
               {highlights.map((h: string) => (
                 <li class="flex items-start gap-2.5 text-sm" style="color: var(--color-navy);">
                   <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,7 +414,34 @@ const tripSchema: Record<string, any> = {
                 </li>
               ))}
             </ul>
+            <button type="button" data-highlights-toggle aria-expanded="false" aria-controls="highlights-list" class="mt-3 hidden cursor-pointer text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read more</button>
           </section>
+        )}
+
+        {highlights.length > 0 && (
+          <script is:inline>
+            (() => {
+              const section = document.querySelector('[data-highlights]');
+              if (!section) return;
+              const list = section.querySelector('[data-highlights-list]');
+              const toggle = section.querySelector('[data-highlights-toggle]');
+              let expanded = false;
+              const check = () => {
+                if (expanded) return;
+                const overflows = list.scrollHeight - list.clientHeight > 1;
+                toggle.classList.toggle('hidden', !overflows);
+              };
+              toggle.addEventListener('click', () => {
+                expanded = !expanded;
+                list.classList.toggle('highlights-collapsed', !expanded);
+                toggle.textContent = expanded ? 'Show less' : 'Read more';
+                toggle.setAttribute('aria-expanded', String(expanded));
+                if (!expanded) check();
+              });
+              check();
+              window.addEventListener('resize', check);
+            })();
+          </script>
         )}
 
         <!-- Photos strip -->
