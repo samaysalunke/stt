@@ -69,6 +69,8 @@ const faqSchema = faqs.length > 0 ? {
           <div class="space-y-2">
             {category.questions.map((item) => (
               <details
+                data-card-skeleton
+                data-skeleton-ready
                 class="bg-white rounded-xl overflow-hidden border group"
                 style="border-color: var(--color-border);"
               >
@@ -97,7 +99,7 @@ const faqSchema = faqs.length > 0 ? {
       ))}
 
       <!-- Still have questions -->
-      <div class="mt-10 text-center p-8 rounded-2xl" style="background-color: var(--color-blush);">
+      <div class="mt-10 text-center p-8 rounded-2xl" data-card-skeleton data-skeleton-ready style="background-color: var(--color-blush);">
         <h3 class="font-bold text-lg mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Still have a question?</h3>
         <p class="text-sm mb-5" style="color: var(--color-gray-text);">WhatsApp is the fastest way to reach us.</p>
         <a

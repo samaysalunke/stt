@@ -1,17 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TripCard from '../../components/TripCard.astro';
-import { listTrips, isTripListable, resolveBooking, tripCardSummary } from '../../lib/content';
+import { listTrips, isTripListable, resolveBooking, tripCardSummary, sortTripsByPriority } from '../../lib/content';
 import { siteUrl } from '../../lib/siteUrl';
 
 // Visibility derives from departures (trip-level status removed): list trips
 // that have at least one upcoming, non-draft departure.
-const allTrips = listTrips().filter(isTripListable);
-
-// Separate available from sold out (derived from departures) — sold out goes last.
-const available = allTrips.filter((t) => !tripCardSummary(t).soldOut);
-const soldOut = allTrips.filter((t) => tripCardSummary(t).soldOut);
-const trips = [...available, ...soldOut];
+const trips = sortTripsByPriority(listTrips().filter(isTripListable));
 const listingSchema = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',

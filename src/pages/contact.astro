@@ -43,6 +43,8 @@ const methods = [
           const Tag = m.href ? 'a' : 'div';
           return (
             <Tag
+              data-card-skeleton
+              data-skeleton-ready
               href={m.href ?? undefined}
               target={m.href && m.href.startsWith('http') ? '_blank' : undefined}
               rel={m.href && m.href.startsWith('http') ? 'noopener noreferrer' : undefined}

@@ -58,6 +58,7 @@ const departureSummary = getDepartureSummary(departures);
 
 <article
   data-testid="trip-card"
+  data-card-skeleton
   class="trip-card-shell group flex h-full w-full flex-col overflow-hidden rounded-3xl bg-white transition-all hover:-translate-y-0.5"
   style="box-shadow: 0 4px 30px -12px rgba(27,43,58,0.18);"
 >
@@ -65,6 +66,7 @@ const departureSummary = getDepartureSummary(departures);
   <div class="relative overflow-hidden" style="aspect-ratio: 4/3;">
     <a href={`/trips/${slug}/`} class="block h-full">
       <img
+        data-skeleton-image
         src={img}
         alt={cardImageAlt}
         width="800"

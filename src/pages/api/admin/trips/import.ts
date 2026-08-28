@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import YAML from 'yaml';
-import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary, normalizeItineraryPhotos } from '../../../../lib/content';
+import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { slugify } from '../../../../lib/utils';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
@@ -72,6 +72,7 @@ export const POST: APIRoute = async ({ request }) => {
       slug,
       title,
       name: title,
+      priority: tripPriority(item.priority),
     });
     // Trip-level status was removed — visibility/sold-out derive from departures.
     // Strip any legacy top-level status carried in the YAML.

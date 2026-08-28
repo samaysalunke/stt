@@ -48,6 +48,36 @@
 /* Navigation loader ring — see src/components/PageLoader.astro. Root-level (see note above). */
 @keyframes stt-spin { to { transform: rotate(360deg); } }
 
+@keyframes stt-card-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+/* Enabled by a tiny head script, so no-JS visitors always receive real content. */
+html.card-skeletons-active [data-card-skeleton] {
+  position: relative;
+  isolation: isolate;
+}
+
+html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(100deg, #e9e8e4 25%, #f4f3ef 42%, #e9e8e4 59%);
+  background-size: 220% 100%;
+  animation: stt-card-shimmer 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::after {
+    animation: none;
+    background: #e9e8e4;
+  }
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);

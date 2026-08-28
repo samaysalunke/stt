@@ -22,6 +22,15 @@ export default config({
           ],
           defaultValue: 'draft',
         }),
+        priority: fields.select({
+          label: 'Priority',
+          options: [
+            { label: 'High', value: 'high' },
+            { label: 'Medium', value: 'medium' },
+            { label: 'Low', value: 'low' },
+          ],
+          defaultValue: 'medium',
+        }),
         status: fields.select({
           label: 'Status',
           options: [

@@ -193,6 +193,56 @@ test('TC-103b itinerary day photos round-trip and are clamped/sanitised on save'
   assert.equal(saved.description.replace(/\r\n/g, '\n'), RICH_DESCRIPTION);
 });
 
+test('TC-103c priority autosave preserves the trip and full edits preserve priority', async () => {
+  const { cookie } = await adminLogin();
+  const before = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  const res = await fetch(`${BASE}/api/admin/trips/priority`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ slug: 'qa-test-v2', priority: 'high' }),
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { success: true, priority: 'high' });
+
+  let saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.equal(saved.priority, 'high');
+  for (const [key, value] of Object.entries(before)) {
+    if (key !== 'priority') assert.deepEqual(saved[key], value, `${key} must be preserved`);
+  }
+
+  const editRes = await updateTrip('qa-test-v2', VALID_CATALOG, VALID_DEPARTURES, cookie);
+  assert.ok(editRes.status >= 300 && editRes.status < 400);
+  saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  assert.equal(saved.priority, 'high', 'full trip overwrite must preserve priority');
+
+  const unchanged = readFileSync(QA_TRIP_PATH, 'utf8');
+  const invalid = await fetch(`${BASE}/api/admin/trips/priority`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ slug: 'qa-test-v2', priority: 'urgent' }),
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(readFileSync(QA_TRIP_PATH, 'utf8'), unchanged, 'invalid input must not modify the file');
+
+  const missing = await fetch(`${BASE}/api/admin/trips/priority`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ slug: 'not-a-real-trip', priority: 'low' }),
+  });
+  assert.equal(missing.status, 404);
+});
+
+test('TC-103d unauthenticated priority update is blocked', async () => {
+  const res = await fetch(`${BASE}/api/admin/trips/priority`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug: 'qa-test-v2', priority: 'low' }),
+    redirect: 'manual',
+  });
+  assert.ok(res.status >= 300 && res.status < 400);
+  assert.match(res.headers.get('location') ?? '', /\/admin\/login/);
+});
+
 // Restore the qa-test-v2 fixture after admin tests so register-v2 tests remain stable.
 // This test runs last in the file and re-saves the original data.
 test('TC-104 restore qa-test-v2 fixture after admin tests', async () => {

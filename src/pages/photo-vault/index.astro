@@ -40,6 +40,8 @@ function formatDate(d: string | null | undefined) {
 
           return (
           <a
+            data-card-skeleton
+            data-skeleton-ready={!image ? '' : undefined}
             href={`/photo-vault/${album.slug}/`}
             class="album-card group block relative overflow-hidden rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
             style="aspect-ratio: 5/6;"
@@ -48,6 +50,7 @@ function formatDate(d: string | null | undefined) {
           >
             {image ? (
               <img
+                data-skeleton-image
                 src={image}
                 alt={`${title} album`}
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

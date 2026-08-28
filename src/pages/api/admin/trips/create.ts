@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { writeTrip, saveImageFile, clearTripSlugAlias, normalizeItineraryPhotos } from '../../../../lib/content';
+import { writeTrip, saveImageFile, clearTripSlugAlias, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
@@ -63,6 +63,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     name,
     title: name,
     publicationStatus: sanitizeInput(body.get('publicationStatus')) || 'draft',
+    priority: tripPriority(body.get('priority')),
     location,
     duration: sanitizeInput(body.get('duration')) || null,
     shortDescription,

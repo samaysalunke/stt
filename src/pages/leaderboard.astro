@@ -102,7 +102,7 @@ function homeCity(latLng: string | null): string {
     </div>
 
     {rows.length === 0 ? (
-      <div class="rounded-2xl p-12 text-center" style="background: var(--color-blush);">
+      <div class="rounded-2xl p-12 text-center" data-card-skeleton data-skeleton-ready style="background: var(--color-blush);">
         <p class="text-lg font-semibold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">No data yet</p>
         <p class="text-sm" style="color: var(--color-gray-text);">Stats appear once trip bookings are confirmed.</p>
       </div>
@@ -119,6 +119,8 @@ function homeCity(latLng: string | null): string {
 
           return (
             <div
+              data-card-skeleton
+              data-skeleton-ready={!row.avatarUrl ? '' : undefined}
               class={`flex items-center gap-3 px-4 py-4 border-b transition-colors ${isMe ? 'ring-1 ring-inset' : ''}`}
               style={`
                 border-color: rgba(245,221,215,0.6);
@@ -137,7 +139,7 @@ function homeCity(latLng: string | null): string {
 
               <!-- Avatar -->
               {row.avatarUrl ? (
-                <img src={row.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
+                <img data-skeleton-image src={row.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
               ) : (
                 <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                      style="background: var(--color-coral);">
@@ -181,13 +183,13 @@ function homeCity(latLng: string | null): string {
 
     <!-- Pinned: logged-in user outside top 20 -->
     {myEntry && !myInTop20 && (
-      <div class="mt-4 rounded-2xl overflow-hidden" style="border: 2px solid var(--color-coral);">
+      <div class="mt-4 rounded-2xl overflow-hidden" data-card-skeleton data-skeleton-ready={!myEntry.avatarUrl ? '' : undefined} style="border: 2px solid var(--color-coral);">
         <div class="flex items-center gap-3 px-4 py-4" style="background: rgba(245,221,215,0.25);">
           <div class="w-8 text-center flex-shrink-0">
             <span class="text-sm font-bold" style="color: var(--color-navy);">{myEntry.rank}</span>
           </div>
           {myEntry.avatarUrl ? (
-            <img src={myEntry.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
+            <img data-skeleton-image src={myEntry.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
           ) : (
             <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                  style="background: var(--color-coral);">
@@ -215,7 +217,7 @@ function homeCity(latLng: string | null): string {
 
     <!-- CTA for users not on the leaderboard -->
     {user && !myEntry && (
-      <div class="mt-8 rounded-2xl p-6 text-center" style="background: var(--color-blush);">
+      <div class="mt-8 rounded-2xl p-6 text-center" data-card-skeleton data-skeleton-ready style="background: var(--color-blush);">
         <p class="text-sm font-medium mb-1" style="color: var(--color-navy);">You're not on the leaderboard yet</p>
         <p class="text-xs mb-4" style="color: var(--color-gray-text);">Stats appear once your trip booking is confirmed.</p>
         <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>

@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { contentLastmod, listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch } from '../../../lib/content';
+import { contentLastmod, listTrips, upcomingBatches, tripCardSummary, tripCardSummaryAnyBatch, tripPriority } from '../../../lib/content';
 import { getDb } from '../../../lib/db';
 
 const db = getDb();
@@ -44,6 +44,7 @@ const trips = listTrips().map((t) => {
     _departureCount: allBatches.length,
     _upcomingCount: upcoming.length,
     _updatedAt: t.updatedAt ?? contentLastmod('trips', t.slug) ?? null,
+    _priority: tripPriority(t.priority),
   };
 });
 const visibleTripCount = trips.filter((trip) => trip._upcomingCount > 0).length;
@@ -139,6 +140,22 @@ const statusLabels: Record<string, string> = {
             </div>
           </div>
 
+          <div class="mb-4 flex items-center gap-3">
+            <label class="text-xs font-semibold" for={`priority-${trip.slug}`} style="color: var(--color-navy);">Priority</label>
+            <select
+              id={`priority-${trip.slug}`}
+              class="trip-priority min-h-9 flex-1 rounded-xl bg-white px-3 text-sm"
+              style="border: 1px solid var(--color-peach); color: var(--color-navy);"
+              data-slug={trip.slug}
+              data-saved-value={trip._priority}
+            >
+              <option value="high" selected={trip._priority === 'high'}>High</option>
+              <option value="medium" selected={trip._priority === 'medium'}>Medium</option>
+              <option value="low" selected={trip._priority === 'low'}>Low</option>
+            </select>
+            <span class="priority-state w-12 text-[11px]" aria-live="polite" style="color: rgba(27,43,58,0.55);"></span>
+          </div>
+
           <div class="mt-auto flex items-center gap-2 pt-1">
             <a href={`/admin/trips/${trip.slug}`} class="flex-1 text-center text-sm font-semibold rounded-full py-2 text-white" style="background-color: var(--color-cta);">Edit</a>
             <button class="duplicate-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug}
@@ -178,6 +195,32 @@ function filterTrips() {
 }
 
 hideDoneTrips?.addEventListener('change', filterTrips);
+
+document.querySelectorAll<HTMLSelectElement>('.trip-priority').forEach((select) => {
+  const state = select.parentElement?.querySelector<HTMLElement>('.priority-state');
+  select.addEventListener('change', async () => {
+    const previous = select.dataset.savedValue ?? 'medium';
+    const priority = select.value;
+    select.disabled = true;
+    if (state) { state.textContent = 'Saving…'; state.style.color = 'rgba(27,43,58,0.55)'; }
+    try {
+      const response = await fetch('/api/admin/trips/priority', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: select.dataset.slug, priority }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.success !== true) throw new Error(result.error || 'Save failed');
+      select.dataset.savedValue = priority;
+      if (state) { state.textContent = 'Saved'; state.style.color = 'var(--color-success)'; }
+    } catch {
+      select.value = previous;
+      if (state) { state.textContent = 'Try again'; state.style.color = 'var(--color-danger)'; }
+    } finally {
+      select.disabled = false;
+    }
+  });
+});
 
 // Duplicate trip
 document.querySelectorAll('.duplicate-trip-btn').forEach(btn => {

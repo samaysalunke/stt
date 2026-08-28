@@ -42,6 +42,7 @@ export const POST: APIRoute = async ({ request }) => {
       slug: newSlug, // keep the in-YAML slug in sync with the new filename (else the copy collides with the original)
       name: copiedName,
       title: copiedName,
+      priority: 'medium',
       batches: copiedBatches,
     });
     delete newData.status; // strip any legacy trip-level status

@@ -97,6 +97,17 @@ test('TC-201 trip_lead POST /api/admin/trips/create → 403', async () => {
   assert.equal(res.status, 403, `Expected 403, got ${res.status}`);
 });
 
+test('TC-201 trip_lead POST /api/admin/trips/priority → 403', async () => {
+  const { cookie } = seedAdminSession({ role: 'trip_lead' });
+  const res = await fetch(`${BASE}/api/admin/trips/priority`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ slug: 'qa-test-v2', priority: 'high' }),
+    redirect: 'manual',
+  });
+  assert.equal(res.status, 403, `Expected 403, got ${res.status}`);
+});
+
 // ── TC-202: ops blocked from owner-only pages and trip creation ───────────────
 test('TC-202 ops GET /admin/settings/roles → 403', async () => {
   const { cookie } = seedAdminSession({ role: 'ops' });

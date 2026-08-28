@@ -34,6 +34,38 @@ export function listTrips(): Array<Record<string, any>> {
 
 export type PublicationStatus = 'draft' | 'published' | 'archived' | 'test';
 
+export const TRIP_PRIORITIES = ['high', 'medium', 'low'] as const;
+export type TripPriority = (typeof TRIP_PRIORITIES)[number];
+
+/** Legacy, absent, and malformed values intentionally receive normal placement. */
+export function tripPriority(value: unknown): TripPriority {
+  return typeof value === 'string' && (TRIP_PRIORITIES as readonly string[]).includes(value.toLowerCase())
+    ? value.toLowerCase() as TripPriority
+    : 'medium';
+}
+
+/**
+ * Group trips by manually managed priority and independently shuffle each group.
+ * Call this after a page's visibility filters; listTrips() retains its workflow-safe order.
+ */
+export function sortTripsByPriority<T extends Record<string, any>>(
+  trips: readonly T[],
+  random: () => number = Math.random,
+): T[] {
+  const buckets: Record<TripPriority, T[]> = { high: [], medium: [], low: [] };
+  for (const trip of trips) buckets[tripPriority(trip?.priority)].push(trip);
+
+  const shuffle = (items: T[]) => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  };
+
+  return [...shuffle(buckets.high), ...shuffle(buckets.medium), ...shuffle(buckets.low)];
+}
+
 /** Public detail pages may include useful archived trips; listings only use published trips. */
 export function tripPublicationStatus(trip: Record<string, any>): PublicationStatus {
   const explicit = String(trip?.publicationStatus ?? '').toLowerCase();

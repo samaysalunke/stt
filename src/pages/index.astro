@@ -2,13 +2,13 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
 import TestimonialCard from '../components/TestimonialCard.astro';
-import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking } from '../lib/content';
+import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking, sortTripsByPriority } from '../lib/content';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature every trip that has an upcoming,
 // not-fully-sold-out departure (trip-level status was removed). No cap — the
 // section scrolls horizontally when there are more than fit on screen.
-const featuredTrips = allTrips.filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut);
+const featuredTrips = sortTripsByPriority(allTrips.filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut));
 const showCarouselArrows = featuredTrips.length > 3;
 
 const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());

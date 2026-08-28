@@ -14,7 +14,7 @@ const travellerFields = [
   ['Emergency contact', record.details.traveller.emergencyContact], ['Why I want to join', record.details.traveller.whyJoin],
 ].filter(([, value]) => value);
 ---
-<article class="trip-card">
+<article class="trip-card" data-card-skeleton data-skeleton-ready>
   <div class="trip-card-summary">
     <div class="trip-card-copy">
       <h3>{record.tripName}</h3>

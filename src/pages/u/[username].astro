@@ -59,16 +59,16 @@ const statusLabel = { ongoing: 'Ongoing', upcoming: 'Upcoming', completed: 'Comp
   <ProfileChrome>
     <main class="profile-shell public-profile">
       <div class={`profile-composition ${profileUser.showTripsPublicly ? '' : 'without-map'}`}>
-        <section class="public-identity">
-          {profileUser.avatarUrl ? <img src={profileUser.avatarUrl} alt="" referrerpolicy="no-referrer" /> : <span class="public-avatar" aria-hidden="true">{firstName[0].toUpperCase()}</span>}
+        <section class="public-identity" data-card-skeleton data-skeleton-ready={!profileUser.avatarUrl ? '' : undefined}>
+          {profileUser.avatarUrl ? <img data-skeleton-image src={profileUser.avatarUrl} alt="" referrerpolicy="no-referrer" /> : <span class="public-avatar" aria-hidden="true">{firstName[0].toUpperCase()}</span>}
           <div><h1>{firstName}</h1><p class="handle">@{profileUser.username}</p><p>{tripsCount ? `${tripsCount} trip${tripsCount === 1 ? '' : 's'} with Seek the Thrill` : `Explorer since ${joinYear}`}</p></div>
           {kmRank !== null && <a class="rank" href="/leaderboard?tab=km">#{kmRank} on the km from home board →</a>}
         </section>
         {profileUser.showTripsPublicly && <section class="map-card" aria-labelledby="map-title"><h2 id="map-title">Adventures across India</h2>{pins.length ? <><MapIndia pins={pins} class="india-map" /><div class="legend"><span><i class="completed"></i>Completed</span><span><i class="ongoing"></i>Ongoing</span><span><i class="upcoming"></i>Upcoming</span></div></> : <div class="map-empty"><strong>Destinations are being mapped.</strong><p>Confirmed trips will appear here when their locations are available.</p></div>}</section>}
       </div>
-      <section class="public-stats" aria-label="Travel statistics"><div><strong>{tripsCount}</strong><span>trips</span></div><div><strong>{stats?.destinationsCount ?? 0}</strong><span>destinations</span></div><div><strong>{stats?.daysOutdoors ?? 0}</strong><span>days outdoors</span></div><div><strong>{(stats?.kmsFromHome ?? 0).toLocaleString('en-IN')} km</strong><span>from home</span></div></section>
+      <section class="public-stats" data-card-skeleton data-skeleton-ready aria-label="Travel statistics"><div><strong>{tripsCount}</strong><span>trips</span></div><div><strong>{stats?.destinationsCount ?? 0}</strong><span>destinations</span></div><div><strong>{stats?.daysOutdoors ?? 0}</strong><span>days outdoors</span></div><div><strong>{(stats?.kmsFromHome ?? 0).toLocaleString('en-IN')} km</strong><span>from home</span></div></section>
       {profileUser.showTripsPublicly && <section class="trip-timeline"><h2>Confirmed trips</h2>{publicTrips.length ? (['ongoing','upcoming','completed'] as const).map((status) => grouped[status].length > 0 && <div class="trip-group"><h3>{statusLabel[status]}</h3><div>{grouped[status].map((trip) => <article><div><strong>{trip.tripName}</strong>{trip.location && <p>{trip.location}</p>}</div><span class={status}>{statusLabel[status]}</span></article>)}</div></div>) : <div class="empty"><strong>No public trips yet.</strong><p>Confirmed trips will appear here when available.</p></div>}</section>}
-      <section class="explore-cta"><div><h2>Travel with Seek the Thrill</h2><p>Small-group adventures across offbeat India.</p></div><a href="/trips/">Explore trips →</a></section>
+      <section class="explore-cta" data-card-skeleton data-skeleton-ready><div><h2>Travel with Seek the Thrill</h2><p>Small-group adventures across offbeat India.</p></div><a href="/trips/">Explore trips →</a></section>
     </main>
   </ProfileChrome>
 </BaseLayout>

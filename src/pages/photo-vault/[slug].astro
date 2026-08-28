@@ -84,6 +84,7 @@ const albumSchema = {
         <div class="columns-2 gap-3 [column-fill:_balance]">
           {photos.map((p, i) => (
             <a
+              data-card-skeleton
               href={p.image}
               data-glightbox="type: image"
               data-gallery="album"
@@ -92,6 +93,7 @@ const albumSchema = {
               style="background-color: var(--color-peach);"
             >
               <img
+                data-skeleton-image
                 src={p.image}
                 alt={p.caption ?? `${name} photo ${i + 1}`}
                 width={p.width || undefined}

@@ -78,6 +78,7 @@ const orgSchema = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    <script is:inline>document.documentElement.classList.add('card-skeletons-active');</script>
     {settings.googleSiteVerification && <meta name="google-site-verification" content={settings.googleSiteVerification} />}
     {settings.bingSiteVerification && <meta name="msvalidate.01" content={settings.bingSiteVerification} />}
 
@@ -162,6 +163,32 @@ const orgSchema = {
     )}
 
     <script>
+      const initializeCardSkeletons = () => {
+        document.querySelectorAll<HTMLElement>('[data-card-skeleton]').forEach((card) => {
+          if (card.hasAttribute('data-skeleton-ready')) return;
+          const marker = card.querySelector<HTMLElement>('[data-skeleton-image]');
+          const image = marker instanceof HTMLImageElement ? marker : marker?.querySelector<HTMLImageElement>('img');
+          const reveal = () => {
+            card.setAttribute('data-skeleton-ready', '');
+            window.clearTimeout(failSafe);
+          };
+          const failSafe = window.setTimeout(reveal, 2500);
+
+          if (!image) {
+            reveal();
+            return;
+          }
+          if (image.complete) reveal();
+          else {
+            image.addEventListener('load', reveal, { once: true });
+            image.addEventListener('error', reveal, { once: true });
+          }
+          card.addEventListener('pointerdown', reveal, { once: true, passive: true });
+          card.addEventListener('focusin', reveal, { once: true });
+        });
+      };
+      initializeCardSkeletons();
+
       const reveals = document.querySelectorAll('.reveal');
       const observer = new IntersectionObserver(
         (entries) => {
