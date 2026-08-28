@@ -5,9 +5,16 @@ import { logAction } from '../../../../lib/audit';
 import { tripAdvanceAmountBySlug } from '../../../../lib/registrationWrite';
 import { paymentState } from '../../../../lib/payment';
 import { jsonOk as json } from '../../../../lib/apiResponse';
-import { recordPayment, sanitizePaymentMethod, validReceivedAt, zohoMode } from '../../../../lib/paymentLedger';
+import { recordPayment, recordRefund, sanitizePaymentMethod, validReceivedAt, zohoMode } from '../../../../lib/paymentLedger';
 import { processZohoDocument } from '../../../../lib/zohoBooks';
 import { sendRegistrationPaymentConfirmed } from '../../../../lib/email';
+import type { PaymentStatus } from '../../../../lib/registrationStatus';
+
+const resolvePaymentStatus = (action: string, nextAmount: number, total: number): PaymentStatus => {
+  if (action === 'unpaid' || nextAmount <= 0) return 'unpaid';
+  if (Number.isFinite(total) && total > 0 && nextAmount >= total) return 'fully_paid';
+  return 'advance_paid';
+};
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -18,13 +25,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? [...new Set(body.ids.map(Number).filter((n: number) => Number.isInteger(n) && n > 0))]
           .map(Number)
       : [];
-    if (!ids.length || !['record', 'unpaid', 'advance', 'full'].includes(action)) return json({ success: false, error: 'Invalid payment action or registration IDs.' }, 400);
+    if (!ids.length || !['record', 'unpaid', 'advance', 'full', 'refund'].includes(action)) return json({ success: false, error: 'Invalid payment action or registration IDs.' }, 400);
     if (ids.length > 500) return json({ success: false, error: 'Too many registrations (max 500).' }, 400);
 
     const receivedAt = String(body.receivedAt || body.received_at || new Date().toISOString());
     const method = sanitizePaymentMethod(body.method || body.paymentMethod || (action === 'unpaid' ? 'other' : 'bank_transfer'));
     if (!validReceivedAt(receivedAt)) return json({ success: false, error: 'Received date is invalid or in the future.' }, 400);
     if (action !== 'unpaid' && !method) return json({ success: false, error: 'Choose a valid payment method.' }, 400);
+    const refundKind = action === 'refund' ? String(body.refundKind || '') : '';
+    if (action === 'refund' && refundKind !== 'partial' && refundKind !== 'full') return json({ success: false, error: 'Refund kind must be "partial" or "full".' }, 400);
     const requestedAmount = body.amount === undefined || body.amount === null || body.amount === '' ? null : Number(body.amount);
     if (requestedAmount !== null && (!Number.isInteger(requestedAmount) || requestedAmount <= 0)) return json({ success: false, error: 'Amount must be a positive whole rupee value.' }, 400);
 
@@ -37,12 +46,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (!reg) throw new Error('Registration not found');
         const total = Number(reg.total_amount);
         const previousAmount = Number(reg.amount_paid) || 0;
+
+        if (action === 'refund') {
+          const amount = requestedAmount;
+          if (amount === null) throw new Error('Refund amount is required');
+          const r = recordRefund({
+            registrationId: id, amount, refundKind: refundKind as 'partial' | 'full',
+            receivedAt, method, transactionReference: body.transactionReference || body.transaction_reference,
+            requestId, actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
+          });
+          results.push({ id, success: true, amountPaid: r.amountPaid, amountRefunded: r.amountRefunded, payment_status: r.paymentStatus, duplicate: r.duplicate });
+          continue;
+        }
+
         if (action !== 'unpaid' && (!Number.isFinite(total) || total <= 0)) throw new Error('Valid total amount is required');
         const advance = Math.min(tripAdvanceAmountBySlug(String(reg.trip_slug || '')), total || Infinity);
         const idempotencyKey = `admin-payment:${requestId}:${id}`;
         const existingEvent = db.prepare('SELECT id FROM payment_events WHERE idempotency_key=?').get(idempotencyKey);
         if (existingEvent) {
-          results.push({ id, success: true, amountPaid: previousAmount, paymentDate: reg.payment_date, state: paymentState(previousAmount, total, advance), duplicate: true });
+          results.push({ id, success: true, amountPaid: previousAmount, paymentDate: reg.payment_date, state: paymentState(previousAmount, total, advance), payment_status: reg.payment_status, duplicate: true });
           continue;
         }
         let amount: number;
@@ -55,6 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const nextAmount = previousAmount + amount;
         const isAdvance = amount > 0 && previousAmount === 0 && nextAmount === advance;
         const isFull = amount > 0 && nextAmount === total;
+        const nextPaymentStatus = resolvePaymentStatus(action, nextAmount, total);
         const recorded = recordPayment({
           registrationId: id, amount, receivedAt, method,
           transactionReference: body.transactionReference || body.transaction_reference,
@@ -63,6 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
           source: ids.length > 1 ? 'admin-bulk' : 'admin',
           documentType: isAdvance ? 'advance' : isFull ? 'final' : undefined,
+          setPaymentStatus: nextPaymentStatus,
         });
         if (recorded.document?.status === 'queued') void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
         // Draft/live: the Zoho worker (above) sends the branded email with the
@@ -87,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           previousValue: { amount: previousAmount, state: paymentState(previousAmount, total, advance) },
           newValue: { amount: nextAmount, delta: amount, state, receivedAt, method, transactionReference: body.transactionReference || undefined },
         });
-        results.push({ id, success: true, amountPaid: nextAmount, paymentDate: receivedAt, state, documentId: recorded.document?.id });
+        results.push({ id, success: true, amountPaid: nextAmount, paymentDate: receivedAt, state, payment_status: nextPaymentStatus, documentId: recorded.document?.id });
       } catch (error: any) {
         results.push({ id, success: false, error: String(error?.message || error) });
       }

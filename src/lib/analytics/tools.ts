@@ -81,7 +81,7 @@ export const analyticsTools: ToolDefinition[] = [
       const d = dateWhere(params);
       const rows = withTripTitles(all(
         `SELECT COALESCE(trip_slug, trip_name) AS trip_slug, trip_name, SUM(COALESCE(amount_paid, 0)) AS revenue
-         FROM registrations WHERE status != 'rejected'${d.sql}
+         FROM registrations WHERE status NOT IN ('rejected', 'cancelled')${d.sql}
          GROUP BY COALESCE(trip_slug, trip_name), trip_name ORDER BY revenue DESC`,
         d.values,
       ));
@@ -133,7 +133,7 @@ export const analyticsTools: ToolDefinition[] = [
                 SUM(MAX(COALESCE(total_amount, 0) - COALESCE(amount_paid, 0), 0)) AS pending_amount,
                 COUNT(*) AS registrations
          FROM registrations
-         WHERE status != 'rejected' AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
+         WHERE status NOT IN ('rejected', 'cancelled') AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
          GROUP BY COALESCE(trip_slug, trip_name), trip_name
          ORDER BY pending_amount DESC`,
       ));
@@ -164,7 +164,7 @@ export const analyticsTools: ToolDefinition[] = [
         `SELECT COALESCE(trip_slug, trip_name) AS trip_slug, trip_name, batch_id, COUNT(*) AS registrations,
                 SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed
          FROM registrations
-         WHERE status != 'rejected'
+         WHERE status NOT IN ('rejected', 'cancelled')
          GROUP BY COALESCE(trip_slug, trip_name), trip_name, batch_id
          ORDER BY registrations DESC`,
       )), 'Headcount excludes rejected registrations and includes confirmed counts.');
@@ -184,7 +184,7 @@ export const analyticsTools: ToolDefinition[] = [
       const d = dateWhere(params);
       return shape(all(
         `SELECT ${expr} AS period, SUM(COALESCE(amount_paid, 0)) AS revenue
-         FROM registrations WHERE status != 'rejected'${d.sql}
+         FROM registrations WHERE status NOT IN ('rejected', 'cancelled')${d.sql}
          GROUP BY ${expr} ORDER BY period ASC`,
         d.values,
       ), `Revenue trend uses ${granularity} granularity and excludes rejected registrations.`);
@@ -203,7 +203,7 @@ export const analyticsTools: ToolDefinition[] = [
                 SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed,
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
                 SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
-                SUM(CASE WHEN status != 'rejected' THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue
+                SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue
          FROM registrations WHERE trip_slug IN (${placeholders}) GROUP BY trip_slug ORDER BY revenue DESC`,
         slugs,
       )), 'Trip comparison uses revenue excluding rejected registrations.');
@@ -240,7 +240,7 @@ export const analyticsTools: ToolDefinition[] = [
                 SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
                 SUM(CASE WHEN status = 'lead' THEN 1 ELSE 0 END) AS leads,
                 SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
-                SUM(CASE WHEN status != 'rejected' THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue
+                SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue
          FROM registrations WHERE 1=1${f.sql} GROUP BY batch_id`,
         f.values,
       ).map((row) => ({ ...row, trip_title: departure?.tripTitle ?? '', startDate: departure?.startDate ?? '', endDate: departure?.endDate ?? '', capacity: departure?.capacity ?? null }));
@@ -330,7 +330,7 @@ export const analyticsTools: ToolDefinition[] = [
       const limit = Math.max(1, Math.min(100, Number(params.limit || 25)));
       return shape(all(
         `SELECT lower(trim(email)) AS customer_key, COUNT(*) AS registrations,
-                SUM(CASE WHEN status != 'rejected' THEN COALESCE(amount_paid, 0) ELSE 0 END) AS lifetime_value
+                SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN COALESCE(amount_paid, 0) ELSE 0 END) AS lifetime_value
          FROM registrations GROUP BY lower(trim(email)) ORDER BY lifetime_value DESC LIMIT ?`,
         [limit],
       ).map((row, i) => ({ customer_id: `customer_${i + 1}`, registrations: row.registrations, lifetime_value: row.lifetime_value })), 'Customer lifetime value is anonymized and excludes rejected revenue.');
@@ -345,7 +345,7 @@ export const analyticsTools: ToolDefinition[] = [
         `WITH ordered AS (
            SELECT date(created_at) AS d, strftime('%Y-%m', created_at) AS month, lower(trim(email)) AS customer_key,
                   ROW_NUMBER() OVER (PARTITION BY lower(trim(email)) ORDER BY datetime(created_at), id) AS rn
-           FROM registrations WHERE status != 'rejected'
+           FROM registrations WHERE status NOT IN ('rejected', 'cancelled')
          )
          SELECT month,
                 SUM(CASE WHEN rn = 1 THEN 1 ELSE 0 END) AS new_customers,
@@ -361,9 +361,9 @@ export const analyticsTools: ToolDefinition[] = [
     execute() {
       return shape(withTripTitles(all(
         `SELECT COALESCE(trip_slug, trip_name) AS trip_slug, trip_name,
-                SUM(CASE WHEN status != 'rejected' THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue,
+                SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN COALESCE(amount_paid, 0) ELSE 0 END) AS revenue,
                 SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_seats,
-                ROUND(1.0 * SUM(CASE WHEN status != 'rejected' THEN COALESCE(amount_paid, 0) ELSE 0 END) /
+                ROUND(1.0 * SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN COALESCE(amount_paid, 0) ELSE 0 END) /
                   NULLIF(SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END), 0), 2) AS revenue_per_seat
          FROM registrations GROUP BY COALESCE(trip_slug, trip_name), trip_name ORDER BY revenue_per_seat DESC`,
       )), 'Revenue per seat is non-rejected revenue divided by confirmed registrations.');

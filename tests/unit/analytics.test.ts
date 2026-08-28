@@ -139,13 +139,17 @@ describe('analytics safety and helpers', () => {
       `INSERT INTO registrations (trip_name, trip_slug, full_name, email, phone, emergency_name, emergency_phone, amount_paid, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(marker, marker, 'Test User 2', `${marker}b@example.invalid`, '9999999997', 'Emergency', '9999999996', 9999, 'rejected');
+    db.prepare(
+      `INSERT INTO registrations (trip_name, trip_slug, full_name, email, phone, emergency_name, emergency_phone, amount_paid, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(marker, marker, 'Test User 3', `${marker}c@example.invalid`, '9999999995', 'Emergency', '9999999994', 8888, 'cancelled');
 
     const tool = analyticsTools.find((t) => t.name === 'getRevenueByTrip')!;
     const result = tool.execute({});
     const slugIndex = result.columns.indexOf('trip_slug');
     const revenueIndex = result.columns.indexOf('revenue');
     const row = result.rows.find((r) => r[slugIndex] === marker);
-    expect(row?.[revenueIndex]).toBe(1000);
+    expect(row?.[revenueIndex]).toBe(1000); // rejected + cancelled excluded
   });
 
   it('cleans sessions older than 24 hours', () => {

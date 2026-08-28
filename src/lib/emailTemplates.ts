@@ -190,6 +190,40 @@ export async function sendRegistrationStatusRejected(data: {
   await sendEmail(data.email, `Booking Update — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-rejected' });
 }
 
+export async function sendRegistrationCancelled(data: {
+  full_name: string;
+  email: string;
+  trip_name: string;
+  trip_date?: string;
+  refundKind: 'none' | 'partial' | 'full';
+  refundAmount: number;
+}) {
+  const whatsappLink = getWhatsappLink();
+  const refundLine =
+    data.refundKind === 'full'
+      ? `<p style="margin:0;color:#065F46;font-size:14px;"><strong>Refund:</strong> ₹${Number(data.refundAmount || 0).toLocaleString('en-IN')} has been refunded.</p>`
+      : data.refundKind === 'partial'
+      ? `<p style="margin:0;color:#065F46;font-size:14px;"><strong>Refund:</strong> A partial refund of ₹${Number(data.refundAmount || 0).toLocaleString('en-IN')} has been processed.</p>`
+      : `<p style="margin:0;color:#6B7280;font-size:14px;"><strong>Refund:</strong> No refund is due per the cancellation policy.</p>`;
+  const html = wrapEmail(`
+    <h2 style="color: #1B2B3A; margin-top: 0;">Your booking has been cancelled</h2>
+    <p style="margin: 0 0 16px;">Hi <strong>${escapeHtml(data.full_name)}</strong>,</p>
+    <p style="margin: 0 0 16px;">This confirms that your booking for <strong>${escapeHtml(data.trip_name)}</strong>${
+      data.trip_date ? ` (${escapeHtml(data.trip_date)})` : ''
+    } has been cancelled.</p>
+    <div style="background:#F1F5F9;border-radius:8px;padding:16px;margin:0 0 24px;">
+      ${refundLine}
+    </div>
+    <p style="margin: 0 0 16px; color: #6B7280; font-size: 14px;">If you'd like to travel with us another time, browse our upcoming trips or reach out on WhatsApp.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="${siteUrl('/trips/')}" style="display:inline-block;background:#1B2B3A;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">Browse Trips</a>
+      <a href="${escapeHtml(whatsappLink)}" style="display:inline-block;background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">WhatsApp Us</a>
+    </div>
+  `);
+
+  await sendEmail(data.email, `Booking Cancelled — ${data.trip_name} | Seek the Thrill`, html, { template: 'registration-cancelled' });
+}
+
 export async function sendRegistrationPaymentReceived(data: {
   firstName: string;
   email: string;

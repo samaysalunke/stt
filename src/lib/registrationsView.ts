@@ -36,6 +36,7 @@ export interface RegStats {
   pending: number;
   confirmed: number;
   rejected: number;
+  cancelled: number;
 }
 
 export interface RegistrationsView {
@@ -57,6 +58,7 @@ export function regStats(rs: Reg[]): RegStats {
     pending: rs.filter((r) => r.status === 'pending').length,
     confirmed: rs.filter((r) => r.status === 'confirmed').length,
     rejected: rs.filter((r) => r.status === 'rejected').length,
+    cancelled: rs.filter((r) => r.status === 'cancelled').length,
   };
 }
 
@@ -164,7 +166,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const total = registrations.length;
   const totals = regStats(registrations);
   const revenue = registrations
-    .filter((r) => r.status !== 'rejected' && r.status !== 'wishlist')
+    .filter((r) => r.status !== 'rejected' && r.status !== 'wishlist' && r.status !== 'cancelled')
     .reduce((n, r) => n + Number(r.amount_paid || 0), 0);
   const historyCount =
     trips.reduce((n, t) => n + t.departures.filter((d) => d.historical).length, 0) + (legacyRegs.length ? 1 : 0);

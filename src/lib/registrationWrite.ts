@@ -4,6 +4,7 @@ import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationPaymentConfirmed } from './email';
 import { recordPayment, zohoMode } from './paymentLedger';
 import { processZohoDocument } from './zohoBooks';
+import { derivePaymentStatus } from './registrationStatus';
 
 export type RegStatus = 'wishlist' | 'lead' | 'pending' | 'confirmed' | 'rejected';
 
@@ -186,6 +187,12 @@ export function createRegistration(
       input.status, input.admin_notes ?? null, 'admin', input.created_at ?? new Date().toISOString(), input.consent_at ?? null,
     );
     const id = Number(res.lastInsertRowid);
+
+    // payment_status: derived from what this create records (advance on the
+    // confirmed path, nothing otherwise) vs the trip total.
+    const recordedAmount = input.status === 'confirmed' ? Math.max(0, advance) : 0;
+    db.prepare('UPDATE registrations SET payment_status=? WHERE id=?')
+      .run(derivePaymentStatus({ amount_paid: recordedAmount, total_amount: input.total_amount }), id);
 
     if (input.status === 'confirmed') {
       let queuedDoc = false;

@@ -169,6 +169,23 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN wishlist_notified_at DATETIME'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN first_touch_json TEXT'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN latest_touch_json TEXT'); } catch {}
+
+  // Stored payment status + refund ledger (admin registrations rework).
+  // No CHECK constraint — SQLite cannot add one to `registrations`, and `status`
+  // has none today. `payment_events` reuses event_type='reversal' for refunds.
+  try { db.exec("ALTER TABLE registrations ADD COLUMN payment_status TEXT DEFAULT 'unpaid'"); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN amount_refunded INTEGER DEFAULT 0'); } catch {}
+  try {
+    db.exec(`
+      UPDATE registrations
+         SET payment_status = CASE
+           WHEN amount_paid <= 0 THEN 'unpaid'
+           WHEN total_amount IS NOT NULL AND total_amount > 0 AND amount_paid >= total_amount THEN 'fully_paid'
+           ELSE 'advance_paid' END
+       WHERE amount_paid > 0 AND payment_status = 'unpaid'
+    `);
+  } catch {}
+
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN first_touch_json TEXT'); } catch {}
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN latest_touch_json TEXT'); } catch {}
 

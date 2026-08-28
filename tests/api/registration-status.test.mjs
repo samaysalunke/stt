@@ -5,7 +5,7 @@
 //   - Screenshot uploaded → status = 'pending' (holds nothing)
 //   - Admin can set status back to 'lead'
 //   - Confirming beyond tier cap → 400 (last-spot race guard)
-import { test, before } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { apiPost, apiGet, adminLogin, BASE } from './helpers.mjs';
 
@@ -41,11 +41,11 @@ async function getRegByEmail(email) {
   return res.json();
 }
 
-async function adminUpdateStatus(id, status, cookie) {
+async function adminUpdateStatus(id, status, cookie, extra = {}) {
   const res = await fetch(`${BASE}/api/admin/update-registration`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', cookie },
-    body: JSON.stringify({ id, status, admin_notes: 'QA test' }),
+    body: JSON.stringify({ id, status, admin_notes: 'QA test', requestId: `qa-${id}-${status}-${Date.now()}-${Math.random()}`, ...extra }),
   });
   return { status: res.status, data: await res.json() };
 }
@@ -135,15 +135,116 @@ test('TC-047 confirming beyond tier cap returns 400 (last-spot race guard)', asy
   assert.ok(row1 && row2, 'One or both registrations not found');
 
   // Confirm first → should succeed
-  const first = await adminUpdateStatus(row1.id, 'confirmed', cookie);
+  const first = await adminUpdateStatus(row1.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
   assert.equal(first.status, 200, `First confirm failed: ${JSON.stringify(first.data)}`);
   assert.equal(first.data.success, true);
 
   // Confirm second for same tier — cap=1 already filled → should fail
-  const second = await adminUpdateStatus(row2.id, 'confirmed', cookie);
+  const second = await adminUpdateStatus(row2.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
   assert.equal(second.status, 400, `Expected 400 for over-confirm, got ${second.status}: ${JSON.stringify(second.data)}`);
   assert.equal(second.data.success, false);
   assert.match(second.data.error, /full|cap/i);
+});
+
+// ── Phase 2: payment_status + cancelled + refunds ─────────────────────────
+const BK = {
+  tripSlug: 'qa-test-bookable', tripName: 'QA Test — Bookable Trip', batchId: 'qa-bookable-2099', tierId: 'standard',
+  fullName: 'QA P2 User', phone: '9876543210', age: '30', city: 'Pune', state: 'Maharashtra',
+  instagram: '@qa_p2', emergencyName: 'QA Emg', emergencyPhone: '9123456789',
+  whyJoin: 'Phase 2 QA.', agreeTerms: 'on', agreeCancel: 'on',
+};
+
+// A confirmed booking bumps bookedSpots in the tracked YAML fixture — reset it
+// before and after so the working tree stays clean.
+async function resetBookable() {
+  await fetch(`${BASE}/api/test/cleanup`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ batchId: 'qa-bookable-2099', tierId: 'standard', tripTitle: 'QA Test — Bookable Trip' }),
+  });
+}
+before(resetBookable);
+after(resetBookable);
+
+async function makePending(email) {
+  await apiPost('/api/register', { ...BK, email, paymentScreenshotUrl: 'https://example.invalid/p2.jpg' });
+  return getRegByEmail(email);
+}
+
+test('P2 confirm without payment_status → 400', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const row = await makePending(`qa-p2-nops-${Date.now()}@example.invalid`);
+  const res = await adminUpdateStatus(row.id, 'confirmed', cookie);
+  assert.equal(res.status, 400, JSON.stringify(res.data));
+});
+
+test('P2 confirm advance_paid records the advance and stores payment_status', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-adv-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  const res = await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  const reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'confirmed');
+  assert.equal(reg.payment_status, 'advance_paid');
+  assert.ok(reg.amount_paid > 0);
+});
+
+test('P2 confirmed → lead while paid → 400; confirmed → rejected → 400', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-block-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  assert.equal((await adminUpdateStatus(row.id, 'lead', cookie)).status, 400);
+  assert.equal((await adminUpdateStatus(row.id, 'rejected', cookie)).status, 400);
+});
+
+test('P2 confirmed → cancelled with a full refund clears the balance', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-refund-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  const paid = (await getRegByEmail(email)).amount_paid;
+  const res = await adminUpdateStatus(row.id, 'cancelled', cookie, { refund: { kind: 'full', amount: paid } });
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  const reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'cancelled');
+  assert.equal(reg.amount_paid, 0);
+  assert.equal(reg.amount_refunded, paid);
+  assert.equal(reg.payment_status, 'full_refund');
+});
+
+test('P2 cancelled → confirmed re-instates and resets amount_refunded', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-reinstate-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  const paid = (await getRegByEmail(email)).amount_paid;
+  await adminUpdateStatus(row.id, 'cancelled', cookie, { refund: { kind: 'full', amount: paid } });
+  const res = await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  const reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'confirmed');
+  assert.equal(reg.amount_refunded, 0);
+  assert.equal(reg.payment_status, 'advance_paid');
+});
+
+test('P2 cancelled → lead is blocked', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-canlead-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  await adminUpdateStatus(row.id, 'cancelled', cookie);
+  assert.equal((await adminUpdateStatus(row.id, 'lead', cookie)).status, 400);
+});
+
+test('P2 rejected → confirmed is allowed', async () => {
+  const { cookie } = await adminLogin('changeme');
+  const email = `qa-p2-unreject-${Date.now()}@example.invalid`;
+  const row = await makePending(email);
+  await adminUpdateStatus(row.id, 'lead', cookie); // pending → lead (unpaid)
+  await adminUpdateStatus(row.id, 'rejected', cookie);
+  const res = await adminUpdateStatus(row.id, 'confirmed', cookie, { payment_status: 'advance_paid' });
+  assert.equal(res.status, 200, JSON.stringify(res.data));
+  assert.equal((await getRegByEmail(email)).status, 'confirmed');
 });
 
 // ── TC-048: 'lead' invalid for unsupported old status values ───────────────

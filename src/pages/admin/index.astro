@@ -11,8 +11,9 @@ const regsAll = db.prepare('SELECT status, amount_paid, created_at, trip_name FR
 const confirmedRegs = regsAll.filter(r => r.status === 'confirmed');
 const totalBookings = confirmedRegs.length;
 const pendingCount = regsAll.filter(r => r.status === 'pending').length;
-// Match the registrations page definition: payments collected = all non-rejected.
-const paidRegs = regsAll.filter(r => r.status !== 'rejected');
+// Match the registrations page definition: payments collected = all non-rejected,
+// non-cancelled (cancelled is excluded from revenue from the moment of cancellation).
+const paidRegs = regsAll.filter(r => r.status !== 'rejected' && r.status !== 'cancelled');
 const revenue = paidRegs.reduce((sum, r) => sum + (r.amount_paid ?? 0), 0);
 const revenueTripCount = new Set(paidRegs.map(r => r.trip_name).filter(Boolean)).size;
 
@@ -39,6 +40,7 @@ function inr(n: number) {
 function statusStyle(status: string) {
   if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
   if (status === 'rejected') return 'background:#FEE2E2;color:#991B1B;';
+  if (status === 'cancelled') return 'background:#E2E8F0;color:#334155;';
   return 'background:#FEF3C7;color:#92400E;';
 }
 

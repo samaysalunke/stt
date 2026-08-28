@@ -106,6 +106,14 @@ async function findDocument(type: DocumentType, reference: string): Promise<any 
 async function createDocument(type: DocumentType, customerId: string, snapshot: any, reference: string, amount: number) {
   const path = type === 'advance' ? '/retainerinvoices' : '/invoices';
   const template = type === 'advance' ? env('ZOHO_RETAINER_TEMPLATE_ID') : env('ZOHO_INVOICE_TEMPLATE_ID');
+  // Advance/retainer docs carry the price / paid / balance line in BOTH notes and
+  // the line-item description — Zoho's default retainer template renders at least one.
+  const total = Number(snapshot.totalAmount) || 0;
+  const balanceLine =
+    type === 'advance'
+      ? `Trip total: ₹${total.toLocaleString('en-IN')} · Advance received: ₹${Number(amount).toLocaleString('en-IN')} · Balance due before departure: ₹${Math.max(0, total - Number(amount)).toLocaleString('en-IN')}`
+      : '';
+  const baseNotes = `${type === 'advance' ? 'Advance for' : 'Final invoice for'} ${snapshot.tripName} (${snapshot.tripDate}) · STT registration #${snapshot.registrationId}`;
   const created = await request(path, {
     method: 'POST',
     body: JSON.stringify({
@@ -113,11 +121,13 @@ async function createDocument(type: DocumentType, customerId: string, snapshot: 
       reference_number: reference,
       date: new Date().toISOString().slice(0, 10),
       template_id: template || undefined,
-      notes: `${type === 'advance' ? 'Advance for' : 'Final invoice for'} ${snapshot.tripName} (${snapshot.tripDate}) · STT registration #${snapshot.registrationId}`,
+      notes: balanceLine ? `${baseNotes}\n${balanceLine}` : baseNotes,
       line_items: [{
         item_id: String(env('ZOHO_BOOKS_ITEM_ID')),
         name: snapshot.tripName,
-        description: `${snapshot.tripName} · ${snapshot.tripDate}`,
+        description: balanceLine
+          ? `${snapshot.tripName} · ${snapshot.tripDate}\n${balanceLine}`
+          : `${snapshot.tripName} · ${snapshot.tripDate}`,
         rate: amount,
         quantity: 1,
       }],

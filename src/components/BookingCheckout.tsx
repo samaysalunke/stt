@@ -40,7 +40,7 @@ interface Props {
   prefilledFromHistory?: boolean;
   initialRegistration?: {
     id: number;
-    status: 'lead' | 'pending' | 'confirmed' | 'rejected';
+    status: 'lead' | 'pending' | 'confirmed' | 'rejected' | 'cancelled';
     fullName?: string | null;
     whyJoin?: string | null;
     amountPaid?: number | null;
@@ -651,6 +651,16 @@ export default function BookingCheckout({
     btn.textContent = '✓ Copied!';
     setTimeout(() => { btn.textContent = orig; }, 1800);
   }
+
+  // A resumed registration that was cancelled can't continue — the row is closed.
+  if (initialRegistration?.status === 'cancelled') return (
+    <div>
+      <StepBar current={1} />
+      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm" style={{ background: C.blush, color: C.navy, border: `1px solid ${C.peach}` }}>
+        <span>This booking was cancelled &mdash; please start a new registration to join this trip. Reload the page to begin.</span>
+      </div>
+    </div>
+  );
 
   // ── Step 1: Review ────────────────────────────────────────────────────────────
   if (step === 1) return (

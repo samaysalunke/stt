@@ -69,6 +69,7 @@ test('TC-202 single create (confirmed) records the advance as amount_paid', asyn
   const reg = await getRegByEmail(email);
   assert.equal(reg.status, 'confirmed');
   assert.equal(reg.amount_paid, 1000); // paymentAmount on qa-test-bookable
+  assert.equal(reg.payment_status, 'advance_paid'); // derived: advance recorded < total
 });
 
 test('TC-203 invalid email is rejected', async () => {
@@ -232,6 +233,7 @@ test('TC-215 payment actions do not change status and status changes preserve pa
   const full = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'full', requestId: paymentRequestId, method: 'upi', transactionReference: 'QA-TXN-1' });
   assert.equal(full.status, 200, JSON.stringify(full.data));
   assert.equal(full.data.results[0].state, 'full');
+  assert.equal(full.data.results[0].payment_status, 'fully_paid', 'payment results carry payment_status alongside state');
   let reg = await getRegByEmail(email);
   assert.equal(reg.status, 'pending');
   assert.equal(reg.amount_paid, 5000);
@@ -240,16 +242,15 @@ test('TC-215 payment actions do not change status and status changes preserve pa
   assert.equal(duplicate.data.results[0].duplicate, true);
   assert.equal((await getRegByEmail(email)).amount_paid, 5000, 'idempotent retry must not overstate payment');
 
-  assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'confirmed' })).status, 200);
+  // Confirm now requires a payment_status; a row already fully paid is a no-op
+  // success that flips status + converges the payment_status column.
+  const confirmRes = await adminPost('/api/admin/update-registration', { id, status: 'confirmed', payment_status: 'fully_paid', requestId: `qa-confirm-${id}` });
+  assert.equal(confirmRes.status, 200, JSON.stringify(confirmRes.data));
   reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'confirmed');
   assert.equal(reg.amount_paid, 5000, 'confirming must not reduce full payment to advance');
-  assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 200);
-  reg = await getRegByEmail(email);
-  assert.equal(reg.amount_paid, 5000, 'unconfirming must not clear payment');
+  assert.equal(reg.payment_status, 'fully_paid');
 
-  const unpaid = await adminPost('/api/admin/registrations/payment', { ids: [id], action: 'unpaid' });
-  assert.equal(unpaid.status, 200);
-  reg = await getRegByEmail(email);
-  assert.equal(reg.status, 'lead');
-  assert.equal(reg.amount_paid, 0);
+  // A confirmed, paid booking cannot be downgraded to lead without a refund first.
+  assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 400);
 });
