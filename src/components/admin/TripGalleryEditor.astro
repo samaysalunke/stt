@@ -1,0 +1,239 @@
+---
+interface GalleryPhoto {
+  image: string;
+  width?: number | null;
+  height?: number | null;
+  source?: 'album' | 'trip';
+}
+
+interface Album {
+  slug: string;
+  name: string;
+  photos: GalleryPhoto[];
+}
+
+interface Props {
+  editorId: string;
+  label: string;
+  fieldName: string;
+  albums: Album[];
+  initialGallery?: GalleryPhoto[];
+  tripSlug?: string;
+  totalLimit?: number;
+  helpText: string;
+}
+
+const {
+  editorId,
+  label,
+  fieldName,
+  albums,
+  initialGallery = [],
+  tripSlug = '',
+  totalLimit,
+  helpText,
+} = Astro.props;
+const uploadId = `${editorId}-upload`;
+---
+
+<div
+  class="field full gallery-editor"
+  data-gallery-editor={editorId}
+  data-albums={JSON.stringify(albums)}
+  data-initial-gallery={JSON.stringify(initialGallery)}
+  data-trip-slug={tripSlug}
+  data-total-limit={totalLimit ?? ''}
+>
+  <label class="flabel">{label}</label>
+  <span class="fhint" set:html={helpText} />
+
+  <select class="finput" data-gallery-album-select style="margin-top:0.5rem;">
+    <option value="">— Choose an album to pick photos —</option>
+    {albums.map((album) => <option value={album.slug}>{album.name}</option>)}
+  </select>
+
+  <div class="gallery-grid hidden" data-gallery-album-grid></div>
+
+  <div style="margin-top:0.85rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+    <input type="file" id={uploadId} accept="image/*" multiple style="display:none;" data-gallery-upload-input />
+    <label for={uploadId} class="gallery-upload-btn">📷 Upload trip-only photos</label>
+    <span class="fhint" data-gallery-upload-status aria-live="polite"></span>
+  </div>
+
+  <p class="flabel" style="margin:1rem 0 0.5rem;">
+    <span>Selected (<span data-gallery-count>0</span>)</span>
+    <span class="fhint" data-gallery-limit-count></span>
+  </p>
+  <div class="gallery-grid" data-gallery-selected></div>
+
+  <input type="hidden" name={fieldName} id={fieldName} data-gallery-json />
+</div>
+
+<script>
+  interface GalleryPhoto {
+    image: string;
+    width?: number | null;
+    height?: number | null;
+    source?: 'album' | 'trip';
+  }
+
+  interface GalleryAlbum { slug: string; name: string; photos: GalleryPhoto[] }
+
+  function initialiseGalleryEditor(root: HTMLElement) {
+    if (root.dataset.initialised === 'true') return;
+    root.dataset.initialised = 'true';
+
+    const albums: GalleryAlbum[] = JSON.parse(root.dataset.albums || '[]');
+    let gallery: GalleryPhoto[] = JSON.parse(root.dataset.initialGallery || '[]');
+    const totalLimit = Number(root.dataset.totalLimit) || null;
+    const albumLimit = 10;
+
+    const albumSelect = root.querySelector<HTMLSelectElement>('[data-gallery-album-select]')!;
+    const albumGrid = root.querySelector<HTMLElement>('[data-gallery-album-grid]')!;
+    const selectedWrap = root.querySelector<HTMLElement>('[data-gallery-selected]')!;
+    const countEl = root.querySelector<HTMLElement>('[data-gallery-count]')!;
+    const limitCountEl = root.querySelector<HTMLElement>('[data-gallery-limit-count]')!;
+    const uploadInput = root.querySelector<HTMLInputElement>('[data-gallery-upload-input]')!;
+    const uploadStatus = root.querySelector<HTMLElement>('[data-gallery-upload-status]')!;
+    const hidden = root.querySelector<HTMLInputElement>('[data-gallery-json]')!;
+    const nameInput = document.querySelector<HTMLInputElement>('#trip-form [name="name"]');
+
+    const effectiveSlug = () => root.dataset.tripSlug || (nameInput?.value || '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const albumCount = () => gallery.filter((photo) => photo.source === 'album').length;
+    const isSelected = (url: string) => gallery.some((photo) => photo.image === url);
+    const isFull = () => totalLimit !== null && gallery.length >= totalLimit;
+
+    function tile(photo: GalleryPhoto, options: { selected: boolean; removable: boolean; onClick: () => void }) {
+      const tileEl = document.createElement('div');
+      tileEl.className = `gallery-thumb${options.selected ? ' is-selected' : ''}`;
+      if (photo.width && photo.height) tileEl.style.aspectRatio = `${photo.width}/${photo.height}`;
+
+      const image = document.createElement('img');
+      image.src = photo.image;
+      image.loading = 'lazy';
+      image.alt = '';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'gallery-thumb-btn';
+      button.title = options.removable ? 'Remove' : 'Toggle';
+      button.setAttribute('aria-label', `${options.removable ? 'Remove' : 'Toggle'} ${photo.image}`);
+      button.textContent = options.removable ? '✕' : (options.selected ? '✓' : '+');
+      button.addEventListener('click', options.onClick);
+      tileEl.append(image, button);
+      return tileEl;
+    }
+
+    function renderSelected() {
+      selectedWrap.replaceChildren();
+      gallery.forEach((photo) => selectedWrap.appendChild(tile(photo, {
+        removable: true,
+        selected: true,
+        onClick: () => {
+          gallery = gallery.filter((item) => item.image !== photo.image);
+          sync();
+        },
+      })));
+      countEl.textContent = String(gallery.length);
+      if (totalLimit !== null) {
+        limitCountEl.textContent = `· ${gallery.length}/${totalLimit} total`;
+      } else {
+        const count = albumCount();
+        limitCountEl.textContent = count >= albumLimit
+          ? `· album limit reached (${albumLimit})`
+          : (count ? `· ${count}/${albumLimit} from album` : '');
+      }
+      hidden.value = JSON.stringify(gallery);
+    }
+
+    function renderAlbumGrid() {
+      const album = albums.find((item) => item.slug === albumSelect.value);
+      albumGrid.replaceChildren();
+      if (!album) {
+        albumGrid.classList.add('hidden');
+        return;
+      }
+      albumGrid.classList.remove('hidden');
+      album.photos.forEach((photo) => {
+        const selected = isSelected(photo.image);
+        albumGrid.appendChild(tile(photo, {
+          removable: false,
+          selected,
+          onClick: () => {
+            if (isSelected(photo.image)) {
+              gallery = gallery.filter((item) => item.image !== photo.image);
+            } else {
+              if (isFull()) {
+                alert(`You can select at most ${totalLimit} photos.`);
+                return;
+              }
+              if (albumCount() >= albumLimit) {
+                alert(`You can pick at most ${albumLimit} images from albums.`);
+                return;
+              }
+              gallery.push({ image: photo.image, width: photo.width, height: photo.height, source: 'album' });
+            }
+            sync();
+          },
+        }));
+      });
+    }
+
+    function sync() {
+      renderSelected();
+      renderAlbumGrid();
+    }
+
+    albumSelect.addEventListener('change', renderAlbumGrid);
+    uploadInput.addEventListener('change', async () => {
+      let files = Array.from(uploadInput.files || []);
+      if (!files.length) return;
+      const slug = effectiveSlug();
+      if (!slug) {
+        alert('Enter the trip name first, then upload trip-only photos.');
+        uploadInput.value = '';
+        return;
+      }
+      if (totalLimit !== null) {
+        const remaining = Math.max(0, totalLimit - gallery.length);
+        if (remaining === 0) {
+          alert(`You can select at most ${totalLimit} photos.`);
+          uploadInput.value = '';
+          return;
+        }
+        if (files.length > remaining) {
+          alert(`Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added.`);
+          files = files.slice(0, remaining);
+        }
+      }
+
+      let done = 0;
+      uploadStatus.textContent = `Uploading 0 / ${files.length}...`;
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('slug', slug);
+        formData.append('photo', file);
+        try {
+          const response = await fetch('/api/admin/trips/upload-photo', { method: 'POST', body: formData });
+          const data = await response.json();
+          if (response.ok && data.url && !isSelected(data.url)) {
+            gallery.push({ image: data.url, width: data.width, height: data.height, source: 'trip' });
+            done++;
+            renderSelected();
+          }
+        } catch { /* Leave failed files out of the gallery. */ }
+        uploadStatus.textContent = `Uploading ${done} / ${files.length}...`;
+      }
+      uploadStatus.textContent = `✓ Uploaded ${done} photo${done === 1 ? '' : 's'}.`;
+      uploadInput.value = '';
+      window.setTimeout(() => { uploadStatus.textContent = ''; }, 2500);
+    });
+
+    root.closest('form')?.addEventListener('submit', () => {
+      hidden.value = JSON.stringify(gallery);
+    });
+    sync();
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-gallery-editor]').forEach(initialiseGalleryEditor);
+</script>

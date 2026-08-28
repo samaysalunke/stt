@@ -53,6 +53,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
 
   const gallery = parseGallery(body.get('gallery_json'));
+  const accommodationGallery = body.has('accommodationGallery_json')
+    ? parseGallery(body.get('accommodationGallery_json'), { totalLimit: 10, removeDuplicates: true })
+    : parseGallery(JSON.stringify(existing.accommodationGallery ?? []), { totalLimit: 10, removeDuplicates: true });
   // Older API clients may not send the new fields. Preserve the stored values
   // in that case; the current editor always posts both hidden JSON inputs.
   const { tripFaqOverrides, tripFaqs } = body.has('tripFaqOverrides_json') || body.has('tripFaqs_json')
@@ -89,6 +92,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     cancellationPolicy: sanitizeInput(body.get('cancellationPolicy')) || null,
     featuredImage,
     gallery,
+    accommodationGallery,
     tripFaqOverrides,
     tripFaqs,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,

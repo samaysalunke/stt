@@ -45,6 +45,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
 
   const gallery = parseGallery(body.get('gallery_json'));
+  const accommodationGallery = parseGallery(body.get('accommodationGallery_json'), {
+    totalLimit: 10,
+    removeDuplicates: true,
+  });
   const { tripFaqOverrides, tripFaqs } = parseTripFaqs(
     body.get('tripFaqOverrides_json'), body.get('tripFaqs_json'),
   );
@@ -76,6 +80,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     cancellationPolicy: sanitizeInput(body.get('cancellationPolicy')) || null,
     featuredImage: featuredImage || null,
     gallery,
+    accommodationGallery,
     tripFaqOverrides,
     tripFaqs,
     paymentAmount: body.get('paymentAmount') ? Number(body.get('paymentAmount')) : null,

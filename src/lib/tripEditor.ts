@@ -250,16 +250,27 @@ export interface GalleryImage {
 // Validates each entry has an image URL; coerces dims to numbers or null. Caps
 // album-sourced images at 10 (trip-only uploads are unlimited). Shared by the
 // create + update API routes.
-export function parseGallery(galleryJson: unknown): GalleryImage[] {
+export interface ParseGalleryOptions {
+  totalLimit?: number;
+  removeDuplicates?: boolean;
+}
+
+export function parseGallery(galleryJson: unknown, options: ParseGalleryOptions = {}): GalleryImage[] {
   let raw: any[] = [];
   try { raw = JSON.parse(typeof galleryJson === 'string' ? galleryJson : '[]'); } catch { /* ignore */ }
   if (!Array.isArray(raw)) return [];
 
   let albumCount = 0;
   const out: GalleryImage[] = [];
+  const seen = new Set<string>();
+  const totalLimit = Number.isFinite(options.totalLimit) && Number(options.totalLimit) >= 0
+    ? Math.floor(Number(options.totalLimit))
+    : null;
   for (const g of raw) {
     const image = String(g?.image ?? '').trim();
     if (!image) continue;
+    if (options.removeDuplicates && seen.has(image)) continue;
+    if (totalLimit !== null && out.length >= totalLimit) break;
     const source: 'album' | 'trip' = g?.source === 'trip' ? 'trip' : 'album';
     if (source === 'album') {
       if (albumCount >= 10) continue;
@@ -273,6 +284,7 @@ export function parseGallery(galleryJson: unknown): GalleryImage[] {
       height: Number.isFinite(h) && h > 0 ? h : null,
       source,
     });
+    seen.add(image);
   }
   return out;
 }

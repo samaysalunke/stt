@@ -3,6 +3,7 @@ export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
 import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
+import TripGalleryEditor from '../../../components/admin/TripGalleryEditor.astro';
 import { listAlbums, listFaqs } from '../../../lib/content';
 
 const publishedAlbums = listAlbums().filter(a => a.published);
@@ -14,6 +15,7 @@ const galleryAlbums = publishedAlbums.map(a => ({
   })),
 }));
 const initialGallery: any[] = [];
+const initialAccommodationGallery: any[] = [];
 const tripSlug = '';
 const itinerary: any[] = [];
 const editorCatalog: any[] = [];
@@ -228,28 +230,26 @@ const globalFaqs = listFaqs();
           <span class="fhint">1200×675px · 16:9 · JPG/PNG · max 10 MB. Used as trip hero banner and listing card thumbnail.</span>
         </div>
 
-        <div class="field full gallery-editor">
-          <label class="flabel">Trip Photos</label>
-          <span class="fhint">Pick up to 10 images from a photo album, and/or upload trip-only photos. Trip-only uploads stay on this trip and are <strong>not</strong> added to the Photo Vault.</span>
+        <TripGalleryEditor
+          editorId="trip-photos"
+          label="Trip Photos"
+          fieldName="gallery_json"
+          albums={galleryAlbums}
+          initialGallery={initialGallery}
+          tripSlug={tripSlug}
+          helpText={'Pick up to 10 images from a photo album, and/or upload trip-only photos. Trip-only uploads stay on this trip and are <strong>not</strong> added to the Photo Vault.'}
+        />
 
-          <select id="gallery-album-select" class="finput" style="margin-top:0.5rem;">
-            <option value="">— Choose an album to pick photos —</option>
-            {publishedAlbums.map(a => (<option value={a.slug}>{a.name}</option>))}
-          </select>
-
-          <div id="gallery-album-grid" class="gallery-grid hidden"></div>
-
-          <div style="margin-top:0.85rem; display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-            <input type="file" id="gallery-upload-input" accept="image/*" multiple style="display:none;" />
-            <label for="gallery-upload-input" class="gallery-upload-btn">📷 Upload trip-only photos</label>
-            <span id="gallery-upload-status" class="fhint"></span>
-          </div>
-
-          <p class="flabel" style="margin:1rem 0 0.5rem;"><span>Selected (<span id="gallery-count">0</span>)</span><span class="fhint" id="gallery-album-count"></span></p>
-          <div id="gallery-selected" class="gallery-grid"></div>
-
-          <input type="hidden" name="gallery_json" id="gallery_json" />
-        </div>
+        <TripGalleryEditor
+          editorId="accommodation-photos"
+          label="Accommodation Photos"
+          fieldName="accommodationGallery_json"
+          albums={galleryAlbums}
+          initialGallery={initialAccommodationGallery}
+          tripSlug={tripSlug}
+          totalLimit={10}
+          helpText={'Add up to 10 photos for the public “Where will you stay?” gallery. These photos are managed independently from Trip Photos.'}
+        />
 
       </div>
     </div>
@@ -652,7 +652,7 @@ select.finput { cursor: pointer; }
   margin-top: 0.6rem;
 }
 .gallery-editor .gallery-grid.hidden { display: none; }
-.gallery-editor #gallery-album-grid {
+.gallery-editor [data-gallery-album-grid] {
   max-height: 320px;
   overflow-y: auto;
   padding: 0.6rem;
@@ -1004,114 +1004,6 @@ document.querySelectorAll('.add-btn[data-list]').forEach(btn => {
 document.querySelectorAll('.file-input[data-preview]').forEach(input => {
   input.addEventListener('change', () => previewImage(input, input.dataset.preview));
 });
-</script>
-
-<!-- ── Trip photo gallery editor ──────────────────────────────────────────── -->
-<script define:vars={{ galleryAlbums, initialGallery, tripSlug }}>
-(function () {
-  const MAX_ALBUM = 10;
-  const albums = galleryAlbums || [];
-  let gallery = JSON.parse(JSON.stringify(initialGallery || []));
-
-  const albumSelect = document.getElementById('gallery-album-select');
-  const albumGrid = document.getElementById('gallery-album-grid');
-  const selectedWrap = document.getElementById('gallery-selected');
-  const countEl = document.getElementById('gallery-count');
-  const albumCountEl = document.getElementById('gallery-album-count');
-  const uploadInput = document.getElementById('gallery-upload-input');
-  const uploadStatus = document.getElementById('gallery-upload-status');
-  const hidden = document.getElementById('gallery_json');
-
-  const nameInput = document.querySelector('#trip-form [name="name"]');
-  const effSlug = () => tripSlug || (nameInput ? nameInput.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '');
-  const albumCount = () => gallery.filter(g => g.source === 'album').length;
-  const isSelected = (url) => gallery.some(g => g.image === url);
-  const aspect = (p) => (p.width && p.height) ? `aspect-ratio:${p.width}/${p.height};` : '';
-
-  function tile(p, opts) {
-    const div = document.createElement('div');
-    div.className = 'gallery-thumb' + (opts.selected ? ' is-selected' : '');
-    div.style.cssText = aspect(p);
-    div.innerHTML =
-      `<img src="${p.image}" loading="lazy" alt="" />` +
-      `<button type="button" class="gallery-thumb-btn" title="${opts.removable ? 'Remove' : 'Toggle'}">${opts.removable ? '✕' : (opts.selected ? '✓' : '+')}</button>`;
-    div.querySelector('button').addEventListener('click', opts.onClick);
-    return div;
-  }
-
-  function renderSelected() {
-    selectedWrap.innerHTML = '';
-    gallery.forEach((p) => {
-      selectedWrap.appendChild(tile(p, {
-        removable: true, selected: true,
-        onClick: () => { gallery = gallery.filter(g => g.image !== p.image); sync(); },
-      }));
-    });
-    countEl.textContent = gallery.length;
-    const ac = albumCount();
-    albumCountEl.textContent = ac >= MAX_ALBUM ? `· album limit reached (${MAX_ALBUM})` : (ac ? `· ${ac}/${MAX_ALBUM} from album` : '');
-    hidden.value = JSON.stringify(gallery);
-  }
-
-  function renderAlbumGrid() {
-    const album = albums.find(a => a.slug === albumSelect.value);
-    albumGrid.innerHTML = '';
-    if (!album) { albumGrid.classList.add('hidden'); return; }
-    albumGrid.classList.remove('hidden');
-    album.photos.forEach((p) => {
-      const sel = isSelected(p.image);
-      albumGrid.appendChild(tile(p, {
-        removable: false, selected: sel,
-        onClick: () => {
-          if (isSelected(p.image)) {
-            gallery = gallery.filter(g => g.image !== p.image);
-          } else {
-            if (albumCount() >= MAX_ALBUM) { alert(`You can pick at most ${MAX_ALBUM} images from albums.`); return; }
-            gallery.push({ image: p.image, width: p.width, height: p.height, source: 'album' });
-          }
-          sync();
-        },
-      }));
-    });
-  }
-
-  function sync() { renderSelected(); renderAlbumGrid(); }
-
-  albumSelect.addEventListener('change', renderAlbumGrid);
-
-  uploadInput.addEventListener('change', async () => {
-    const files = Array.from(uploadInput.files || []);
-    if (!files.length) return;
-    const slug = effSlug();
-    if (!slug) { alert('Enter the trip name first, then upload trip-only photos.'); return; }
-    let done = 0;
-    uploadStatus.textContent = `Uploading 0 / ${files.length}...`;
-    for (const file of files) {
-      const fd = new FormData();
-      fd.append('slug', slug);
-      fd.append('photo', file);
-      try {
-        const res = await fetch('/api/admin/trips/upload-photo', { method: 'POST', body: fd });
-        const data = await res.json();
-        if (res.ok && data.url) {
-          gallery.push({ image: data.url, width: data.width, height: data.height, source: 'trip' });
-          done++;
-          renderSelected();
-        }
-      } catch { /* skip */ }
-      uploadStatus.textContent = `Uploading ${done} / ${files.length}...`;
-    }
-    uploadStatus.textContent = `✓ Uploaded ${done} photo${done !== 1 ? 's' : ''}.`;
-    uploadInput.value = '';
-    setTimeout(() => { uploadStatus.textContent = ''; }, 2500);
-  });
-
-  document.getElementById('trip-form').addEventListener('submit', () => {
-    hidden.value = JSON.stringify(gallery);
-  });
-
-  sync();
-})();
 </script>
 
 <!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
