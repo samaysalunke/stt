@@ -8,6 +8,7 @@ import { adminLogin, BASE } from './helpers.mjs';
 
 const QA_TRIP_PATH = 'src/content/trips/qa-test-v2.yaml';
 const ORIGINAL_QA_TRIP = readFileSync(QA_TRIP_PATH, 'utf8');
+const RICH_DESCRIPTION = '## A vivid route\n\nTravel **slowly**, follow *quiet trails*, and read the [trip notes](https://example.com).\n\n- Waterfalls\n- Villages\n\n1. Arrive\n2. Explore';
 
 const VALID_CATALOG = JSON.stringify([
   { id: 'economy', label: 'Economy', helperText: 'Budget option.' },
@@ -44,6 +45,7 @@ async function updateTrip(slug, catalogJson, departuresJson, cookie, faqFields =
   fd.append('status', 'booking-open');
   fd.append('paymentAmount', '1000');
   fd.append('balanceDueRule', '15 days before trip');
+  fd.append('description', RICH_DESCRIPTION);
   fd.append('occupancyCatalog_json', catalogJson);
   fd.append('departures_json', departuresJson);
   fd.append('itinerary_json', '[]');
@@ -72,6 +74,8 @@ test('TC-100 authenticated update with valid catalog+departures JSON → redirec
     'Should redirect back to admin trips',
   );
   const saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  // Multipart form encoding canonicalizes textarea line endings to CRLF.
+  assert.equal(saved.description.replace(/\r\n/g, '\n'), RICH_DESCRIPTION, 'Markdown description should round-trip unchanged');
   assert.equal(saved.batches[0].discountAmount, 1250);
   assert.equal(saved.batches[0].discountEndsAt, '2098-12-20T13:00:00.000Z');
 });

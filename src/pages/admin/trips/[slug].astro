@@ -2,6 +2,7 @@
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
+import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
 import { readTrip, listAlbums, listFaqs } from '../../../lib/content';
 import { editableBooking } from '../../../lib/tripEditor';
 
@@ -162,7 +163,7 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Full Description</label>
-          <textarea name="description" class="finput" rows="8" placeholder="Detailed trip description shown on the trip page...">{trip.description ?? ''}</textarea>
+          <RichTextEditor fieldName="description" initialValue={trip.description ?? ''} placeholder="Detailed trip description shown on the trip page..." />
         </div>
 
         <div class="field full">

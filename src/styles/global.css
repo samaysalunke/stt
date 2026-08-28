@@ -114,3 +114,43 @@
     .anim-delay-4 { animation-delay: 0.32s; }
   }
 }
+
+/* Shared typography for admin-authored rich text and its public rendering. */
+.rich-text {
+  min-width: 0;
+  color: var(--color-gray-text);
+  font-size: 1rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.rich-text > *:first-child { margin-top: 0; }
+.rich-text > *:last-child { margin-bottom: 0; }
+.rich-text p { margin: 0 0 0.85rem; }
+.rich-text h2,
+.rich-text h3 {
+  color: var(--color-navy);
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.rich-text h2 { margin: 1.6rem 0 0.65rem; font-size: 1.35rem; }
+.rich-text h3 { margin: 1.3rem 0 0.55rem; font-size: 1.12rem; }
+.rich-text strong { color: var(--color-navy); font-weight: 700; }
+.rich-text em { font-style: italic; }
+.rich-text a {
+  color: var(--color-cta);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-text ul,
+.rich-text ol { margin: 0.85rem 0; padding-left: 1.4rem; }
+.rich-text ul { list-style: disc; }
+.rich-text ol { list-style: decimal; }
+.rich-text li { padding-left: 0.15rem; }
+.rich-text li + li { margin-top: 0.35rem; }
+.rich-text li > p { margin-bottom: 0.35rem; }
+.trip-description-collapsed {
+  max-height: calc(1.7rem * 3);
+}

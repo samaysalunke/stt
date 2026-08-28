@@ -4,10 +4,11 @@ import DayAccordion from '../../components/DayAccordion';
 import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
+import MarkdownContent from '../../components/MarkdownContent.astro';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
-import { generateTripSeo } from '../../lib/tripSeo';
+import { generateTripSeo, markdownToPlainText } from '../../lib/tripSeo';
 
 export const prerender = false;
 
@@ -42,6 +43,7 @@ const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
 const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
 const generatedSeo = generateTripSeo(trip);
+const searchDescription = markdownToPlainText(trip.seoDescription || generatedSeo.seoDescription);
 
 // ── Photos strip ──────────────────────────────────────────────────────────
 // Photos come from the trip's curated `gallery` (album-picked + trip-only
@@ -167,7 +169,7 @@ const eventSchemas = departures.map((departure) => {
     '@type': 'Event',
     '@id': `${canonicalUrl}#departure-${encodeURIComponent(departure.id)}`,
     name: `${tripName} — ${departure.startDate}`,
-    ...(description ? { description } : {}), image: [heroImgAbs], url: canonicalUrl,
+    ...(searchDescription ? { description: searchDescription } : {}), image: [heroImgAbs], url: canonicalUrl,
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     eventStatus: 'https://schema.org/EventScheduled',
     startDate: departure.startDate, ...(departure.endDate ? { endDate: departure.endDate } : {}),
@@ -201,7 +203,7 @@ const tripSchema: Record<string, any> = {
 
 <BaseLayout
   title={trip.seoTitle || generatedSeo.seoTitle}
-  description={trip.seoDescription || generatedSeo.seoDescription}
+  description={searchDescription}
   image={trip.socialImage || heroImg}
   imageAlt={trip.socialImageAlt || trip.imageAlt || generatedSeo.imageAlt}
   nav="back"
@@ -308,10 +310,10 @@ const tripSchema: Record<string, any> = {
         {description && (
           <section data-trip-feels>
             <h2 class="text-2xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">What this trip feels like</h2>
-            <input type="checkbox" id="trip-feels-toggle" class="peer sr-only" />
-            <p data-trip-feels-text class="text-base leading-relaxed line-clamp-3 peer-checked:line-clamp-none" style="color: var(--color-gray-text);">{description}</p>
-            <label for="trip-feels-toggle" data-trip-feels-toggle class="mt-2 inline-flex cursor-pointer text-sm font-semibold hover:underline peer-checked:hidden" style="color: var(--color-coral);">Read more</label>
-            <label for="trip-feels-toggle" data-trip-feels-toggle class="mt-2 hidden cursor-pointer text-sm font-semibold hover:underline peer-checked:inline-flex" style="color: var(--color-coral);">Show less</label>
+            <div id="trip-feels-content" data-trip-feels-text class="trip-description-collapsed min-w-0 overflow-hidden">
+              <MarkdownContent content={description} variant="rich-text" />
+            </div>
+            <button type="button" data-trip-feels-toggle aria-expanded="false" aria-controls="trip-feels-content" class="mt-2 hidden cursor-pointer text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read more</button>
           </section>
         )}
 
@@ -320,16 +322,21 @@ const tripSchema: Record<string, any> = {
             (() => {
               const section = document.querySelector('[data-trip-feels]');
               if (!section) return;
-              const checkbox = document.getElementById('trip-feels-toggle');
               const text = section.querySelector('[data-trip-feels-text]');
-              const toggles = section.querySelectorAll('[data-trip-feels-toggle]');
+              const toggle = section.querySelector('[data-trip-feels-toggle]');
+              let expanded = false;
               const check = () => {
-                // don't re-measure while expanded — <p> is unclamped, would read as fitting
-                if (checkbox.checked) return;
-                // clamped <p> overflows when there are more than 3 lines of copy
+                if (expanded) return;
                 const overflows = text.scrollHeight - text.clientHeight > 1;
-                toggles.forEach((el) => { el.style.display = overflows ? '' : 'none'; });
+                toggle.classList.toggle('hidden', !overflows);
               };
+              toggle.addEventListener('click', () => {
+                expanded = !expanded;
+                text.classList.toggle('trip-description-collapsed', !expanded);
+                toggle.textContent = expanded ? 'Show less' : 'Read more';
+                toggle.setAttribute('aria-expanded', String(expanded));
+                if (!expanded) check();
+              });
               check();
               window.addEventListener('resize', check);
             })();

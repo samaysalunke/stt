@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateTripSeo } from '../../src/lib/tripSeo';
+import { generateTripSeo, markdownToPlainText } from '../../src/lib/tripSeo';
 
 describe('generateTripSeo', () => {
   it('uses the trip name, location and short description', () => {
@@ -39,5 +39,12 @@ describe('generateTripSeo', () => {
     expect(result.seoDescription.length).toBeLessThanOrEqual(170);
     expect(result.imageAlt.length).toBeLessThanOrEqual(180);
     expect(result.seoDescription).not.toContain('<p>');
+  });
+
+  it('removes rich Markdown syntax from search-facing text', () => {
+    const markdown = '## Hidden valleys\n\nA **bold** and *quiet* [journey](https://example.com).\n\n- Waterfalls\n- Villages';
+    expect(markdownToPlainText(markdown)).toBe('Hidden valleys A bold and quiet journey. Waterfalls Villages');
+    expect(generateTripSeo({ name: 'A Trip', description: markdown }).seoDescription)
+      .toBe('Hidden valleys A bold and quiet journey. Waterfalls Villages');
   });
 });

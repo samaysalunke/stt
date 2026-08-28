@@ -1,0 +1,216 @@
+---
+interface Props {
+  fieldName: string;
+  initialValue?: string | null;
+  placeholder?: string;
+}
+
+const {
+  fieldName,
+  initialValue = '',
+  placeholder = 'Write a detailed trip description…',
+} = Astro.props;
+---
+
+<div class="rich-text-editor" data-rich-text-editor data-placeholder={placeholder}>
+  <div class="rich-text-toolbar" role="toolbar" aria-label="Description formatting" hidden>
+    <button type="button" data-command="paragraph" aria-label="Paragraph">Paragraph</button>
+    <button type="button" data-command="heading-2" aria-label="Heading 2">H2</button>
+    <button type="button" data-command="heading-3" aria-label="Heading 3">H3</button>
+    <span class="rich-text-toolbar-divider" aria-hidden="true"></span>
+    <button type="button" data-command="bold" aria-label="Bold"><strong>B</strong></button>
+    <button type="button" data-command="italic" aria-label="Italic"><em>I</em></button>
+    <button type="button" data-command="link" aria-label="Add or edit link">Link</button>
+    <span class="rich-text-toolbar-divider" aria-hidden="true"></span>
+    <button type="button" data-command="bullet-list" aria-label="Bulleted list">• List</button>
+    <button type="button" data-command="ordered-list" aria-label="Numbered list">1. List</button>
+    <span class="rich-text-toolbar-spacer"></span>
+    <button type="button" data-command="undo" aria-label="Undo">↶</button>
+    <button type="button" data-command="redo" aria-label="Redo">↷</button>
+  </div>
+  <div class="rich-text rich-text-surface" data-editor-surface hidden></div>
+  <textarea
+    name={fieldName}
+    class="finput rich-text-fallback"
+    rows="8"
+    placeholder={placeholder}
+  >{initialValue ?? ''}</textarea>
+</div>
+
+<script>
+  import { Editor } from '@tiptap/core';
+  import StarterKit from '@tiptap/starter-kit';
+  import { Markdown } from '@tiptap/markdown';
+
+  const allowedLink = (value: string) => {
+    const href = value.trim();
+    if (!href) return '';
+    if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(href)) return href;
+    return `https://${href}`;
+  };
+
+  document.querySelectorAll<HTMLElement>('[data-rich-text-editor]:not([data-enhanced])').forEach((root) => {
+    const textarea = root.querySelector<HTMLTextAreaElement>('textarea');
+    const surface = root.querySelector<HTMLElement>('[data-editor-surface]');
+    const toolbar = root.querySelector<HTMLElement>('.rich-text-toolbar');
+    if (!textarea || !surface || !toolbar) return;
+
+    try {
+      const editor = new Editor({
+        element: surface,
+        extensions: [
+          StarterKit.configure({
+            blockquote: false,
+            code: false,
+            codeBlock: false,
+            heading: { levels: [2, 3] },
+            horizontalRule: false,
+            strike: false,
+            underline: false,
+            link: {
+              openOnClick: false,
+              defaultProtocol: 'https',
+            },
+          }),
+          Markdown.configure({
+            markedOptions: { gfm: false, breaks: false },
+          }),
+        ],
+        content: textarea.value,
+        contentType: 'markdown',
+        editorProps: {
+          attributes: {
+            'aria-label': 'Full description',
+            'data-placeholder': root.dataset.placeholder || '',
+          },
+        },
+        onUpdate: ({ editor }) => {
+          textarea.value = editor.getMarkdown();
+          updateToolbar(editor);
+        },
+        onSelectionUpdate: ({ editor }) => updateToolbar(editor),
+      });
+
+      const updateToolbar = (activeEditor: Editor) => {
+        const active: Record<string, boolean> = {
+          paragraph: activeEditor.isActive('paragraph'),
+          'heading-2': activeEditor.isActive('heading', { level: 2 }),
+          'heading-3': activeEditor.isActive('heading', { level: 3 }),
+          bold: activeEditor.isActive('bold'),
+          italic: activeEditor.isActive('italic'),
+          link: activeEditor.isActive('link'),
+          'bullet-list': activeEditor.isActive('bulletList'),
+          'ordered-list': activeEditor.isActive('orderedList'),
+        };
+        toolbar.querySelectorAll<HTMLButtonElement>('button[data-command]').forEach((button) => {
+          if (button.dataset.command === 'undo' || button.dataset.command === 'redo') return;
+          const isActive = Boolean(active[button.dataset.command || '']);
+          button.classList.toggle('is-active', isActive);
+          button.setAttribute('aria-pressed', String(isActive));
+        });
+      };
+
+      toolbar.addEventListener('click', (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-command]');
+        if (!button) return;
+        const chain = editor.chain().focus();
+        switch (button.dataset.command) {
+          case 'paragraph': chain.setParagraph().run(); break;
+          case 'heading-2': chain.toggleHeading({ level: 2 }).run(); break;
+          case 'heading-3': chain.toggleHeading({ level: 3 }).run(); break;
+          case 'bold': chain.toggleBold().run(); break;
+          case 'italic': chain.toggleItalic().run(); break;
+          case 'bullet-list': chain.toggleBulletList().run(); break;
+          case 'ordered-list': chain.toggleOrderedList().run(); break;
+          case 'undo': chain.undo().run(); break;
+          case 'redo': chain.redo().run(); break;
+          case 'link': {
+            if (editor.isActive('link')) {
+              chain.unsetLink().run();
+              break;
+            }
+            const current = editor.getAttributes('link').href || '';
+            const href = allowedLink(window.prompt('Link URL', current) || '');
+            if (href) chain.extendMarkRange('link').setLink({ href }).run();
+            break;
+          }
+        }
+        textarea.value = editor.getMarkdown();
+        updateToolbar(editor);
+      });
+
+      textarea.form?.addEventListener('submit', () => {
+        textarea.value = editor.getMarkdown();
+      });
+
+      root.dataset.enhanced = 'true';
+      toolbar.hidden = false;
+      surface.hidden = false;
+      textarea.hidden = true;
+      updateToolbar(editor);
+    } catch (error) {
+      console.error('Rich-text editor failed to start; using textarea fallback.', error);
+    }
+  });
+</script>
+
+<style is:global>
+  .rich-text-editor { width: 100%; }
+  .rich-text-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.4rem;
+    border: 1px solid var(--color-border);
+    border-bottom: 0;
+    border-radius: 0.5rem 0.5rem 0 0;
+    background: var(--color-gray-soft);
+  }
+  .rich-text-toolbar[hidden] { display: none; }
+  .rich-text-toolbar button {
+    min-height: 2rem;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+    color: var(--color-text-secondary);
+    background: transparent;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .rich-text-toolbar button:hover { background: white; color: var(--color-primary); }
+  .rich-text-toolbar button.is-active {
+    border-color: var(--color-border);
+    color: var(--color-primary);
+    background: white;
+    box-shadow: var(--shadow-card);
+  }
+  .rich-text-toolbar-divider { width: 1px; height: 1.4rem; margin: 0 0.15rem; background: var(--color-border); }
+  .rich-text-toolbar-spacer { flex: 1; }
+  .rich-text-surface {
+    min-height: 13rem;
+    max-height: 32rem;
+    overflow: auto;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0 0 0.5rem 0.5rem;
+    background: white;
+  }
+  .rich-text-surface:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(27,43,58,0.1);
+  }
+  .rich-text-surface .tiptap { position: relative; min-height: 11.25rem; outline: none; }
+  .rich-text-surface .tiptap:has(> p:only-child > br.ProseMirror-trailingBreak:only-child)::before {
+    position: absolute;
+    inset: 0 auto auto 0;
+    color: #9ca3af;
+    pointer-events: none;
+    content: attr(data-placeholder);
+  }
+  @media (max-width: 520px) {
+    .rich-text-toolbar-divider { display: none; }
+    .rich-text-toolbar-spacer { flex-basis: 100%; height: 0; }
+  }
+</style>

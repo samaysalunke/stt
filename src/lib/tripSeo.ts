@@ -1,13 +1,17 @@
 const TITLE_SUFFIX = ' | Seek the Thrill';
 
-function cleanText(value: unknown): string {
+export function markdownToPlainText(value: unknown): string {
   return String(value ?? '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}(?:#{1,6}|[-+*]|\d+[.)])\s+/gm, '')
     .replace(/[*_#>`~]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+const cleanText = markdownToPlainText;
 
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;

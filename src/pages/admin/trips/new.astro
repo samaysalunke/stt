@@ -2,6 +2,7 @@
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
+import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
 import { listAlbums, listFaqs } from '../../../lib/content';
 
 const publishedAlbums = listAlbums().filter(a => a.published);
@@ -124,7 +125,7 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Full Description</label>
-          <textarea name="description" class="finput" rows="8" placeholder="Detailed trip description shown on the trip page..."></textarea>
+          <RichTextEditor fieldName="description" placeholder="Detailed trip description shown on the trip page..." />
         </div>
 
         <div class="field full">
