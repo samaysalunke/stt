@@ -45,6 +45,9 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* Navigation loader ring — see src/components/PageLoader.astro. Root-level (see note above). */
+@keyframes stt-spin { to { transform: rotate(360deg); } }
+
 @layer base {
   html {
     font-family: var(--font-sans);

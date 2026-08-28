@@ -1,0 +1,142 @@
+---
+// Translucent full-screen navigation loader for the plain-MPA public site.
+// Rendered once in <body> of BaseLayout.astro. Hidden by default; shown on
+// internal-link clicks + beforeunload; every fresh document paints hidden.
+// Opt out per-link or per-subtree with a `data-no-loader` attribute.
+---
+
+<div id="stt-page-loader" role="status" aria-live="polite" aria-hidden="true">
+  <div class="stt-pl-figure">
+    <span class="stt-pl-ring" aria-hidden="true"></span>
+    <img src="/logo.jpg" alt="" width="56" height="56" class="stt-pl-logo" />
+  </div>
+  <span class="stt-pl-text">Loading page…</span>
+</div>
+
+<style is:global>
+  #stt-page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(27, 43, 58, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease, visibility 0s linear 200ms;
+  }
+
+  #stt-page-loader.is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 200ms ease, visibility 0s linear 0s;
+  }
+
+  #stt-page-loader .stt-pl-figure {
+    position: relative;
+    width: 56px;
+    height: 56px;
+  }
+
+  #stt-page-loader .stt-pl-logo {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lifted);
+  }
+
+  #stt-page-loader .stt-pl-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    margin: -40px 0 0 -40px;
+    border: 3px solid rgba(245, 221, 215, 0.55);
+    border-top-color: var(--color-coral);
+    border-radius: 9999px;
+    animation: stt-spin 0.8s linear infinite;
+  }
+
+  #stt-page-loader .stt-pl-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #stt-page-loader {
+      transition: opacity 120ms ease, visibility 0s linear 120ms;
+    }
+
+    #stt-page-loader.is-active {
+      transition: opacity 120ms ease, visibility 0s linear 0s;
+    }
+
+    #stt-page-loader .stt-pl-ring {
+      animation: none;
+    }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var el = document.getElementById('stt-page-loader');
+    if (!el) return;
+    var SAFETY_MS = 7000, safetyTimer;
+
+    function show() {
+      if (el.classList.contains('is-active')) return;
+      el.classList.add('is-active');
+      el.setAttribute('aria-hidden', 'false');
+      clearTimeout(safetyTimer);
+      safetyTimer = setTimeout(hide, SAFETY_MS);
+    }
+
+    function hide() {
+      clearTimeout(safetyTimer);
+      el.classList.remove('is-active');
+      el.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a || !(a instanceof HTMLAnchorElement)) return;
+      if (a.closest('[data-no-loader]') || a.hasAttribute('download')) return;
+      var target = (a.getAttribute('target') || '').toLowerCase();
+      if (target && target !== '_self') return;
+      var raw = a.getAttribute('href') || '';
+      if (!raw || raw.charAt(0) === '#') return;
+      if (/^(mailto:|tel:|sms:|javascript:|blob:|data:)/i.test(raw)) return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin) return;
+      if (url.pathname.indexOf('/api/') === 0) return;
+      if (url.pathname === location.pathname && url.search === location.search) return;
+      show();
+    }, true);
+
+    window.addEventListener('beforeunload', function () { show(); });
+
+    window.addEventListener('pageshow', function (e) { if (e.persisted) hide(); });
+  })();
+</script>

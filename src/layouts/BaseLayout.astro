@@ -3,6 +3,7 @@ import SEO from '../components/SEO.astro';
 import Header from '../components/Header.astro';
 import BackButton from '../components/BackButton.astro';
 import Footer from '../components/Footer.astro';
+import PageLoader from '../components/PageLoader.astro';
 import '../styles/global.css';
 import { readSiteSettings } from '../lib/content';
 import { SITE_ORIGIN, siteUrl } from '../lib/siteUrl';
@@ -130,6 +131,7 @@ const orgSchema = {
     >
       Skip to content
     </a>
+    <PageLoader />
     {nav === 'scroll' && <Header hidden={true} user={user} />}
     {nav === 'header' && <Header user={user} />}
     {nav === 'logo' && <Header logoOnly={true} user={user} />}
