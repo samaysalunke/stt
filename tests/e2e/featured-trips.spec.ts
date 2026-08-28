@@ -11,6 +11,9 @@ for (const width of [320, 375, 390]) {
       expect(await cards.count()).toBeGreaterThan(0);
 
       for (const card of await cards.all()) {
+        await expect(card).toBeVisible();
+        const cardBox = await card.boundingBox();
+        expect(cardBox?.width ?? 0).toBeGreaterThan(0);
         await expect(card.locator('[data-testid="trip-card-summary"]')).toHaveCSS('flex-direction', 'column');
         const info = await card.locator('[data-testid="trip-card-info"]').boundingBox();
         const price = await card.locator('[data-testid="trip-card-price"]').boundingBox();
@@ -31,6 +34,23 @@ test('wide listing cards retain the two-column summary', async ({ page }) => {
 
   const summary = page.locator('[data-testid="trip-card-summary"]').first();
   await expect(summary).toHaveCSS('flex-direction', 'row');
+});
+
+test('desktop featured trip cards fill their carousel slots', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const slots = page.locator('#featured-carousel > div');
+  expect(await slots.count()).toBeGreaterThan(0);
+
+  for (const slot of await slots.all()) {
+    const card = slot.locator('[data-testid="trip-card"]');
+    await expect(card).toBeVisible();
+    const [slotBox, cardBox] = await Promise.all([slot.boundingBox(), card.boundingBox()]);
+    expect(slotBox).not.toBeNull();
+    expect(cardBox).not.toBeNull();
+    expect(Math.abs((slotBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThan(1);
+  }
 });
 
 test('mobile featured trip cards share one height', async ({ page }) => {

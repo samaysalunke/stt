@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import YAML from 'yaml';
-import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary } from '../../../../lib/content';
+import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary, normalizeItineraryPhotos } from '../../../../lib/content';
 import { slugify } from '../../../../lib/utils';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 
@@ -76,6 +76,9 @@ export const POST: APIRoute = async ({ request }) => {
     // Trip-level status was removed — visibility/sold-out derive from departures.
     // Strip any legacy top-level status carried in the YAML.
     delete data.status;
+
+    // Clamp per-day itinerary photos so imported YAML can't smuggle external URLs.
+    normalizeItineraryPhotos(data.itinerary);
 
     // Preview state is derived from the departures, same as the live site.
     const derivedStatus = !tripHasUpcomingDates(data)

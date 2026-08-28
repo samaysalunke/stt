@@ -13,7 +13,24 @@ highlights: []
 included: []
 notIncluded: []
 packingList: []
-itinerary: []
+itinerary:
+  - day: 1
+    title: Arrival day
+    description: Land, meet the group, and settle in.
+    photos:
+      - image: /images/trips/qa-test-v2/day1-a.webp
+        width: 1200
+        height: 800
+      - image: /images/trips/qa-test-v2/day1-b.webp
+        width: 1200
+        height: 800
+  - day: 2
+    title: Into the valley
+    description: A full day exploring the valley trails.
+    photos:
+      - image: /images/trips/qa-test-v2/day2-a.webp
+        width: 1200
+        height: 800
 meetingPoint: null
 meetingTime: null
 importantNotes: null

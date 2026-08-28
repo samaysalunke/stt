@@ -127,6 +127,42 @@ test('TC-103 trip FAQ fields round-trip and survive an older-client update', asy
   assert.deepEqual(saved.tripFaqs, faqFields.tripFaqs);
 });
 
+test('TC-103b itinerary day photos round-trip and are clamped/sanitised on save', async () => {
+  const { cookie } = await adminLogin();
+  const itineraryJson = JSON.stringify([
+    {
+      dayNumber: 1, dayTitle: 'Day with photos', activities: 'Explore', accommodation: '', transport: '',
+      breakfast: false, lunch: false, dinner: false, specialNotes: '',
+      photos: [
+        { image: '/images/trips/qa/a.webp', width: 800, height: 600 },
+        { image: '/images/trips/qa/b.webp' },
+        { image: '/images/trips/qa/c.webp' },
+        { image: '/images/trips/qa/d.webp' },
+        { image: 'https://evil.example/x.jpg' },
+      ],
+    },
+  ]);
+  const fd = new FormData();
+  fd.append('slug', 'qa-test-v2');
+  fd.append('status', 'booking-open');
+  fd.append('paymentAmount', '1000');
+  fd.append('description', RICH_DESCRIPTION);
+  fd.append('occupancyCatalog_json', VALID_CATALOG);
+  fd.append('departures_json', VALID_DEPARTURES);
+  fd.append('itinerary_json', itineraryJson);
+  const res = await fetch(`${BASE}/api/admin/trips/update`, { method: 'POST', body: fd, headers: { cookie }, redirect: 'manual' });
+  assert.ok(res.status >= 300 && res.status < 400, `Expected redirect, got ${res.status}`);
+
+  const saved = parse(readFileSync(QA_TRIP_PATH, 'utf8'));
+  const photos = saved.itinerary?.[0]?.photos ?? [];
+  assert.equal(photos.length, 3, 'clamped to 3 photos, external URL dropped');
+  assert.deepEqual(photos[0], { image: '/images/trips/qa/a.webp', width: 800, height: 600 });
+  assert.equal(photos[1].width, null, 'missing dimensions become null');
+  assert.ok(photos.every((p) => p.image.startsWith('/images/')), 'only local images kept');
+  // Unrelated fields still survive the full-file overwrite.
+  assert.equal(saved.description.replace(/\r\n/g, '\n'), RICH_DESCRIPTION);
+});
+
 // Restore the qa-test-v2 fixture after admin tests so register-v2 tests remain stable.
 // This test runs last in the file and re-saves the original data.
 test('TC-104 restore qa-test-v2 fixture after admin tests', async () => {

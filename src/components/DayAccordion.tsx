@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import 'glightbox/dist/css/glightbox.css';
+
+interface DayPhoto {
+  image: string;
+  width: number | null;
+  height: number | null;
+}
 
 interface ItineraryDay {
   day: number;
@@ -8,14 +15,35 @@ interface ItineraryDay {
   meals?: string[];
   transport?: string;
   note?: string;
+  photos?: DayPhoto[];
 }
 
 interface Props {
   itinerary: ItineraryDay[];
+  tripName?: string;
 }
 
-export default function DayAccordion({ itinerary }: Props) {
+export default function DayAccordion({ itinerary, tripName }: Props) {
   const [openDay, setOpenDay] = useState<number>(itinerary[0]?.day ?? 1);
+  const hasPhotos = itinerary.some((d) => d.photos && d.photos.length > 0);
+  const lightbox = useRef<any>(null);
+
+  // Re-init glightbox whenever the open day changes — only that day's photo
+  // links are in the DOM (the accordion body unmounts on collapse).
+  useEffect(() => {
+    if (!hasPhotos) return;
+    let cancelled = false;
+    import('glightbox').then(({ default: GLightbox }) => {
+      if (cancelled) return;
+      lightbox.current?.destroy?.();
+      lightbox.current = GLightbox({ selector: '[data-glightbox]', touchNavigation: true, loop: true });
+    });
+    return () => {
+      cancelled = true;
+      lightbox.current?.destroy?.();
+      lightbox.current = null;
+    };
+  }, [openDay, hasPhotos]);
 
   return (
     <div className="space-y-2">
@@ -56,6 +84,28 @@ export default function DayAccordion({ itinerary }: Props) {
 
             {isOpen && (
               <div className="px-5 pb-5 pt-1" style={{ background: 'white' }}>
+                {day.photos && day.photos.length > 0 && (
+                  <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto rounded-xl mb-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {day.photos.map((p, i) => (
+                      <a
+                        key={p.image}
+                        href={p.image}
+                        data-glightbox="type: image"
+                        data-gallery={`day-${day.day}`}
+                        className={day.photos!.length > 1 ? 'block w-[88%] shrink-0 snap-start' : 'block w-full shrink-0 snap-start'}
+                      >
+                        <img
+                          src={p.image}
+                          loading="lazy"
+                          width={p.width ?? undefined}
+                          height={p.height ?? undefined}
+                          className="w-full aspect-[4/3] object-cover rounded-xl"
+                          alt={[tripName, `Day ${day.day}, photo ${i + 1}`].filter(Boolean).join(' — ')}
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <p className="text-sm leading-relaxed mb-4" style={{ color: '#6B7280' }}>
                   {day.description}
                 </p>

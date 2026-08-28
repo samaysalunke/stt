@@ -73,6 +73,31 @@ export function writeTrip(slug: string, data: Record<string, any>): void {
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
 }
 
+/**
+ * Clamp/sanitise per-day itinerary photos in place: at most 3 per day, only
+ * locally-hosted `/images/...` URLs, `width`/`height` coerced to number|null.
+ * A day with no valid photos loses the `photos` key entirely (keeps YAML clean).
+ * Called on every admin write path (update / create / import) — the client cap
+ * is cosmetic.
+ */
+export function normalizeItineraryPhotos(itinerary: unknown): void {
+  if (!Array.isArray(itinerary)) return;
+  for (const day of itinerary) {
+    if (!day || typeof day !== 'object') continue;
+    const raw = Array.isArray((day as any).photos) ? (day as any).photos : [];
+    const clean = raw
+      .filter((p: any) => p && typeof p.image === 'string' && p.image.startsWith('/images/'))
+      .slice(0, 3)
+      .map((p: any) => ({
+        image: p.image,
+        width: Number.isFinite(p.width) ? p.width : null,
+        height: Number.isFinite(p.height) ? p.height : null,
+      }));
+    if (clean.length) (day as any).photos = clean;
+    else delete (day as any).photos;
+  }
+}
+
 export function deleteTrip(slug: string, opts: { keepImages?: boolean } = {}): void {
   assertSafeSlug(slug);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { readTrip, writeTrip, deleteTrip, saveImageFile, recordTripSlugAlias } from '../../../../lib/content';
+import { readTrip, writeTrip, deleteTrip, saveImageFile, recordTripSlugAlias, normalizeItineraryPhotos } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
@@ -43,6 +43,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     const raw = body.get('itinerary_json')?.toString() ?? '[]';
     itinerary = JSON.parse(raw);
   } catch { /* ignore */ }
+  normalizeItineraryPhotos(itinerary);
 
   // Featured image: use new if uploaded, else keep existing
   let featuredImage = sanitizeInput(body.get('existingFeaturedImage')) || null;

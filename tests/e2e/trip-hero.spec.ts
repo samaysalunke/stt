@@ -108,6 +108,35 @@ test.describe('trip departure hero', () => {
     await expect(page.locator('#booking-panel-cta')).toHaveAttribute('aria-disabled', 'true');
   });
 
+  test('shows per-day itinerary photos above the day description', async ({ page }) => {
+    await page.goto('/trips/qa-test-v2/');
+
+    // Day 1 is open by default: its 2 photos render inside the accordion.
+    await expect(page.locator('img[src*="/images/trips/qa-test-v2/day1-"]')).toHaveCount(2);
+
+    // The photos sit above the day description within the same day card.
+    const layout = await page.evaluate(() => {
+      const img = document.querySelector('img[src*="/images/trips/qa-test-v2/day1-a.webp"]');
+      const body = img?.closest('div.px-5');
+      const p = body?.querySelector('p');
+      return {
+        hasImg: !!img,
+        imgBeforeText: !!p && (img!.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      };
+    });
+    expect(layout.hasImg).toBe(true);
+    expect(layout.imgBeforeText).toBe(true);
+
+    // Expanding day 2 reveals its own distinct photo. Retry the click until the
+    // client:visible island has hydrated and the toggle takes effect.
+    const day2Btn = page.getByRole('button', { name: /Into the valley/ });
+    await day2Btn.scrollIntoViewIfNeeded();
+    await expect(async () => {
+      await day2Btn.click();
+      await expect(page.locator('img[src*="/images/trips/qa-test-v2/day2-a.webp"]')).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15000 });
+  });
+
   test('renders inherited FAQs at the end and emits matching FAQPage data', async ({ page }) => {
     await page.goto(TRIP_URL);
     const heading = page.getByRole('heading', { name: 'Frequently asked questions' });

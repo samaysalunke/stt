@@ -679,6 +679,23 @@ select.finput { cursor: pointer; }
   font-weight: 600;
 }
 
+.day-photos-block { margin-top: 0.85rem; }
+.day-photos-hint { color: var(--color-text-secondary); font-weight: 400; }
+.day-photos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0; }
+.day-photo-thumb { position: relative; width: 96px; height: 72px; border-radius: 0.4rem; overflow: hidden; border: 1px solid var(--color-border); }
+.day-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.day-photo-rm {
+  position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; line-height: 1;
+  border: 0; border-radius: 999px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.7rem; cursor: pointer;
+}
+.day-photo-add {
+  display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
+  font-size: 0.8rem; padding: 0.35rem 0.6rem; border: 1px dashed var(--color-border); border-radius: 0.4rem;
+  color: var(--color-text-secondary);
+}
+.day-photo-add:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.day-photos-status { margin-left: 0.6rem; font-size: 0.75rem; color: var(--color-text-secondary); }
+
 .day-footer {
   display: flex;
   justify-content: flex-end;
@@ -773,7 +790,7 @@ select.finput { cursor: pointer; }
 }
 </style>
 
-<script define:vars={{ itinerary }}>
+<script define:vars={{ itinerary, tripSlug: slug }}>
 // ── Tab switching ─────────────────────────────
 const tabs = document.querySelectorAll('.tab-btn');
 const panels = document.querySelectorAll('.tab-panel');
@@ -846,6 +863,9 @@ function renumberDays() {
   updateCount();
 }
 
+// Slug used when uploading per-day photos (this page always has one).
+const tripSlugForUpload = () => tripSlug || '';
+
 function createDayCard(data, open = false) {
   const div = document.createElement('div');
   div.className = 'day-card' + (open ? ' open' : '');
@@ -862,6 +882,7 @@ function createDayCard(data, open = false) {
   const b = (meals ? meals.includes('B') : data?.breakfast) ? 'checked' : '';
   const l = (meals ? meals.includes('L') : data?.lunch) ? 'checked' : '';
   const d = (meals ? meals.includes('D') : data?.dinner) ? 'checked' : '';
+  const dayPhotos = Array.isArray(data?.photos) ? data.photos.slice(0, 3) : [];
 
   div.innerHTML = `
     <div class="day-header">
@@ -909,6 +930,16 @@ function createDayCard(data, open = false) {
           <input type="text" class="day-input day-specialNotes" value="${notes}" placeholder="Anything travellers should know..." />
         </div>
       </div>
+      <div class="day-photos-block">
+        <div class="day-label">Photos <span class="day-photos-hint">— up to 3, shown at the top of this day on the trip page</span></div>
+        <div class="day-photos"></div>
+        <label class="day-photo-add">
+          <input type="file" class="day-photo-input" accept="image/*" multiple hidden />
+          <span>📷 Add photos</span>
+        </label>
+        <span class="day-photos-status"></span>
+        <input type="hidden" class="day-photos-json" value="${JSON.stringify(dayPhotos).replace(/"/g, '&quot;')}" />
+      </div>
       <div class="day-footer">
         <button type="button" class="rm-btn day-remove-btn">Remove Day</button>
       </div>
@@ -939,6 +970,53 @@ function createDayCard(data, open = false) {
   div.querySelector('.day-accommodation').addEventListener('input', updateThis);
   div.querySelectorAll('.day-breakfast,.day-lunch,.day-dinner').forEach(cb => cb.addEventListener('change', updateThis));
 
+  // ── Per-day photos ──
+  const photosWrap = div.querySelector('.day-photos');
+  const photosJson = div.querySelector('.day-photos-json');
+  const photosStatus = div.querySelector('.day-photos-status');
+  const photoFileInput = div.querySelector('.day-photo-input');
+  const getDayPhotos = () => { try { return JSON.parse(photosJson.value || '[]'); } catch { return []; } };
+  const setDayPhotos = (list) => { photosJson.value = JSON.stringify(list); renderDayPhotos(); };
+  function renderDayPhotos() {
+    const list = getDayPhotos();
+    photosWrap.innerHTML = list.map((p, i) => `
+      <div class="day-photo-thumb">
+        <img src="${p.image}" alt="" loading="lazy" />
+        <button type="button" class="day-photo-rm" data-i="${i}" title="Remove photo">✕</button>
+      </div>`).join('');
+    photosWrap.querySelectorAll('.day-photo-rm').forEach(btn => btn.addEventListener('click', () => {
+      const list2 = getDayPhotos();
+      list2.splice(Number(btn.dataset.i), 1);
+      setDayPhotos(list2);
+    }));
+  }
+  photoFileInput.addEventListener('change', async () => {
+    const files = Array.from(photoFileInput.files || []);
+    photoFileInput.value = '';
+    if (!files.length) return;
+    const uploadSlug = tripSlugForUpload();
+    if (!uploadSlug) { photosStatus.textContent = 'Enter the trip name first.'; return; }
+    for (const file of files) {
+      if (getDayPhotos().length >= 3) { photosStatus.textContent = 'Max 3 photos.'; break; }
+      photosStatus.textContent = 'Uploading…';
+      try {
+        const fd = new FormData();
+        fd.append('slug', uploadSlug);
+        fd.append('photo', file);
+        const res = await fetch('/api/admin/trips/upload-photo', { method: 'POST', body: fd });
+        const out = await res.json().catch(() => null);
+        if (res.ok && out?.url) {
+          setDayPhotos([...getDayPhotos(), { image: out.url, width: out.width ?? null, height: out.height ?? null }]);
+          photosStatus.textContent = '';
+        } else {
+          photosStatus.textContent = out?.error || 'Upload failed.';
+        }
+      } catch { photosStatus.textContent = 'Upload failed.'; }
+    }
+    setTimeout(() => { photosStatus.textContent = ''; }, 2500);
+  });
+  renderDayPhotos();
+
   return div;
 }
 
@@ -965,6 +1043,7 @@ function serializeItinerary() {
     lunch:          card.querySelector('.day-lunch')?.checked ?? false,
     dinner:         card.querySelector('.day-dinner')?.checked ?? false,
     specialNotes:   card.querySelector('.day-specialNotes')?.value ?? '',
+    photos: (() => { try { return JSON.parse(card.querySelector('.day-photos-json')?.value || '[]'); } catch { return []; } })(),
   }));
 }
 
