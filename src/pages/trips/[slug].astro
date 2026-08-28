@@ -361,16 +361,6 @@ const tripSchema: Record<string, any> = {
           </section>
         )}
 
-        <!-- Who is this for? -->
-        {trip.whoShouldJoin && (
-          <section>
-            <div class="rounded-xl p-5" style="background-color: var(--color-blush); border-left: 4px solid var(--color-coral);">
-              <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Who is this for?</h3>
-              <p class="text-sm leading-relaxed" style="color: var(--color-navy);">{trip.whoShouldJoin}</p>
-            </div>
-          </section>
-        )}
-
         <!-- Highlights -->
         {highlights.length > 0 && (
           <section>
