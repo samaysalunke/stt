@@ -72,10 +72,12 @@ export default function BookingPanel({
   // Only short-circuit to the waitlist block when there is genuinely nothing to
   // do — every bookable date is full AND there's no coming-soon date to wishlist.
   const allSoldOut = bookable.length > 0 && bookable.every((d) => d.soldOut) && !anyComingSoon;
-  // Booking flow always starts with nothing selected (explicit choice). The one
-  // exception: an all-coming-soon trip pre-selects its (only kind of) date so the
-  // wishlist form is immediately visible.
-  const initialDeparture = bookable.length === 0 ? (departures[0]?.id ?? '') : '';
+  // Booking flow normally starts with nothing selected (explicit choice).
+  // Exceptions, both pre-selecting departures[0]:
+  //  - an all-coming-soon trip, so the wishlist form is immediately visible;
+  //  - a trip with exactly one departure, so only occupancy is left to choose.
+  const initialDeparture =
+    departures.length === 1 || bookable.length === 0 ? (departures[0]?.id ?? '') : '';
   const [departureId, setDepartureId] = useState<string>(initialDeparture);
   const [tierId, setTierId] = useState<string>('');
 
@@ -380,6 +382,7 @@ export default function BookingPanel({
               <p className="text-xs" style={{ color: C.coral }}>{wlError}</p>
             )}
             <button
+              id="booking-panel-cta"
               type="submit"
               disabled={wlState === 'submitting'}
               className="block w-full text-center font-semibold text-white py-3.5 rounded-full transition-all"

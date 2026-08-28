@@ -216,7 +216,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         effectivePaymentStatus = r.paymentStatus;
       }
     } else {
-      // lead ↔ pending, rejected → lead/pending, lead/pending → rejected.
+      // lead ↔ pending, rejected → lead/pending, lead/pending → rejected,
+      // cancelled → lead/pending/rejected.
       // assertTransition guaranteed amount_paid === 0 here.
       getDb().prepare('UPDATE registrations SET payment_status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run('unpaid', id);
       effectivePaymentStatus = 'unpaid';

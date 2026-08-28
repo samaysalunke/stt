@@ -35,8 +35,6 @@ const needsConfirmPayment: Guard = (ctx) => {
 const mustBeUnpaid: Guard = (ctx) =>
   ctx.amountPaid > 0 ? 'Cancel and record any refund first.' : null;
 
-const reinstateOnly: Guard = () => 'Re-instate via Confirm, or leave cancelled.';
-
 // wishlist + lead share the same outbound rules.
 const LEAD_LIKE: Record<string, Guard> = {
   pending: mustBeUnpaid,
@@ -64,10 +62,10 @@ export const TRANSITIONS: Record<string, Record<string, Guard>> = {
     confirmed: needsConfirmPayment,
   },
   cancelled: {
+    lead: mustBeUnpaid,
+    pending: mustBeUnpaid,
     confirmed: needsConfirmPayment,
-    lead: reinstateOnly,
-    pending: reinstateOnly,
-    rejected: reinstateOnly,
+    rejected: mustBeUnpaid,
   },
 };
 
