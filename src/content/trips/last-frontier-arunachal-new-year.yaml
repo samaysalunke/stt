@@ -55,11 +55,12 @@ paymentAmount: 10000          # advance — REVIEW: form did not state the booki
 balanceDueRule: 15 days before trip
 meetingPoint: >-
   Guwahati — group departs from Guwahati. Arrive in Guwahati the night before (Guwahati to Guwahati route).
-importantNotes: >-
-  High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights. Carry warm layers and
-  any personal medication. Day 3 (Bumla) and Day 5 (Borderlands) are weather- and permit-dependent, with
-  alternative routes such as Mago and Zithang Valley. The Day 5 high-altitude road trip is an optional
-  ₹2,500/person add-on. Contact: WhatsApp 7975027491.
+importantNotes: |
+  - High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights.
+  - Carry warm layers and any personal medication.
+  - Day 3 (Bumla) and Day 5 (Borderlands) are weather- and permit-dependent, with alternative routes such as Mago and Zithang Valley.
+  - The Day 5 high-altitude road trip is an optional ₹2,500/person add-on.
+  - Contact: WhatsApp 7975027491.
 itinerary:
   - day: 1
     title: Guwahati to Dirang

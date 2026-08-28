@@ -262,7 +262,8 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Important Notes</label>
-          <textarea name="importantNotes" class="finput" rows="4" placeholder="Things travelers must know...">{trip.importantNotes ?? ''}</textarea>
+          <RichTextEditor fieldName="importantNotes" initialValue={trip.importantNotes ?? ''} placeholder="One point per line. Use the • List button for bullets." />
+          <span class="fhint">Shown as the "Important" callout on the trip page. Keep each point on its own bullet.</span>
         </div>
 
         <div class="field full">

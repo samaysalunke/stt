@@ -139,10 +139,10 @@ excluded:
 paymentAmount: 10000
 balanceDueRule: 15 days before trip
 meetingPoint: Leh Airport — pickup arranged on Day 1.
-importantNotes: >
-  High-altitude destination (11,000 ft and above). Day 1 kept relaxed for
-  acclimatisation. Oxygen cylinder carried in vehicle. Alcohol discouraged in
-  the first 48 hours. Inform us in advance of any medical conditions (asthma,
-  heart conditions, high BP). Itinerary subject to change due to weather or road
-  conditions — BRO clearance dependent. Balance due 15 days before trip. Minimum
-  8 people to confirm.
+importantNotes: |
+  - High-altitude destination (11,000 ft and above); Day 1 kept relaxed for acclimatisation.
+  - Oxygen cylinder carried in the vehicle. Alcohol discouraged in the first 48 hours.
+  - Inform us in advance of any medical conditions (asthma, heart conditions, high BP).
+  - Itinerary subject to change due to weather or road conditions — BRO clearance dependent.
+  - Balance due 15 days before trip.
+  - Minimum 8 people to confirm.

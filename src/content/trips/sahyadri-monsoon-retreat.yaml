@@ -104,8 +104,9 @@ excluded:
   - Anything not listed under inclusions
 paymentAmount: 10000
 meetingPoint: Mumbai — departure point shared with the group on booking. 8:00 AM sharp.
-importantNotes: >
-  Monsoon-friendly itinerary — nature will do its thing. Safety is top priority;
-  rain or shine, the spirit of the trip comes through. Double sharing cottages
-  are limited and allocated first-come. Advance of ₹10,000 is non-refundable.
-  Minimum 8 people to confirm the trip.
+importantNotes: |
+  - Monsoon-friendly itinerary — nature will do its thing.
+  - Safety is top priority; rain or shine, the spirit of the trip comes through.
+  - Double sharing cottages are limited and allocated first-come.
+  - Advance of ₹10,000 is non-refundable.
+  - Minimum 8 people to confirm the trip.

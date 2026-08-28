@@ -151,6 +151,18 @@
 .rich-text li { padding-left: 0.15rem; }
 .rich-text li + li { margin-top: 0.35rem; }
 .rich-text li > p { margin-bottom: 0.35rem; }
+
+/* Compact rich text for the trip "Important" callout — smaller, navy, tight margins. */
+.rich-text.important-note-body {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--color-navy);
+}
+.rich-text.important-note-body p { margin: 0 0 0.5rem; }
+.rich-text.important-note-body ul,
+.rich-text.important-note-body ol { margin: 0; padding-left: 1.2rem; }
+.rich-text.important-note-body li + li { margin-top: 0.25rem; }
+
 .trip-description-collapsed {
   max-height: calc(1.7rem * 3);
 }

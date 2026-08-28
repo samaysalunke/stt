@@ -140,10 +140,10 @@ excluded:
 paymentAmount: 10000
 balanceDueRule: 10 days before trip
 meetingPoint: Guwahati — departure sharp at 7:00 AM. Arrive in Guwahati a day prior.
-importantNotes: >
-  Arrive in Guwahati the evening before — departure is at 7 AM sharp, late
-  arrivals cannot be accommodated. On return, drop at Khanapara (Guwahati) for
-  airport connections. Price is ₹29,000 (triple sharing) or ₹31,000 (double
-  sharing). Advance of ₹10,000 is non-refundable. Cancellations within 15 days
-  of departure attract 100% cancellation charges. Balance due 10 days before
-  trip.
+importantNotes: |
+  - Arrive in Guwahati the evening before — departure is at 7 AM sharp, late arrivals cannot be accommodated.
+  - On return, drop at Khanapara (Guwahati) for airport connections.
+  - Price is ₹29,000 (triple sharing) or ₹31,000 (double sharing).
+  - Advance of ₹10,000 is non-refundable.
+  - Cancellations within 15 days of departure attract 100% cancellation charges.
+  - Balance due 10 days before trip.

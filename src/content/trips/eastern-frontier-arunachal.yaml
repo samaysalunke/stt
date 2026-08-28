@@ -52,10 +52,11 @@ paymentAmount: 10000          # advance — REVIEW: confirm actual booking amoun
 balanceDueRule: 15 days before trip
 meetingPoint: >-
   Guwahati — group departs early morning. Arrive in Guwahati the night before.
-importantNotes: >-
-  High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights.
-  Carry warm layers and any personal medication. Itinerary may flex with weather and road/permit
-  conditions. The Chug Valley fine-dining experience is an optional ₹1,500/person add-on.
+importantNotes: |
+  - High-altitude trip (up to ~13,700 ft) with long mountain drives and cold nights.
+  - Carry warm layers and any personal medication.
+  - Itinerary may flex with weather and road/permit conditions.
+  - The Chug Valley fine-dining experience is an optional ₹1,500/person add-on.
 itinerary:
   - day: 1
     title: Guwahati to Dirang
