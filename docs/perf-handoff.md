@@ -110,13 +110,16 @@ git checkout main && git merge --ff-only 7832aa5 && git push origin main
 **`-H 'Accept: text/html'` is required in every check below.** The middleware
 gates the cookie path and the cache-header path on the request advertising
 `text/html` (`src/middleware.ts:150`; `:116` on the pre-2a code). A bare
-`curl -sI` sends `Accept: */*`, trips neither gate, and returns clean whatever
-the origin is doing — a false pass.
+`curl -sI` fails on two counts — it sends `Accept: */*` and issues a HEAD
+rather than a GET, and the public-HTML branch requires both — so it returns
+clean whatever the origin is doing. A false pass. Use
+`curl -s -D - -o /dev/null -H 'Accept: text/html'`. The image checks are fine
+as `curl -sI`; that route gates on neither.
 
 Deploy up to and including commit `7832aa5`, then:
 
 ```bash
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -i set-cookie
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -i set-cookie
 ```
 
 **Must return nothing.** If a `set-cookie` is present, stop — the beacon is not
@@ -132,8 +135,8 @@ Commits `acd2734` through `b5e3864`. Then confirm the origin is emitting the
 headers the edge rules will defer to:
 
 ```bash
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/       | grep -iE 'cache-control|cdn-cache|vary'
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/profile | grep -i cache-control   # private, no-store
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/       | grep -iE 'cache-control|cdn-cache|vary'
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/profile | grep -i cache-control   # private, no-store
 ```
 
 Expected on `/`:
@@ -151,7 +154,7 @@ it CNAMEs to `v9gprqct.up.railway.app`, so every real pageview goes straight to
 Railway and never touches the edge.
 
 ```bash
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
 # proxied  -> server: cloudflare + cf-ray
 # current  -> server: railway-hikari, no cf-ray
 ```
@@ -169,7 +172,7 @@ currently **Full**). On **Flexible** the flip causes an infinite redirect loop.
 Full detail with copy-pasteable expressions is in
 **`docs/cloudflare-cache-setup.md`**. Summary:
 
-1. **Cache Rule "Bypass logged-in"** — `http.cookie contains "user_session" or http.cookie contains "admin_token"` → Bypass cache. **Must sort above** the HTML rule.
+1. **Cache Rule "Bypass logged-in"** — `http.cookie contains "user_session" or http.cookie contains "admin_token"` → Bypass cache. **Must sort BELOW** the HTML rule — Cache Rules evaluate top to bottom and the last matching rule wins, so bypass has to be last to override the HTML rule for a logged-in request.
 2. **Cache Rule "Public HTML"** — host + the allow-listed paths → Eligible; **Edge TTL: "Use cache-control header if present, bypass cache if not"**; Browser TTL: Respect origin. Deferring to the origin header is what makes the app's four guards authoritative.
 3. **Cache Rule assets** — `/_astro/*` → Eligible, Edge TTL 1 year. Safe unconditionally (content-hashed).
 4. **Cache Rule images** — `/images/*` → Eligible, Edge TTL 1 year. **Second load-bearing constraint: only after 3a is live.** Check first:
@@ -185,11 +188,11 @@ Full detail with copy-pasteable expressions is in
 ```bash
 # Twice each; second should be HIT
 for p in / /trips/ /trips/monsoon-meghalaya/; do
-  curl -sI -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
+  curl -s -D - -o /dev/null -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
 done
 
 # Logged in -> BYPASS, and the header avatar must still render
-curl -sI -H 'Accept: text/html' -H 'Cookie: user_session=<real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
+curl -s -D - -o /dev/null -H 'Accept: text/html' -H 'Cookie: user_session=<real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
 ```
 
 Behavioural, and these are the ones that actually matter:

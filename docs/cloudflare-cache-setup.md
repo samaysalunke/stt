@@ -14,7 +14,7 @@ silent damage if ignored:
    bypassing the edge entirely. Check before starting:
 
    ```bash
-   curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
+   curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
    ```
 
    A proxied response carries `cf-ray` and `server: cloudflare`. If it says
@@ -42,14 +42,17 @@ have nothing to defer to.
 **`-H 'Accept: text/html'` is not optional in any of these commands.** The
 middleware gates both the cookie path and the cache-header path on the request
 advertising `text/html` (`src/middleware.ts:150`, and `:116` on the pre-2a
-code). A bare `curl -sI` sends `Accept: */*`, matches neither gate, and comes
-back clean no matter what the origin is actually doing — it reads as a pass
-while telling you nothing.
+code) **and** on `request.method === 'GET'`. A bare `curl -sI` fails both: it
+sends `Accept: */*` and issues a HEAD, not a GET. It comes back clean no matter
+what the origin is doing — it reads as a pass while telling you nothing.
+
+Use `curl -s -D - -o /dev/null -H 'Accept: text/html'` for HTML. The image
+checks below are fine as `curl -sI`; that route gates on neither.
 
 ```bash
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/            | grep -iE 'cache-control|cdn-cache-control|set-cookie|vary'
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/trips/      | grep -i cache-control
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/profile     | grep -i cache-control   # expect: private, no-store
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/            | grep -iE 'cache-control|cdn-cache-control|set-cookie|vary'
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/trips/      | grep -i cache-control
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/profile     | grep -i cache-control   # expect: private, no-store
 ```
 
 Expected on the two public pages:
@@ -106,7 +109,14 @@ allow-listed path) authoritative rather than advisory.
 
 ## 3. Cache Rule — bypass on session cookie
 
-Same screen, and it must sort **above** the HTML rule.
+Same screen, and it must sort **BELOW** the HTML rule.
+
+> Cloudflare Cache Rules evaluate top to bottom and **the last matching rule
+> wins** for a conflicting setting. A logged-in request to `/` matches both this
+> rule and the HTML rule, so whichever sits lower decides. Bypass must therefore
+> be last. (An earlier version of this checklist said "above", which would have
+> let the HTML rule override the bypass and make logged-in pages edge-cacheable
+> — the exact leak this rule exists to prevent.)
 
 - **Name:** `Bypass logged-in`
 - **Expression:**
@@ -166,7 +176,7 @@ Anonymous, twice each — the second should be a `HIT`:
 
 ```bash
 for p in / /trips/ /trips/monsoon-meghalaya/; do
-  curl -sI -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
+  curl -s -D - -o /dev/null -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
 done
 ```
 
@@ -174,11 +184,11 @@ Then the cases that must **not** be cached:
 
 ```bash
 # Logged in -> BYPASS, private no-cache, header avatar still renders
-curl -sI -H 'Accept: text/html' -H 'Cookie: user_session=<a real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
+curl -s -D - -o /dev/null -H 'Accept: text/html' -H 'Cookie: user_session=<a real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
 
 # Unpublished album -> 404 and must not be cached; publish it, request again,
 # and it must appear immediately rather than in five minutes.
-curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/photo-vault/<unpublished-slug>/
+curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/photo-vault/<unpublished-slug>/
 ```
 
 Behavioural checks:
