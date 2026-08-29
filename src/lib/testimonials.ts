@@ -1,16 +1,20 @@
 import { YAML, fs, path, TESTIMONIALS_DIR, ensureDir, assertSafeSlug } from './_contentBase';
+import { cachedRead, bumpContentVersion } from './contentCache';
 
+/** Cached. The returned array and its objects are shared and read-only. */
 export function listTestimonials(): Array<Record<string, any>> {
-  ensureDir(TESTIMONIALS_DIR);
-  return fs
-    .readdirSync(TESTIMONIALS_DIR)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => {
-      const slug = f.replace('.yaml', '');
-      const raw = fs.readFileSync(path.join(TESTIMONIALS_DIR, f), 'utf-8');
-      const data = YAML.parse(raw) ?? {};
-      return { slug, ...data };
-    });
+  return cachedRead('testimonials', () => {
+    ensureDir(TESTIMONIALS_DIR);
+    return fs
+      .readdirSync(TESTIMONIALS_DIR)
+      .filter(f => f.endsWith('.yaml'))
+      .map(f => {
+        const slug = f.replace('.yaml', '');
+        const raw = fs.readFileSync(path.join(TESTIMONIALS_DIR, f), 'utf-8');
+        const data = YAML.parse(raw) ?? {};
+        return { slug, ...data };
+      });
+  });
 }
 
 export function selectFeaturedTestimonials(
@@ -33,10 +37,12 @@ export function writeTestimonial(slug: string, data: Record<string, any>): void 
   ensureDir(TESTIMONIALS_DIR);
   const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+  bumpContentVersion();
 }
 
 export function deleteTestimonial(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(TESTIMONIALS_DIR, `${slug}.yaml`);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  bumpContentVersion();
 }

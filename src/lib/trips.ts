@@ -1,5 +1,6 @@
 import { YAML, fs, path, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
 import { listDeletedSlugs } from './tripDeletions';
+import { cachedRead, bumpContentVersion, getContentVersion } from './contentCache';
 
 /** Raw, unfiltered slugs of every trip file on disk (includes soft-deleted). */
 export function listTripSlugs(): string[] {
@@ -7,29 +8,37 @@ export function listTripSlugs(): string[] {
   return fs.readdirSync(TRIPS_DIR).filter(f => f.endsWith('.yaml')).map(f => f.replace('.yaml', ''));
 }
 
+/**
+ * Cached. The returned array and every trip object in it are SHARED and
+ * read-only — mutate a trip and every later reader in the cache generation sees
+ * it. Anything that needs to modify a trip must go through readTrip(), which is
+ * deliberately uncached for exactly that reason.
+ */
 export function listTrips(): Array<Record<string, any>> {
-  ensureDir(TRIPS_DIR);
-  const deleted = listDeletedSlugs();
-  const trips = fs
-    .readdirSync(TRIPS_DIR)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => {
-      const slug = f.replace('.yaml', '');
-      const raw = fs.readFileSync(path.join(TRIPS_DIR, f), 'utf-8');
-      const data = YAML.parse(raw) ?? {};
-      // Filename is the authoritative identity (readTrip/writeTrip/deleteTrip all
-      // key by it). Spread data first so a stale in-YAML `slug:` can never override
-      // it — otherwise two files sharing an internal slug collide, and delete/edit
-      // hit the wrong file.
-      return { ...data, slug };
-    })
-    .filter(t => !deleted.has(t.slug));
-  const ranked = trips.map((t) => ({
-    t,
-    rank: !tripHasUpcomingDates(t) ? 2 : (tripCardSummary(t).soldOut ? 1 : 0),
-  }));
-  ranked.sort((a, b) => a.rank - b.rank);
-  return ranked.map((r) => r.t);
+  return cachedRead('trips', () => {
+    ensureDir(TRIPS_DIR);
+    const deleted = listDeletedSlugs();
+    const trips = fs
+      .readdirSync(TRIPS_DIR)
+      .filter(f => f.endsWith('.yaml'))
+      .map(f => {
+        const slug = f.replace('.yaml', '');
+        const raw = fs.readFileSync(path.join(TRIPS_DIR, f), 'utf-8');
+        const data = YAML.parse(raw) ?? {};
+        // Filename is the authoritative identity (readTrip/writeTrip/deleteTrip all
+        // key by it). Spread data first so a stale in-YAML `slug:` can never override
+        // it — otherwise two files sharing an internal slug collide, and delete/edit
+        // hit the wrong file.
+        return { ...data, slug };
+      })
+      .filter(t => !deleted.has(t.slug));
+    const ranked = trips.map((t) => ({
+      t,
+      rank: !tripHasUpcomingDates(t) ? 2 : (tripCardSummary(t).soldOut ? 1 : 0),
+    }));
+    ranked.sort((a, b) => a.rank - b.rank);
+    return ranked.map((r) => r.t);
+  });
 }
 
 export type PublicationStatus = 'draft' | 'published' | 'archived' | 'test';
@@ -66,6 +75,26 @@ export function sortTripsByPriority<T extends Record<string, any>>(
   return [...shuffle(buckets.high), ...shuffle(buckets.medium), ...shuffle(buckets.low)];
 }
 
+/**
+ * A deterministic `random` for sortTripsByPriority, seeded from the content
+ * version so the shuffle only changes when the content does.
+ *
+ * Without a seed each render picks a fresh order, which means different
+ * Cloudflare PoPs cache different orders of the same page and every
+ * revalidation reshuffles it. Seeding makes the order stable for a given
+ * content version and rotate on the next admin edit. mulberry32: 32-bit, fast,
+ * good enough for a shuffle — this is presentation order, not security.
+ */
+export function contentSeededRandom(seed: number = getContentVersion()): () => number {
+  let a = (seed + 0x6d2b79f5) | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Public detail pages may include useful archived trips; listings only use published trips. */
 export function tripPublicationStatus(trip: Record<string, any>): PublicationStatus {
   const explicit = String(trip?.publicationStatus ?? '').toLowerCase();
@@ -90,6 +119,17 @@ export function isTripListable(trip: Record<string, any>): boolean {
   return publishable && tripHasUpcomingDates(trip);
 }
 
+/**
+ * DELIBERATELY NOT CACHED — do not wrap this in cachedRead().
+ *
+ * This is the read half of a read-modify-write: `adjustBookingCount`
+ * (src/lib/registrationWrite.ts) does readTrip → mutate the returned object in
+ * place → writeTrip, and carries an ATOMICITY INVARIANT requiring that to
+ * complete synchronously in one tick. Handing it a shared cached object breaks
+ * that two ways: two confirmations would mutate the same instance and silently
+ * lose a seat increment, and the dev-mode deep-freeze would throw on the
+ * mutation outright. Every caller of readTrip gets its own fresh parse.
+ */
 export function readTrip(slug: string): Record<string, any> | null {
   assertSafeSlug(slug);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);
@@ -103,6 +143,10 @@ export function writeTrip(slug: string, data: Record<string, any>): void {
   ensureDir(TRIPS_DIR);
   const filePath = path.join(TRIPS_DIR, `${slug}.yaml`);
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+  // Hooked here rather than at the call sites so that every write path
+  // invalidates — including the booking one, which reaches writeTrip through
+  // adjustBookingCount. Synchronous, so that function's invariant holds.
+  bumpContentVersion();
 }
 
 /**
@@ -143,6 +187,7 @@ export function deleteTrip(slug: string, opts: { keepImages?: boolean } = {}): v
     } catch { /* best-effort */ }
   }
   fs.unlinkSync(filePath);
+  bumpContentVersion();
 }
 
 /**
@@ -321,7 +366,34 @@ export function activeDepartureDiscount(batch: Record<string, any>, now = Date.n
   return Number.isFinite(endsAt) && endsAt > now ? amount : 0;
 }
 
+/**
+ * Memo for resolveBooking, keyed on the trip object's identity.
+ *
+ * resolveBooking ran 4x per trip on `/` (the listTrips ranking pass, the
+ * listable filter, the card summary, and the departures prop) and 3x on
+ * `/trips/`. It is pure over the trip object, so one resolve per object is
+ * enough. A WeakMap means entries die with the trips that key them.
+ *
+ * STALENESS: because listTrips() is cached, the same trip objects now persist
+ * for a cache generation, so a memoized result does too. resolveBooking depends
+ * on wall-clock time through activeDepartureDiscount() and upcomingBatches(),
+ * which makes a discount expiry or a departure rolling into the past visible up
+ * to `30s + s-maxage` late — about 5.5 minutes once edge caching is on. That is
+ * acceptable for a trips site, and the countdown UI is client-side anyway.
+ * (Without the listTrips cache this memo would introduce no staleness at all,
+ * since listTrips would rebuild the key objects on every call.)
+ */
+const bookingMemo = new WeakMap<object, ResolvedBooking>();
+
 export function resolveBooking(trip: Record<string, any>): ResolvedBooking {
+  const memoized = bookingMemo.get(trip);
+  if (memoized) return memoized;
+  const resolved = resolveBookingUncached(trip);
+  bookingMemo.set(trip, resolved);
+  return resolved;
+}
+
+function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
   const catalog = resolveCatalog(trip);
   const hasBatchArray = Array.isArray(trip?.batches) && trip.batches.length > 0;
   const rawDepartures: Array<Record<string, any>> = hasBatchArray
@@ -404,6 +476,13 @@ export function tripCardSummary(trip: Record<string, any>): {
   hasComingSoon: boolean;
   /** Every upcoming departure is coming-soon (so there is no public price). */
   allComingSoon: boolean;
+  /**
+   * The resolved departures this summary was computed from. Exposed so a card
+   * render that needs both the summary and the departures makes one call
+   * instead of two — it is the same array reference resolveBooking() returns,
+   * so treat it as read-only, like everything else on the read path.
+   */
+  departures: ResolvedDeparture[];
 } {
   const booking = resolveBooking(trip);
   // Coming-soon departures are excluded from every price computation — the card
@@ -442,6 +521,7 @@ export function tripCardSummary(trip: Record<string, any>): {
     soldOut: allSoldOut,
     hasComingSoon: comingSoonCount > 0,
     allComingSoon: booking.departures.length > 0 && comingSoonCount === booking.departures.length,
+    departures: booking.departures,
   };
 }
 

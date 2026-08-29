@@ -1,4 +1,5 @@
 import { YAML, fs, path, ALBUMS_DIR, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
+import { bumpContentVersion } from './contentCache';
 
 export function listAlbums(): Array<Record<string, any>> {
   ensureDir(ALBUMS_DIR);
@@ -32,6 +33,7 @@ export function writeAlbum(slug: string, data: Record<string, any>): void {
   ensureDir(ALBUMS_DIR);
   const filePath = path.join(ALBUMS_DIR, `${slug}.yaml`);
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+  bumpContentVersion();
 }
 
 export function deleteAlbum(slug: string): void {
@@ -43,6 +45,7 @@ export function deleteAlbum(slug: string): void {
     if (data) for (const url of collectImageUrls(data)) deleteImageByUrl(url);
   } catch { /* best-effort */ }
   fs.unlinkSync(filePath);
+  bumpContentVersion();
 }
 
 export function contentLastmod(kind: 'trips' | 'albums', slug: string): string | undefined {

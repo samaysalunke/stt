@@ -1,10 +1,18 @@
 import { getDb } from './db';
 import { logAction } from './audit';
+import { cachedRead, bumpContentVersion } from './contentCache';
 
-/** Slugs of trips that are soft-deleted (hidden but recoverable). */
+/**
+ * Slugs of trips that are soft-deleted (hidden but recoverable).
+ *
+ * Cached: listTrips() calls this on every invocation, so the SELECT was being
+ * re-prepared on every page render. The returned Set is shared and read-only.
+ */
 export function listDeletedSlugs(): Set<string> {
-  const rows = getDb().prepare('SELECT slug FROM deleted_trips').all() as Array<{ slug: string }>;
-  return new Set(rows.map((r) => r.slug));
+  return cachedRead('deletedSlugs', () => {
+    const rows = getDb().prepare('SELECT slug FROM deleted_trips').all() as Array<{ slug: string }>;
+    return new Set(rows.map((r) => r.slug));
+  });
 }
 
 export function isTripDeleted(slug: string): boolean {
@@ -31,4 +39,5 @@ export function softDeleteTrip(
     targetType: 'trip',
     targetId: slug,
   });
+  bumpContentVersion();
 }

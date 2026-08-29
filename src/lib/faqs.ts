@@ -1,17 +1,25 @@
 import { YAML, fs, path, FAQS_DIR, ensureDir, assertSafeSlug } from './_contentBase';
+import { cachedRead, bumpContentVersion } from './contentCache';
 
+/**
+ * Cached. The sort happens inside the loader, so the cached array is already
+ * ordered and no caller sorts it again in place — `resolveTripFaqs` below
+ * builds fresh copies rather than reordering this one, and must stay that way.
+ */
 export function listFaqs(): Array<Record<string, any>> {
-  ensureDir(FAQS_DIR);
-  return fs
-    .readdirSync(FAQS_DIR)
-    .filter(f => f.endsWith('.yaml'))
-    .map(f => {
-      const slug = f.replace('.yaml', '');
-      const raw = fs.readFileSync(path.join(FAQS_DIR, f), 'utf-8');
-      const data = YAML.parse(raw) ?? {};
-      return { slug, ...data };
-    })
-    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  return cachedRead('faqs', () => {
+    ensureDir(FAQS_DIR);
+    return fs
+      .readdirSync(FAQS_DIR)
+      .filter(f => f.endsWith('.yaml'))
+      .map(f => {
+        const slug = f.replace('.yaml', '');
+        const raw = fs.readFileSync(path.join(FAQS_DIR, f), 'utf-8');
+        const data = YAML.parse(raw) ?? {};
+        return { slug, ...data };
+      })
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  });
 }
 
 export function readFaq(slug: string): Record<string, any> | null {
@@ -27,12 +35,14 @@ export function writeFaq(slug: string, data: Record<string, any>): void {
   ensureDir(FAQS_DIR);
   const filePath = path.join(FAQS_DIR, `${slug}.yaml`);
   fs.writeFileSync(filePath, YAML.stringify(data), 'utf-8');
+  bumpContentVersion();
 }
 
 export function deleteFaq(slug: string): void {
   assertSafeSlug(slug);
   const filePath = path.join(FAQS_DIR, `${slug}.yaml`);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  bumpContentVersion();
 }
 
 export interface ResolvedTripFaq {

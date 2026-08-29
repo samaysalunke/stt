@@ -2,13 +2,18 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
 import TestimonialCard from '../components/TestimonialCard.astro';
-import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, resolveBooking, sortTripsByPriority } from '../lib/content';
+import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature every trip that has an upcoming,
 // not-fully-sold-out departure (trip-level status was removed). No cap — the
 // section scrolls horizontally when there are more than fit on screen.
-const featuredTrips = sortTripsByPriority(allTrips.filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut));
+// Seeded shuffle: the order is stable until the content changes, so every edge
+// PoP caches the same order instead of one per revalidation.
+const featuredTrips = sortTripsByPriority(
+  allTrips.filter((t) => isTripListable(t) && !tripCardSummary(t).soldOut),
+  contentSeededRandom(),
+);
 const showCarouselArrows = featuredTrips.length > 3;
 
 const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());
@@ -131,7 +136,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
                   soldOut={card.soldOut}
                   hasComingSoon={card.hasComingSoon}
                   allComingSoon={card.allComingSoon}
-                  departures={resolveBooking(trip).departures}
+                  departures={card.departures}
                 />
               </div>
             );

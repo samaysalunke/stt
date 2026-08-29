@@ -433,4 +433,17 @@ function initializeSchema(db: Database.Database) {
       createdAt INTEGER DEFAULT (unixepoch())
     );
   `);
+
+  // Generic process-wide key/value scratch. Currently holds exactly one key,
+  // `content_version` — the monotonic counter that invalidates the in-process
+  // content cache (src/lib/contentCache.ts). It lives in SQLite rather than in
+  // a module variable so the counter survives a restart: a bumped version must
+  // never travel backwards, or a stale cache entry written before the restart
+  // could be considered fresh after it.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+  `);
 }
