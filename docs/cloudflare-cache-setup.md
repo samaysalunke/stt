@@ -7,6 +7,22 @@ Cloudflare UI and has to be done by hand.
 **The ordering below is load-bearing.** Two constraints, both of which cause
 silent damage if ignored:
 
+0. **`www` must be proxied by Cloudflare (orange cloud) or none of this does
+   anything.** Verified 2026-08-29: the apex `seekthethrill.in` is proxied and
+   301s to `www`, but the `www` record itself is **DNS-only** — it CNAMEs to
+   `v9gprqct.up.railway.app` and every real pageview goes straight to Railway,
+   bypassing the edge entirely. Check before starting:
+
+   ```bash
+   curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
+   ```
+
+   A proxied response carries `cf-ray` and `server: cloudflare`. If it says
+   `server: railway-hikari` with no `cf-ray`, flip the `www` record to proxied
+   in Cloudflare → DNS first. Encryption mode must be **Full** or **Full
+   (strict)** before you do — on **Flexible** the flip produces an infinite
+   redirect loop, because Cloudflare fetches the origin over HTTP and the app
+   308s it back to HTTPS.
 1. **2a must be deployed and verified before the HTML cache rule goes on.**
    Until the attribution beacon is live, HTML responses can still carry
    `Set-Cookie`, and — worse — the cookie-free responses repeat visitors get are
@@ -21,12 +37,19 @@ silent damage if ignored:
 ## 0. Before touching anything
 
 Confirm the origin is already sending the right headers, or the rules below
-have nothing to defer to:
+have nothing to defer to.
+
+**`-H 'Accept: text/html'` is not optional in any of these commands.** The
+middleware gates both the cookie path and the cache-header path on the request
+advertising `text/html` (`src/middleware.ts:150`, and `:116` on the pre-2a
+code). A bare `curl -sI` sends `Accept: */*`, matches neither gate, and comes
+back clean no matter what the origin is actually doing — it reads as a pass
+while telling you nothing.
 
 ```bash
-curl -sI https://www.seekthethrill.in/            | grep -iE 'cache-control|cdn-cache-control|set-cookie|vary'
-curl -sI https://www.seekthethrill.in/trips/      | grep -i cache-control
-curl -sI https://www.seekthethrill.in/profile     | grep -i cache-control   # expect: private, no-store
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/            | grep -iE 'cache-control|cdn-cache-control|set-cookie|vary'
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/trips/      | grep -i cache-control
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/profile     | grep -i cache-control   # expect: private, no-store
 ```
 
 Expected on the two public pages:
@@ -143,7 +166,7 @@ Anonymous, twice each — the second should be a `HIT`:
 
 ```bash
 for p in / /trips/ /trips/monsoon-meghalaya/; do
-  curl -sI "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
+  curl -sI -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
 done
 ```
 
@@ -151,11 +174,11 @@ Then the cases that must **not** be cached:
 
 ```bash
 # Logged in -> BYPASS, private no-cache, header avatar still renders
-curl -sI -H 'Cookie: user_session=<a real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
+curl -sI -H 'Accept: text/html' -H 'Cookie: user_session=<a real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
 
 # Unpublished album -> 404 and must not be cached; publish it, request again,
 # and it must appear immediately rather than in five minutes.
-curl -sI https://www.seekthethrill.in/photo-vault/<unpublished-slug>/
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/photo-vault/<unpublished-slug>/
 ```
 
 Behavioural checks:

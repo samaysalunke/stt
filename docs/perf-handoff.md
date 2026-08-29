@@ -99,10 +99,24 @@ for the full 5 minutes. Scope the token no wider — nothing else uses it.
 
 This is the first load-bearing ordering constraint.
 
+Railway auto-deploys on pushes to `main` only, so "deploy 2a alone" means
+fast-forwarding `main` to `7832aa5` and pushing that, then merging the rest as a
+second push:
+
+```bash
+git checkout main && git merge --ff-only 7832aa5 && git push origin main
+```
+
+**`-H 'Accept: text/html'` is required in every check below.** The middleware
+gates the cookie path and the cache-header path on the request advertising
+`text/html` (`src/middleware.ts:150`; `:116` on the pre-2a code). A bare
+`curl -sI` sends `Accept: */*`, trips neither gate, and returns clean whatever
+the origin is doing — a false pass.
+
 Deploy up to and including commit `7832aa5`, then:
 
 ```bash
-curl -sI https://www.seekthethrill.in/ | grep -i set-cookie
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -i set-cookie
 ```
 
 **Must return nothing.** If a `set-cookie` is present, stop — the beacon is not
@@ -118,8 +132,8 @@ Commits `acd2734` through `b5e3864`. Then confirm the origin is emitting the
 headers the edge rules will defer to:
 
 ```bash
-curl -sI https://www.seekthethrill.in/       | grep -iE 'cache-control|vary'
-curl -sI https://www.seekthethrill.in/profile | grep -i cache-control   # private, no-store
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/       | grep -iE 'cache-control|cdn-cache|vary'
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/profile | grep -i cache-control   # private, no-store
 ```
 
 Expected on `/`:
@@ -128,6 +142,27 @@ cache-control: public, max-age=0, s-maxage=300
 cdn-cache-control: public, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400
 vary: Accept-Encoding
 ```
+
+## 5b. PRECONDITION — `www` is not proxied
+
+Verified 2026-08-29 and **not yet fixed**. The apex `seekthethrill.in` is
+proxied by Cloudflare and 301s to `www`, but the `www` record is **DNS-only**:
+it CNAMEs to `v9gprqct.up.railway.app`, so every real pageview goes straight to
+Railway and never touches the edge.
+
+```bash
+curl -sI -H 'Accept: text/html' https://www.seekthethrill.in/ | grep -iE 'cf-ray|server'
+# proxied  -> server: cloudflare + cf-ray
+# current  -> server: railway-hikari, no cf-ray
+```
+
+Until the `www` record is flipped to proxied, everything in step 6 is inert:
+the origin emits correct cache headers that nothing caches, and every purge
+clears a cache that holds nothing. Both are harmless no-ops, not errors — which
+is exactly why this is easy to miss.
+
+Encryption mode must be **Full** or **Full (strict)** before flipping (it is
+currently **Full**). On **Flexible** the flip causes an infinite redirect loop.
 
 ## 6. Cloudflare dashboard
 
@@ -150,11 +185,11 @@ Full detail with copy-pasteable expressions is in
 ```bash
 # Twice each; second should be HIT
 for p in / /trips/ /trips/monsoon-meghalaya/; do
-  curl -sI "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
+  curl -sI -H 'Accept: text/html' "https://www.seekthethrill.in$p" | grep -iE 'cf-cache-status|cache-control|set-cookie'
 done
 
 # Logged in -> BYPASS, and the header avatar must still render
-curl -sI -H 'Cookie: user_session=<real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
+curl -sI -H 'Accept: text/html' -H 'Cookie: user_session=<real session>' https://www.seekthethrill.in/ | grep -i cf-cache-status
 ```
 
 Behavioural, and these are the ones that actually matter:
