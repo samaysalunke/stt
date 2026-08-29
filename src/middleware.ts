@@ -17,6 +17,13 @@ const CSRF_CONTENT_TYPES = [
   'text/plain',
 ];
 
+/**
+ * Server-render timing, off by default. Set PERF_TIMING=1 to log one line per
+ * request to stdout (Railway logs). The loader half of this lives in
+ * src/lib/contentCache.ts so instrumentation has a single point, not ten.
+ */
+const PERF_TIMING = process.env.PERF_TIMING === '1';
+
 function firstHeaderValue(value: string | null): string | null {
   return value?.split(',')[0]?.trim() || null;
 }
@@ -212,7 +219,11 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
     locals.adminUser = null;
   }
 
+  const startedAt = PERF_TIMING ? performance.now() : 0;
   const response = await next();
+  if (PERF_TIMING) {
+    console.log(`[perf] ${request.method} ${url.pathname} ${(performance.now() - startedAt).toFixed(1)}ms`);
+  }
   const headers = new Headers(response.headers);
 
   // ── Baseline security headers (all routes) ─────────────────────────────────

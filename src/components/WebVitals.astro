@@ -1,0 +1,41 @@
+---
+// Core Web Vitals → GA4. Rendered from BaseLayout only when `analyticsEnabled
+// && gaId` are already true there — this component assumes gtag() exists and
+// does not re-derive the PROD/!admin gate.
+//
+// Astro components cannot take a `client:` directive (that is framework-island
+// syntax), so the idle behaviour is done explicitly: the bundled module script
+// is deferred by Astro, and the listeners are attached inside
+// requestIdleCallback so nothing competes with the LCP paint.
+//
+// Each metric fires as its own GA4 event named after the metric (LCP, CLS,
+// INP, TTFB). `value` is rounded because GA4 event params are integers; CLS is
+// unitless and tiny, so it is scaled by 1000 first (the convention in
+// web-vitals' own GA4 example) — read CLS in GA4 as thousandths.
+---
+
+<script>
+  import { onCLS, onINP, onLCP, onTTFB, type Metric } from 'web-vitals';
+
+  function report(metric: Metric) {
+    const gtag = (window as any).gtag;
+    if (typeof gtag !== 'function') return;
+    gtag('event', metric.name, {
+      value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+      metric_id: metric.id,
+      metric_value: metric.value,
+      metric_rating: metric.rating,
+      non_interaction: true,
+    });
+  }
+
+  function start() {
+    onLCP(report);
+    onCLS(report);
+    onINP(report);
+    onTTFB(report);
+  }
+
+  if ('requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 3000 });
+  else setTimeout(start, 0);
+</script>

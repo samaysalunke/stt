@@ -15,6 +15,7 @@
     "test": "npm run test:unit && npm run test:api && npm run test:e2e",
     "test:report": "npm run test && node tests/write-report.mjs",
     "test:watch": "vitest",
+    "perf:lhci": "npx @lhci/cli autorun",
     "backfill:profile-stats": "node scripts/backfill-profile-stats.mjs"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.1",
     "uuid": "^13.0.0",
+    "web-vitals": "^6.2.1",
     "yaml": "^2.8.2"
   },
   "devDependencies": {
