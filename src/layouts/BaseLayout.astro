@@ -101,6 +101,39 @@ const orgSchema = {
 
     <slot name="head" />
 
+    <!--
+      First/latest-touch attribution. This used to be set by middleware on the
+      HTML response itself, which cannot coexist with edge caching — see the
+      comment in src/pages/api/attribution.ts. Fires once per session (not per
+      pageview) via a sessionStorage flag, and only on public pages.
+    -->
+    <script is:inline>
+      (function () {
+        try {
+          if (sessionStorage.getItem('stt_attr') === '1') return;
+          var p = location.pathname;
+          if (p.indexOf('/admin') === 0 || p.indexOf('/api') === 0) return;
+          var body = JSON.stringify({
+            landingPage: p,
+            search: location.search,
+            referrer: document.referrer,
+          });
+          var done = function () { try { sessionStorage.setItem('stt_attr', '1'); } catch (e) {} };
+          if (navigator.sendBeacon &&
+              navigator.sendBeacon('/api/attribution', new Blob([body], { type: 'application/json' }))) {
+            done();
+          } else {
+            fetch('/api/attribution', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: body,
+              keepalive: true,
+            }).then(function (r) { if (r.ok) done(); }).catch(function () {});
+          }
+        } catch (e) { /* attribution is best-effort */ }
+      })();
+    </script>
+
     {analyticsEnabled && gaId && (
       <>
         <!-- Google tag (gtag.js) -->

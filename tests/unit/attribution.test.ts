@@ -5,6 +5,7 @@ import {
   attributionSource,
   hasCampaignTouch,
   readAttribution,
+  sameOriginLandingPath,
 } from '../../src/lib/attribution';
 
 describe('conversion attribution', () => {
@@ -31,6 +32,24 @@ describe('conversion attribution', () => {
     expect(hasCampaignTouch(external, 'https://www.seekthethrill.in')).toBe(true);
     expect(hasCampaignTouch(internal, 'https://www.seekthethrill.in')).toBe(false);
     expect(attributionSource(external).source).toBe('google.com');
+  });
+
+  // The landing page now arrives from the client beacon instead of the request
+  // URL, so it has to be pinned to our own origin before it is stored.
+  it('keeps a client-supplied landing page on our own origin', () => {
+    const base = 'https://www.seekthethrill.in';
+
+    expect(sameOriginLandingPath('/trips/ladakh/')).toBe('/trips/ladakh/');
+    expect(sameOriginLandingPath('https://evil.example/x')).toBe('/');
+    expect(sameOriginLandingPath('trips/')).toBe('/');
+    expect(sameOriginLandingPath('')).toBe('/');
+    // Protocol-relative and backslash forms must not survive as a host.
+    expect(sameOriginLandingPath('//evil.example/x')).toBe('/evil.example/x');
+    expect(sameOriginLandingPath('/\\evil.example/x')).toBe('/evil.example/x');
+
+    for (const hostile of ['https://evil.example/x', '//evil.example/x', '/\\evil.example/x']) {
+      expect(new URL(sameOriginLandingPath(hostile), base).origin).toBe(base);
+    }
   });
 
   it('fails closed when attribution cookies are malformed', () => {

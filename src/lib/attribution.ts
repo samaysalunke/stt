@@ -28,6 +28,23 @@ export function attributionFromRequest(url: URL, request: Request): AttributionT
   };
 }
 
+/**
+ * Force a client-supplied landing path to be a same-origin path.
+ *
+ * Used by POST /api/attribution, where the landing page arrives from the page
+ * instead of from the request URL. Resolving against our origin is not enough
+ * on its own: an absolute ("https://elsewhere/x") or protocol-relative
+ * ("//elsewhere/x") value wins over the base and would put an off-site URL in
+ * the stored touch, which the admin attribution views then display. Anything
+ * that is not plainly a path collapses to "/". Backslashes are slash-equivalent
+ * to the URL parser, so they collapse too.
+ */
+export function sameOriginLandingPath(value: string): string {
+  if (!value.startsWith('/')) return '/';
+  const collapsed = `/${value.replace(/^[/\\]+/, '')}`;
+  return collapsed.startsWith('//') ? '/' : collapsed;
+}
+
 export function hasCampaignTouch(touch: AttributionTouch, siteOrigin: string): boolean {
   if (touch.utmSource || touch.utmMedium || touch.utmCampaign) return true;
   if (!touch.referrer) return false;
