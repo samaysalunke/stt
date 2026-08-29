@@ -43,6 +43,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const featuredFile = body.get('featuredImage') as File | null;
   if (featuredFile && featuredFile.size > 0) {
     featuredImage = await saveImageFile(featuredFile, 'images/trips', `${slug}-featured`);
+    // Deterministic filename: this overwrites any existing cover at the same
+    // URL, so the edge copy of that URL has to go with it.
+    await purgeUrls([featuredImage]);
   }
 
   const gallery = parseGallery(body.get('gallery_json'));

@@ -21,6 +21,8 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const coverFile = body.get('coverImage') as File | null;
   if (coverFile && coverFile.size > 0) {
     coverImage = await saveImageFile(coverFile, 'images/albums', `${slug}-cover`);
+    // Deterministic filename — overwrites in place, so purge the old copy.
+    await purgeUrls([coverImage]);
   }
 
   const data: Record<string, any> = {
