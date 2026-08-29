@@ -139,3 +139,17 @@ test('TC-199 Zoho document worker rejects requests without its bearer secret', a
   const res = await fetch(`${BASE}/api/jobs/zoho-documents`, { method: 'POST' });
   assert.equal(res.status, 401);
 });
+
+test('TC-199a Telegram worker rejects requests without the bot-token bearer secret', async () => {
+  const res = await fetch(`${BASE}/api/jobs/telegram-notifications`, { method: 'POST' });
+  const body = await res.text();
+  assert.equal(res.status, 401);
+  assert.doesNotMatch(body, /TELEGRAM_BOT_TOKEN|bot\d+:/i);
+});
+
+test('TC-199b Telegram test endpoint rejects unauthenticated requests without leaking configuration', async () => {
+  const res = await fetch(`${BASE}/api/admin/test-telegram`, { method: 'POST', redirect: 'manual' });
+  const body = await res.text();
+  assert.ok(res.status === 401 || (res.status >= 300 && res.status < 400));
+  assert.doesNotMatch(body, /TELEGRAM_BOT_TOKEN|bot\d+:/i);
+});

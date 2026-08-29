@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         age:r.age||null, gender:r.gender||null, city:r.city||null, instagram:r.instagram||null,
         emergency_name:r.emergency_name||null, emergency_phone:r.emergency_phone||null, why_join:r.why_join||null,
         status:r.status, admin_notes:'Imported by admin', created_at:r.created_at||null, consent_at:r.consent_at||null },
-        { sendEmail, skipCapacity:p.selection!.is_past || capacityOverride });
+        { sendEmail, skipCapacity:p.selection!.is_past || capacityOverride, notifyTelegram:false });
       if (!inserted.ok) { p.action=inserted.error==='duplicate'?'skip':'error'; p.reason=inserted.message||'Insert failed'; continue; }
       created++;
     }

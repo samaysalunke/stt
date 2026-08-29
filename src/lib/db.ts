@@ -387,6 +387,30 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE invoice_documents ADD COLUMN retainer_applied_at TEXT'); } catch {}
   try { db.exec('ALTER TABLE invoice_documents ADD COLUMN balance_recorded_at TEXT'); } catch {}
 
+  // Idempotent Telegram lifecycle notifications. Rows are created only when a
+  // live booking enters lead/confirmed; the unique key deliberately survives
+  // later status changes so the same event can never be sent twice.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_notification_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK(event_type IN ('lead','confirmed')),
+      status TEXT NOT NULL DEFAULT 'queued'
+        CHECK(status IN ('queued','dispatching','retry_wait','sent','uncertain','failed')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      telegram_message_id TEXT,
+      last_error TEXT,
+      next_attempt_at DATETIME,
+      event_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      UNIQUE(registration_id, event_type)
+    );
+    CREATE INDEX IF NOT EXISTS telegram_notification_events_pending
+      ON telegram_notification_events(status, next_attempt_at, created_at);
+  `);
+
   // Soft-delete tombstones for trips. The YAML file stays on disk (on the
   // content volume); a row here hides the trip everywhere. Restore = delete
   // the row. Lives on the DATA_DIR volume so it survives deploys/re-seeds.

@@ -6,6 +6,7 @@ import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../l
 import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
 import { attributionSource, readAttribution } from '../../lib/attribution';
+import { dispatchTelegramEvent, enqueueTelegramEvent } from '../../lib/telegram';
 
 const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
 
@@ -25,17 +26,18 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
   sharingOption: string | null; totalAmount: number; batchId: string; tierId: string;
   firstTouchJson: string; latestTouchJson: string;
   source: string; sourceDetail: string | null;
-}): { id: number; isNew: boolean } {
+}): { id: number; isNew: boolean; telegramQueued: boolean } {
+  return db.transaction(() => {
   // Adopt an existing lead row, OR a wishlist row for the same identity+departure
   // (the traveller wishlisted this date and it has since opened — upgrade the same
   // row in place, keeping created_at and wishlisted_at as history).
   const existing = db.prepare(`
-    SELECT id FROM registrations
+    SELECT id, status FROM registrations
     WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ? AND batch_id = ?
       AND status IN ('lead', 'wishlist')
     ORDER BY CASE status WHEN 'lead' THEN 0 ELSE 1 END
     LIMIT 1
-  `).get(p.email, p.tripSlug, p.batchId) as { id: number } | undefined;
+  `).get(p.email, p.tripSlug, p.batchId) as { id: number; status: string } | undefined;
 
   if (existing) {
     db.prepare(`
@@ -56,7 +58,9 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
       p.source, p.sourceDetail, p.firstTouchJson, p.latestTouchJson,
       existing.id,
     );
-    return { id: existing.id, isNew: false };
+    const telegramQueued = existing.status === 'wishlist'
+      ? enqueueTelegramEvent(db, existing.id, 'lead') : false;
+    return { id: existing.id, isNew: false, telegramQueued };
   }
 
   const insert = db.prepare(`
@@ -72,7 +76,10 @@ function findOrCreateLead(db: ReturnType<typeof getDb>, p: {
     p.whyJoin, p.sharingOption, p.totalAmount, p.batchId, p.tierId,
     p.source, p.sourceDetail, p.firstTouchJson, p.latestTouchJson,
   );
-  return { id: Number(insert.lastInsertRowid), isNew: true };
+  const id = Number(insert.lastInsertRowid);
+  const telegramQueued = enqueueTelegramEvent(db, id, 'lead');
+  return { id, isNew: true, telegramQueued };
+  })();
 }
 
 function saveState(db: ReturnType<typeof getDb>, id: number, travellerState: string) {
@@ -182,7 +189,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
     }
 
     if (!submittingPayment) {
-      const { id: leadId, isNew } = findOrCreateLead(db, {
+      const { id: leadId, isNew, telegramQueued } = findOrCreateLead(db, {
         tripName, tripSlug, tripDateStr, fullName: required.fullName, email: required.email, phone: required.phone,
         gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
         emergencyName: required.emergencyName, emergencyPhone: required.emergencyPhone, whyJoin: required.whyJoin,
@@ -218,6 +225,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
         if (required.city) geocodeCity(required.city).catch(() => {});
       }
 
+      if (telegramQueued) await dispatchTelegramEvent(leadId, 'lead').catch((err) => console.error('[Telegram lead]', err));
+
       return json({ success: true, status: 'lead', registrationId: leadId });
     }
 
@@ -235,8 +244,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
       LIMIT 1
     `).get(required.email, tripSlug, batchId);
 
-    const leadId = (!hasLeadRow && existingPaid?.status === 'pending')
-      ? existingPaid.id
+    const leadResult = (!hasLeadRow && existingPaid?.status === 'pending')
+      ? { id: existingPaid.id, telegramQueued: false }
       : findOrCreateLead(db, {
           tripName, tripSlug, tripDateStr, fullName: required.fullName, email: required.email, phone: required.phone,
           gender: sanitizeInput(body.gender) || null, age: required.age, city: required.city, instagram,
@@ -244,7 +253,8 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
           sharingOption, totalAmount, batchId, tierId: selectedOffer.tierId,
           firstTouchJson, latestTouchJson,
           source: marketingSource.source, sourceDetail: marketingSource.detail,
-        }).id;
+        });
+    const leadId = leadResult.id;
 
     db.prepare(`
       UPDATE registrations SET
@@ -284,6 +294,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
     });
 
     if (required.city) geocodeCity(required.city).catch(() => {});
+    if (leadResult.telegramQueued) await dispatchTelegramEvent(leadId, 'lead').catch((err) => console.error('[Telegram lead]', err));
     return json({ success: true, status: 'pending', registrationId: leadId });
   } catch (err) {
     console.error('[Register API Error]', err);

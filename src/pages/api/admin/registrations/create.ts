@@ -5,6 +5,7 @@ import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../.
 import { logAction } from '../../../../lib/audit';
 import { createRegistration, type RegStatus } from '../../../../lib/registrationWrite';
 import { jsonOk, jsonFail as fail } from '../../../../lib/apiResponse';
+import { dispatchTelegramEvent } from '../../../../lib/telegram';
 
 const CREATE_STATUSES: RegStatus[] = ['lead', 'pending', 'confirmed'];
 
@@ -92,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status,
         admin_notes: sanitizeInput(body.admin_notes) || 'Added by admin',
       },
-      { sendEmail, skipCapacity: sel.is_past },
+      { sendEmail, skipCapacity: sel.is_past, notifyTelegram: !sel.is_past },
     );
 
     if (!result.ok) {
@@ -109,6 +110,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       targetId: String(result.id),
       newValue: { trip: sel.trip_name, status, source: 'admin-single' },
     });
+
+    if (result.id && result.telegramEvent) {
+      await dispatchTelegramEvent(result.id, result.telegramEvent).catch((err) => console.error('[Telegram admin create]', err));
+    }
 
     return jsonOk({ success: true, id: result.id });
   } catch (err) {

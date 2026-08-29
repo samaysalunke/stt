@@ -33,6 +33,8 @@ interface ImportMetaEnv {
   readonly ZOHO_RETAINER_TEMPLATE_ID?: string;
   readonly ZOHO_INVOICE_TEMPLATE_ID?: string;
   readonly ZOHO_JOB_SECRET?: string;
+  readonly TELEGRAM_BOT_TOKEN?: string;
+  readonly TELEGRAM_ADMIN_CHAT_ID?: string;
   readonly ANALYTICS_LLM_PROVIDER?: 'anthropic' | 'openai' | 'test';
   readonly ANALYTICS_LLM_MODEL?: string;
   readonly ANALYTICS_LLM_API_KEY?: string;

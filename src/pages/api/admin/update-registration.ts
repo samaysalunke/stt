@@ -19,6 +19,7 @@ import {
 } from '../../../lib/paymentLedger';
 import { processZohoDocument } from '../../../lib/zohoBooks';
 import { assertTransition, ADMIN_SETTABLE_STATUSES } from '../../../lib/registrationStatus';
+import { dispatchTelegramEvent, enqueueTelegramEvent, type TelegramEventType } from '../../../lib/telegram';
 
 const bad = (error: string, status = 400) =>
   new Response(JSON.stringify({ success: false, error }), { status, headers: { 'Content-Type': 'application/json' } });
@@ -138,9 +139,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // ── Status write ─────────────────────────────────────────────────────
-    getDb()
-      .prepare('UPDATE registrations SET status=?, admin_notes=?, status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?')
-      .run(newStatus, adminNotes, id);
+    const telegramEvent = (newStatus === 'lead' || newStatus === 'confirmed')
+      ? newStatus as TelegramEventType : null;
+    const telegramQueued = getDb().transaction(() => {
+      getDb()
+        .prepare('UPDATE registrations SET status=?, admin_notes=?, status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+        .run(newStatus, adminNotes, id);
+      return telegramEvent ? enqueueTelegramEvent(getDb(), id, telegramEvent) : false;
+    })();
 
     let effectivePaymentStatus = reg.payment_status as string;
     let confirmQueuedDoc = false;
@@ -289,6 +295,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         refund: refundResult ? { kind: refundBody?.kind, amount: Number(refundBody?.amount) || 0 } : undefined,
       },
     });
+
+    if (telegramQueued && telegramEvent) {
+      await dispatchTelegramEvent(id, telegramEvent).catch((err) => console.error('[Telegram status]', err));
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

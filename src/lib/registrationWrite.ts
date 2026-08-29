@@ -5,6 +5,7 @@ import { sendRegistrationPaymentConfirmed } from './email';
 import { recordPayment, zohoMode } from './paymentLedger';
 import { processZohoDocument } from './zohoBooks';
 import { derivePaymentStatus } from './registrationStatus';
+import { enqueueTelegramEvent } from './telegram';
 
 export type RegStatus = 'wishlist' | 'lead' | 'pending' | 'confirmed' | 'rejected';
 
@@ -130,6 +131,7 @@ export interface CreateRegistrationInput {
 export interface CreateResult {
   ok: boolean;
   id?: number;
+  telegramEvent?: 'lead' | 'confirmed';
   error?: 'duplicate' | 'capacity_full' | 'db_error';
   message?: string;
 }
@@ -144,7 +146,7 @@ export interface CreateResult {
  */
 export function createRegistration(
   input: CreateRegistrationInput,
-  opts: { sendEmail?: boolean; skipCapacity?: boolean; extraConfirmedInTier?: number } = {},
+  opts: { sendEmail?: boolean; skipCapacity?: boolean; extraConfirmedInTier?: number; notifyTelegram?: boolean } = {},
 ): CreateResult {
   const db = getDb();
 
@@ -168,31 +170,36 @@ export function createRegistration(
   const advance = input.total_amount > 0 ? Math.min(configuredAdvance, input.total_amount) : configuredAdvance;
 
   try {
-    const res = db.prepare(`
-      INSERT INTO registrations (
-        trip_name, trip_slug, trip_date, full_name, email, phone, gender,
-        age, city, instagram, emergency_name, emergency_phone,
-        why_join, sharing_option, total_amount, batch_id, tier_id,
-        amount_paid, payment_date, status, admin_notes, source, created_at, consent_at
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(
-      input.trip_name, input.trip_slug, input.trip_date,
-      input.full_name, input.email, input.phone, input.gender ?? null,
-      input.age ?? null, input.city ?? null, input.instagram ?? null,
-      // emergency_name/phone are NOT NULL in the schema — admin rows may omit them.
-      input.emergency_name ?? '', input.emergency_phone ?? '',
-      input.why_join ?? null, input.sharing_option, input.total_amount,
-      input.batch_id, input.tier_id,
-      0, null,
-      input.status, input.admin_notes ?? null, 'admin', input.created_at ?? new Date().toISOString(), input.consent_at ?? null,
-    );
-    const id = Number(res.lastInsertRowid);
+    const { id, telegramEvent } = db.transaction(() => {
+      const res = db.prepare(`
+        INSERT INTO registrations (
+          trip_name, trip_slug, trip_date, full_name, email, phone, gender,
+          age, city, instagram, emergency_name, emergency_phone,
+          why_join, sharing_option, total_amount, batch_id, tier_id,
+          amount_paid, payment_date, status, status_changed_at, admin_notes, source, created_at, consent_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,?,?)
+      `).run(
+        input.trip_name, input.trip_slug, input.trip_date,
+        input.full_name, input.email, input.phone, input.gender ?? null,
+        input.age ?? null, input.city ?? null, input.instagram ?? null,
+        // emergency_name/phone are NOT NULL in the schema — admin rows may omit them.
+        input.emergency_name ?? '', input.emergency_phone ?? '',
+        input.why_join ?? null, input.sharing_option, input.total_amount,
+        input.batch_id, input.tier_id,
+        0, null,
+        input.status, input.admin_notes ?? null, 'admin', input.created_at ?? new Date().toISOString(), input.consent_at ?? null,
+      );
+      const id = Number(res.lastInsertRowid);
 
-    // payment_status: derived from what this create records (advance on the
-    // confirmed path, nothing otherwise) vs the trip total.
-    const recordedAmount = input.status === 'confirmed' ? Math.max(0, advance) : 0;
-    db.prepare('UPDATE registrations SET payment_status=? WHERE id=?')
-      .run(derivePaymentStatus({ amount_paid: recordedAmount, total_amount: input.total_amount }), id);
+      // payment_status: derived from what this create records (advance on the
+      // confirmed path, nothing otherwise) vs the trip total.
+      const recordedAmount = input.status === 'confirmed' ? Math.max(0, advance) : 0;
+      db.prepare('UPDATE registrations SET payment_status=? WHERE id=?')
+        .run(derivePaymentStatus({ amount_paid: recordedAmount, total_amount: input.total_amount }), id);
+      const event = opts.notifyTelegram && (input.status === 'lead' || input.status === 'confirmed')
+        && enqueueTelegramEvent(db, id, input.status) ? input.status : undefined;
+      return { id, telegramEvent: event as 'lead' | 'confirmed' | undefined };
+    })();
 
     if (input.status === 'confirmed') {
       let queuedDoc = false;
@@ -227,7 +234,7 @@ export function createRegistration(
       }
     }
 
-    return { ok: true, id };
+    return { ok: true, id, telegramEvent };
   } catch (e) {
     console.error('[createRegistration]', e);
     return { ok: false, error: 'db_error', message: 'Database error.' };
