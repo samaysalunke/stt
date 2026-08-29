@@ -1,4 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
+import type { AstroCookies } from 'astro';
 import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
@@ -74,6 +75,94 @@ function assertSameOriginPost(url: URL, request: Request): Response | null {
   }
 
   return null;
+}
+
+/** Seconds the edge may serve a public HTML page before revalidating. */
+const HTML_S_MAXAGE = 300;
+/** Feeds change less often and are cheap to regenerate. */
+const FEED_S_MAXAGE = 3600;
+
+/**
+ * Public pages the edge is allowed to cache. Exact paths, plus the two prefixes
+ * whose detail pages are equally public. Anything not listed here defaults to
+ * uncached, which is the safe direction.
+ */
+const CACHEABLE_EXACT = new Set([
+  '/', '/trips/', '/about/', '/faq/', '/contact/',
+  '/custom-itineraries/', '/privacy/', '/terms/', '/cancellation/',
+]);
+const CACHEABLE_PREFIXES = ['/trips/', '/photo-vault/'];
+
+/** Never cacheable: personal, transactional, or authenticated surfaces. */
+const NO_STORE_PREFIXES = ['/profile', '/admin', '/api/', '/login', '/leaderboard', '/u/'];
+
+function isCacheablePath(pathname: string): boolean {
+  if (CACHEABLE_EXACT.has(pathname)) return true;
+  // /trips/<slug>/ yes, /trips/<slug>/book no — the booking flow is personal.
+  if (pathname.endsWith('/book') || pathname.endsWith('/book/')) return false;
+  return CACHEABLE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+/**
+ * Decide what a shared cache may do with this response.
+ *
+ * The Cloudflare rule is configured to defer to these headers ("use
+ * cache-control header if present, bypass if not"), which makes the four
+ * guards below authoritative rather than advisory:
+ *
+ *   - status must be 200. An unpublished album and an unknown trip slug both
+ *     return a bare 404; caching those means publishing looks broken for the
+ *     full TTL.
+ *   - no Set-Cookie on the response. A shared cache would hand one visitor's
+ *     cookie to everyone. (2a removed the last routine source of these on
+ *     public HTML.)
+ *   - no session cookie on the request. A logged-in render embeds the user in
+ *     the header, so it differs per visitor. There is also a cookie-bypass rule
+ *     at the edge; this is the second layer, deliberately, because a rule
+ *     misconfiguration would otherwise leak a header avatar.
+ *   - the path must be on the allow-list above.
+ *
+ * s-maxage is the guaranteed contract. stale-while-revalidate and
+ * stale-if-error are progressive enhancement — honoured on higher Cloudflare
+ * tiers, ignored gracefully below.
+ */
+function applyCacheHeaders({ url, request, response, headers, cookies }: {
+  url: URL;
+  request: Request;
+  response: Response;
+  headers: Headers;
+  cookies: AstroCookies;
+}): void {
+  const path = url.pathname;
+
+  if (path === '/feed.xml' || path === '/sitemap.xml') {
+    headers.set('Cache-Control', `public, max-age=0, s-maxage=${FEED_S_MAXAGE}`);
+    headers.set('CDN-Cache-Control', `public, s-maxage=${FEED_S_MAXAGE}, stale-while-revalidate=86400`);
+    return;
+  }
+
+  if (NO_STORE_PREFIXES.some((prefix) => path.startsWith(prefix)) || path.endsWith('/book') || path.endsWith('/book/')) {
+    headers.set('Cache-Control', 'private, no-store');
+    return;
+  }
+
+  const hasSession = !!cookies.get('user_session')?.value || !!cookies.get('admin_token')?.value;
+  const isHtmlGet = request.method === 'GET' && (request.headers.get('accept') ?? '').includes('text/html');
+
+  if (hasSession) {
+    // I3, second layer: a logged-in render is per-visitor, whatever the path.
+    headers.set('Cache-Control', 'private, no-cache');
+    return;
+  }
+
+  if (isHtmlGet && response.status === 200 && !headers.has('set-cookie') && isCacheablePath(path)) {
+    headers.set('Cache-Control', `public, max-age=0, s-maxage=${HTML_S_MAXAGE}`);
+    headers.set(
+      'CDN-Cache-Control',
+      `public, s-maxage=${HTML_S_MAXAGE}, stale-while-revalidate=86400, stale-if-error=86400`,
+    );
+    headers.set('Vary', 'Accept-Encoding');
+  }
 }
 
 export const onRequest = defineMiddleware(async ({ url, request, cookies, locals, redirect }, next) => {
@@ -237,9 +326,8 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
     url.pathname.startsWith('/keystatic/') || url.pathname === '/profile' || url.pathname.startsWith('/profile/') ||
     url.pathname.startsWith('/login/') || url.pathname.startsWith('/unsubscribe/');
   if (privateRoute) headers.set('X-Robots-Tag', 'noindex, nofollow');
-  if (url.pathname === '/profile' || url.pathname.startsWith('/profile/')) {
-    headers.set('Cache-Control', 'private, no-store');
-  }
+
+  applyCacheHeaders({ url, request, response, headers, cookies });
 
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 });
