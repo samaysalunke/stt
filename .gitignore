@@ -35,3 +35,4 @@ test-reports/
 # caveman skill tooling (local)
 .agents/
 skills-lock.json
+.lighthouseci/

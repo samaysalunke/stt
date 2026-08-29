@@ -5,14 +5,14 @@ implementation as of 2026-08-29.
 
 ## Checkpoint
 
-- **Branch:** `perf/edge-cache-chain` (7 commits, branched from `main` at `077b0d8`)
+- **Branch:** `perf/edge-cache-chain` (9 commits, branched from `main` at `077b0d8`)
 - **Not pushed. No PR.** Working tree clean apart from the pre-existing untracked `public/mockups/`.
 - **Scope agreed for this pass:** the plan's own priority chain `0 → 1 → 2a → 2b → 2e → 3a`. Phases 3b/3c/3d, 4 and 5 were deliberately left out.
 
 Verify the checkpoint before continuing:
 
 ```bash
-git log --oneline main..HEAD     # expect the 7 commits below
+git log --oneline main..HEAD     # expect the commits below, plus this doc and the baseline
 npm run build                    # green
 npx vitest run                   # 262 pass
 npm run test:api                 # 142 pass
@@ -56,9 +56,9 @@ Also pre-existing: two `tsc --noEmit` errors in `src/lib/safeMarkdown.ts:18` and
 
 ## Pending — code
 
-One item only, and it is optional:
+Nothing. The last open item is now closed:
 
-- **Phase 0 baseline never captured.** `npm run perf:lhci` exists but was never run, so there is no "before" number for `/`, `/trips/`, `/trips/<slug>`. Worth running before deploying anything, since afterwards the baseline is gone.
+- ~~**Phase 0 baseline never captured.**~~ Captured 2026-08-29 for both `main` @ `077b0d8` and this branch. Numbers, method and how to read them: **`docs/perf-baseline.md`**. Headline: origin TTFB 4-9x faster on the branch (Phase 1's content cache); LCP unchanged within noise; nothing local measures Phase 2.
 
 Everything else pending is out of the agreed scope: Phase 3b (Track A + `ResponsiveImage.astro` when it happens — not the Track B variant pipeline), 3c self-hosted heroes, 3d R2, Phase 4 (fonts, dead code, countdown collapse, prefetch), Phase 5 (DB indexes, admin-session throttle).
 
@@ -69,14 +69,15 @@ Everything else pending is out of the agreed scope: Phase 3b (Track A + `Respons
 Nothing here is code. The ordering is load-bearing — two of these cause silent
 damage if done out of sequence.
 
-## 1. Capture the baseline first (optional, but one-way)
+## 1. Capture the baseline first — DONE, skip
 
-```bash
-npm run build && npm run perf:lhci
-```
+Already captured for both branches on 2026-08-29; see `docs/perf-baseline.md`.
+Raw reports sit in `test-reports/lighthouse-main/` and
+`test-reports/lighthouse-branch/`, which are gitignored — copy them out before
+any clean if the numbers matter to you.
 
-Report lands in `test-reports/lighthouse/`. Once caching is on, the "before"
-number cannot be recovered.
+Re-running `npm run perf:lhci` now overwrites `test-reports/lighthouse/` with a
+fresh branch run. Harmless, but it adds nothing.
 
 ## 2. Push and open the PR
 
