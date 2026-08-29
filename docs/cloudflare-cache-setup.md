@@ -170,6 +170,35 @@ oversized file stays oversized in dimensions. Per-viewport sizing needs either
 Cloudflare Image Resizing (paid add-on) or the variant pipeline, both of which
 are deferred out of this pass.
 
+## 6b. Dashboard traps — read before creating any rule
+
+Both of these cost real time on the first run-through (2026-08-29).
+
+**The expression editor, not the builder.** "Create rule" opens a
+Field / Operator / Value builder. Pasting a Wireshark expression into the
+**Value** box does not parse it — Cloudflare wraps the whole thing as a literal
+string and the Expression Preview reads:
+
+```
+(http.request.full_uri wildcard r#"starts_with(http.request.uri.path, "/images/")"#)
+```
+
+That matches nothing. The rule deploys, shows **Active**, and is completely
+inert. Click **Edit expression** (top-right of the preview) first, then paste.
+Correct state is the preview showing your own text with no `full_uri wildcard
+r#"` wrapper — and the character count dropping.
+
+Verify from the Cache Rules list rather than the editor: the **Match against**
+column shows parsed conditions ("URI Path starts with /_astro/") for a good
+rule, and the raw wrapped string for a broken one.
+
+**The "may not apply to your traffic" dialog is a false positive** on rules 3,
+4 and 5. Cloudflare tries to extract a hostname from the expression to check for
+a proxied DNS record; those rules are path- or cookie-only, so there is nothing
+to find. Choose **Ignore and deploy rule anyway**. Never "Create a new proxied
+DNS record" — that adds a junk record. Rule 2 does not warn, because it carries
+`http.host`.
+
 ## 7. Verify
 
 Anonymous, twice each — the second should be a `HIT`:
@@ -190,6 +219,32 @@ curl -s -D - -o /dev/null -H 'Accept: text/html' -H 'Cookie: user_session=<a rea
 # and it must appear immediately rather than in five minutes.
 curl -s -D - -o /dev/null -H 'Accept: text/html' https://www.seekthethrill.in/photo-vault/<unpublished-slug>/
 ```
+
+**Reading `cf-cache-status` correctly.** Two things look like failures and are
+not:
+
+- **Intermittent `MISS` on a page that just returned `HIT`.** A Cloudflare POP
+  has many machines, each with its own cache; consecutive requests land on
+  different ones. Compare the `cf-ray` suffix — it differs. Repeat 5-8 times and
+  look for a majority of `HIT` with a rising `age`, rather than expecting two
+  requests to prove anything. Tiered Cache (step 6) reduces this.
+- **`DYNAMIC` rather than `BYPASS`** on a logged-in request. The bypass rule is
+  still doing the work; Cloudflare simply reports it this way here.
+
+To prove the bypass rule fires **on its own**, rather than the origin's
+`private, no-cache` masking an inert rule, send a cookie whose name merely
+contains the substring:
+
+```bash
+curl -s -D - -o /dev/null -H 'Accept: text/html' -H 'Cookie: xuser_sessionx=1' \
+  https://www.seekthethrill.in/ | grep -iE 'cf-cache-status|cache-control'
+```
+
+Cloudflare's `contains` matches the substring, but the origin parses a different
+cookie name and so sends `public, max-age=0, s-maxage=300`. A cacheable response
+that still does not cache proves the rule alone is responsible. (Verified
+2026-08-29.) Note this also means the rule bypasses on any cookie *containing*
+`user_session` — broader than intended, erring safe.
 
 Behavioural checks:
 

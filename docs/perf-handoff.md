@@ -3,10 +3,29 @@
 Point a new session at this file. It is the state of `PERFORMANCE-PLAN.md`
 implementation as of 2026-08-29.
 
+## Status: DEPLOYED AND VERIFIED — 2026-08-29
+
+The code chain and the Cloudflare dashboard work are both done and verified in
+production. What remains is listed under "Still outstanding" at the bottom; it is
+all admin-login or GA4 work that cannot be done from a shell.
+
+Deployment log:
+
+| Step | State |
+|---|---|
+| Baseline captured (`main` + branch) | done — `docs/perf-baseline.md` |
+| Branch pushed, PR #15 | **merged** into `main` via fast-forward |
+| `CF_ZONE_ID` + `CF_PURGE_TOKEN` on Railway | set |
+| 2a deployed alone and gated | done — no `Set-Cookie`, beacon live, `/api/attribution` 200 |
+| Rest deployed (`acd2734`..`d57f38c`) | done — origin headers verified |
+| `www` flipped to proxied | done — `cf-ray … BOM`, `server: cloudflare`, no 525, no loop |
+| 4 Cache Rules | done — HIT on HTML/assets/images, bypass verified independently |
+| Zone settings | see step 6 |
+
 ## Checkpoint
 
-- **Branch:** `perf/edge-cache-chain` (9 commits, branched from `main` at `077b0d8`)
-- **Not pushed. No PR.** Working tree clean apart from the pre-existing untracked `public/mockups/`.
+- **Branch:** `perf/edge-cache-chain` (9 commits, branched from `main` at `077b0d8`), merged to `main`.
+- Working tree clean apart from the pre-existing untracked `public/mockups/`.
 - **Scope agreed for this pass:** the plan's own priority chain `0 → 1 → 2a → 2b → 2e → 3a`. Phases 3b/3c/3d, 4 and 5 were deliberately left out.
 
 Verify the checkpoint before continuing:
@@ -64,10 +83,44 @@ Everything else pending is out of the agreed scope: Phase 3b (Track A + `Respons
 
 ---
 
+# Still outstanding
+
+Everything below this line under "Your manual steps" has been **done and
+verified** except the following, which need an admin login or GA4 and so could
+not be done from a shell:
+
+1. **Behavioural purge tests (step 7).** Nothing has yet exercised
+   `CF_PURGE_TOKEN` end to end. All five matter, and the image one most of all —
+   with a 1-year edge TTL now live, a silently failing purge pins a replaced
+   image effectively forever:
+   - unpublished album → publish → must appear immediately, not in 5 minutes
+   - fill a test trip's last seat by confirming a registration → `/` and
+     `/trips/` show sold-out within seconds
+   - **repeat via admin → registrations → create with status `confirmed`** —
+     the second counter path, the one the plan originally missed
+   - edit a trip in admin → visible within seconds
+   - re-upload a trip's featured image → changes in a browser that had the old one
+
+   If any takes the full five minutes, the purge is a no-op: check `CF_ZONE_ID`
+   and `CF_PURGE_TOKEN` on Railway first.
+
+2. **Attribution lead test (step 4).** Submit a lead from a fresh browser or
+   private window and confirm the registration row has source/medium/landing
+   path populated. The beacon fires once per session behind a `sessionStorage`
+   flag (`stt_attr`), so a reload will not re-fire it. A 200 from
+   `/api/attribution` only proves the endpoint accepts a POST.
+
+3. **GA4 numbers (step 8)** — pageviews/day and the `/` : `/trips/` :
+   `/trips/<slug>` split, to frame the work as a latency win rather than a
+   capacity one. The baseline supports the latency reading:
+   origin TTFB was already 10-30ms on `main`.
+
+---
+
 # Your manual steps, in order
 
-Nothing here is code. The ordering is load-bearing — two of these cause silent
-damage if done out of sequence.
+Kept for the record and for the next environment. The ordering is load-bearing —
+two of these cause silent damage if done out of sequence.
 
 ## 1. Capture the baseline first — DONE, skip
 
@@ -180,8 +233,9 @@ Full detail with copy-pasteable expressions is in
    curl -sI https://www.seekthethrill.in/images/<a-trip>-featured.webp | grep -i cache-control
    ```
    Must say `max-age=86400, stale-while-revalidate=604800`. If it still says `immutable`, 3a is not deployed — adding this rule now makes the bug permanent at the edge.
-5. **Zone settings:** Brotli on, HTTP/3 on, Early Hints on, Tiered Cache (Smart Tiering) on, **Rocket Loader OFF** (it reorders scripts and breaks island hydration).
-6. **Pro plan and above only:** Polish = Lossy + WebP/AVIF, Mirage on. Polish converts and recompresses but does **not** resize — oversized images stay oversized in dimensions until Phase 3b.
+5. **Zone settings:** Brotli on, HTTP/3 on, Early Hints on, Tiered Cache (Smart Tiering) on, **Rocket Loader OFF** (it reorders scripts and breaks island hydration). Tiered Cache is worth the click specifically because a POP's machines each hold their own cache — without it, one machine's fetch does not warm the rest.
+6. **The zone is on the `free` plan**, which prunes this list: `stale-while-revalidate` is Enterprise-only and is ignored (harmlessly — the code documents it as progressive enhancement at `src/middleware.ts:125-127`), and Polish/Mirage are unavailable. Everything load-bearing — Cache Rules, and the Edge TTL "respect origin" setting — is free-tier.
+7. **Pro plan and above only:** Polish = Lossy + WebP/AVIF, Mirage on. Polish converts and recompresses but does **not** resize — oversized images stay oversized in dimensions until Phase 3b.
 
 ## 7. Verify at the edge
 
