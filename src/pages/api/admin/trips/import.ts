@@ -3,6 +3,8 @@ import YAML from 'yaml';
 import { readTrip, writeTrip, tripHasUpcomingDates, tripCardSummary, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { slugify } from '../../../../lib/utils';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, TRIP_LISTING_PATHS } from '../../../../lib/cachePurge';
 
 // Bulk import trips from a YAML or JSON document. The `yaml` parser accepts
 // JSON too (JSON is a subset of YAML), so one parse path handles both.
@@ -105,5 +107,8 @@ export const POST: APIRoute = async ({ request }) => {
     writeTrip(slug, data);
     if (existed) overwritten++; else created++;
   }
+  const touched = toWrite.map(({ slug }) => `/trips/${slug}/`);
+  await submitToIndexNow(touched);
+  await purgeUrls([...TRIP_LISTING_PATHS, ...touched]);
   return json({ success: true, dryRun: false, created, overwritten, errors });
 };

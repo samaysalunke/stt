@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { requireRole } from '../../../../lib/requireRole';
 import { writeAlbum, readAlbum, saveImageFile } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls } from '../../../../lib/cachePurge';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
@@ -38,5 +39,6 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
   writeAlbum(slug, data);
   await submitToIndexNow([`/photo-vault/${slug}/`]);
+  await purgeUrls([`/photo-vault/${slug}/`]);
   return redirect(`/admin/photo-vault/${slug}`);
 };

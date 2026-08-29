@@ -2,6 +2,8 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, listTripSlugs } from '../../../../lib/content';
 import { copiedTripName, withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -49,6 +51,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     writeTrip(newSlug, newData);
 
+    await submitToIndexNow([`/trips/${newSlug}/`]);
+    await purgeUrls(tripPaths(newSlug));
     return new Response(JSON.stringify({ success: true, newSlug }), { status: 200 });
   } catch (err) {
     console.error('Duplicate trip error:', err);

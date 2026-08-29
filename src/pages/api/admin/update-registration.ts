@@ -10,6 +10,7 @@ import {
 import { logAction } from '../../../lib/audit';
 import { recalculateUserLeaderboard } from '../../../lib/stats';
 import { tripAdvanceAmountBySlug, adjustBookingCount } from '../../../lib/registrationWrite';
+import { purgeUrls, tripPaths, TRIP_LISTING_PATHS } from '../../../lib/cachePurge';
 import { requireRole } from '../../../lib/requireRole';
 import {
   recordPayment,
@@ -50,6 +51,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const tierId = (reg.tier_id as string) ?? null;
     const currentPaid = Number(reg.amount_paid) || 0;
     const currentRefunded = Number(reg.amount_refunded) || 0;
+    // Set wherever this request moves a seat counter. Confirming the booking
+    // that fills a trip changes the sold-out badge and the CTA on the listings,
+    // so the edge copies of those pages have to go — otherwise they show
+    // "N spots left" and a live CTA for up to the full TTL.
+    let seatsChanged = false;
     const totalRaw = Number(reg.total_amount);
     const totalAmount = Number.isFinite(totalRaw) && totalRaw > 0 ? totalRaw : null;
 
@@ -203,9 +209,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      if (prevStatus !== 'confirmed') adjustBookingCount(tripName, batchId, 1, tierId);
+      if (prevStatus !== 'confirmed') {
+        adjustBookingCount(tripName, batchId, 1, tierId);
+        seatsChanged = true;
+      }
     } else if (newStatus === 'cancelled') {
-      if (prevStatus === 'confirmed') adjustBookingCount(tripName, batchId, -1, tierId);
+      if (prevStatus === 'confirmed') {
+        adjustBookingCount(tripName, batchId, -1, tierId);
+        seatsChanged = true;
+      }
       if (refundBody) {
         const r = recordRefund({
           registrationId: id,
@@ -298,6 +310,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (telegramQueued && telegramEvent) {
       await dispatchTelegramEvent(id, telegramEvent).catch((err) => console.error('[Telegram status]', err));
+    }
+
+    // Purge once, after the writes, rather than beside each adjustBookingCount:
+    // both branches are mutually exclusive but this keeps it to a single API
+    // call and off the synchronous read-modify-write, whose atomicity invariant
+    // forbids an await anywhere near it.
+    if (seatsChanged) {
+      const matchedTrip = findTripByName(tripName);
+      await purgeUrls(matchedTrip ? tripPaths(matchedTrip.slug) : TRIP_LISTING_PATHS);
     }
 
     return new Response(JSON.stringify({ success: true }), {

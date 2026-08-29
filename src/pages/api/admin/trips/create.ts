@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { writeTrip, saveImageFile, clearTripSlugAlias, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
@@ -94,5 +95,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   clearTripSlugAlias(slug);
   writeTrip(slug, data);
   await submitToIndexNow([`/trips/${slug}/`]);
+  await purgeUrls(tripPaths(slug));
   return redirect(`/admin/trips/${slug}`);
 };

@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { requireRole } from '../../../../lib/requireRole';
 import { writeFaq, listFaqs } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, allCacheablePaths } from '../../../../lib/cachePurge';
 
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const denied = requireRole(locals, ['owner', 'ops']);
@@ -19,5 +21,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     order,
     defaultOnTripPages: body.get('defaultOnTripPages') === 'on',
   });
+  await submitToIndexNow(['/faq/']);
+  await purgeUrls(allCacheablePaths());
   return redirect('/admin/faqs');
 };

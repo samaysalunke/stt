@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { softDeleteTrip } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -12,6 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       actorRole: locals.adminUser?.role,
     });
     await submitToIndexNow([`/trips/${slug}/`]);
+    await purgeUrls(tripPaths(slug));
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {
     return new Response(JSON.stringify({ error: 'Failed' }), { status: 500 });

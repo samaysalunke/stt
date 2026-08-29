@@ -6,6 +6,7 @@ import { logAction } from '../../../../lib/audit';
 import { createRegistration, type RegStatus } from '../../../../lib/registrationWrite';
 import { jsonOk, jsonFail as fail } from '../../../../lib/apiResponse';
 import { dispatchTelegramEvent } from '../../../../lib/telegram';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 const CREATE_STATUSES: RegStatus[] = ['lead', 'pending', 'confirmed'];
 
@@ -114,6 +115,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (result.id && result.telegramEvent) {
       await dispatchTelegramEvent(result.id, result.telegramEvent).catch((err) => console.error('[Telegram admin create]', err));
     }
+
+    // Creating a registration already at `confirmed` moves the seat counter —
+    // createRegistration calls adjustBookingCount on that path — so the cached
+    // listings and detail page would otherwise keep the old spots-left count.
+    if (status === 'confirmed') await purgeUrls(tripPaths(sel.trip_slug));
 
     return jsonOk({ success: true, id: result.id });
   } catch (err) {

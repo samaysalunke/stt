@@ -7,6 +7,7 @@ import { readTrip } from '../../../../lib/content';
 import { editableBooking, matchTierFromStay } from '../../../../lib/tripEditor';
 import { resolveSelection, type ResolvedSelection } from './create';
 import { jsonOk as json, jsonFail as fail } from '../../../../lib/apiResponse';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 const IMPORT_STATUSES: RegStatus[] = ['lead', 'pending', 'confirmed'];
 type RowAction = 'create' | 'skip' | 'error' | 'superseded';
@@ -100,6 +101,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     let created=0;
+    // Any row imported at `confirmed` moves the seat counter (createRegistration
+    // calls adjustBookingCount on that path), so one purge covers the whole run.
+    let seatsChanged=false;
     for (const p of result.candidates) {
       const r=p.input!;
       const inserted=createRegistration({ ...p.selection!, full_name:r.full_name, email:r.email, phone:r.phone,
@@ -108,8 +112,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status:r.status, admin_notes:'Imported by admin', created_at:r.created_at||null, consent_at:r.consent_at||null },
         { sendEmail, skipCapacity:p.selection!.is_past || capacityOverride, notifyTelegram:false });
       if (!inserted.ok) { p.action=inserted.error==='duplicate'?'skip':'error'; p.reason=inserted.message||'Insert failed'; continue; }
+      if (r.status==='confirmed') seatsChanged=true;
       created++;
     }
+    if (seatsChanged) await purgeUrls(tripPaths(tripSlug));
     const counts={ create:created, skip:result.preview.filter(p=>p.action==='skip').length,
       error:result.preview.filter(p=>p.action==='error').length, superseded:result.counts.superseded };
     logAction({ actorUserId:locals.adminUser?.userId, actorEmail:locals.adminUser?.email, actorRole:locals.adminUser?.role,

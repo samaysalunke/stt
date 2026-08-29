@@ -1,6 +1,8 @@
 export const prerender = false;
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, TRIP_PRIORITIES } from '../../../../lib/content';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -25,5 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (!trip) return json({ success: false, error: 'Trip not found.' }, 404);
 
   writeTrip(slug, { ...trip, priority });
+  await submitToIndexNow([`/trips/${slug}/`]);
+  await purgeUrls(tripPaths(slug));
   return json({ success: true, priority });
 };

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { readTrip, writeTrip, deleteTrip, saveImageFile, recordTripSlugAlias, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
@@ -112,5 +113,6 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   writeTrip(newSlug, data);
   // Ping the new URL; on a slug change also ping the old one so engines drop it.
   await submitToIndexNow([`/trips/${newSlug}/`, ...(newSlug !== oldSlug ? [`/trips/${oldSlug}/`] : [])]);
+  await purgeUrls([...tripPaths(newSlug), ...(newSlug !== oldSlug ? [`/trips/${oldSlug}/`] : [])]);
   return redirect(`/admin/trips/${newSlug}?saved=1`);
 };

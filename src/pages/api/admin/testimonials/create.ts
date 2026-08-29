@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { requireRole } from '../../../../lib/requireRole';
 import { writeTestimonial } from '../../../../lib/content';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, allCacheablePaths, TRIP_LISTING_PATHS } from '../../../../lib/cachePurge';
 
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const denied = requireRole(locals, ['owner', 'ops']);
@@ -19,5 +21,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     quote: sanitizeInput(body.get('quote')) || '',
     featured: body.get('featured') === 'on' || body.get('featured') === 'true',
   });
+  await submitToIndexNow(TRIP_LISTING_PATHS);
+  await purgeUrls(allCacheablePaths());
   return redirect('/admin/testimonials');
 };

@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { requireRole } from '../../../../lib/requireRole';
 import { deleteImageByUrl, readSiteSettings, saveImageFile, writeSettings } from '../../../../lib/content';
 import { sanitizeInput } from '../../../../lib/utils';
+import { submitToIndexNow } from '../../../../lib/indexnow';
+import { purgeUrls, allCacheablePaths, TRIP_LISTING_PATHS } from '../../../../lib/cachePurge';
 
 // Fields the settings form is allowed to update. Anything not listed here is
 // preserved from the existing site-settings.yaml (merge, not overwrite).
@@ -64,5 +66,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
   writeSettings(updated);
   if (replacedPortrait) deleteImageByUrl(replacedPortrait);
+  await submitToIndexNow(TRIP_LISTING_PATHS);
+  await purgeUrls(allCacheablePaths());
   return redirect('/admin/settings?saved=1');
 };
