@@ -1,7 +1,8 @@
 # Telegram booking notifications
 
 The booking lifecycle sends one Telegram notification when a live registration
-first enters `lead`, and one when it first enters `confirmed`. Bulk imports,
+first enters `lead`, one when payment submission moves it to `pending`, and one
+when it first enters `confirmed`. Bulk imports,
 historical backfills, and registrations that existed before this feature do not
 create events. Delivery failures never change a booking API response.
 

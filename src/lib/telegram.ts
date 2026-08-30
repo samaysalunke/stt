@@ -3,7 +3,7 @@ import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
 
-export type TelegramEventType = 'lead' | 'confirmed';
+export type TelegramEventType = 'lead' | 'pending' | 'confirmed';
 export type TelegramDeliveryState = 'queued' | 'dispatching' | 'retry_wait' | 'sent' | 'uncertain' | 'failed';
 
 type RegistrationSnapshot = {
@@ -54,8 +54,13 @@ export function formatTelegramMessage(
   eventAt: string | Date,
   imageUnavailable = false,
 ): string {
+  const heading: Record<TelegramEventType, string> = {
+    lead: 'NEW BOOKING LEAD',
+    pending: 'BOOKING PAYMENT PENDING',
+    confirmed: 'BOOKING CONFIRMED',
+  };
   const lines = [
-    eventType === 'lead' ? 'NEW BOOKING LEAD' : 'BOOKING CONFIRMED',
+    heading[eventType],
     `Booking ID: ${registration.id}`,
     `Name: ${field(registration.full_name, 120)}`,
     `Email: ${field(registration.email, 254)}`,
@@ -69,7 +74,7 @@ export function formatTelegramMessage(
   if (imageUnavailable) lines.push('', 'IMAGE UNAVAILABLE');
   // Telegram media captions are limited to 1024 characters. Preserve room for
   // all operational fields even if legacy customer data is unexpectedly long.
-  return lines.join('\n').slice(0, eventType === 'confirmed' && !imageUnavailable ? 1000 : 4000);
+  return lines.join('\n').slice(0, eventType !== 'lead' && !imageUnavailable ? 1000 : 4000);
 }
 
 export function enqueueTelegramEvent(
@@ -213,9 +218,9 @@ export async function deliverClaimedTelegramEvent(db: Database.Database, event: 
       const upload = resolveLocalPaymentUpload(registration.payment_screenshot_url);
       if (!upload.ok) {
         warning = `image_unavailable: ${upload.reason}`;
-        messageId = await sendText(formatTelegramMessage('confirmed', registration, event.event_at, true));
+        messageId = await sendText(formatTelegramMessage(event.event_type, registration, event.event_at, true));
       } else {
-        const caption = formatTelegramMessage('confirmed', registration, event.event_at);
+        const caption = formatTelegramMessage(event.event_type, registration, event.event_at);
         if (upload.kind === 'document') {
           messageId = await sendFile('sendDocument', 'document', upload, caption);
         } else {

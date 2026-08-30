@@ -145,7 +145,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // ── Status write ─────────────────────────────────────────────────────
-    const telegramEvent = (newStatus === 'lead' || newStatus === 'confirmed')
+    const telegramEvent = (newStatus === 'lead' || newStatus === 'pending' || newStatus === 'confirmed')
       ? newStatus as TelegramEventType : null;
     const telegramQueued = getDb().transaction(() => {
       getDb()

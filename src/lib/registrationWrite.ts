@@ -131,7 +131,7 @@ export interface CreateRegistrationInput {
 export interface CreateResult {
   ok: boolean;
   id?: number;
-  telegramEvent?: 'lead' | 'confirmed';
+  telegramEvent?: 'lead' | 'pending' | 'confirmed';
   error?: 'duplicate' | 'capacity_full' | 'db_error';
   message?: string;
 }
@@ -196,9 +196,9 @@ export function createRegistration(
       const recordedAmount = input.status === 'confirmed' ? Math.max(0, advance) : 0;
       db.prepare('UPDATE registrations SET payment_status=? WHERE id=?')
         .run(derivePaymentStatus({ amount_paid: recordedAmount, total_amount: input.total_amount }), id);
-      const event = opts.notifyTelegram && (input.status === 'lead' || input.status === 'confirmed')
+      const event = opts.notifyTelegram && (input.status === 'lead' || input.status === 'pending' || input.status === 'confirmed')
         && enqueueTelegramEvent(db, id, input.status) ? input.status : undefined;
-      return { id, telegramEvent: event as 'lead' | 'confirmed' | undefined };
+      return { id, telegramEvent: event as 'lead' | 'pending' | 'confirmed' | undefined };
     })();
 
     if (input.status === 'confirmed') {

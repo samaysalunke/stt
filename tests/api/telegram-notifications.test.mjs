@@ -88,14 +88,34 @@ test('public checkout upgrades wishlist to lead and queues that transition', asy
   assert.deepEqual(eventRows(email).map((row) => row.event_type), ['lead']);
 });
 
-test('live single-admin lead/confirmed creates notify, pending and historical creates do not', async () => {
+test('public payment submission queues pending once after the lead event', async () => {
+  const email = `qa-telegram-payment-${Date.now()}@example.invalid`;
+  const payload = {
+    ...LIVE, tripName: LIVE.tripTitle, fullName: 'Telegram Payment', email,
+    phone: '9876543210', age: '28', city: 'Mumbai', state: 'Maharashtra',
+    emergencyName: 'Emergency', emergencyPhone: '9123456789', whyJoin: 'Testing payment notification',
+  };
+  const lead = await apiPost('/api/register', { ...payload, intent: 'details' });
+  const pending = await apiPost('/api/register', {
+    ...payload,
+    paymentScreenshotUrl: '/api/uploads/123e4567-e89b-42d3-a456-426614174000.png',
+    agreeTerms: true,
+    agreeCancel: true,
+  });
+  assert.equal(lead.status, 200, JSON.stringify(lead.data));
+  assert.equal(pending.status, 200, JSON.stringify(pending.data));
+  assert.equal(pending.data.status, 'pending');
+  assert.deepEqual(eventRows(email).map((row) => row.event_type), ['lead', 'pending']);
+});
+
+test('live single-admin lead/pending/confirmed creates notify, historical creates do not', async () => {
   for (const status of ['lead', 'pending', 'confirmed']) {
     const email = `qa-telegram-create-${status}-${Date.now()}@example.invalid`;
     const made = await adminPost('/api/admin/registrations/create', {
       ...LIVE, status, full_name: `Telegram ${status}`, email, phone: '9876543210', sendEmail: false,
     });
     assert.equal(made.status, 200, JSON.stringify(made.data));
-    assert.deepEqual(eventRows(email).map((row) => row.event_type), status === 'pending' ? [] : [status]);
+    assert.deepEqual(eventRows(email).map((row) => row.event_type), [status]);
   }
 
   const historicalEmail = `qa-telegram-history-${Date.now()}@example.invalid`;
@@ -116,7 +136,7 @@ test('admin transitions queue each lifecycle event once across status re-entry',
   assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 200);
   assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'pending' })).status, 200);
   assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 200);
-  assert.deepEqual(eventRows(email).map((row) => row.event_type), ['lead']);
+  assert.deepEqual(eventRows(email).map((row) => row.event_type), ['pending', 'lead']);
 });
 
 test('pending, rejected, and cancelled bookings queue confirmation on first entry', async () => {
@@ -135,12 +155,12 @@ test('pending, rejected, and cancelled bookings queue confirmation on first entr
       id, status: 'confirmed', payment_status: 'advance_paid', requestId: `telegram-confirm-${id}`,
     });
     assert.equal(confirmed.status, 200, JSON.stringify(confirmed.data));
-    assert.deepEqual(eventRows(email).map((row) => row.event_type), ['confirmed']);
+    assert.deepEqual(eventRows(email).map((row) => row.event_type), ['pending', 'confirmed']);
   }
 });
 
-test('bulk imports suppress Telegram events for lead and confirmed rows', async () => {
-  for (const status of ['lead', 'confirmed']) {
+test('bulk imports suppress Telegram events for lead, pending, and confirmed rows', async () => {
+  for (const status of ['lead', 'pending', 'confirmed']) {
     const email = `qa-telegram-import-${status}-${Date.now()}@example.invalid`;
     const csv = ['full_name,email,phone', `Imported,${email},9876543210`].join('\n');
     const result = await adminPost('/api/admin/registrations/import', {

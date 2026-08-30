@@ -256,21 +256,24 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
         });
     const leadId = leadResult.id;
 
-    db.prepare(`
-      UPDATE registrations SET
-        trip_name=?, trip_date=?, full_name=?, email=?, phone=?, gender=?,
-        age=?, city=?, instagram=?, emergency_name=?, emergency_phone=?,
-        payment_screenshot_url=?, why_join=?, sharing_option=?, total_amount=?,
-        tier_id=?, consent_at=CURRENT_TIMESTAMP, status='pending',
-        status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(
-      tripName, tripDateStr, required.fullName, required.email, required.phone, sanitizeInput(body.gender) || null,
-      required.age, required.city, instagram, required.emergencyName, required.emergencyPhone,
-      screenshotUrl, required.whyJoin, sharingOption, totalAmount,
-      selectedOffer.tierId, leadId,
-    );
-    saveState(db, leadId, required.state);
+    const pendingQueued = db.transaction(() => {
+      db.prepare(`
+        UPDATE registrations SET
+          trip_name=?, trip_date=?, full_name=?, email=?, phone=?, gender=?,
+          age=?, city=?, instagram=?, emergency_name=?, emergency_phone=?,
+          payment_screenshot_url=?, why_join=?, sharing_option=?, total_amount=?,
+          tier_id=?, consent_at=CURRENT_TIMESTAMP, status='pending',
+          status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+      `).run(
+        tripName, tripDateStr, required.fullName, required.email, required.phone, sanitizeInput(body.gender) || null,
+        required.age, required.city, instagram, required.emergencyName, required.emergencyPhone,
+        screenshotUrl, required.whyJoin, sharingOption, totalAmount,
+        selectedOffer.tierId, leadId,
+      );
+      saveState(db, leadId, required.state);
+      return enqueueTelegramEvent(db, leadId, 'pending');
+    })();
 
     let whatsappLink = 'https://wa.me/917975027491';
     try {
@@ -295,6 +298,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
 
     if (required.city) geocodeCity(required.city).catch(() => {});
     if (leadResult.telegramQueued) await dispatchTelegramEvent(leadId, 'lead').catch((err) => console.error('[Telegram lead]', err));
+    if (pendingQueued) await dispatchTelegramEvent(leadId, 'pending').catch((err) => console.error('[Telegram pending]', err));
     return json({ success: true, status: 'pending', registrationId: leadId });
   } catch (err) {
     console.error('[Register API Error]', err);

@@ -69,6 +69,8 @@ describe('Telegram formatting and upload confinement', () => {
   it('formats India time and includes only a positive cumulative paid amount', () => {
     expect(formatIndiaTimestamp('2026-08-29 12:00:00')).toMatch(/05:30 pm IST/i);
     const base = { id: 42, full_name: 'Asha', email: 'a@example.com', phone: '9', trip_name: 'Ladakh', trip_date: 'Sep', payment_screenshot_url: null, amount_paid: 0 };
+    expect(formatTelegramMessage('lead', base, '2026-08-29 12:00:00')).toContain('NEW BOOKING LEAD');
+    expect(formatTelegramMessage('pending', base, '2026-08-29 12:00:00')).toContain('BOOKING PAYMENT PENDING');
     expect(formatTelegramMessage('confirmed', base, '2026-08-29 12:00:00')).not.toContain('Amount paid');
     expect(formatTelegramMessage('confirmed', { ...base, amount_paid: 12500 }, '2026-08-29 12:00:00')).toContain('Amount paid: ₹12,500');
   });
@@ -89,8 +91,9 @@ describe('Telegram outbox and delivery policy', () => {
     seed(db);
     expect(enqueueTelegramEvent(db, 1, 'lead')).toBe(true);
     expect(enqueueTelegramEvent(db, 1, 'lead')).toBe(false);
+    expect(enqueueTelegramEvent(db, 1, 'pending')).toBe(true);
     expect(enqueueTelegramEvent(db, 1, 'confirmed')).toBe(true);
-    expect(claimTelegramEvents(db, 10)).toHaveLength(2);
+    expect(claimTelegramEvents(db, 10)).toHaveLength(3);
     expect(claimTelegramEvents(db, 10)).toHaveLength(0);
     expect(db.prepare(`SELECT DISTINCT status FROM telegram_notification_events`).all()).toEqual([{ status: 'dispatching' }]);
     db.close();
@@ -104,6 +107,19 @@ describe('Telegram outbox and delivery policy', () => {
     expect(await deliverClaimedTelegramEvent(db, event)).toBe('sent');
     expect(fetchMock.mock.calls[0][0]).toContain('/sendMessage');
     expect(db.prepare(`SELECT status, telegram_message_id FROM telegram_notification_events`).get()).toEqual({ status: 'sent', telegram_message_id: '77' });
+    db.close();
+  });
+
+  it('sends pending payment proof as a photo with the pending caption', async () => {
+    const photo = '123e4567-e89b-42d3-a456-426614174000.jpg';
+    fs.writeFileSync(path.join(tempDir, 'uploads', photo), 'jpg');
+    const db = database(); seed(db, `/api/uploads/${photo}`); enqueueTelegramEvent(db, 1, 'pending');
+    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 78 } }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
+    expect(fetchMock.mock.calls[0][0]).toContain('/sendPhoto');
+    const body = fetchMock.mock.calls[0][1].body as FormData;
+    expect(body.get('caption')).toContain('BOOKING PAYMENT PENDING');
     db.close();
   });
 
