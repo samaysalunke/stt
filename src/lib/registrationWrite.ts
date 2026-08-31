@@ -75,6 +75,55 @@ export function adjustBookingCount(
   }
 }
 
+/**
+ * Move one confirmed seat between two tiers on the same departure, in a single
+ * read-modify-write.
+ *
+ * Same ATOMICITY INVARIANT as adjustBookingCount — keep this fully SYNCHRONOUS,
+ * no `await` anywhere inside, so the readTrip → mutate → writeTrip runs to
+ * completion in one tick and cannot interleave with a concurrent confirmation.
+ * Doing this as adjustBookingCount(-1) then adjustBookingCount(+1) would be two
+ * separate read-modify-writes: a crash between them permanently loses a seat.
+ *
+ * `bookedSpots` (the departure total) is deliberately left untouched — a move
+ * doesn't change how many people are on the trip. Legacy batches with no
+ * `offers[]` array are a no-op (their counter is batch-level only).
+ */
+export function moveBookingTier(
+  tripName: string,
+  batchId: string | null,
+  fromTierId: string,
+  toTierId: string,
+) {
+  if (!batchId || !fromTierId || !toTierId || fromTierId === toTierId) return;
+  try {
+    const matched = findTripByName(tripName);
+    if (!matched) return;
+    const tripData = readTrip(matched.slug);
+    if (!tripData) return;
+
+    const batches = Array.isArray(tripData.batches) ? tripData.batches : [];
+    const b = batches.find((x: any) => x.id === batchId);
+    if (!b || !Array.isArray(b.offers)) return;
+
+    const from = b.offers.find((o: any) => o.tierId === fromTierId);
+    const to = b.offers.find((o: any) => o.tierId === toTierId);
+    if (!from && !to) return;
+
+    if (from) {
+      const cur = typeof from.booked === 'number' ? from.booked : 0;
+      from.booked = Math.max(0, cur - 1);
+    }
+    if (to) {
+      const cur = typeof to.booked === 'number' ? to.booked : 0;
+      to.booked = Math.max(0, cur + 1);
+    }
+    writeTrip(matched.slug, tripData);
+  } catch (err) {
+    console.error('[moveBookingTier]', err);
+  }
+}
+
 /** Count of confirmed registrations on a given batch + tier. */
 export function confirmedCountForTier(batchId: string, tierId: string): number {
   return (getDb()

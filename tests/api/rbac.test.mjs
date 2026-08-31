@@ -108,6 +108,19 @@ test('TC-201 trip_lead POST /api/admin/trips/priority → 403', async () => {
   assert.equal(res.status, 403, `Expected 403, got ${res.status}`);
 });
 
+test('TC-201 trip_lead PATCH /api/admin/registrations/occupancy → 403', async () => {
+  const { cookie } = seedAdminSession({ role: 'trip_lead' });
+  const res = await fetch(`${BASE}/api/admin/registrations/occupancy`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ id: 1, tierId: 'private' }),
+    redirect: 'manual',
+  });
+  // Middleware's ownerOrOpsOnly prefix rule catches this first, but requireRole
+  // inside the handler is the real gate — assert the outcome, not the layer.
+  assert.equal(res.status, 403, `Expected 403, got ${res.status}`);
+});
+
 // ── TC-202: ops blocked from owner-only pages and trip creation ───────────────
 test('TC-202 ops GET /admin/settings/roles → 403', async () => {
   const { cookie } = seedAdminSession({ role: 'ops' });

@@ -12,6 +12,18 @@ export async function apiPost(path, body, { headers = {}, redirect = 'follow' } 
   return { status: res.status, data, headers: res.headers };
 }
 
+export async function apiPatch(path, body, { headers = {}, redirect = 'follow' } = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+    redirect,
+  });
+  const ct = res.headers.get('content-type') ?? '';
+  const data = ct.includes('json') ? await res.json() : await res.text();
+  return { status: res.status, data, headers: res.headers };
+}
+
 export async function apiGet(path, { redirect = 'manual', cookie = null } = {}) {
   const headers = cookie ? { cookie } : {};
   const res = await fetch(`${BASE}${path}`, { redirect, headers });

@@ -8,8 +8,12 @@ import {
   assertTransition,
 } from '../../lib/registrationStatus';
 import { zohoOpenUrl } from '../../lib/zohoBooks';
-interface Props { registration: Record<string, any>; readOnly?: boolean }
-const { registration: r, readOnly = false } = Astro.props;
+interface Props {
+  registration: Record<string, any>;
+  readOnly?: boolean;
+  tierOptions?: Array<{ tierId: string; label: string; price: number; cap: number | null; booked: number }>;
+}
+const { registration: r, readOnly = false, tierOptions = [] } = Astro.props;
 // Stored payment_status is authoritative; derive only as a legacy fallback.
 const payStatus: string = r.payment_status || derivePaymentStatus(r);
 const payStyle = paymentStatusStyle(payStatus);
@@ -37,6 +41,9 @@ const statusOptions = statusButtons.map((s) => ({
   disabled: s !== r.status && !canTransition(s),
 }));
 const showDocsTab = r.status !== 'wishlist' && (documents.length > 0 || r.status === 'confirmed');
+// Occupancy can only be switched on a multi-tier departure the row is linked to.
+// Single-tier trips and the legacy bucket get no tab.
+const showOccupancyTab = !readOnly && tierOptions.length > 1 && !!r.batch_id;
 const parseTouch = (raw: unknown) => {
   try { return typeof raw === 'string' ? JSON.parse(raw) : null; } catch { return null; }
 };
@@ -135,6 +142,7 @@ const attributionFields = [
         <button type="button" class="tab-btn active" data-id={r.id} data-tab="overview">Overview</button>
         <button type="button" class="tab-btn" data-id={r.id} data-tab="status">Status &amp; payment</button>
         {showDocsTab && <button type="button" class="tab-btn" data-id={r.id} data-tab="documents">Documents</button>}
+        {showOccupancyTab && <button type="button" class="tab-btn" data-id={r.id} data-tab="occupancy">Occupancy</button>}
         <button type="button" class="tab-btn" data-id={r.id} data-tab="notes">Notes</button>
       </div>
 
@@ -249,6 +257,37 @@ const attributionFields = [
                   : r.status === 'confirmed' && <span>The invoice is generated once the booking is fully paid.</span>}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showOccupancyTab && (
+        <div class="tab-panel" data-id={r.id} data-tab="occupancy" hidden>
+          <div class="sp-wrap">
+            <div class="sp-hero">
+              <span class="sp-hero-label">Current occupancy</span>
+              <span class="sp-hero-pay">{r.sharing_option ?? '—'} · {formatINR(r.total_amount)}</span>
+            </div>
+            <label class="sp-field">
+              <span>Occupancy</span>
+              <select id={`occ-tier-${r.id}`}>
+                {tierOptions.map((t) => (
+                  <option value={t.tierId} selected={t.tierId === r.tier_id}>
+                    {t.label} — {formatINR(t.price)}{t.cap != null && t.booked >= t.cap ? ' · full' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p class="wishlist-note">Changes the price to match the new tier. No email is sent to the traveller.</p>
+            <button
+              type="button"
+              class="sp-save"
+              data-action="save-occupancy"
+              data-id={r.id}
+              data-current-tier={r.tier_id ?? ''}
+              data-paid={Number(r.amount_paid) || 0}
+              data-has-doc={documents.length > 0 ? '1' : ''}
+            >Change occupancy</button>
           </div>
         </div>
       )}

@@ -18,6 +18,7 @@ if (slug === '__legacy') {
     const dep: RegDeparture = {
       id: '', startDate: '', endDate: '', status: 'history',
       regs: view.legacyRegs, cap: null, booked: 0, soldOut: false, historical: true,
+      tierOptions: [],
     };
     trip = { slug: '__legacy', name: 'Unassigned / legacy registrations', active: false, nextDate: '', departures: [dep], historical: true, regCount: view.legacyRegs.length };
   }
@@ -172,7 +173,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
               <button type="button" class="notify-wishlist-btn" data-batch-id={dep.id}>Notify them</button>
             </div>
           )}
-          {dep.regs.length > 0 && <div class="registration-list">{dep.regs.map((r) => <RegistrationCard registration={r} readOnly={isTripLead} />)}</div>}
+          {dep.regs.length > 0 && <div class="registration-list">{dep.regs.map((r) => <RegistrationCard registration={r} readOnly={isTripLead} tierOptions={dep.tierOptions} />)}</div>}
         </article>
       );
     })}
@@ -327,6 +328,29 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       btn.disabled = false;
       if (!res.ok || !data?.success || data.failed) alert(data?.error || data?.results?.find((x) => !x.success)?.error || 'Update failed.');
       else reloadWithFilters();
+      return;
+    }
+    if (btn.dataset.action === 'save-occupancy') {
+      const sel = document.getElementById('occ-tier-' + id);
+      const newTier = sel?.value || '';
+      const curTier = btn.dataset.currentTier || '';
+      if (!newTier || newTier === curTier) { alert('Pick a different occupancy.'); return; }
+      const labelOf = (v) => [...(sel?.options || [])].find((o) => o.value === v)?.text?.trim() || v;
+      const paid = Number(btn.dataset.paid) || 0;
+      const hasDoc = btn.dataset.hasDoc === '1';
+      let ask = `Change #${id} occupancy?\n\n${labelOf(curTier)}\n→ ${labelOf(newTier)}\n\nThe trip price is recomputed to match the new tier. No email is sent to the traveller.`;
+      if (paid > 0 || hasDoc) ask += `\n\nThis booking has a payment or an invoice attached — you may need to record a refund or fix the invoice in Zoho afterwards.`;
+      if (!confirm(ask)) return;
+      btn.disabled = true;
+      const res = await fetch('/api/admin/registrations/occupancy', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(id), tierId: newTier, requestId: crypto.randomUUID() }),
+      });
+      const data = await res.json().catch(() => null);
+      btn.disabled = false;
+      if (!res.ok || !data?.success) { alert(data?.error || 'Could not change occupancy.'); return; }
+      if (Array.isArray(data.warnings) && data.warnings.length) alert(data.warnings.join('\n'));
+      reloadWithFilters();
       return;
     }
     if (btn.dataset.action === 'patch-state') {

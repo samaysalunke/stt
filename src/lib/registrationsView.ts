@@ -18,6 +18,7 @@ export interface RegDeparture {
   booked: number;
   soldOut: boolean;
   historical: boolean;
+  tierOptions: Array<{ tierId: string; label: string; price: number; cap: number | null; booked: number }>;
 }
 
 export interface RegTrip {
@@ -110,7 +111,8 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const trips: RegTrip[] = listTrips()
     .map((trip: any) => {
       const name = String(trip.title || trip.name || trip.slug);
-      const { editorDepartures } = editableBooking(trip);
+      const { editorCatalog, editorDepartures } = editableBooking(trip);
+      const labelByTier = Object.fromEntries(editorCatalog.map((c) => [c.id, c.label]));
       const departures: RegDeparture[] = editorDepartures
         .filter((d: any) => d.id && (!isTripLead || allowedBatchIds!.includes(String(d.id))))
         .map((d: any) => {
@@ -134,6 +136,13 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
             booked,
             soldOut,
             historical,
+            tierOptions: offers.map((o: any) => ({
+              tierId: String(o.tierId),
+              label: labelByTier[String(o.tierId)] ?? String(o.tierId),
+              price: Number(o.price) || 0,
+              cap: o.cap != null ? Number(o.cap) : null,
+              booked: Number(o.booked) || 0,
+            })),
           };
         })
         .sort((a, b) => a.startDate.localeCompare(b.startDate));

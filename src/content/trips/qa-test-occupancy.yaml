@@ -1,0 +1,36 @@
+title: QA Test — Occupancy Change
+publicationStatus: test
+slug: qa-test-occupancy
+status: booking-open
+duration: 2 Days
+description: Automated QA fixture. Multi-tier departure for occupancy-change tests.
+paymentAmount: 1000
+occupancyCatalog:
+  - id: dorm
+    label: Dorm Bed
+    helperText: Shared dorm.
+  - id: private
+    label: Private Room
+    helperText: Private double.
+  - id: solo
+    label: Solo Room
+    helperText: Single occupancy.
+batches:
+  - id: qa-occ-2099
+    startDate: 2099-04-01
+    endDate: 2099-04-02
+    status: booking-open
+    offers:
+      - tierId: dorm
+        price: 5000
+        cap: 12
+        booked: 0
+      - tierId: private
+        price: 7000
+        cap: 4
+        booked: 0
+      - tierId: solo
+        price: 9000
+        cap: 0
+        booked: 0
+    bookedSpots: 0
