@@ -24,7 +24,7 @@ function statusStyle(status: string) {
       <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-primary-dark);margin:0 0 0.25rem;">Contact Submissions</h1>
       <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{contacts.length} total messages</p>
     </div>
-    <a
+    <a id="contacts-export"
       href="/api/admin/export?type=contacts"
       style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
     >
@@ -149,6 +149,15 @@ function statusStyle(status: string) {
 
   // Filter buttons
   let activeFilter = 'all';
+  const exportLink = document.getElementById('contacts-export') as HTMLAnchorElement | null;
+
+  function updateExportLink() {
+    if (!exportLink) return;
+    const params = new URLSearchParams({ type: 'contacts' });
+    if (activeFilter !== 'all') params.set('status', activeFilter);
+    exportLink.href = `/api/admin/export?${params}`;
+  }
+
   function applyContactFilter() {
     const rows = document.querySelectorAll<HTMLTableRowElement>('.contact-row');
     rows.forEach(row => {
@@ -163,6 +172,7 @@ function statusStyle(status: string) {
         if (detail) detail.style.display = 'none';
       }
     });
+    updateExportLink();
   }
 
   document.querySelectorAll<HTMLButtonElement>('.contact-filter').forEach(btn => {
@@ -181,4 +191,5 @@ function statusStyle(status: string) {
 
   (window as any).toggleContact = toggleContact;
   (window as any).toggleResolved = toggleResolved;
+  updateExportLink();
 </script>

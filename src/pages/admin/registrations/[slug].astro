@@ -69,7 +69,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       <div class="header-actions">
         <a class="primary" href={`/admin/registrations/new?trip=${encodeURIComponent(trip.slug)}`}>+ Add</a>
         <a href={`/admin/registrations/import?trip=${encodeURIComponent(trip.slug)}`}>↑ Import</a>
-        <a class="export" href={exportHref}>↓ Export CSV</a>
+        <a id="registrations-export" class="export" href={exportHref} data-base-href={exportHref}>↓ Export CSV</a>
       </div>
     )}
   </header>
@@ -515,6 +515,32 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   function applyFilters() {
     applyDepFilters();
     applyRowFilters();
+    updateExportLink();
+  }
+
+  function updateExportLink() {
+    const link = document.getElementById('registrations-export');
+    if (!link) return;
+    const base = link.dataset.baseHref || '/api/admin/export?type=registrations';
+    const exportUrl = new URL(base, location.origin);
+    const q = document.getElementById('search-input')?.value?.trim() ?? '';
+    const status = document.getElementById('filter-status')?.value ?? '';
+    const selectedId = depSelect?.value ?? '';
+    const showHistory = !!histCheckbox?.checked;
+    if (q) exportUrl.searchParams.set('q', q); else exportUrl.searchParams.delete('q');
+    if (status) exportUrl.searchParams.set('status', status); else exportUrl.searchParams.delete('status');
+    exportUrl.searchParams.delete('batch_id');
+    exportUrl.searchParams.delete('batch_filter');
+    if (selectedId || !showHistory) {
+      exportUrl.searchParams.set('batch_filter', '1');
+      const batchIds = selectedId
+        ? [selectedId]
+        : [...document.querySelectorAll('.departure:not(.history-item)')]
+            .map((dep) => dep.dataset.departureId || '')
+            .filter(Boolean);
+      batchIds.forEach((id) => exportUrl.searchParams.append('batch_id', id));
+    }
+    link.href = exportUrl.pathname + exportUrl.search;
   }
 
   boxes().forEach((b) => b.addEventListener('change', selectionUI));

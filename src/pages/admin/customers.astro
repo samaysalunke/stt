@@ -159,7 +159,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
       <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{totalCustomers} customer{totalCustomers !== 1 ? 's' : ''} · read-only{capped ? ' · showing first 1 000' : ''}</p>
     </div>
     {!isTripLead && (
-      <a href="/api/admin/export?type=customers"
+      <a id="customers-export" href="/api/admin/export?type=customers"
          style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">
         ↓ Export CSV
       </a>
@@ -526,6 +526,17 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   const typeFilter = document.getElementById('cust-type-filter') as HTMLSelectElement | null;
   const list = document.getElementById('cust-list');
   const emptyMsg = document.getElementById('cust-empty');
+  const exportLink = document.getElementById('customers-export') as HTMLAnchorElement | null;
+
+  function updateExportLink() {
+    if (!exportLink) return;
+    const params = new URLSearchParams({ type: 'customers' });
+    const q = searchInput?.value.trim();
+    const customerType = typeFilter?.value;
+    if (q) params.set('q', q);
+    if (customerType) params.set('customer_type', customerType);
+    exportLink.href = `/api/admin/export?${params}`;
+  }
 
   function applyFilters() {
     const q = searchInput?.value.toLowerCase().trim() ?? '';
@@ -549,8 +560,10 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     });
     if (list) list.style.display = visible === 0 ? 'none' : '';
     if (emptyMsg) emptyMsg.style.display = visible === 0 ? '' : 'none';
+    updateExportLink();
   }
 
   searchInput?.addEventListener('input', applyFilters);
   typeFilter?.addEventListener('change', applyFilters);
+  updateExportLink();
 </script>

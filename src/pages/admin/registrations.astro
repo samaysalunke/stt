@@ -8,6 +8,7 @@ export const prerender = false;
 const adminUser = Astro.locals.adminUser;
 const isTripLead = adminUser?.role === 'trip_lead';
 const { trips, legacyRegs, total, totals, revenue, historyCount } = buildRegistrationsView(adminUser);
+const visibleBatchIds = trips.filter((trip) => !trip.historical).flatMap((trip) => trip.departures.map((dep) => dep.id)).filter(Boolean);
 
 const money = (n: number) => formatINR(n);
 const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
@@ -29,7 +30,7 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
       {!isTripLead && <a class="primary" href="/admin/registrations/new">+ Add</a>}
       {!isTripLead && <a href="/admin/registrations/import">↑ Import</a>}
       {!isTripLead && <a href="/admin/registrations/unpaid-leads">Unpaid leads</a>}
-      <a class="export" href="/api/admin/export?type=registrations">↓ Export all CSV</a>
+      <a id="registrations-export" class="export" href="/api/admin/export?type=registrations">↓ Export CSV</a>
       {historyCount > 0 && <label class="history-toggle"><input id="show-history" type="checkbox" /> Show history <span class="history-count">({historyCount})</span></label>}
     </div>
   </div>
@@ -83,8 +84,20 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.actions{justify-content:flex-start}}
 </style>
 
-<script>
+<script define:vars={{ visibleBatchIds }}>
   const history = document.getElementById('show-history') as HTMLInputElement | null;
+  const exportLink = document.getElementById('registrations-export') as HTMLAnchorElement | null;
+
+  function updateExportLink() {
+    if (!exportLink) return;
+    const params = new URLSearchParams({ type: 'registrations' });
+    if (!history?.checked) {
+      params.set('batch_filter', '1');
+      visibleBatchIds.forEach((id) => params.append('batch_id', id));
+    }
+    exportLink.href = `/api/admin/export?${params}`;
+  }
+
   function applyHistory() {
     const showHistory = !!history?.checked;
     document.querySelectorAll<HTMLElement>('.trip-card').forEach((card) => {
@@ -93,6 +106,7 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
     const anyVisible = [...document.querySelectorAll<HTMLElement>('.trip-card')].some((c) => c.style.display !== 'none');
     const nr = document.getElementById('noResults');
     if (nr) nr.style.display = anyVisible ? 'none' : 'block';
+    updateExportLink();
   }
   history?.addEventListener('change', applyHistory);
   applyHistory();
