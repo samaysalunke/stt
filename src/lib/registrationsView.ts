@@ -19,6 +19,9 @@ export interface RegDeparture {
   soldOut: boolean;
   historical: boolean;
   tierOptions: Array<{ tierId: string; label: string; price: number; cap: number | null; booked: number }>;
+  /** true when the raw batch carries a real per-tier `offers[]` array (vs legacy
+   *  `sharingOptions` synthesis, which copies the batch total onto every tier). */
+  perTierOffers: boolean;
 }
 
 export interface RegTrip {
@@ -118,6 +121,8 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
         .map((d: any) => {
           const id = String(d.id);
           knownBatchIds.add(id);
+          const rawBatch = (Array.isArray(trip.batches) ? trip.batches : []).find((b: any) => String(b?.id) === id);
+          const perTierOffers = Array.isArray(rawBatch?.offers) && rawBatch.offers.length > 0;
           const offers = Array.isArray(d.offers) ? d.offers : [];
           const metered = offers.length > 0 && offers.every((o: any) => o.cap != null);
           const cap = metered ? offers.reduce((n: number, o: any) => n + Number(o.cap || 0), 0) : null;
@@ -136,6 +141,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
             booked,
             soldOut,
             historical,
+            perTierOffers,
             tierOptions: offers.map((o: any) => ({
               tierId: String(o.tierId),
               label: labelByTier[String(o.tierId)] ?? String(o.tierId),

@@ -54,4 +54,15 @@ describe('I5 — the booking read-modify-write is not cached', () => {
     expect(body.length).toBeGreaterThan(0);
     expect(body).not.toMatch(/\bawait\b/);
   });
+
+  it('moveBookingTier contains no await', () => {
+    const write = src('lib/registrationWrite.ts');
+    const body = write.slice(
+      write.indexOf('export function moveBookingTier'),
+      write.indexOf('export function hasActiveRegistration'),
+    );
+
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).not.toMatch(/\bawait\b/);
+  });
 });

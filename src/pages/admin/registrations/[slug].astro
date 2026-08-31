@@ -2,6 +2,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import RegistrationCard from '../../../components/admin/RegistrationCard.astro';
 import { buildRegistrationsView, regStats, type RegTrip, type RegDeparture } from '../../../lib/registrationsView';
+import { buildDepartureOccupancy } from '../../../lib/occupancyMatrix';
 import { formatINR } from '../../../lib/utils';
 import { REG_STATUS_COLORS } from '../../../lib/registrationStatus';
 export const prerender = false;
@@ -18,7 +19,7 @@ if (slug === '__legacy') {
     const dep: RegDeparture = {
       id: '', startDate: '', endDate: '', status: 'history',
       regs: view.legacyRegs, cap: null, booked: 0, soldOut: false, historical: true,
-      tierOptions: [],
+      tierOptions: [], perTierOffers: false,
     };
     trip = { slug: '__legacy', name: 'Unassigned / legacy registrations', active: false, nextDate: '', departures: [dep], historical: true, regCount: view.legacyRegs.length };
   }
@@ -138,6 +139,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   <div id="departures-container">
     {trip.departures.map((dep) => {
       const ds = regStats(dep.regs);
+      const occ = buildDepartureOccupancy(dep.regs, dep.tierOptions);
+      const heldTotal = occ.heldMale + occ.heldFemale + occ.heldOther;
       return (
         <article class={`departure ${dep.historical ? 'history-item' : ''}`} data-departure-id={dep.id}>
           <div class="departure-head">
@@ -157,6 +160,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
               {ds.rejected > 0 && <b style={REG_STATUS_COLORS.rejected}>{ds.rejected} rejected</b>}
               {ds.cancelled > 0 && <b style={REG_STATUS_COLORS.cancelled}>{ds.cancelled} cancelled</b>}
               {dep.cap !== null && <span>{dep.booked}/{dep.cap} occupied</span>}
+              {heldTotal > 0 && <span>{occ.heldMale} M · {occ.heldFemale} F{occ.heldOther > 0 ? ` · ${occ.heldOther} other` : ''} held</span>}
               {!isTripLead && dep.id && (
                 <span class="dep-actions">
                   <a href={`/admin/registrations/new?trip=${encodeURIComponent(trip.slug)}&departure=${encodeURIComponent(dep.id)}`}>+ Add</a>
@@ -165,6 +169,46 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
               )}
             </div>
           </div>
+          {dep.perTierOffers && dep.id && occ.rows.length > 0 && (
+            <div class="occ-matrix-wrap">
+              <table class="occ-matrix">
+                <thead>
+                  <tr>
+                    <th scope="col">Tier</th>
+                    <th scope="col">Rooms</th>
+                    <th scope="col">Male</th>
+                    <th scope="col">Female</th>
+                    <th scope="col">Other</th>
+                    <th scope="col">Beds left</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {occ.rows.map((row) => {
+                    const rooms = row.roomSize == null
+                      ? (row.cap == null ? '—' : 'open')
+                      : `${row.roomsUsed?.total ?? 0} / ${row.totalRooms}`;
+                    const cell = (held: number, hr: number | null) => hr == null ? `${held} · —` : `${held} · +${hr}`;
+                    return (
+                      <tr class={row.overbooked ? 'occ-over' : undefined}>
+                        <td>{row.label}{row.overbooked ? ' ⚠' : ''}</td>
+                        <td>{rooms}</td>
+                        <td>{cell(row.held.male, row.headroom.male)}</td>
+                        <td>{cell(row.held.female, row.headroom.female)}</td>
+                        <td>{row.held.other > 0 ? <span title="Set this traveller's gender to pair them into a room">{row.held.other}</span> : 0}</td>
+                        <td>{row.headroom.bedsLeft ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {occ.unmatchedHeld > 0 && (
+                  <tfoot>
+                    <tr><td colspan="6" class="occ-note">{occ.unmatchedHeld} held registration{occ.unmatchedHeld === 1 ? '' : 's'} not matched to a tier</td></tr>
+                  </tfoot>
+                )}
+              </table>
+              <p class="occ-note">Best-case estimate: single-gender rooms, current travellers assumed tightly packed. Move someone between tiers from a registration's Occupancy tab.</p>
+            </div>
+          )}
           {!isTripLead && dep.id && BOOKABLE_STATUSES.includes(dep.status) && unnotifiedWishlist(dep) > 0 && (
             <div class="wishlist-notify" data-batch-id={dep.id}>
               <span>
@@ -200,6 +244,14 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   .departure{border:1px solid var(--color-border);border-radius:.75rem;background:#fff;margin-bottom:.65rem;overflow:hidden}.departure-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .9rem;background:#FCFAF9}.departure-title,.departure-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}.dep-status-chip{margin-left:.5rem;padding:.1rem .45rem;border-radius:999px;background:var(--color-gray-soft);color:var(--color-text-secondary);font-size:.68rem;font-weight:700;text-transform:capitalize;white-space:nowrap}.departure-select-checkbox{width:1rem;height:1rem;accent-color:var(--color-coral)}.departure-summary>span{font-size:.74rem;color:var(--color-text-secondary)}.departure-summary b{padding:.15rem .5rem;border-radius:999px;font-size:.7rem}.dep-actions a{padding:.2rem .45rem;font-size:.7rem;border:1px solid var(--color-peach);border-radius:.4rem;color:var(--color-navy);text-decoration:none;font-weight:700}
   .wishlist-notify{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;background:#EEF2FF;border-top:1px solid #C7D2FE;padding:.6rem .9rem;font-size:.8rem;color:#3730A3}.wishlist-notify button{padding:.4rem .8rem;border:0;border-radius:.5rem;background:#4338CA;color:#fff;font-weight:700;font-size:.78rem;cursor:pointer}.wishlist-notify button:disabled{opacity:.6;cursor:default}.wishlist-notify.done{background:#ECFDF5;border-color:#A7F3D0;color:#065F46}
   .registration-list{display:flex;flex-direction:column;gap:.6rem;padding:.7rem;border-top:1px solid var(--color-border);background:#FCFAF9}.history-item{display:none}#noResults{display:none;text-align:center;padding:2rem;color:var(--color-text-secondary)}
+  .occ-matrix-wrap{overflow-x:auto;margin:.5rem .9rem}
+  .occ-matrix{width:100%;border-collapse:collapse;font-size:.76rem}
+  .occ-matrix th,.occ-matrix td{padding:.3rem .5rem;border-bottom:1px solid var(--color-border);text-align:left;white-space:nowrap}
+  .occ-matrix thead th{font-size:.65rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-secondary)}
+  .occ-matrix td:first-child{font-weight:700;color:var(--color-navy)}
+  .occ-matrix .occ-over,.occ-matrix .occ-over td:first-child{color:var(--color-danger)}
+  .occ-note{margin:.35rem 0 0;font-size:.68rem;color:var(--color-text-secondary)}
+  td.occ-note{padding:.3rem .5rem}
   @media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr)}.departure-head{align-items:flex-start;flex-direction:column}}
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>

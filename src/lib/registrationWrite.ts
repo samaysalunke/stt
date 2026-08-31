@@ -75,15 +75,36 @@ export function adjustBookingCount(
   }
 }
 
+/** Count of confirmed registrations on a given batch + tier. */
+export function confirmedCountForTier(batchId: string, tierId: string): number {
+  return (getDb()
+    .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
+    .get(batchId, tierId, 'confirmed') as { n: number }).n;
+}
+
+/** Tier cap from the trip YAML (null = unmetered). */
+export function tierCapFor(tripName: string, batchId: string, tierId: string): number | null {
+  try {
+    const matched = findTripByName(tripName);
+    if (!matched) return null;
+    const trip = readTrip(matched.slug);
+    const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);
+    const offer = (batch?.offers as any[])?.find((o: any) => o.tierId === tierId);
+    return offer?.cap != null ? Number(offer.cap) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Move one confirmed seat between two tiers on the same departure, in a single
  * read-modify-write.
  *
- * Same ATOMICITY INVARIANT as adjustBookingCount — keep this fully SYNCHRONOUS,
- * no `await` anywhere inside, so the readTrip → mutate → writeTrip runs to
- * completion in one tick and cannot interleave with a concurrent confirmation.
- * Doing this as adjustBookingCount(-1) then adjustBookingCount(+1) would be two
- * separate read-modify-writes: a crash between them permanently loses a seat.
+ * Carries the same ATOMICITY INVARIANT as adjustBookingCount — it must stay
+ * fully SYNCHRONOUS so the readTrip → mutate → writeTrip runs to completion in
+ * one tick and cannot interleave with a concurrent confirmation. Doing this as
+ * adjustBookingCount(-1) then adjustBookingCount(+1) would be two separate
+ * read-modify-writes: a crash between them permanently loses a seat.
  *
  * `bookedSpots` (the departure total) is deliberately left untouched — a move
  * doesn't change how many people are on the trip. Legacy batches with no
@@ -121,27 +142,6 @@ export function moveBookingTier(
     writeTrip(matched.slug, tripData);
   } catch (err) {
     console.error('[moveBookingTier]', err);
-  }
-}
-
-/** Count of confirmed registrations on a given batch + tier. */
-export function confirmedCountForTier(batchId: string, tierId: string): number {
-  return (getDb()
-    .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
-    .get(batchId, tierId, 'confirmed') as { n: number }).n;
-}
-
-/** Tier cap from the trip YAML (null = unmetered). */
-export function tierCapFor(tripName: string, batchId: string, tierId: string): number | null {
-  try {
-    const matched = findTripByName(tripName);
-    if (!matched) return null;
-    const trip = readTrip(matched.slug);
-    const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);
-    const offer = (batch?.offers as any[])?.find((o: any) => o.tierId === tierId);
-    return offer?.cap != null ? Number(offer.cap) : null;
-  } catch {
-    return null;
   }
 }
 
