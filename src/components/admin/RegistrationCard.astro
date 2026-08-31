@@ -66,6 +66,10 @@ const travellerFields = [
     field('Wishlist notified', r.wishlist_notified_at ? formatDateIN(r.wishlist_notified_at) : null),
   ] : []),
 ].filter(Boolean) as Field[];
+const demographicSummary = [field('Age', r.age), field('Gender', r.gender)]
+  .filter(Boolean)
+  .map((f) => f!.label === 'Age' ? `Age ${f!.value}` : String(f!.value))
+  .join(' · ');
 
 const tripPaymentFields = [
   field('Trip price', r.total_amount ? formatINR(r.total_amount) : null),
@@ -100,6 +104,7 @@ const attributionFields = [
     <div class="reg-primary">
       <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={regStatusStyle(r.status)}>{r.status}</span>{r.payment_screenshot_url && <span class="screenshot-chip">📎 Screenshot</span>}</div>
       <div class="reg-contact">#{r.id} · {r.email}</div><div class="reg-contact">{r.phone}</div>
+      {demographicSummary && <div class="reg-contact">{demographicSummary}</div>}
       <div class="reg-contact reg-dates">Applied {formatDateIN(r.created_at)} · Updated {formatDateIN(r.updated_at ?? r.created_at)}</div>
     </div>
     <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong></div>
