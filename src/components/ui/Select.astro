@@ -1,0 +1,19 @@
+---
+/**
+ * Native <select>. Options go in the default slot. Attributes (name, id,
+ * required, value…) pass through.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className, ...rest } = Astro.props;
+
+const base =
+  'w-full rounded-xl border border-peach bg-white px-4 py-2.5 text-sm text-navy ' +
+  'outline-none appearance-none ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral';
+---
+
+<select class:list={[base, className]} {...rest}>
+  <slot />
+</select>

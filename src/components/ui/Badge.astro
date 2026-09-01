@@ -1,0 +1,45 @@
+---
+/**
+ * Status / category badge.
+ *
+ * Ports the maps from the old `src/components/Badge.astro` verbatim (same
+ * `variant` + `value` API) so existing call sites keep working; the only change
+ * is that colours come from utilities instead of inline `style`.
+ */
+interface Props {
+  variant?: 'status' | 'category';
+  value: string;
+  class?: string;
+}
+
+const { variant = 'status', value, class: className, ...rest } = Astro.props;
+
+const statusStyles: Record<string, string> = {
+  'booking-open': 'bg-[#dcfce7] text-[#166534]',
+  'coming-soon': 'bg-[#e0e7ff] text-[#3730a3]',
+  'sold-out': 'bg-[#fee2e2] text-[#991b1b]',
+  'draft': 'bg-[#fef9c3] text-[#713f12]',
+};
+
+const statusLabels: Record<string, string> = {
+  'booking-open': 'Booking Open',
+  'coming-soon': 'Coming Soon',
+  'sold-out': 'Sold Out',
+  'draft': 'Draft',
+};
+
+const isStatus = variant === 'status';
+const tone = isStatus ? (statusStyles[value] ?? statusStyles['draft']) : 'bg-blush text-navy';
+const label = isStatus ? (statusLabels[value] ?? value) : value;
+---
+
+<span
+  class:list={[
+    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide',
+    tone,
+    className,
+  ]}
+  {...rest}
+>
+  {label}
+</span>

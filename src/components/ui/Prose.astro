@@ -1,0 +1,16 @@
+---
+/**
+ * Long-form copy wrapper. Just applies the shared `.rich-text` typography
+ * (defined in global.css) so pages stop re-declaring paragraph/heading/list
+ * spacing. Pass extra `.rich-text` modifiers (e.g. `important-note-body`) via
+ * `class`.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className, ...rest } = Astro.props;
+---
+
+<div class:list={['rich-text', className]} {...rest}>
+  <slot />
+</div>

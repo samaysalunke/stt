@@ -1,0 +1,22 @@
+---
+/**
+ * Fixed-ratio media slot for <Card>. Default 4/3 matches the current TripCard.
+ * Slot in an <img> (or a link wrapping one); overlay children go in the
+ * `overlay` slot and sit above the image.
+ */
+interface Props {
+  ratio?: string;
+  class?: string;
+}
+
+const { ratio = '4 / 3', class: className, ...rest } = Astro.props;
+---
+
+<div
+  class:list={['relative overflow-hidden', className]}
+  style={`aspect-ratio: ${ratio};`}
+  {...rest}
+>
+  <slot />
+  <slot name="overlay" />
+</div>

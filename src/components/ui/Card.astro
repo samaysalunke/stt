@@ -1,0 +1,27 @@
+---
+/**
+ * Card shell — white surface, one radius (`--radius-card`), one media shadow.
+ * Use with <CardMedia> and <CardBody>, or drop arbitrary children in.
+ *
+ * `as` lets a semantic element be chosen (article / div / a). Extra attributes
+ * pass through.
+ */
+interface Props {
+  as?: 'article' | 'div' | 'section';
+  hover?: boolean;
+  class?: string;
+}
+
+const { as: Tag = 'article', hover = false, class: className, ...rest } = Astro.props;
+---
+
+<Tag
+  class:list={[
+    'flex flex-col overflow-hidden rounded-[var(--radius-card)] bg-white shadow-media',
+    hover && 'transition-transform duration-200 hover:-translate-y-0.5',
+    className,
+  ]}
+  {...rest}
+>
+  <slot />
+</Tag>

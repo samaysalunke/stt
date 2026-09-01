@@ -1,0 +1,17 @@
+---
+/** Padded body region for <Card>. `gap` and `pad` are the common knobs. */
+interface Props {
+  pad?: 'sm' | 'md' | 'lg';
+  gap?: 'sm' | 'md' | 'lg' | 'none';
+  class?: string;
+}
+
+const { pad = 'md', gap = 'md', class: className, ...rest } = Astro.props;
+
+const pads = { sm: 'p-4', md: 'p-6', lg: 'p-8' } as const;
+const gaps = { none: '', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' } as const;
+---
+
+<div class:list={['flex flex-1 flex-col', pads[pad], gaps[gap], className]} {...rest}>
+  <slot />
+</div>

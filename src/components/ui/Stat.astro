@@ -1,0 +1,21 @@
+---
+/**
+ * A single figure + label tile (the "12–16 / Group Size", "10+ / Destinations"
+ * pairs on the homepage and leaderboard). Display font on the value.
+ */
+interface Props {
+  value: string;
+  label: string;
+  tone?: 'light' | 'dark';
+  class?: string;
+}
+
+const { value, label, tone = 'dark', class: className, ...rest } = Astro.props;
+const valueColor = tone === 'dark' ? 'text-navy' : 'text-white';
+const labelColor = tone === 'dark' ? 'text-gray-text' : 'text-white/45';
+---
+
+<div class:list={['text-center', className]} {...rest}>
+  <div class:list={['font-display text-2xl lg:text-3xl font-bold', valueColor]}>{value}</div>
+  <div class:list={['mt-0.5 text-xs uppercase tracking-wider', labelColor]}>{label}</div>
+</div>

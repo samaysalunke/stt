@@ -1,0 +1,17 @@
+---
+/**
+ * Text-ish input. All attributes (type, name, id, placeholder, required,
+ * value, inputmode, pattern, autocomplete…) pass through unchanged.
+ */
+interface Props {
+  class?: string;
+}
+const { class: className, ...rest } = Astro.props;
+
+const base =
+  'w-full rounded-xl border border-peach bg-white px-4 py-2.5 text-sm text-navy ' +
+  'placeholder:text-gray-text/70 outline-none ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral';
+---
+
+<input class:list={[base, className]} {...rest} />

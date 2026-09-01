@@ -1,0 +1,162 @@
+---
+// UI primitive gallery — Phase 1 review surface for the UI refresh.
+// Not linked from anywhere; renders a 404 in production; deleted before merge.
+// (Astro does not route underscore-prefixed files, so this lives at /ui-kit.
+//  An early `return` in frontmatter breaks this project's compiler, hence the
+//  status-set + conditional-render guard rather than `return Astro.redirect`.)
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/ui/Button.astro';
+import Badge from '../components/ui/Badge.astro';
+import Card from '../components/ui/Card.astro';
+import CardMedia from '../components/ui/CardMedia.astro';
+import CardBody from '../components/ui/CardBody.astro';
+import Section from '../components/ui/Section.astro';
+import Field from '../components/ui/Field.astro';
+import Input from '../components/ui/Input.astro';
+import Select from '../components/ui/Select.astro';
+import Textarea from '../components/ui/Textarea.astro';
+import Stat from '../components/ui/Stat.astro';
+import Prose from '../components/ui/Prose.astro';
+import Icon from '../components/ui/Icon.astro';
+
+const isProd = import.meta.env.PROD;
+if (isProd) Astro.response.status = 404;
+
+const heroImg = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&auto=format&fit=crop&q=80';
+const buttonVariants = ['primary', 'cta', 'outline', 'ghost'] as const;
+const iconNames = ['map-pin', 'arrow-right', 'chevron-right', 'chevron-down', 'menu', 'close', 'users', 'clock', 'mail', 'check', 'calendar', 'sparkles'] as const;
+---
+
+<BaseLayout title="UI primitives" description="Internal component gallery" nav="none" robots="noindex,nofollow">
+  {isProd ? (
+    <div class="container-app py-14"><p class="text-gray-text">Not found.</p></div>
+  ) : (
+  <div class="container-app py-14 space-y-16">
+    <header class="space-y-2">
+      <h1 class="text-display-lg font-display">UI primitives</h1>
+      <p class="text-gray-text">Phase 1 review surface. Built on the <code>@theme</code> tokens in <code>global.css</code>. Sign off on the look before any page migration.</p>
+    </header>
+
+    <section class="space-y-4">
+      <h2 class="text-display-sm font-display text-coral">Display type scale (Fraunces)</h2>
+      <p class="text-display-xl font-display">Display XL &mdash; hero headline</p>
+      <p class="text-display-lg font-display">Display LG &mdash; page title</p>
+      <p class="text-display-md font-display">Display MD &mdash; section heading</p>
+      <p class="text-display-sm font-display">Display SM &mdash; card / block heading</p>
+      <p class="text-display-xs font-display">Display XS &mdash; small heading</p>
+      <p class="text-base text-gray-text">Body &mdash; DM Sans, Tailwind default scale, for running copy.</p>
+    </section>
+
+    <section class="space-y-6">
+      <h2 class="text-display-sm font-display text-coral">Buttons</h2>
+      {buttonVariants.map((v) => (
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="w-16 text-xs uppercase tracking-widest text-gray-text">{v}</span>
+          <Button variant={v} size="sm">Small</Button>
+          <Button variant={v} size="md">Medium <Icon name="arrow-right" /></Button>
+          <Button variant={v} size="lg">Large</Button>
+          <Button variant={v} size="md" disabled>Disabled</Button>
+          <Button variant={v} size="md" href="#">As link</Button>
+        </div>
+      ))}
+      <Button variant="cta" size="lg" block>Full-width CTA</Button>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Badges</h2>
+      <div class="flex flex-wrap gap-3">
+        <Badge value="booking-open" />
+        <Badge value="coming-soon" />
+        <Badge value="sold-out" />
+        <Badge value="draft" />
+        <Badge variant="category" value="Himalaya" />
+      </div>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Card</h2>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <Card hover>
+            <CardMedia>
+              <img src={heroImg} alt="" width="800" height="600" class="h-full w-full object-cover" />
+              <div slot="overlay" class="u-overlay-scrim absolute inset-0"></div>
+              <span slot="overlay" class="absolute left-3 top-3"><Badge value="booking-open" /></span>
+            </CardMedia>
+            <CardBody>
+              <h3 class="text-display-sm font-display">Sample trip {i + 1}</h3>
+              <p class="inline-flex items-center gap-1.5 text-sm text-gray-text">
+                <Icon name="map-pin" class="text-coral" /> Somewhere offbeat
+              </p>
+              <Button variant="primary" size="md" block class="mt-auto">View details</Button>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Stat</h2>
+      <div class="flex gap-10 rounded-[var(--radius-card)] bg-white p-6 shadow-card w-max">
+        <Stat value="12&ndash;16" label="Group size" />
+        <Stat value="10+" label="Destinations" />
+        <Stat value="4.9" label="Avg rating" />
+      </div>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Section (tones + header)</h2>
+    </section>
+    <Section title="A soft band" intro="Section handles the container gutter, vertical rhythm and the centered heading block." tone="soft">
+      <p class="text-center text-gray-text">slot content</p>
+    </Section>
+    <Section title="A blush band" intro="Same primitive, blush tone." tone="blush" space="sm">
+      <p class="text-center text-gray-text">slot content</p>
+    </Section>
+    <Section title="A navy band" intro="Inverted text handled by the tone." tone="navy" space="sm">
+      <p class="text-center text-white/75">slot content</p>
+    </Section>
+
+    <section class="space-y-4 max-w-md">
+      <h2 class="text-display-sm font-display text-coral">Form primitives</h2>
+      <Field label="Full name" for="g-name" required>
+        <Input id="g-name" type="text" name="name" placeholder="Journey Tester" />
+      </Field>
+      <Field label="Email" for="g-email" required hint="We only use this to hold your spot.">
+        <Input id="g-email" type="email" name="email" placeholder="you@example.com" />
+      </Field>
+      <Field label="Occupancy" for="g-occ">
+        <Select id="g-occ" name="occ">
+          <option>Standard</option>
+          <option>Deluxe</option>
+        </Select>
+      </Field>
+      <Field label="Why this trip?" for="g-why" error="This one shows the error state.">
+        <Textarea id="g-why" name="why" rows="3" placeholder="Tell us what pulled you here." class="border-coral" />
+      </Field>
+      <Button variant="cta" size="lg" block>Submit</Button>
+    </section>
+
+    <section class="space-y-3 max-w-2xl">
+      <h2 class="text-display-sm font-display text-coral">Prose (.rich-text)</h2>
+      <Prose>
+        <h2>A heading inside prose</h2>
+        <p>Body paragraph with a <a href="#">link</a> and <strong>bold</strong> and <em>italic</em>.</p>
+        <ul><li>First point</li><li>Second point</li></ul>
+      </Prose>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Icons</h2>
+      <div class="flex flex-wrap gap-6 text-navy">
+        {iconNames.map((n) => (
+          <span class="flex flex-col items-center gap-1 text-xs text-gray-text">
+            <Icon name={n} size="1.75rem" class="text-coral" />
+            {n}
+          </span>
+        ))}
+      </div>
+    </section>
+  </div>
+  )}
+</BaseLayout>

@@ -1,0 +1,19 @@
+---
+/**
+ * Multiline input. Attributes (name, id, rows, placeholder, required, value…)
+ * pass through. Prefill via the `value` prop, not children — <textarea> content
+ * is raw text in HTML, so a slot would render literally.
+ */
+interface Props {
+  value?: string;
+  class?: string;
+}
+const { value, class: className, ...rest } = Astro.props;
+
+const base =
+  'w-full rounded-xl border border-peach bg-white px-4 py-2.5 text-sm text-navy ' +
+  'placeholder:text-gray-text/70 outline-none resize-y ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral';
+---
+
+<textarea class:list={[base, className]} {...rest}>{value}</textarea>

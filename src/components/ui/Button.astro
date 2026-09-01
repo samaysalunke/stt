@@ -1,0 +1,57 @@
+---
+/**
+ * Button / link primitive.
+ *
+ * Renders a real <a> when `href` is set, otherwise a <button>. All extra
+ * attributes (id, name, type, disabled, data-*, aria-*, target…) pass straight
+ * through. Pass `class` to extend — it is appended after the variant classes.
+ *
+ * Replaces the ~30 hand-rolled `inline-flex … rounded-full px-6 py-4 …` blocks
+ * across the pages with 4 variants × 3 sizes.
+ */
+interface Props {
+  href?: string;
+  variant?: 'primary' | 'cta' | 'outline' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+  block?: boolean;
+  class?: string;
+}
+
+const {
+  href,
+  variant = 'primary',
+  size = 'md',
+  block = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const base =
+  'inline-flex items-center justify-center gap-2 rounded-full font-semibold ' +
+  'transition-all duration-150 hover:-translate-y-0.5 ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral ' +
+  'disabled:opacity-40 disabled:pointer-events-none aria-disabled:opacity-40 aria-disabled:pointer-events-none';
+
+const variants: Record<string, string> = {
+  primary: 'bg-coral text-white hover:brightness-105 shadow-card',
+  cta: 'bg-cta text-white hover:brightness-105 shadow-card',
+  outline: 'border border-current bg-transparent hover:bg-navy/5',
+  ghost: 'bg-transparent hover:bg-navy/5',
+};
+
+const sizes: Record<string, string> = {
+  sm: 'px-4 py-1.5 text-sm',
+  md: 'px-6 py-3 text-sm',
+  lg: 'px-8 py-4 text-base',
+};
+
+const Tag = href ? 'a' : 'button';
+---
+
+<Tag
+  href={href}
+  class:list={[base, variants[variant], sizes[size], block && 'w-full', className]}
+  {...rest}
+>
+  <slot />
+</Tag>
