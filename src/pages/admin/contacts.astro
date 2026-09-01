@@ -19,21 +19,21 @@ function statusStyle(status: string) {
 ---
 
 <AdminLayout title="Contact Submissions" page="contacts">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+  <div class="flex items-center justify-between mb-[1.5rem]">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-primary-dark);margin:0 0 0.25rem;">Contact Submissions</h1>
-      <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{contacts.length} total messages</p>
+      <h1 class="font-display text-[1.5rem] font-extrabold text-[#111D27] mt-[0] mx-[0] mb-[0.25rem]">Contact Submissions</h1>
+      <p class="text-gray-text text-[0.875rem] m-0">{contacts.length} total messages</p>
     </div>
     <a id="contacts-export"
       href="/api/admin/export?type=contacts"
-      style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
+      class="py-[0.45rem] px-[1rem] bg-navy text-white rounded-[0.5rem] text-[0.875rem] font-semibold no-underline"
     >
       ↓ Export CSV
     </a>
   </div>
 
   <!-- Filter bar -->
-  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+  <div class="flex flex-wrap gap-[0.5rem] mb-[1rem]">
     {['all','new','resolved'].map(s => (
       <button
         class="contact-filter"
@@ -46,28 +46,28 @@ function statusStyle(status: string) {
   </div>
 
   {contacts.length === 0 ? (
-    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;">No contact submissions yet.</p>
+    <p class="text-center p-[3rem] text-gray-text bg-white border border-peach/60 rounded-[1.25rem]">No contact submissions yet.</p>
   ) : (
-    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+    <div class="flex flex-col gap-[0.75rem]">
       {contacts.map((c) => (
-        <div class="contact-row" data-status={c.status ?? 'new'} style="background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;padding:1rem 1.15rem;">
+        <div class="contact-row bg-white border border-peach/60 rounded-[1.25rem] py-[1rem] px-[1.15rem]" data-status={c.status ?? 'new'}>
           <!-- Summary -->
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
-            <div style="min-width:0;">
-              <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                <span style="font-weight:700;color:var(--color-navy);">{c.full_name}</span>
+          <div class="flex items-start justify-between gap-[0.75rem] flex-wrap">
+            <div class="min-w-0">
+              <div class="flex items-center gap-[0.5rem] flex-wrap">
+                <span class="font-bold text-navy">{c.full_name}</span>
                 <span style={`padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;${statusStyle(c.status ?? 'new')}`}>
                   {c.status ?? 'new'}
                 </span>
               </div>
-              <a href={`mailto:${c.email}`} style="color:var(--color-coral);font-size:0.82rem;word-break:break-all;">{c.email}</a>
-              <p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--color-navy);">{c.subject}</p>
+              <a href={`mailto:${c.email}`} class="text-coral text-[0.82rem] break-all">{c.email}</a>
+              <p class="mt-[0.25rem] mx-[0] mb-[0] text-[0.85rem] text-navy">{c.subject}</p>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex:none;">
-              <span style="font-size:0.75rem;color:var(--color-text-secondary);white-space:nowrap;">{fmt(c.created_at as string)}</span>
+            <div class="flex flex-col items-end gap-[0.4rem] flex-none">
+              <span class="text-[0.75rem] text-gray-text whitespace-nowrap">{fmt(c.created_at as string)}</span>
               <button
                 onclick={`toggleContact(${c.id})`}
-                style="font-size:0.75rem;color:var(--color-coral);background:none;border:1px solid var(--color-coral);border-radius:0.5rem;padding:0.2rem 0.7rem;cursor:pointer;"
+                class="text-[0.75rem] text-coral bg-transparent border border-coral rounded-[0.5rem] py-[0.2rem] px-[0.7rem] cursor-pointer"
               >
                 View
               </button>
@@ -75,17 +75,17 @@ function statusStyle(status: string) {
           </div>
 
           <!-- Expandable detail -->
-          <div id={`contact-${c.id}`} style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--color-border);">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 1.5rem;font-size:0.82rem;margin-bottom:1rem;">
-              <div><span style="color:var(--color-text-secondary);font-weight:600;">Phone:</span> {c.phone ?? '—'}</div>
-              <div><span style="color:var(--color-text-secondary);font-weight:600;">Source:</span> {c.source ?? '—'}</div>
+          <div id={`contact-${c.id}`} class="hidden mt-[1rem] pt-[1rem] border-t border-border">
+            <div class="grid grid-cols-2 gap-y-[0.4rem] gap-x-[1.5rem] text-[0.82rem] mb-[1rem]">
+              <div><span class="text-gray-text font-semibold">Phone:</span> {c.phone ?? '—'}</div>
+              <div><span class="text-gray-text font-semibold">Source:</span> {c.source ?? '—'}</div>
             </div>
-            <p style="font-size:0.82rem;font-weight:600;color:var(--color-text-secondary);margin:0 0 0.4rem;">Message:</p>
-            <div style="background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:0.75rem;padding:0.875rem;font-size:0.875rem;white-space:pre-wrap;line-height:1.6;">{c.message}</div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;">
+            <p class="text-[0.82rem] font-semibold text-gray-text mt-[0] mx-[0] mb-[0.4rem]">Message:</p>
+            <div class="bg-gray-soft border border-border rounded-[0.75rem] p-[0.875rem] text-[0.875rem] whitespace-pre-wrap leading-[1.6]">{c.message}</div>
+            <div class="flex gap-[0.5rem] flex-wrap mt-[1rem]">
               <a
                 href={`mailto:${c.email}?subject=Re: ${encodeURIComponent(c.subject)}`}
-                style="padding:0.5rem 1.25rem;background:var(--color-accent);color:white;border-radius:0.5rem;font-size:0.82rem;font-weight:700;text-decoration:none;white-space:nowrap;"
+                class="py-[0.5rem] px-[1.25rem] bg-coral text-white rounded-[0.5rem] text-[0.82rem] font-bold no-underline whitespace-nowrap"
               >
                 Reply via Email
               </a>

@@ -19,22 +19,22 @@ const error   = Astro.url.searchParams.get('error');
 
 <AdminLayout title="Role Management" page="settings">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">Role Management</h1>
-    <p class="text-sm mt-1" style="color: var(--color-gray-text);">Control who can access the admin panel and what they can do.</p>
+    <h1 class="text-2xl font-bold font-display text-navy">Role Management</h1>
+    <p class="text-sm mt-1 text-gray-text">Control who can access the admin panel and what they can do.</p>
   </div>
 
   {saved && (
-    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2" style="background: rgba(34,166,84,0.10); color: var(--color-success);">
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2 bg-success/10 text-success">
       Role assigned successfully.
     </div>
   )}
   {removed && (
-    <div class="rounded-2xl px-4 py-3 mb-6 text-sm" style="background: rgba(34,166,84,0.10); color: var(--color-success);">
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm bg-success/10 text-success">
       Role removed.
     </div>
   )}
   {error && (
-    <div class="rounded-2xl px-4 py-3 mb-6 text-sm" style="background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626;">
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]">
       {error === 'last_owner' ? "Can't remove the last owner." :
        error === 'self'       ? "Can't remove your own owner role." :
        error === 'not_found'  ? 'User not found.' : 'Something went wrong.'}
@@ -42,22 +42,22 @@ const error   = Astro.url.searchParams.get('error');
   )}
 
   <!-- Current roles table -->
-  <div class="bg-white rounded-[2rem] overflow-hidden mb-8" style="border: 1px solid rgba(245,221,215,0.6);">
-    <div class="px-6 py-4 border-b" style="border-color: var(--color-peach);">
-      <h2 class="text-base font-semibold" style="color: var(--color-navy);">Current admin users</h2>
+  <div class="bg-white rounded-[2rem] overflow-hidden mb-8 border border-peach/60">
+    <div class="px-6 py-4 border-b border-peach">
+      <h2 class="text-base font-semibold text-navy">Current admin users</h2>
     </div>
     {adminUsers.length === 0 ? (
-      <div class="px-6 py-8 text-center text-sm" style="color: var(--color-gray-text);">
+      <div class="px-6 py-8 text-center text-sm text-gray-text">
         No roles assigned yet.
       </div>
     ) : (
       <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr style="background: rgba(245,221,215,0.2);">
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">User</th>
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Role</th>
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest hidden sm:table-cell" style="color: var(--color-navy);">Trips</th>
+          <tr class="bg-peach/20">
+            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest text-navy">User</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Role</th>
+            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest hidden sm:table-cell text-navy">Trips</th>
             <th class="px-6 py-3"></th>
           </tr>
         </thead>
@@ -68,10 +68,10 @@ const error   = Astro.url.searchParams.get('error');
             const isLastOwner = u.role === 'owner' && adminUsers.filter(x => x.role === 'owner').length === 1;
             const canRemove = !isSelf && !isLastOwner;
             return (
-              <tr class="border-t" style="border-color: var(--color-peach);">
+              <tr class="border-t border-peach">
                 <td class="px-6 py-4">
-                  <div class="font-medium" style="color: var(--color-navy);">{u.displayName ?? u.email}</div>
-                  <div class="text-xs" style="color: var(--color-gray-text);">{u.email}</div>
+                  <div class="font-medium text-navy">{u.displayName ?? u.email}</div>
+                  <div class="text-xs text-gray-text">{u.email}</div>
                 </td>
                 <td class="px-6 py-4">
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
@@ -81,7 +81,7 @@ const error   = Astro.url.searchParams.get('error');
                     {u.role}
                   </span>
                 </td>
-                <td class="px-6 py-4 hidden sm:table-cell text-xs" style="color: var(--color-gray-text);">
+                <td class="px-6 py-4 hidden sm:table-cell text-xs text-gray-text">
                   {tripList.length > 0 ? tripList.join(', ') : '—'}
                 </td>
                 <td class="px-6 py-4 text-right">
@@ -90,11 +90,11 @@ const error   = Astro.url.searchParams.get('error');
                       <input type="hidden" name="action" value="remove-form" />
                       <input type="hidden" name="userId" value={u.userId} />
                       <input type="hidden" name="role" value={u.role} />
-                      <button type="submit" class="text-xs font-medium hover:opacity-70 transition-opacity"
-                              style="color: #DC2626;">Remove</button>
+                      <button type="submit" class="text-xs font-medium hover:opacity-70 transition-opacity text-[#DC2626]"
+                             >Remove</button>
                     </form>
                   ) : (
-                    <span class="text-xs" style="color: rgba(27,43,58,0.3);">{isSelf ? 'You' : '—'}</span>
+                    <span class="text-xs text-navy/30">{isSelf ? 'You' : '—'}</span>
                   )}
                 </td>
               </tr>
@@ -107,28 +107,28 @@ const error   = Astro.url.searchParams.get('error');
   </div>
 
   <!-- Add role form -->
-  <div class="bg-white rounded-[2rem] px-6 py-6" style="border: 1px solid rgba(245,221,215,0.6);">
-    <h2 class="text-base font-semibold mb-5" style="color: var(--color-navy);">Assign a role</h2>
+  <div class="bg-white rounded-[2rem] px-6 py-6 border border-peach/60">
+    <h2 class="text-base font-semibold mb-5 text-navy">Assign a role</h2>
     <form method="POST" action="/api/admin/roles" class="space-y-4" id="assign-form">
       <input type="hidden" name="action" value="assign-form" />
 
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color: var(--color-navy);">
+        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-navy">
           User email
         </label>
         <input type="email" name="email" required placeholder="user@example.com"
-               class="w-full rounded-2xl px-4 py-3 text-sm outline-none"
-               style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-blush);" />
-        <p class="text-xs mt-1" style="color: var(--color-gray-text);">The user must have logged in with Google at least once.</p>
+               class="w-full rounded-2xl px-4 py-3 text-sm outline-none border border-peach/80 bg-blush"
+               />
+        <p class="text-xs mt-1 text-gray-text">The user must have logged in with Google at least once.</p>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color: var(--color-navy);">
+        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-navy">
           Role
         </label>
         <select name="role" required id="role-select"
-                class="w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-blush);">
+                class="w-full rounded-2xl px-4 py-3 text-sm outline-none border border-peach/80 bg-blush"
+               >
           <option value="owner">owner — full access, can manage roles</option>
           <option value="ops" selected>ops — can manage bookings and content</option>
           <option value="trip_lead">trip_lead — read-only participant list for assigned trips</option>
@@ -136,22 +136,22 @@ const error   = Astro.url.searchParams.get('error');
       </div>
 
       <div id="trip-ids-row" class="hidden">
-        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5" style="color: var(--color-navy);">
+        <label class="block text-xs font-semibold uppercase tracking-widest mb-1.5 text-navy">
           Assigned trips
         </label>
         <select name="tripIds" multiple id="trip-ids-select"
-                class="w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-blush); min-height: 100px;">
+                class="w-full rounded-2xl px-4 py-3 text-sm outline-none border border-peach/80 bg-blush min-h-[100px]"
+               >
           {trips.map((t) => (
             <option value={t.slug}>{t.name} ({t.slug})</option>
           ))}
         </select>
-        <p class="text-xs mt-1" style="color: var(--color-gray-text);">Hold Cmd/Ctrl to select multiple trips.</p>
+        <p class="text-xs mt-1 text-gray-text">Hold Cmd/Ctrl to select multiple trips.</p>
       </div>
 
       <button type="submit"
-              class="rounded-full px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style="background-color: var(--color-cta);">
+              class="rounded-full px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-cta"
+             >
         Assign role
       </button>
     </form>

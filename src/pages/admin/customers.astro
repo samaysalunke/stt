@@ -153,21 +153,21 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 ---
 
 <AdminLayout title="Customers" page="customers">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem;">
+  <div class="flex items-center justify-between mb-[1.25rem] flex-wrap gap-[0.75rem]">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-navy);margin:0 0 0.2rem;">Customers</h1>
-      <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{totalCustomers} customer{totalCustomers !== 1 ? 's' : ''} · read-only{capped ? ' · showing first 1 000' : ''}</p>
+      <h1 class="font-display text-[1.5rem] font-extrabold text-navy mt-[0] mx-[0] mb-[0.2rem]">Customers</h1>
+      <p class="text-gray-text text-[0.875rem] m-0">{totalCustomers} customer{totalCustomers !== 1 ? 's' : ''} · read-only{capped ? ' · showing first 1 000' : ''}</p>
     </div>
     {!isTripLead && (
       <a id="customers-export" href="/api/admin/export?type=customers"
-         style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;">
+         class="py-[0.45rem] px-[1rem] bg-navy text-white rounded-[0.5rem] text-[0.875rem] font-semibold no-underline">
         ↓ Export CSV
       </a>
     )}
   </div>
 
   {capped && (
-    <div style="background:#FEF9C3;border:1px solid #FCD34D;border-radius:0.75rem;padding:0.6rem 1rem;font-size:0.82rem;color:#78350F;margin-bottom:1rem;">
+    <div class="bg-[#FEF9C3] border border-warning-border rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-[#78350F] mb-[1rem]">
       More than 1 000 customers found — showing the 1 000 most recent. Use Export CSV to get the full list.
     </div>
   )}
@@ -186,11 +186,11 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   </div>
 
   <!-- Search toolbar -->
-  <div style="display:flex;gap:0.5rem;margin:1rem 0;flex-wrap:wrap;align-items:center;">
+  <div class="flex gap-[0.5rem] my-[1rem] mx-[0] flex-wrap items-center">
     <input id="cust-search" type="search" placeholder="Search name, email, phone, username, city…"
-           style="flex:1;min-width:200px;padding:0.5rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;" />
+           class="flex-1 min-w-[200px] py-[0.5rem] px-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.875rem]" />
     <select id="cust-type-filter"
-            style="padding:0.5rem 0.75rem;border:1.5px solid var(--color-border);border-radius:0.5rem;font-size:0.875rem;">
+            class="py-[0.5rem] px-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.875rem]">
       <option value="">All customers</option>
       <option value="has-account">Has account</option>
       <option value="no-account">No account</option>
@@ -203,11 +203,11 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
   <!-- Customer table -->
   {customers.length === 0 ? (
-    <div style="background:white;border:1px solid var(--color-border);border-radius:1.25rem;padding:3rem;text-align:center;color:var(--color-text-secondary);">
+    <div class="bg-white border border-border rounded-[1.25rem] p-[3rem] text-center text-gray-text">
       No customers found.
     </div>
   ) : (
-    <div id="cust-list" style="display:flex;flex-direction:column;gap:0.6rem;">
+    <div id="cust-list" class="flex flex-col gap-[0.6rem]">
       {customers.map((c, i) => {
         const regs = regsByEmail.get(c.email) ?? [];
         const lb = c.user_id ? leaderboardByUserId.get(c.user_id) : null;
@@ -230,28 +230,28 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
             <!-- Summary row -->
             <div class="cust-summary">
               <div class="cust-primary">
-                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                  <strong style="color:var(--color-navy);">{displayName}</strong>
-                  {c.username && <span style="font-size:0.72rem;background:var(--color-blush);color:var(--color-coral);padding:0.15rem 0.45rem;border-radius:9999px;font-weight:600;">@{c.username}</span>}
-                  {c.role && <span style="font-size:0.72rem;background:#F3F4F6;color:#374151;padding:0.15rem 0.45rem;border-radius:9999px;font-weight:600;">{c.role}</span>}
+                <div class="flex items-center gap-[0.5rem] flex-wrap">
+                  <strong class="text-navy">{displayName}</strong>
+                  {c.username && <span class="text-[0.72rem] bg-blush text-coral py-[0.15rem] px-[0.45rem] rounded-full font-semibold">@{c.username}</span>}
+                  {c.role && <span class="text-[0.72rem] bg-[#F3F4F6] text-[#374151] py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{c.role}</span>}
                 </div>
-                <div style="font-size:0.78rem;color:var(--color-text-secondary);margin-top:0.1rem;">{c.email}</div>
-                {c.phone && <div style="font-size:0.78rem;color:var(--color-text-secondary);">{c.phone}</div>}
+                <div class="text-[0.78rem] text-gray-text mt-[0.1rem]">{c.email}</div>
+                {c.phone && <div class="text-[0.78rem] text-gray-text">{c.phone}</div>}
               </div>
 
               <div class="cust-meta">
                 <span class="meta-label">Bookings</span>
-                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;">
-                  {c.confirmed > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#D1FAE5;color:#065F46;">{c.confirmed} conf</span>}
-                  {c.pending > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#FEF3C7;color:#92400E;">{c.pending} pend</span>}
-                  {c.lead > 0 && <span style="padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;background:#FEF9C3;color:#78350F;">{c.lead} lead</span>}
-                  {c.confirmed === 0 && c.pending === 0 && c.lead === 0 && <span style="font-size:0.75rem;color:var(--color-text-secondary);">{c.total_regs} reg{c.total_regs !== 1 ? 's' : ''}</span>}
+                <div class="flex gap-[0.3rem] flex-wrap">
+                  {c.confirmed > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-[#D1FAE5] text-[#065F46]">{c.confirmed} conf</span>}
+                  {c.pending > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-warning-surface text-warning-ink">{c.pending} pend</span>}
+                  {c.lead > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-[#FEF9C3] text-[#78350F]">{c.lead} lead</span>}
+                  {c.confirmed === 0 && c.pending === 0 && c.lead === 0 && <span class="text-[0.75rem] text-gray-text">{c.total_regs} reg{c.total_regs !== 1 ? 's' : ''}</span>}
                 </div>
               </div>
 
               <div class="cust-meta">
                 <span class="meta-label">Latest trip</span>
-                <strong style="font-size:0.82rem;color:var(--color-navy);">{c.latest_trip ?? '—'}</strong>
+                <strong class="text-[0.82rem] text-navy">{c.latest_trip ?? '—'}</strong>
               </div>
 
               <div class="cust-meta">
@@ -263,12 +263,12 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
               <div class="cust-meta" data-desktop-only>
                 <span class="meta-label">City</span>
-                <span style="font-size:0.82rem;">{c.city ?? '—'}</span>
+                <span class="text-[0.82rem]">{c.city ?? '—'}</span>
               </div>
 
               <div class="cust-meta" data-desktop-only>
                 <span class="meta-label">Last activity</span>
-                <span style="font-size:0.78rem;color:var(--color-text-secondary);">{formatDateIN(c.last_reg_at)}</span>
+                <span class="text-[0.78rem] text-gray-text">{formatDateIN(c.last_reg_at)}</span>
               </div>
 
               <button onclick={`toggleCustomer(${i})`} aria-expanded="false" class="cust-toggle-btn">
@@ -277,16 +277,16 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
             </div>
 
             <!-- Detail drawer -->
-            <div id={`cust-detail-${i}`} class="cust-detail" style="display:none;">
+            <div id={`cust-detail-${i}`} class="cust-detail hidden">
               <div class="cust-detail-grid">
 
                 <!-- Identity + account block -->
                 <div>
-                  <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-                    <h3 class="detail-heading" style="margin:0;">Identity</h3>
+                  <div class="flex items-center justify-between gap-[0.5rem]">
+                    <h3 class="detail-heading m-0">Identity</h3>
                     {!isTripLead && <button type="button" onclick={`toggleCustEdit(${i})`} class="cust-edit-btn">Edit</button>}
                   </div>
-                  <div class="detail-fields" id={`cust-view-${i}`} style="margin-top:0.5rem;">
+                  <div class="detail-fields mt-[0.5rem]" id={`cust-view-${i}`}>
                     <div><span>Email</span>
                       <span>{c.email}
                         <button onclick={`copyText('${c.email}')`} class="copy-btn" title="Copy email">⧉</button>
@@ -298,11 +298,11 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                   </div>
 
                   {!isTripLead && (
-                    <form id={`cust-edit-${i}`} class="cust-edit-form" data-email={c.email} style="display:none;margin-top:0.5rem;">
+                    <form id={`cust-edit-${i}`} class="cust-edit-form hidden mt-[0.5rem]" data-email={c.email}>
                       <label>Full name<input type="text" name="full_name" value={c.full_name ?? ''} required /></label>
                       <label>Phone<input type="text" name="phone" value={c.phone ?? ''} required /></label>
                       <label>City<input type="text" name="city" value={c.city ?? ''} /></label>
-                      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                      <div class="flex gap-[0.5rem] mt-[0.5rem]">
                         <button type="submit" class="cust-edit-save">Save</button>
                         <button type="button" onclick={`toggleCustEdit(${i})`} class="cust-edit-cancel">Cancel</button>
                       </div>
@@ -311,7 +311,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
                   {c.user_id && (
                     <>
-                      <h3 class="detail-heading" style="margin-top:1rem;">Account</h3>
+                      <h3 class="detail-heading mt-[1rem]">Account</h3>
                       <div class="detail-fields">
                         {c.displayName && <div><span>Name</span><span>{c.displayName}</span></div>}
                         {c.username && <div><span>Username</span><span>@{c.username} <button onclick={`copyText('@${c.username}')`} class="copy-btn" title="Copy username">⧉</button></span></div>}
@@ -326,7 +326,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
                   {lb && (
                     <>
-                      <h3 class="detail-heading" style="margin-top:1rem;">Adventure stats</h3>
+                      <h3 class="detail-heading mt-[1rem]">Adventure stats</h3>
                       <div class="detail-fields">
                         <div><span>Km from home</span><span>{Math.round(lb.kmsFromHome).toLocaleString('en-IN')} km</span></div>
                         <div><span>Days outdoors</span><span>{lb.daysOutdoors}</span></div>
@@ -336,20 +336,20 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                   )}
 
                   <!-- Links -->
-                  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1rem;">
+                  <div class="flex flex-wrap gap-[0.5rem] mt-[1rem]">
                     <a href={`/admin/registrations/?search=${encodeURIComponent(c.email)}`}
-                       style="padding:0.35rem 0.7rem;border:1px solid var(--color-coral);color:var(--color-coral);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                       class="py-[0.35rem] px-[0.7rem] border border-coral text-coral rounded-[0.4rem] text-[0.78rem] font-semibold no-underline">
                       View registrations →
                     </a>
                     {c.username && c.showTripsPublicly && (
                       <a href={`/u/${c.username}`} target="_blank"
-                         style="padding:0.35rem 0.7rem;border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                         class="py-[0.35rem] px-[0.7rem] border border-border text-gray-text rounded-[0.4rem] text-[0.78rem] font-semibold no-underline">
                         Public profile ↗
                       </a>
                     )}
                     {!isTripLead && (
                       <a href={`/admin/audit?email=${encodeURIComponent(c.email)}`}
-                         style="padding:0.35rem 0.7rem;border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius:0.4rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                         class="py-[0.35rem] px-[0.7rem] border border-border text-gray-text rounded-[0.4rem] text-[0.78rem] font-semibold no-underline">
                         Audit log →
                       </a>
                     )}
@@ -360,19 +360,19 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                 <div>
                   <h3 class="detail-heading">Booking history ({regs.length})</h3>
                   {regs.length === 0 ? (
-                    <p style="font-size:0.82rem;color:var(--color-text-secondary);">No registrations found.</p>
+                    <p class="text-[0.82rem] text-gray-text">No registrations found.</p>
                   ) : (
-                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    <div class="flex flex-col gap-[0.5rem]">
                       {regs.map((r) => (
-                        <div style="background:var(--color-gray-soft);border:1px solid var(--color-border);border-radius:0.6rem;padding:0.6rem 0.8rem;">
-                          <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
-                            <strong style="font-size:0.84rem;color:var(--color-navy);">{r.trip_name ?? r.trip_slug ?? '—'}</strong>
-                            <div style="display:flex;gap:0.3rem;">
+                        <div class="bg-gray-soft border border-border rounded-[0.6rem] py-[0.6rem] px-[0.8rem]">
+                          <div class="flex items-center justify-between gap-[0.5rem] flex-wrap">
+                            <strong class="text-[0.84rem] text-navy">{r.trip_name ?? r.trip_slug ?? '—'}</strong>
+                            <div class="flex gap-[0.3rem]">
                               <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${regStatusStyle(r.status)}`}>{r.status}</span>
                               {r.amount_paid != null && <span style={`padding:0.1rem 0.4rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${payStyle(Number(r.amount_paid))}`}>{formatINR(Number(r.amount_paid))}</span>}
                             </div>
                           </div>
-                          <div style="font-size:0.76rem;color:var(--color-text-secondary);margin-top:0.2rem;">
+                          <div class="text-[0.76rem] text-gray-text mt-[0.2rem]">
                             {r.sharing_option ?? r.tier_id ?? '—'} · Applied {formatDateIN(r.created_at)}
                           </div>
                         </div>
@@ -383,12 +383,12 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                   <!-- Audit timeline (owner/ops only) -->
                   {!isTripLead && auditEntries.length > 0 && (
                     <>
-                      <h3 class="detail-heading" style="margin-top:1rem;">Recent activity</h3>
-                      <div style="display:flex;flex-direction:column;gap:0.3rem;">
+                      <h3 class="detail-heading mt-[1rem]">Recent activity</h3>
+                      <div class="flex flex-col gap-[0.3rem]">
                         {auditEntries.map((a) => (
-                          <div style="font-size:0.76rem;color:var(--color-text-secondary);display:flex;gap:0.4rem;align-items:baseline;">
-                            <span style="white-space:nowrap;">{formatDateTimeFromUnix(a.createdAt)}</span>
-                            <code style="background:rgba(245,221,215,0.4);color:var(--color-navy);padding:0.1rem 0.3rem;border-radius:0.25rem;">{a.action}</code>
+                          <div class="text-[0.76rem] text-gray-text flex gap-[0.4rem] items-baseline">
+                            <span class="whitespace-nowrap">{formatDateTimeFromUnix(a.createdAt)}</span>
+                            <code class="bg-peach/40 text-navy py-[0.1rem] px-[0.3rem] rounded-[0.25rem]">{a.action}</code>
                             {a.actorEmail && <span>by {a.actorEmail}</span>}
                           </div>
                         ))}
@@ -404,7 +404,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     </div>
   )}
 
-  <div id="cust-empty" style="display:none;background:white;border:1px solid var(--color-border);border-radius:1.25rem;padding:3rem;text-align:center;color:var(--color-text-secondary);">
+  <div id="cust-empty" class="hidden bg-white border border-border rounded-[1.25rem] p-[3rem] text-center text-gray-text">
     No customers match your search.
   </div>
 </AdminLayout>

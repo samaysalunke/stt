@@ -16,32 +16,32 @@ function fmt(date: string) {
 ---
 
 <AdminLayout title="Newsletter" page="newsletter">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+  <div class="flex items-center justify-between mb-[1.5rem]">
     <div>
-      <h1 style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--color-primary-dark);margin:0 0 0.25rem;">Newsletter Subscribers</h1>
-      <p style="color:var(--color-text-secondary);font-size:0.875rem;margin:0;">{active} active · {subscribers.length} total</p>
+      <h1 class="font-display text-[1.5rem] font-extrabold text-[#111D27] mt-[0] mx-[0] mb-[0.25rem]">Newsletter Subscribers</h1>
+      <p class="text-gray-text text-[0.875rem] m-0">{active} active · {subscribers.length} total</p>
     </div>
     <a
       href="/api/admin/export?type=newsletter"
-      style="padding:0.45rem 1rem;background:var(--color-primary);color:white;border-radius:0.5rem;font-size:0.875rem;font-weight:600;text-decoration:none;"
+      class="py-[0.45rem] px-[1rem] bg-navy text-white rounded-[0.5rem] text-[0.875rem] font-semibold no-underline"
     >
       ↓ Export CSV
     </a>
   </div>
 
   {subscribers.length === 0 ? (
-    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;">No subscribers yet.</p>
+    <p class="text-center p-[3rem] text-gray-text bg-white border border-peach/60 rounded-[1.25rem]">No subscribers yet.</p>
   ) : (
-    <div style="display:grid;gap:0.75rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
+    <div class="grid gap-[0.75rem] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
       {subscribers.map((s) => (
-        <div style="background:white;border:1px solid rgba(245,221,215,0.6);border-radius:1.25rem;padding:1rem 1.15rem;display:flex;flex-direction:column;gap:0.6rem;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;">
-            <span style="font-weight:600;color:var(--color-navy);word-break:break-all;font-size:0.9rem;">{s.email}</span>
+        <div class="bg-white border border-peach/60 rounded-[1.25rem] py-[1rem] px-[1.15rem] flex flex-col gap-[0.6rem]">
+          <div class="flex items-start justify-between gap-[0.5rem]">
+            <span class="font-semibold text-navy break-all text-[0.9rem]">{s.email}</span>
             <span style={`flex:none;padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${s.active ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}`}>
               {s.active ? 'active' : 'unsubscribed'}
             </span>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;color:var(--color-text-secondary);">
+          <div class="flex items-center justify-between text-[0.75rem] text-gray-text">
             <span>#{s.id}</span>
             <span>{fmt(s.subscribed_at as string)}</span>
           </div>

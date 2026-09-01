@@ -8,47 +8,47 @@ const testimonials = listTestimonials();
 
 <AdminLayout title="Testimonials" page="testimonials">
   <div class="flex items-center justify-between mb-6">
-    <p class="text-sm" style="color: rgba(27,43,58,0.55);">
+    <p class="text-sm text-navy/55">
       {testimonials.length} testimonial{testimonials.length === 1 ? '' : 's'} · shown on the homepage and trip pages
     </p>
     <a href="/admin/testimonials/new/"
-       class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
-       style="background: var(--color-navy);">+ New</a>
+       class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy"
+      >+ New</a>
   </div>
 
   {testimonials.length === 0 ? (
-    <div class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);">
-      <p class="text-sm" style="color: rgba(27,43,58,0.5);">No testimonials yet. Add the first one.</p>
+    <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
+      <p class="text-sm text-navy/50">No testimonials yet. Add the first one.</p>
     </div>
   ) : (
     <div class="grid gap-4 sm:grid-cols-2">
       {testimonials.map(t => (
-        <div class="bg-white rounded-[2rem] p-5 flex flex-col" style="border: 1px solid rgba(245,221,215,0.6);">
+        <div class="bg-white rounded-[2rem] p-5 flex flex-col border border-peach/60">
           <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-1" style="color: var(--color-coral);">
+            <div class="flex items-center gap-1 text-coral">
               {Array.from({ length: 5 }).map((_, i) => (
                 <svg class="w-3.5 h-3.5" fill={i < (t.rating ?? 5) ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.48 3.5l2.06 4.18 4.61.67-3.34 3.25.79 4.59L11.48 14l-4.12 2.18.79-4.59-3.34-3.25 4.61-.67L11.48 3.5z" />
                 </svg>
               ))}
               {t.featured && (
-                <span class="ml-2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-                      style="background: rgba(232,114,90,0.12); color: var(--color-coral);">Featured</span>
+                <span class="ml-2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral/12 text-coral"
+                     >Featured</span>
               )}
             </div>
           </div>
-          <p class="text-sm leading-relaxed mb-4 flex-1" style="color: var(--color-navy);">"{t.quote}"</p>
+          <p class="text-sm leading-relaxed mb-4 flex-1 text-navy">"{t.quote}"</p>
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold" style="color: var(--color-navy);">{t.name}</p>
-              <p class="text-[11px]" style="color: rgba(27,43,58,0.5);">{[t.location, t.tripName].filter(Boolean).join(' · ')}</p>
+              <p class="text-sm font-semibold text-navy">{t.name}</p>
+              <p class="text-[11px] text-navy/50">{[t.location, t.tripName].filter(Boolean).join(' · ')}</p>
             </div>
             <div class="flex items-center gap-2">
-              <a href={`/admin/testimonials/${t.slug}/`} class="text-sm font-medium" style="color: var(--color-coral);">Edit</a>
+              <a href={`/admin/testimonials/${t.slug}/`} class="text-sm font-medium text-coral">Edit</a>
               <form method="POST" action="/api/admin/testimonials/delete"
                     onsubmit="return confirm('Delete this testimonial?');">
                 <input type="hidden" name="slug" value={t.slug} />
-                <button type="submit" class="text-sm font-medium" style="color: var(--color-danger);">Delete</button>
+                <button type="submit" class="text-sm font-medium text-danger">Delete</button>
               </form>
             </div>
           </div>

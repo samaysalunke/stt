@@ -7,27 +7,27 @@ const albums = listAlbums();
 ---
 
 <AdminLayout title="Photo Vault" page="photo-vault">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-    <h1 style="font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--color-text-primary); margin:0;">Photo Vault</h1>
-    <a href="/admin/photo-vault/new" style="background:var(--color-primary); color:white; padding:0.5rem 1.25rem; border-radius:0.5rem; text-decoration:none; font-weight:600; font-size:0.875rem;">+ New Album</a>
+  <div class="flex items-center justify-between mb-[1.5rem]">
+    <h1 class="font-display text-[1.5rem] font-bold text-navy m-0">Photo Vault</h1>
+    <a href="/admin/photo-vault/new" class="bg-navy text-white py-[0.5rem] px-[1.25rem] rounded-[0.5rem] no-underline font-semibold text-[0.875rem]">+ New Album</a>
   </div>
 
   {albums.length === 0 ? (
-    <div style="text-align:center; padding:4rem 2rem; color:var(--color-text-secondary);">
-      <p style="font-size:1.1rem; margin-bottom:1rem;">No albums yet.</p>
-      <a href="/admin/photo-vault/new" style="background:var(--color-primary); color:white; padding:0.6rem 1.5rem; border-radius:0.5rem; text-decoration:none; font-weight:600;">Create your first album</a>
+    <div class="text-center py-[4rem] px-[2rem] text-gray-text">
+      <p class="text-[1.1rem] mb-[1rem]">No albums yet.</p>
+      <a href="/admin/photo-vault/new" class="bg-navy text-white py-[0.6rem] px-[1.5rem] rounded-[0.5rem] no-underline font-semibold">Create your first album</a>
     </div>
   ) : (
-    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1.25rem;">
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-[1.25rem]">
       {albums.map(album => {
         const photos = Array.isArray(album.photos) ? album.photos : [];
         return (
           <div style="background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; overflow:hidden;">
-            <div style="height:160px; overflow:hidden; background:var(--color-surface); position:relative;">
+            <div class="h-[160px] overflow-hidden bg-gray-soft relative">
               {album.coverImage ? (
-                <img src={album.coverImage} alt={album.name} style="width:100%; height:100%; object-fit:cover;" />
+                <img src={album.coverImage} alt={album.name} class="w-full h-full object-cover" />
               ) : photos[0]?.image ? (
-                <img src={photos[0].image} alt={album.name} style="width:100%; height:100%; object-fit:cover;" />
+                <img src={photos[0].image} alt={album.name} class="w-full h-full object-cover" />
               ) : (
                 <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:2rem;">🖼️</div>
               )}
@@ -35,17 +35,17 @@ const albums = listAlbums();
                 {album.published ? 'Published' : 'Draft'}
               </div>
             </div>
-            <div style="padding:1rem;">
-              <div style="font-weight:700; color:var(--color-text-primary); margin-bottom:0.25rem;">{album.name ?? album.slug}</div>
-              <div style="font-size:0.8rem; color:var(--color-text-secondary); margin-bottom:0.15rem;">{album.location ?? ''}</div>
+            <div class="p-[1rem]">
+              <div class="font-bold text-navy mb-[0.25rem]">{album.name ?? album.slug}</div>
+              <div class="text-[0.8rem] text-gray-text mb-[0.15rem]">{album.location ?? ''}</div>
               <div style="font-size:0.8rem; color:var(--color-text-muted);">{photos.length} photo{photos.length !== 1 ? 's' : ''}</div>
-              <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
-                <a href={`/admin/photo-vault/${album.slug}`} style="flex:1; text-align:center; font-size:0.8rem; color:var(--color-primary); text-decoration:none; border:1px solid var(--color-primary); border-radius:0.35rem; padding:0.3rem 0.5rem; font-weight:500;">Edit</a>
+              <div class="flex gap-[0.5rem] mt-[0.75rem]">
+                <a href={`/admin/photo-vault/${album.slug}`} class="flex-1 text-center text-[0.8rem] text-navy no-underline border border-navy rounded-[0.35rem] py-[0.3rem] px-[0.5rem] font-medium">Edit</a>
                 <button
-                  class="delete-album-btn"
+                  class="delete-album-btn flex-1 text-[0.8rem] text-[#dc2626] bg-transparent border border-[#dc2626] rounded-[0.35rem] py-[0.3rem] px-[0.5rem] cursor-pointer font-medium"
                   data-slug={album.slug}
                   data-name={album.name ?? album.slug}
-                  style="flex:1; font-size:0.8rem; color:#dc2626; background:none; border:1px solid #dc2626; border-radius:0.35rem; padding:0.3rem 0.5rem; cursor:pointer; font-weight:500;"
+                 
                 >Delete</button>
               </div>
             </div>

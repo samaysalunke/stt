@@ -60,6 +60,13 @@
   /* --color-success (#22A654) is 3.16:1 on white and fails AA as text. Kept as
      a fill/indicator; this is the readable variant for text, at 5.40:1. */
   --color-success-ink: #157A3F;
+  /* Warning/advisory triple, previously hardcoded as #FEF3C7 / #FCD34D / #92400E
+     on AdminLayout's "email is not configured" banner. Tokenised alongside the
+     danger pair because the admin surface raises the same kind of advisory in
+     several places. 7.66:1 ink-on-surface. */
+  --color-warning-surface: #FEF3C7;
+  --color-warning-border: #FCD34D;
+  --color-warning-ink: #92400E;
   --color-border: #E8DDD9;
 
   /* ── Typography ────────────────────────────────────────────── */

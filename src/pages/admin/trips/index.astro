@@ -84,40 +84,40 @@ const statusLabels: Record<string, string> = {
 <AdminLayout title="Trips" page="trips">
   <div class="flex items-center justify-between mb-6">
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-      <p id="trip-count" class="text-sm" style="color: rgba(27,43,58,0.55);">
+      <p id="trip-count" class="text-sm text-navy/55">
         {visibleTripCount} of {trips.length} trips
       </p>
-      <label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--color-navy);">
+      <label class="flex items-center gap-2 text-sm cursor-pointer text-navy">
         <input id="hide-done-trips" type="checkbox" checked class="h-4 w-4 accent-current" />
         Hide completed trips
       </label>
     </div>
     <div class="flex items-center gap-2">
-      <a href="/admin/trips/import/" class="rounded-xl px-4 py-2.5 text-sm font-semibold" style="color: var(--color-navy); border: 1px solid var(--color-peach);">Import</a>
-      <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">+ New Trip</a>
+      <a href="/admin/trips/import/" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-navy border border-peach">Import</a>
+      <a href="/admin/trips/new" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy">+ New Trip</a>
     </div>
   </div>
 
   {trips.length === 0 ? (
-    <div class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);">
-      <p class="text-sm mb-4" style="color: rgba(27,43,58,0.5);">No trips yet.</p>
-      <a href="/admin/trips/new" class="rounded-full px-6 py-3 text-sm font-semibold text-white inline-block" style="background-color: var(--color-cta);">Create your first trip</a>
+    <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
+      <p class="text-sm mb-4 text-navy/50">No trips yet.</p>
+      <a href="/admin/trips/new" class="rounded-full px-6 py-3 text-sm font-semibold text-white inline-block bg-cta">Create your first trip</a>
     </div>
   ) : (
     <>
     <div id="trip-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {trips.map((trip) => (
         <div
-          class="trip-card bg-white rounded-[2rem] p-5 flex flex-col"
+          class="trip-card bg-white rounded-[2rem] p-5 flex flex-col border border-peach/60"
           data-done={trip._upcomingCount === 0 ? 'true' : 'false'}
           hidden={trip._upcomingCount === 0}
-          style="border: 1px solid rgba(245,221,215,0.6);"
+         
         >
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
-              <h3 class="font-display text-base font-semibold truncate" style="color: var(--color-navy);">{trip.name || trip.slug}</h3>
-              <p class="text-[11px] truncate" style="color: rgba(27,43,58,0.45);">{trip.slug}</p>
-              <p class="mt-1 text-[11px]" style="color: rgba(27,43,58,0.55);">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
+              <h3 class="font-display text-base font-semibold truncate text-navy">{trip.name || trip.slug}</h3>
+              <p class="text-[11px] truncate text-navy/45">{trip.slug}</p>
+              <p class="mt-1 text-[11px] text-navy/55">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
                   style={`background:${statusColors[trip._derivedStatus]}22; color:${statusColors[trip._derivedStatus]};`}>
@@ -126,26 +126,26 @@ const statusLabels: Record<string, string> = {
           </div>
 
           <div class="grid grid-cols-3 gap-2 mb-4 text-center">
-            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">{trip._hasSharing ? 'From' : 'Price'}</div>
-              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip._fromPrice ? `₹${Number(trip._fromPrice).toLocaleString('en-IN')}` : '—'}</div>
+            <div class="rounded-xl py-2 bg-gray-soft">
+              <div class="text-[10px] uppercase tracking-wide text-navy/45">{trip._hasSharing ? 'From' : 'Price'}</div>
+              <div class="text-sm font-semibold text-navy">{trip._fromPrice ? `₹${Number(trip._fromPrice).toLocaleString('en-IN')}` : '—'}</div>
             </div>
-            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">Next batch</div>
-              <div class="text-sm font-semibold" style="color: var(--color-navy);">{trip._leadTotal != null ? `${trip._leadBooked ?? 0}/${trip._leadTotal}` : '—'}</div>
+            <div class="rounded-xl py-2 bg-gray-soft">
+              <div class="text-[10px] uppercase tracking-wide text-navy/45">Next batch</div>
+              <div class="text-sm font-semibold text-navy">{trip._leadTotal != null ? `${trip._leadBooked ?? 0}/${trip._leadTotal}` : '—'}</div>
             </div>
-            <div class="rounded-xl py-2" style="background: var(--color-gray-soft);">
-              <div class="text-[10px] uppercase tracking-wide" style="color: rgba(27,43,58,0.45);">{trip._departureCount > 1 ? `${trip._departureCount} dates` : 'Starts'}</div>
-              <div class="text-xs font-semibold" style="color: var(--color-navy);">{fmtDay(trip._leadStart)}</div>
+            <div class="rounded-xl py-2 bg-gray-soft">
+              <div class="text-[10px] uppercase tracking-wide text-navy/45">{trip._departureCount > 1 ? `${trip._departureCount} dates` : 'Starts'}</div>
+              <div class="text-xs font-semibold text-navy">{fmtDay(trip._leadStart)}</div>
             </div>
           </div>
 
           <div class="mb-4 flex items-center gap-3">
-            <label class="text-xs font-semibold" for={`priority-${trip.slug}`} style="color: var(--color-navy);">Priority</label>
+            <label class="text-xs font-semibold text-navy" for={`priority-${trip.slug}`}>Priority</label>
             <select
               id={`priority-${trip.slug}`}
-              class="trip-priority min-h-9 flex-1 rounded-xl bg-white px-3 text-sm"
-              style="border: 1px solid var(--color-peach); color: var(--color-navy);"
+              class="trip-priority min-h-9 flex-1 rounded-xl bg-white px-3 text-sm border border-peach text-navy"
+             
               data-slug={trip.slug}
               data-saved-value={trip._priority}
             >
@@ -153,22 +153,22 @@ const statusLabels: Record<string, string> = {
               <option value="medium" selected={trip._priority === 'medium'}>Medium</option>
               <option value="low" selected={trip._priority === 'low'}>Low</option>
             </select>
-            <span class="priority-state w-12 text-[11px]" aria-live="polite" style="color: rgba(27,43,58,0.55);"></span>
+            <span class="priority-state w-12 text-[11px] text-navy/55" aria-live="polite"></span>
           </div>
 
           <div class="mt-auto flex items-center gap-2 pt-1">
-            <a href={`/admin/trips/${trip.slug}`} class="flex-1 text-center text-sm font-semibold rounded-full py-2 text-white" style="background-color: var(--color-cta);">Edit</a>
-            <button class="duplicate-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug}
+            <a href={`/admin/trips/${trip.slug}`} class="flex-1 text-center text-sm font-semibold rounded-full py-2 text-white bg-cta">Edit</a>
+            <button class="duplicate-trip-btn text-sm font-medium rounded-full px-4 py-2 text-navy border border-peach" data-slug={trip.slug}
                     title="Duplicate this trip as a draft"
-                    style="color: var(--color-navy); border: 1px solid var(--color-peach);">Copy</button>
-            <button class="delete-trip-btn text-sm font-medium rounded-full px-4 py-2" data-slug={trip.slug} data-name={trip.name || trip.slug}
-                    style="color: var(--color-danger); border: 1px solid var(--color-danger);">Delete</button>
+                   >Copy</button>
+            <button class="delete-trip-btn text-sm font-medium rounded-full px-4 py-2 text-danger border border-danger" data-slug={trip.slug} data-name={trip.name || trip.slug}
+                   >Delete</button>
           </div>
         </div>
       ))}
     </div>
-    <div id="no-visible-trips" class="bg-white rounded-[2rem] p-10 text-center" style="border: 1px solid rgba(245,221,215,0.6);" hidden={visibleTripCount > 0}>
-      <p class="text-sm" style="color: rgba(27,43,58,0.5);">No active trips. Uncheck “Hide completed trips” to view completed trips.</p>
+    <div id="no-visible-trips" class="bg-white rounded-[2rem] p-10 text-center border border-peach/60" hidden={visibleTripCount > 0}>
+      <p class="text-sm text-navy/50">No active trips. Uncheck “Hide completed trips” to view completed trips.</p>
     </div>
     </>
   )}

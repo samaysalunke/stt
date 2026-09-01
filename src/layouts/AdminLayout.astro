@@ -68,15 +68,13 @@ const allNavItems = [...navItems, ...ownerNavItems].filter(
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="robots" content="noindex, nofollow" />
   </head>
-  <body class="min-h-screen" style="background-color: var(--color-gray-soft); color: var(--color-navy); font-family: var(--font-sans);">
+  <body class="min-h-screen bg-gray-soft text-navy font-sans">
 
     <!-- Top bar (fixed) -->
-    <header class="fixed top-0 left-0 right-0 z-40 px-5 sm:px-6 py-3 flex items-center justify-between"
-            style="background: rgba(255,255,255,0.82); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(245,221,215,0.6);">
+    <header class="fixed top-0 left-0 right-0 z-40 px-5 sm:px-6 py-3 flex items-center justify-between bg-white/82 backdrop-blur-md border-b border-peach/60">
       <div class="flex items-center gap-3">
         <button id="menu-toggle" aria-label="Open menu" aria-expanded="false"
-                class="w-10 h-10 rounded-xl flex items-center justify-center"
-                style="background: rgba(27,43,58,0.05); color: var(--color-navy);">
+                class="w-10 h-10 rounded-xl flex items-center justify-center bg-navy/5 text-navy">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3.75 6.75h16.5M3.75 12h10.5m-10.5 5.25h16.5" />
@@ -84,39 +82,34 @@ const allNavItems = [...navItems, ...ownerNavItems].filter(
         </button>
         <div class="leading-none">
           <h1 class="font-display text-base sm:text-lg font-semibold leading-none">{title}</h1>
-          <span class="text-[10px] font-semibold uppercase tracking-widest"
-                style="color: var(--color-coral);">Admin Portal</span>
+          <span class="text-[10px] font-semibold uppercase tracking-widest text-coral">Admin Portal</span>
         </div>
       </div>
       <div class="flex items-center gap-3">
         <div class="relative">
-          <svg class="w-5 h-5" style="color: var(--color-navy); opacity: 0.6;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-navy opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
           </svg>
-          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-white"
-                style="background: var(--color-coral);"></span>
+          <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 border-white bg-coral"></span>
         </div>
-        <img src="/logo.jpg" alt="STT" class="w-8 h-8 rounded-full object-cover" style="border: 1px solid var(--color-peach);" />
+        <img src="/logo.jpg" alt="STT" class="w-8 h-8 rounded-full object-cover border border-peach" />
       </div>
     </header>
 
     <!-- Sidebar overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 z-40 opacity-0 pointer-events-none transition-opacity duration-300"
-         style="background: rgba(27,43,58,0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 z-40 opacity-0 pointer-events-none transition-opacity duration-300 bg-navy/40 backdrop-blur-[2px]"></div>
 
     <!-- Sidebar drawer -->
     <aside id="sidebar"
-           class="fixed top-0 left-0 z-50 h-full w-72 flex flex-col -translate-x-full transition-transform duration-300 shadow-2xl"
-           style="background: var(--color-white);">
-      <div class="flex items-center justify-between px-5 h-16 border-b" style="border-color: rgba(245,221,215,0.6);">
+           class="fixed top-0 left-0 z-50 h-full w-72 flex flex-col -translate-x-full transition-transform duration-300 shadow-2xl bg-white">
+      <div class="flex items-center justify-between px-5 h-16 border-b border-peach/60">
         <a href="/admin/" class="flex items-center gap-2.5">
           <img src="/logo.jpg" alt="Seek the Thrill" class="h-9 w-auto rounded-lg" />
-          <span class="font-display font-semibold text-sm" style="color: var(--color-navy);">Seek the Thrill</span>
+          <span class="font-display font-semibold text-sm text-navy">Seek the Thrill</span>
         </a>
         <button id="sidebar-close" aria-label="Close menu"
-                class="w-8 h-8 rounded-lg flex items-center justify-center"
-                style="color: var(--color-navy); opacity: 0.6;">
+                class="w-8 h-8 rounded-lg flex items-center justify-center text-navy opacity-60">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -128,10 +121,10 @@ const allNavItems = [...navItems, ...ownerNavItems].filter(
           const active = page === item.key;
           return (
             <a href={item.href}
-               class="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-colors"
-               style={active
-                 ? 'background: rgba(232,114,90,0.10); color: var(--color-coral); font-weight: 600;'
-                 : 'color: rgba(27,43,58,0.6);'}>
+               class:list={[
+                 'flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm transition-colors',
+                 active ? 'bg-coral/10 text-coral font-semibold' : 'text-navy/60 font-medium',
+               ]}>
               <svg class="w-5 h-5 flex-none" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
               </svg>
@@ -141,23 +134,21 @@ const allNavItems = [...navItems, ...ownerNavItems].filter(
         })}
       </nav>
 
-      <div class="px-4 py-4 border-t" style="border-color: rgba(245,221,215,0.6);">
+      <div class="px-4 py-4 border-t border-peach/60">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-9 h-9 rounded-full grid place-items-center font-display font-bold text-white text-sm"
-               style="background: var(--color-coral);">
+          <div class="w-9 h-9 rounded-full grid place-items-center font-display font-bold text-white text-sm bg-coral">
             {(adminUser?.displayName ?? adminUser?.email ?? 'A')[0].toUpperCase()}
           </div>
           <div class="leading-tight">
-            <p class="text-sm font-semibold" style="color: var(--color-navy);">
+            <p class="text-sm font-semibold text-navy">
               {adminUser?.displayName ?? adminUser?.email ?? 'Admin'}
             </p>
-            <p class="text-[11px]" style="color: rgba(27,43,58,0.5);">{adminUser?.role ?? ''}</p>
+            <p class="text-[11px] text-navy/50">{adminUser?.role ?? ''}</p>
           </div>
         </div>
         <form method="POST" action="/api/admin/logout">
           <button type="submit"
-                  class="w-full text-center text-sm font-medium py-2.5 rounded-full transition-colors"
-                  style="color: var(--color-navy); border: 1px solid var(--color-peach);">
+                  class="w-full text-center text-sm font-medium py-2.5 rounded-full transition-colors text-navy border border-peach">
             Sign out
           </button>
         </form>
@@ -165,10 +156,9 @@ const allNavItems = [...navItems, ...ownerNavItems].filter(
     </aside>
 
     <!-- Page content -->
-    <main class="pt-24 pb-12 px-5 sm:px-6" style="max-width: 1200px; margin: 0 auto;">
+    <main class="pt-24 pb-12 px-5 sm:px-6 max-w-[1200px] mx-auto">
       {!emailConfigured && (
-        <div class="mb-6 flex items-start gap-3 rounded-xl px-4 py-3"
-             style="background: #FEF3C7; border: 1px solid #FCD34D; color: #92400E;">
+        <div class="mb-6 flex items-start gap-3 rounded-xl px-4 py-3 bg-warning-surface border border-warning-border text-warning-ink">
           <svg class="w-5 h-5 flex-none mt-0.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
