@@ -22,6 +22,8 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
+| `7389da4` | feat(ui): Phase 4 — booking flow onto tokens, a11y audit closed |
+| `88945c1` | docs: refresh the commit table with post-rebase SHAs |
 | `8ab0846` | feat(ui): Phase 3 — marketing and legal pages onto tokens |
 | `4b88e1a` | chore: ignore Playwright's test-results directory |
 | `588d985` | docs: record the Phase 2 commit in the handoff table |
