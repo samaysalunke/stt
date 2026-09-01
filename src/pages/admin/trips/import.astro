@@ -23,39 +23,39 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
 
 <AdminLayout title="Import Trips" page="trips">
   <div class="mb-6 flex items-center justify-between">
-    <p class="text-sm" style="color: rgba(27,43,58,0.55);">Paste or upload YAML / JSON — one trip or many. Preview before importing.</p>
-    <a href="/admin/trips/" class="text-sm font-medium" style="color: var(--color-coral);">← Back to trips</a>
+    <p class="text-sm text-navy/55">Paste or upload YAML / JSON — one trip or many. Preview before importing.</p>
+    <a href="/admin/trips/" class="text-sm font-medium text-coral">← Back to trips</a>
   </div>
 
-  <div class="bg-white rounded-[2rem] p-6 max-w-3xl" style="border: 1px solid rgba(245,221,215,0.6);">
+  <div class="bg-white rounded-[2rem] p-6 max-w-3xl border border-peach/60">
     <div class="flex items-center justify-between mb-3">
-      <label class="block text-xs font-semibold uppercase tracking-widest" style="color: var(--color-navy);">Trips (YAML or JSON)</label>
-      <label class="text-sm font-medium cursor-pointer" style="color: var(--color-coral);">
+      <label class="block text-xs font-semibold uppercase tracking-widest text-navy">Trips (YAML or JSON)</label>
+      <label class="text-sm font-medium cursor-pointer text-coral">
         Upload file
         <input id="import-file" type="file" accept=".yaml,.yml,.json,.txt" class="hidden" />
       </label>
     </div>
     <textarea id="import-content" rows="14" placeholder={sample}
-      class="w-full rounded-2xl px-4 py-3 text-sm outline-none font-mono"
-      style="border: 1px solid rgba(245,221,215,0.8); background: var(--color-white); line-height: 1.5;"></textarea>
+      class="w-full rounded-2xl px-4 py-3 text-sm outline-none font-mono border border-peach/80 bg-white leading-[1.5]"
+     ></textarea>
 
     <div class="flex items-center gap-3 mt-4">
-      <button id="preview-btn" class="rounded-full px-6 py-2.5 text-sm font-semibold text-white" style="background: var(--color-navy);">Preview</button>
-      <span id="import-msg" class="text-sm" style="color: var(--color-gray-text);"></span>
+      <button id="preview-btn" class="rounded-full px-6 py-2.5 text-sm font-semibold text-white bg-navy">Preview</button>
+      <span id="import-msg" class="text-sm text-gray-text"></span>
     </div>
 
     <!-- Preview / errors -->
     <div id="preview-box" class="hidden mt-6">
-      <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm" style="background: #FEF2F2; color: #991B1B;"></div>
+      <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm bg-[#FEF2F2] text-danger-ink"></div>
       <div id="preview-list" class="flex flex-col gap-2"></div>
       <div id="confirm-row" class="hidden items-center gap-3 mt-5">
-        <button id="confirm-btn" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);"></button>
-        <span class="text-xs" style="color: var(--color-gray-text);">Existing slugs will be overwritten.</span>
+        <button id="confirm-btn" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta"></button>
+        <span class="text-xs text-gray-text">Existing slugs will be overwritten.</span>
       </div>
     </div>
 
     <!-- Result -->
-    <div id="result-box" class="hidden mt-6 rounded-2xl p-5 text-sm" style="background: rgba(34,166,84,0.10); color: var(--color-success);"></div>
+    <div id="result-box" class="hidden mt-6 rounded-2xl p-5 text-sm bg-success/10 text-success"></div>
   </div>
 </AdminLayout>
 
@@ -113,10 +113,10 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
     }
     // Preview rows
     previewList.innerHTML = data.preview.map((p: any) => `
-      <div class="flex items-center justify-between rounded-2xl px-4 py-3" style="background: var(--color-gray-soft);">
+      <div class="flex items-center justify-between rounded-2xl px-4 py-3 bg-gray-soft">
         <div>
-          <p class="text-sm font-semibold" style="color: var(--color-navy);">${p.title}</p>
-          <p class="text-[11px]" style="color: rgba(27,43,58,0.5);">${p.slug} · ${p.status}</p>
+          <p class="text-sm font-semibold text-navy">${p.title}</p>
+          <p class="text-[11px] text-navy/50">${p.slug} · ${p.status}</p>
         </div>
         <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full" style="${
           p.action === 'overwrite' ? 'background:#FEF3C7;color:#92400E;' : 'background:#D1FAE5;color:#065F46;'

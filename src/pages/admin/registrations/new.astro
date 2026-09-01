@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
-import { ADMIN_REG_INPUT_STYLE as inputStyle, ADMIN_REG_LABEL_STYLE as labelStyle } from '../../../lib/adminStyles';
+import { ADMIN_REG_INPUT_CLASS as inputCls, ADMIN_REG_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 export const prerender = false;
 
 const tripsData = buildTripOptions();
@@ -10,78 +10,78 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 ---
 
 <AdminLayout title="Add Registration" page="registrations">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-    <p style="font-size:0.875rem;color:var(--color-text-secondary);margin:0;">Add a single registration manually (e.g. an offline or phone booking).</p>
-    <a href="/admin/registrations" style="font-size:0.875rem;font-weight:600;color:var(--color-coral);text-decoration:none;">← Back to registrations</a>
+  <div class="flex items-center justify-between mb-[1.25rem]">
+    <p class="text-[0.875rem] text-gray-text m-0">Add a single registration manually (e.g. an offline or phone booking).</p>
+    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral no-underline">← Back to registrations</a>
   </div>
 
   {tripsData.length === 0 ? (
-    <p style="text-align:center;padding:3rem;color:var(--color-text-secondary);background:white;border-radius:0.75rem;border:1px solid var(--color-border);">No trips with departures to add registrations to.</p>
+    <p class="text-center p-[3rem] text-gray-text bg-white rounded-[0.75rem] border border-border">No trips with departures to add registrations to.</p>
   ) : (
-    <form id="reg-form" style="max-width:720px;background:white;border:1px solid var(--color-border);border-radius:0.9rem;padding:1.5rem;display:flex;flex-direction:column;gap:1.1rem;">
+    <form id="reg-form" class="max-w-[720px] bg-white border border-border rounded-[0.9rem] p-[1.5rem] flex flex-col gap-[1.1rem]">
 
-      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--color-text-primary);cursor:pointer;">
+      <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
         <input type="checkbox" id="backfill" /> Show past departures (historical back-fill)
       </label>
 
       <!-- Trip / departure / occupancy -->
-      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div style="grid-column:1 / -1;">
-          <label style={labelStyle}>Trip *</label>
-          <select id="trip" style={inputStyle}><option value="">Select a trip…</option></select>
+      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
+        <div class="col-span-full">
+          <label class={labelCls}>Trip *</label>
+          <select id="trip" class={inputCls}><option value="">Select a trip…</option></select>
         </div>
         <div>
-          <label style={labelStyle}>Departure *</label>
-          <select id="departure" style={inputStyle}><option value="">Select trip first…</option></select>
+          <label class={labelCls}>Departure *</label>
+          <select id="departure" class={inputCls}><option value="">Select trip first…</option></select>
         </div>
         <div>
-          <label style={labelStyle}>Occupancy *</label>
-          <select id="tier" style={inputStyle}><option value="">—</option></select>
+          <label class={labelCls}>Occupancy *</label>
+          <select id="tier" class={inputCls}><option value="">—</option></select>
         </div>
       </div>
 
-      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
         <div>
-          <label style={labelStyle}>Status</label>
-          <select id="status" style={inputStyle}>
+          <label class={labelCls}>Status</label>
+          <select id="status" class={inputCls}>
             <option value="pending" selected>Pending (awaiting verification)</option>
             <option value="lead">Lead (registered, unpaid)</option>
             <option value="confirmed">Confirmed</option>
           </select>
         </div>
-        <div style="display:flex;align-items:flex-end;padding-bottom:0.5rem;">
-          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--color-text-primary);cursor:pointer;">
+        <div class="flex items-end pb-[0.5rem]">
+          <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
             <input type="checkbox" id="sendEmail" checked /> Send notification email (on confirm)
           </label>
         </div>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--color-border);margin:0.25rem 0;" />
+      <hr class="border-t border-border my-[0.25rem] mx-[0]" />
 
       <!-- Registrant -->
-      <div class="reg-form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div><label style={labelStyle}>Full name *</label><input id="full_name" type="text" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Email *</label><input id="email" type="email" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Phone *</label><input id="phone" type="tel" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Age</label><input id="age" type="text" inputmode="numeric" style={inputStyle} /></div>
+      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
+        <div><label class={labelCls}>Full name *</label><input id="full_name" type="text" class={inputCls} /></div>
+        <div><label class={labelCls}>Email *</label><input id="email" type="email" class={inputCls} /></div>
+        <div><label class={labelCls}>Phone *</label><input id="phone" type="tel" class={inputCls} /></div>
+        <div><label class={labelCls}>Age</label><input id="age" type="text" inputmode="numeric" class={inputCls} /></div>
         <div>
-          <label style={labelStyle}>Gender</label>
-          <select id="gender" style={inputStyle}>
+          <label class={labelCls}>Gender</label>
+          <select id="gender" class={inputCls}>
             <option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
           </select>
         </div>
-        <div><label style={labelStyle}>City</label><input id="city" type="text" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Instagram</label><input id="instagram" type="text" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Emergency name</label><input id="emergency_name" type="text" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Emergency phone</label><input id="emergency_phone" type="tel" style={inputStyle} /></div>
-        <div style="grid-column:1 / -1;"><label style={labelStyle}>Why joining / notes</label><textarea id="why_join" rows="2" style={inputStyle}></textarea></div>
+        <div><label class={labelCls}>City</label><input id="city" type="text" class={inputCls} /></div>
+        <div><label class={labelCls}>Instagram</label><input id="instagram" type="text" class={inputCls} /></div>
+        <div><label class={labelCls}>Emergency name</label><input id="emergency_name" type="text" class={inputCls} /></div>
+        <div><label class={labelCls}>Emergency phone</label><input id="emergency_phone" type="tel" class={inputCls} /></div>
+        <div class="col-span-full"><label class={labelCls}>Why joining / notes</label><textarea id="why_join" rows="2" class={inputCls}></textarea></div>
       </div>
 
-      <div id="form-msg" style="display:none;font-size:0.85rem;padding:0.6rem 0.85rem;border-radius:0.5rem;"></div>
+      <div id="form-msg" class="hidden text-[0.85rem] py-[0.6rem] px-[0.85rem] rounded-[0.5rem]"></div>
 
-      <div style="display:flex;gap:0.75rem;align-items:center;">
-        <button type="submit" id="submit-btn" style="padding:0.6rem 1.5rem;background:var(--color-primary);color:white;border:none;border-radius:0.5rem;font-size:0.875rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);">Add registration</button>
-        <a href="/admin/registrations" style="font-size:0.85rem;color:var(--color-text-secondary);text-decoration:none;">Cancel</a>
+      <div class="flex gap-[0.75rem] items-center">
+        <button type="submit" id="submit-btn" class="py-[0.6rem] px-[1.5rem] bg-navy text-white border-none rounded-[0.5rem] text-[0.875rem] font-bold cursor-pointer font-sans">Add registration</button>
+        <a href="/admin/registrations" class="text-[0.85rem] text-gray-text no-underline">Cancel</a>
       </div>
     </form>
   )}

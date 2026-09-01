@@ -2,14 +2,12 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { ABOUT_DEFAULTS } from '../../lib/aboutDefaults';
 import { readSiteSettings } from '../../lib/content';
-import { ADMIN_CONTENT_INPUT_STYLE as inputStyle, ADMIN_CONTENT_LABEL_STYLE as labelStyle } from '../../lib/adminStyles';
+import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../components/admin/formClasses';
 export const prerender = false;
 
 const s = readSiteSettings();
 const saved = Astro.url.searchParams.get('saved') === '1';
 
-const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
 const cardCls = 'bg-white rounded-[2rem] p-6 mb-6';
 const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
 const aboutValue = (value: unknown, fallback: string) =>
@@ -21,8 +19,8 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
 
 <AdminLayout title="Settings" page="settings">
   {saved && (
-    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2"
-         style="background: rgba(34,166,84,0.10); color: var(--color-success);">
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2 bg-success/10 text-success"
+        >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
       </svg>
@@ -33,124 +31,124 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
   <form method="POST" action="/api/admin/settings/update" enctype="multipart/form-data">
     <!-- Contact & Social -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Contact &amp; Social</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Shown in the footer, contact page and trip pages.</p>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">Contact &amp; Social</h2>
+      <p class="text-sm mb-5 text-navy/50">Shown in the footer, contact page and trip pages.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <label class={labelCls} style={labelStyle}>Email</label>
-          <input type="email" name="email" value={s.email ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Email</label>
+          <input type="email" name="email" value={s.email ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Phone</label>
-          <input type="text" name="phone" value={s.phone ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Phone</label>
+          <input type="text" name="phone" value={s.phone ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>WhatsApp link</label>
-          <input type="text" name="whatsappLink" value={s.whatsappLink ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>WhatsApp link</label>
+          <input type="text" name="whatsappLink" value={s.whatsappLink ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Instagram URL</label>
-          <input type="text" name="instagram" value={s.instagram ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Instagram URL</label>
+          <input type="text" name="instagram" value={s.instagram ?? ''} class={inputCls} />
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Address</label>
-          <input type="text" name="address" value={s.address ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Address</label>
+          <input type="text" name="address" value={s.address ?? ''} class={inputCls} />
         </div>
       </div>
     </section>
 
     <!-- Payment Details -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Payment Details</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Shown on trip booking forms and in payment reminder emails.</p>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">Payment Details</h2>
+      <p class="text-sm mb-5 text-navy/50">Shown on trip booking forms and in payment reminder emails.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>UPI ID</label>
-          <input type="text" name="upiId" value={s.upiId ?? ''} placeholder="name@bank" class={inputCls} style={inputStyle} />
+          <label class={labelCls}>UPI ID</label>
+          <input type="text" name="upiId" value={s.upiId ?? ''} placeholder="name@bank" class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Bank account name</label>
-          <input type="text" name="bankAccountName" value={s.bankAccountName ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Bank account name</label>
+          <input type="text" name="bankAccountName" value={s.bankAccountName ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Account number</label>
-          <input type="text" name="bankAccountNumber" value={s.bankAccountNumber ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Account number</label>
+          <input type="text" name="bankAccountNumber" value={s.bankAccountNumber ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Branch name</label>
-          <input type="text" name="bankBranch" value={s.bankBranch ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Branch name</label>
+          <input type="text" name="bankBranch" value={s.bankBranch ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>IFSC code</label>
-          <input type="text" name="bankIfsc" value={s.bankIfsc ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>IFSC code</label>
+          <input type="text" name="bankIfsc" value={s.bankIfsc ?? ''} class={inputCls} />
         </div>
       </div>
     </section>
 
     <!-- Policies & Payment -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Legal Page Overrides</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Overrides support Markdown for headings, bold text, lists, and links.</p>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">Legal Page Overrides</h2>
+      <p class="text-sm mb-5 text-navy/50">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Overrides support Markdown for headings, bold text, lists, and links.</p>
       <div class="grid gap-4">
         <div>
-          <label class={labelCls} style={labelStyle}>Cancellation policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
-          <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls} style={inputStyle}>{s.cancellationPolicy ?? ''}</textarea>
-          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
-          <input type="date" name="cancellationUpdatedAt" value={s.cancellationUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Cancellation policy <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls}>{s.cancellationPolicy ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`}>Last updated</label>
+          <input type="date" name="cancellationUpdatedAt" value={s.cancellationUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Terms &amp; conditions <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
-          <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls} style={inputStyle}>{s.termsAndConditions ?? ''}</textarea>
-          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
-          <input type="date" name="termsUpdatedAt" value={s.termsUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Terms &amp; conditions <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls}>{s.termsAndConditions ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`}>Last updated</label>
+          <input type="date" name="termsUpdatedAt" value={s.termsUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Privacy policy <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(override)</span></label>
-          <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls} style={inputStyle}>{s.privacyPolicy ?? ''}</textarea>
-          <label class={`${labelCls} mt-2`} style={labelStyle}>Last updated</label>
-          <input type="date" name="privacyUpdatedAt" value={s.privacyUpdatedAt ?? '2026-08-01'} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Privacy policy <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls}>{s.privacyPolicy ?? ''}</textarea>
+          <label class={`${labelCls} mt-2`}>Last updated</label>
+          <input type="date" name="privacyUpdatedAt" value={s.privacyUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
       </div>
     </section>
 
     <!-- Site -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Site</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Analytics, search-engine verification and footer.</p>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">Site</h2>
+      <p class="text-sm mb-5 text-navy/50">Analytics, search-engine verification and footer.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <label class={labelCls} style={labelStyle}>Google Analytics ID</label>
-          <input type="text" name="googleAnalyticsId" value={s.googleAnalyticsId ?? ''} placeholder="G-XXXXXXXXXX" class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Google Analytics ID</label>
+          <input type="text" name="googleAnalyticsId" value={s.googleAnalyticsId ?? ''} placeholder="G-XXXXXXXXXX" class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Copyright text</label>
-          <input type="text" name="copyrightText" value={s.copyrightText ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Copyright text</label>
+          <input type="text" name="copyrightText" value={s.copyrightText ?? ''} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Google Search Console verification</label>
-          <input type="text" name="googleSiteVerification" value={s.googleSiteVerification ?? ''} placeholder="Content value only" class={inputCls} style={inputStyle} />
-          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">Paste the content value from Google’s HTML meta tag.</p>
+          <label class={labelCls}>Google Search Console verification</label>
+          <input type="text" name="googleSiteVerification" value={s.googleSiteVerification ?? ''} placeholder="Content value only" class={inputCls} />
+          <p class="text-xs mt-1.5 text-navy/45">Paste the content value from Google’s HTML meta tag.</p>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Bing Webmaster Tools verification</label>
-          <input type="text" name="bingSiteVerification" value={s.bingSiteVerification ?? ''} placeholder="Content value only" class={inputCls} style={inputStyle} />
-          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">Paste the content value from Bing’s msvalidate.01 meta tag.</p>
+          <label class={labelCls}>Bing Webmaster Tools verification</label>
+          <input type="text" name="bingSiteVerification" value={s.bingSiteVerification ?? ''} placeholder="Content value only" class={inputCls} />
+          <p class="text-xs mt-1.5 text-navy/45">Paste the content value from Bing’s msvalidate.01 meta tag.</p>
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Homepage Instagram images</label>
-          <textarea name="instagramImages" rows="5" placeholder="One image URL per line (blank = default images)" class={inputCls} style={inputStyle}>{(s.instagramImages ?? []).join('\n')}</textarea>
-          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">One image URL per line. Shown in the homepage Instagram grid. Leave blank to use defaults.</p>
+          <label class={labelCls}>Homepage Instagram images</label>
+          <textarea name="instagramImages" rows="5" placeholder="One image URL per line (blank = default images)" class={inputCls}>{(s.instagramImages ?? []).join('\n')}</textarea>
+          <p class="text-xs mt-1.5 text-navy/45">One image URL per line. Shown in the homepage Instagram grid. Leave blank to use defaults.</p>
         </div>
       </div>
     </section>
 
     <!-- About Page -->
     <section class={cardCls} style={cardStyle}>
-      <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">About Page</h2>
-      <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Copy for the <a href="/about/" target="_blank" class="underline" style="color: var(--color-coral);">/about</a> page. Leave any field blank to use the built-in default.</p>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">About Page</h2>
+      <p class="text-sm mb-5 text-navy/50">Copy for the <a href="/about/" target="_blank" class="underline text-coral">/about</a> page. Leave any field blank to use the built-in default.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Portrait photo</label>
+          <label class={labelCls}>Portrait photo</label>
           {(s.aboutFounderImage || ABOUT_DEFAULTS.founderImage) && (
             <img
               src={s.aboutFounderImage || ABOUT_DEFAULTS.founderImage}
@@ -164,70 +162,70 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
             name="aboutFounderImage"
             accept="image/jpeg,image/png,image/webp"
             class={inputCls}
-            style={inputStyle}
+           
           />
           <img
             id="about-founder-image-preview"
             alt="New About page portrait preview"
             class="mt-3 hidden h-48 w-36 rounded-xl object-cover"
           />
-          <p class="text-xs mt-1.5" style="color: rgba(27,43,58,0.45);">JPG, PNG or WebP · max 10 MB. Leave empty to keep the current portrait.</p>
+          <p class="text-xs mt-1.5 text-navy/45">JPG, PNG or WebP · max 10 MB. Leave empty to keep the current portrait.</p>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Byline name</label>
-          <input type="text" name="aboutBylineName" value={aboutValue(s.aboutBylineName, ABOUT_DEFAULTS.bylineName)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Byline name</label>
+          <input type="text" name="aboutBylineName" value={aboutValue(s.aboutBylineName, ABOUT_DEFAULTS.bylineName)} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Portrait caption</label>
-          <input type="text" name="aboutCaption" value={aboutValue(s.aboutCaption, ABOUT_DEFAULTS.caption)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Portrait caption</label>
+          <input type="text" name="aboutCaption" value={aboutValue(s.aboutCaption, ABOUT_DEFAULTS.caption)} class={inputCls} />
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Pull quote</label>
-          <textarea name="aboutQuote" rows="3" class={inputCls} style={inputStyle}>{aboutValue(s.aboutQuote, ABOUT_DEFAULTS.quote)}</textarea>
+          <label class={labelCls}>Pull quote</label>
+          <textarea name="aboutQuote" rows="3" class={inputCls}>{aboutValue(s.aboutQuote, ABOUT_DEFAULTS.quote)}</textarea>
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Body <span style="color: rgba(27,43,58,0.4); text-transform: none; letter-spacing: 0;">(one paragraph per blank line)</span></label>
-          <textarea name="aboutBody" rows="6" class={inputCls} style={inputStyle}>{aboutValue(s.aboutBody, ABOUT_DEFAULTS.body)}</textarea>
+          <label class={labelCls}>Body <span class="text-navy/40 normal-case tracking-[0]">(one paragraph per blank line)</span></label>
+          <textarea name="aboutBody" rows="6" class={inputCls}>{aboutValue(s.aboutBody, ABOUT_DEFAULTS.body)}</textarea>
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Principles heading</label>
-          <input type="text" name="aboutPrinciplesHeading" value={aboutValue(s.aboutPrinciplesHeading, ABOUT_DEFAULTS.principlesHeading)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Principles heading</label>
+          <input type="text" name="aboutPrinciplesHeading" value={aboutValue(s.aboutPrinciplesHeading, ABOUT_DEFAULTS.principlesHeading)} class={inputCls} />
         </div>
         {[0, 1, 2].map((i) => (
-          <div class="sm:col-span-2 grid gap-2 sm:grid-cols-[1fr_2fr] rounded-2xl p-3" style="background: var(--color-gray-soft);">
+          <div class="sm:col-span-2 grid gap-2 sm:grid-cols-[1fr_2fr] rounded-2xl p-3 bg-gray-soft">
             <div>
-              <label class={labelCls} style={labelStyle}>Principle {i + 1} title</label>
-              <input type="text" name="aboutPrincipleTitle[]" value={aboutPrinciples[i]?.title ?? ''} class={inputCls} style={inputStyle} />
+              <label class={labelCls}>Principle {i + 1} title</label>
+              <input type="text" name="aboutPrincipleTitle[]" value={aboutPrinciples[i]?.title ?? ''} class={inputCls} />
             </div>
             <div>
-              <label class={labelCls} style={labelStyle}>Principle {i + 1} description</label>
-              <input type="text" name="aboutPrincipleDesc[]" value={aboutPrinciples[i]?.desc ?? ''} class={inputCls} style={inputStyle} />
+              <label class={labelCls}>Principle {i + 1} description</label>
+              <input type="text" name="aboutPrincipleDesc[]" value={aboutPrinciples[i]?.desc ?? ''} class={inputCls} />
             </div>
           </div>
         ))}
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>Closing paragraph</label>
-          <textarea name="aboutSignature" rows="3" class={inputCls} style={inputStyle}>{aboutValue(s.aboutSignature, ABOUT_DEFAULTS.signature)}</textarea>
+          <label class={labelCls}>Closing paragraph</label>
+          <textarea name="aboutSignature" rows="3" class={inputCls}>{aboutValue(s.aboutSignature, ABOUT_DEFAULTS.signature)}</textarea>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Sign-off label</label>
-          <input type="text" name="aboutSignoff" value={aboutValue(s.aboutSignoff, ABOUT_DEFAULTS.signoff)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Sign-off label</label>
+          <input type="text" name="aboutSignoff" value={aboutValue(s.aboutSignoff, ABOUT_DEFAULTS.signoff)} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Signature name</label>
-          <input type="text" name="aboutSignName" value={aboutValue(s.aboutSignName, ABOUT_DEFAULTS.signName)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Signature name</label>
+          <input type="text" name="aboutSignName" value={aboutValue(s.aboutSignName, ABOUT_DEFAULTS.signName)} class={inputCls} />
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls} style={labelStyle}>CTA button label</label>
-          <input type="text" name="aboutCtaLabel" value={aboutValue(s.aboutCtaLabel, ABOUT_DEFAULTS.ctaLabel)} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>CTA button label</label>
+          <input type="text" name="aboutCtaLabel" value={aboutValue(s.aboutCtaLabel, ABOUT_DEFAULTS.ctaLabel)} class={inputCls} />
         </div>
       </div>
     </section>
 
     <div class="flex justify-end mb-10">
       <button type="submit"
-              class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style="background-color: var(--color-cta);">
+              class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-cta"
+             >
         Save changes
       </button>
     </div>
@@ -235,12 +233,12 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
 
   <!-- Account -->
   <section class={cardCls} style={cardStyle}>
-    <h2 class="font-display text-lg font-semibold mb-1" style="color: var(--color-navy);">Account</h2>
-    <p class="text-sm mb-5" style="color: rgba(27,43,58,0.5);">Signed in as Zahra · Super Admin.</p>
+    <h2 class="font-display text-lg font-semibold mb-1 text-navy">Account</h2>
+    <p class="text-sm mb-5 text-navy/50">Signed in as Zahra · Super Admin.</p>
     <form method="POST" action="/api/admin/logout">
       <button type="submit"
-              class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors"
-              style="color: var(--color-danger); border: 1px solid var(--color-danger);">
+              class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors text-danger border border-danger"
+             >
         Sign out
       </button>
     </form>

@@ -14,56 +14,56 @@ function fmt(d: string) {
 ---
 
 <AdminLayout title="Broadcast" page="broadcast">
-  <div style="max-width: 720px;">
-    <h1 style="font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--color-primary-dark); margin: 0 0 0.25rem;">
+  <div class="max-w-[720px]">
+    <h1 class="font-display text-[1.5rem] font-extrabold text-[#111D27] mt-[0] mx-[0] mb-[0.25rem]">
       Send Broadcast
     </h1>
-    <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0 0 2rem;">
+    <p class="text-gray-text text-[0.875rem] mt-[0] mx-[0] mb-[2rem]">
       Email all active newsletter subscribers.
     </p>
 
-    <form id="broadcast-form" style="background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 2rem;">
-      <div style="margin-bottom: 1.25rem;">
-        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">Subject</label>
+    <form id="broadcast-form" class="bg-white rounded-[12px] p-[1.5rem] shadow-[0_1px_4px_rgba(0,0,0,0.08)] mb-[2rem]">
+      <div class="mb-[1.25rem]">
+        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">Subject</label>
         <input
           type="text"
           name="subject"
           required
           placeholder="e.g. New Batch: Spiti Valley — June 2025"
-          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; outline: none;"
+          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border outline-none"
         />
       </div>
 
-      <div style="margin-bottom: 1.25rem;">
-        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">
+      <div class="mb-[1.25rem]">
+        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">
           Body
-          <span style="font-weight: 400; color: var(--color-text-secondary); margin-left: 4px;">(HTML supported)</span>
+          <span class="font-normal text-gray-text ml-[4px]">(HTML supported)</span>
         </label>
         <textarea
           name="body_html"
           required
           rows="8"
           placeholder="<p>We just opened a new batch for ...</p>"
-          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; resize: vertical; outline: none; font-family: monospace;"
+          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border resize-y outline-none font-mono"
         ></textarea>
       </div>
 
-      <div style="margin-bottom: 1.5rem;">
-        <label style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--color-text-primary);">Post URL <span style="font-weight: 400; color: var(--color-text-secondary);">(optional)</span></label>
+      <div class="mb-[1.5rem]">
+        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">Post URL <span class="font-normal text-gray-text">(optional)</span></label>
         <input
           type="url"
           name="post_url"
           placeholder="https://www.seekthethrill.in/trips/spiti-valley"
-          style="width: 100%; padding: 0.65rem 0.9rem; border: 1.5px solid #E5E7EB; border-radius: 8px; font-size: 0.875rem; box-sizing: border-box; outline: none;"
+          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border outline-none"
         />
       </div>
 
-      <div id="broadcast-status" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.875rem;"></div>
+      <div id="broadcast-status" class="hidden mb-[1rem] py-[0.75rem] px-[1rem] rounded-[8px] text-[0.875rem]"></div>
 
       <button
         type="submit"
         id="broadcast-btn"
-        style="padding: 0.65rem 1.5rem; background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer;"
+        class="py-[0.65rem] px-[1.5rem] bg-navy text-white border-none rounded-[8px] text-[0.875rem] font-semibold cursor-pointer"
       >
         Send to all active subscribers
       </button>
@@ -71,25 +71,25 @@ function fmt(d: string) {
 
     {logs.length > 0 && (
       <div>
-        <h2 style="font-size: 1rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 1rem;">Recent broadcasts</h2>
-        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
-          <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+        <h2 class="text-[1rem] font-bold text-navy mt-[0] mx-[0] mb-[1rem]">Recent broadcasts</h2>
+        <div class="bg-white rounded-[12px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
+          <div class="overflow-x-auto">
+          <table class="w-full border-collapse text-[0.875rem]">
             <thead>
-              <tr style="background: #F9FAFB; border-bottom: 1px solid #F0F0F0;">
-                <th style="padding: 0.75rem 1rem; text-align: left; color: var(--color-text-secondary); font-weight: 600;">Subject</th>
-                <th style="padding: 0.75rem 1rem; text-align: left; color: var(--color-text-secondary); font-weight: 600;">Sent</th>
-                <th style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-secondary); font-weight: 600;">Recipients</th>
-                <th style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-secondary); font-weight: 600;">Status</th>
+              <tr class="bg-[#F9FAFB] border-b border-[#F0F0F0]">
+                <th class="py-[0.75rem] px-[1rem] text-left text-gray-text font-semibold">Subject</th>
+                <th class="py-[0.75rem] px-[1rem] text-left text-gray-text font-semibold">Sent</th>
+                <th class="py-[0.75rem] px-[1rem] text-right text-gray-text font-semibold">Recipients</th>
+                <th class="py-[0.75rem] px-[1rem] text-right text-gray-text font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr style="border-bottom: 1px solid #F9FAFB;">
-                  <td style="padding: 0.75rem 1rem; color: var(--color-text-primary);">{log.subject}</td>
-                  <td style="padding: 0.75rem 1rem; color: var(--color-text-secondary);">{fmt(log.sent_at)}</td>
-                  <td style="padding: 0.75rem 1rem; text-align: right; color: var(--color-text-primary);">{log.recipient_count}</td>
-                  <td style="padding: 0.75rem 1rem; text-align: right;">
+                <tr class="border-b border-[#F9FAFB]">
+                  <td class="py-[0.75rem] px-[1rem] text-navy">{log.subject}</td>
+                  <td class="py-[0.75rem] px-[1rem] text-gray-text">{fmt(log.sent_at)}</td>
+                  <td class="py-[0.75rem] px-[1rem] text-right text-navy">{log.recipient_count}</td>
+                  <td class="py-[0.75rem] px-[1rem] text-right">
                     <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? '#D1FAE5' : '#FEE2E2'}; color: ${log.status === 'sent' ? '#065F46' : '#991B1B'};`}>
                       {log.status}
                     </span>

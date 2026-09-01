@@ -1,48 +1,46 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { ADMIN_CONTENT_INPUT_STYLE as inputStyle, ADMIN_CONTENT_LABEL_STYLE as labelStyle } from '../../../lib/adminStyles';
+import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 export const prerender = false;
 
-const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
 ---
 
 <AdminLayout title="New Testimonial" page="testimonials">
-  <form method="POST" action="/api/admin/testimonials/create" class="bg-white rounded-[2rem] p-6 max-w-2xl" style="border: 1px solid rgba(245,221,215,0.6);">
+  <form method="POST" action="/api/admin/testimonials/create" class="bg-white rounded-[2rem] p-6 max-w-2xl border border-peach/60">
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
-        <label class={labelCls} style={labelStyle}>Name</label>
-        <input type="text" name="name" required class={inputCls} style={inputStyle} />
+        <label class={labelCls}>Name</label>
+        <input type="text" name="name" required class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} style={labelStyle}>Location</label>
-        <input type="text" name="location" placeholder="e.g. Delhi, India" class={inputCls} style={inputStyle} />
+        <label class={labelCls}>Location</label>
+        <input type="text" name="location" placeholder="e.g. Delhi, India" class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} style={labelStyle}>Trip taken</label>
-        <input type="text" name="tripName" aria-describedby="trip-name-help" placeholder="e.g. Meghalaya Trek" class={inputCls} style={inputStyle} />
-        <p id="trip-name-help" class="mt-1.5 text-xs" style="color: rgba(27,43,58,0.55);">Optional display context only. This does not control where the testimonial appears.</p>
+        <label class={labelCls}>Trip taken</label>
+        <input type="text" name="tripName" aria-describedby="trip-name-help" placeholder="e.g. Meghalaya Trek" class={inputCls} />
+        <p id="trip-name-help" class="mt-1.5 text-xs text-navy/55">Optional display context only. This does not control where the testimonial appears.</p>
       </div>
       <div>
-        <label class={labelCls} style={labelStyle}>Rating</label>
-        <select name="rating" class={inputCls} style={inputStyle}>
+        <label class={labelCls}>Rating</label>
+        <select name="rating" class={inputCls}>
           {[5, 4, 3, 2, 1].map(n => <option value={n} selected={n === 5}>{n} star{n === 1 ? '' : 's'}</option>)}
         </select>
       </div>
       <div class="sm:col-span-2">
-        <label class={labelCls} style={labelStyle}>Quote</label>
-        <textarea name="quote" rows="4" required class={inputCls} style={inputStyle}></textarea>
+        <label class={labelCls}>Quote</label>
+        <textarea name="quote" rows="4" required class={inputCls}></textarea>
       </div>
       <div class="sm:col-span-2">
-        <label class="flex items-center gap-2 text-sm" style="color: var(--color-navy);">
+        <label class="flex items-center gap-2 text-sm text-navy">
           <input type="checkbox" name="featured" value="true" />
           Featured (highlighted on homepage)
         </label>
       </div>
     </div>
     <div class="flex items-center gap-3 mt-6">
-      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);">Create</button>
-      <a href="/admin/testimonials/" class="text-sm font-medium" style="color: rgba(27,43,58,0.55);">Cancel</a>
+      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta">Create</button>
+      <a href="/admin/testimonials/" class="text-sm font-medium text-navy/55">Cancel</a>
     </div>
   </form>
 </AdminLayout>

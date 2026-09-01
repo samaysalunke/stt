@@ -5,6 +5,7 @@ import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
 import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
 import TripGalleryEditor from '../../../components/admin/TripGalleryEditor.astro';
 import { DEPARTURE_STATUSES, listAlbums, listFaqs } from '../../../lib/content';
+import '../../../styles/admin-trip-form.css';
 
 const publishedAlbums = listAlbums().filter(a => a.published);
 const galleryAlbums = publishedAlbums.map(a => ({
@@ -71,7 +72,7 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Occupancy Tiers</label>
-          <p class="fhint" style="margin-bottom:0.5rem;">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
+          <p class="fhint mb-[0.5rem]">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
           <div id="catalog-editor"></div>
           <button type="button" id="add-tier-btn" class="add-btn">+ Add Occupancy Tier</button>
           <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
@@ -79,12 +80,12 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Departures &amp; Offers</label>
-          <p class="fhint" style="margin-bottom:0.5rem;">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
+          <p class="fhint mb-[0.5rem]">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
           <div
             id="departure-validation-error"
             role="alert"
             hidden={!bookingError}
-            style="margin-bottom:0.75rem; border:1px solid var(--color-danger); border-radius:0.5rem; padding:0.75rem; color:var(--color-danger); background:rgba(220,38,38,0.06); font-size:0.875rem;"
+            class="mb-[0.75rem] border border-danger rounded-[0.5rem] p-[0.75rem] text-danger bg-[rgba(220,38,38,0.06)] text-[0.875rem]"
           >
             The trip was not saved because a departure is incomplete. Check its date, selected occupancy tier, and price.
           </div>
@@ -171,7 +172,7 @@ const globalFaqs = listFaqs();
     <div class="tab-panel hidden" id="tab-itinerary">
       <div class="itin-toolbar">
         <span class="itin-count" id="itin-count">0 days</span>
-        <div style="display:flex;gap:0.5rem;">
+        <div class="flex gap-[0.5rem]">
           <button type="button" class="itin-tool-btn" id="expand-all-btn">Expand all</button>
           <button type="button" class="itin-tool-btn" id="collapse-all-btn">Collapse all</button>
         </div>
@@ -270,460 +271,6 @@ const globalFaqs = listFaqs();
   </form>
 </AdminLayout>
 
-<style is:global>
-/* ── Layout ─────────────────────────────────── */
-.edit-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.back-link {
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-.edit-title {
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin: 0;
-  flex: 1;
-}
-.header-actions {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
-}
-.preview-btn {
-  padding: 0.45rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  background: white;
-}
-.save-btn {
-  background: var(--color-primary);
-  color: white;
-  padding: 0.55rem 1.5rem;
-  border-radius: 0.5rem;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-.save-btn:hover { opacity: 0.9; }
-
-/* ── Tabs ────────────────────────────────────── */
-.tabs-bar {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--color-border);
-  margin-bottom: 1.5rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs-bar::-webkit-scrollbar { display: none; }
-.tab-btn {
-  padding: 0.6rem 1.1rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  transition: color 0.15s, border-color 0.15s;
-}
-.tab-btn:hover { color: var(--color-text-primary); }
-.tab-btn.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-}
-
-/* ── Panels ──────────────────────────────────── */
-.tab-panel { }
-.tab-panel.hidden { display: none; }
-
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.1rem;
-}
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-.field.full { grid-column: 1 / -1; }
-
-.flabel {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.char-count {
-  font-weight: 400;
-  color: #9CA3AF;
-}
-.fhint {
-  font-size: 0.72rem;
-  color: #9CA3AF;
-  line-height: 1.4;
-}
-.fhint code {
-  background: var(--color-border);
-  padding: 0 0.2rem;
-  border-radius: 0.2rem;
-}
-.finput {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 0.4rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--color-text-primary);
-  font-size: 0.875rem;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-  transition: border-color 0.15s;
-}
-.finput:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(45,95,62,0.1); }
-select.finput { cursor: pointer; }
-
-/* ── Dynamic lists ───────────────────────────── */
-.dyn-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 0.4rem;
-}
-.dyn-item { display: flex; gap: 0.4rem; }
-.dyn-item input { flex: 1; }
-.rm-btn {
-  background: none;
-  border: 1px solid #dc2626;
-  color: #dc2626;
-  border-radius: 0.35rem;
-  padding: 0.3rem 0.55rem;
-  cursor: pointer;
-  font-size: 0.8rem;
-  flex-shrink: 0;
-}
-.add-btn {
-  background: none;
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-secondary);
-  border-radius: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 500;
-  align-self: flex-start;
-}
-.add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-
-/* ── Itinerary toolbar ───────────────────────── */
-.itin-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-.itin-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-.itin-tool-btn {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 0.4rem;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-.itin-tool-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-
-#add-day-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.7rem;
-  background: white;
-  border: 1.5px dashed var(--color-border);
-  border-radius: 0.6rem;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-#add-day-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-
-/* ── Accordion day cards ─────────────────────── */
-.day-card {
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 0.65rem;
-  margin-bottom: 0.6rem;
-  overflow: hidden;
-  transition: box-shadow 0.15s;
-}
-.day-card:focus-within { box-shadow: 0 0 0 2px rgba(45,95,62,0.15); border-color: var(--color-primary); }
-
-.day-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 1rem;
-  cursor: pointer;
-  user-select: none;
-}
-.day-header:hover { background: var(--color-surface); }
-
-.day-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--font-display);
-}
-.day-card.open .day-num { background: var(--color-accent); }
-
-.day-header-text { flex: 1; min-width: 0; }
-.day-title {
-  font-weight: 700;
-  font-size: 0.875rem;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: var(--font-display);
-}
-.day-summary {
-  font-size: 0.72rem;
-  color: var(--color-text-secondary);
-  margin-top: 0.1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.day-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-shrink: 0;
-}
-.day-move-btn {
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 0.3rem;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: 0.7rem;
-  padding: 0;
-}
-.day-move-btn:hover { background: var(--color-surface); border-color: var(--color-primary); color: var(--color-primary); }
-.day-move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.day-chevron {
-  width: 16px;
-  height: 16px;
-  color: var(--color-text-secondary);
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-.day-card.open .day-chevron { transform: rotate(180deg); }
-
-.day-body {
-  display: none;
-  padding: 0 1rem 1rem;
-  border-top: 1px solid var(--color-border);
-}
-.day-card.open .day-body { display: block; }
-
-.day-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.7rem;
-  margin-top: 0.85rem;
-}
-.day-grid .full { grid-column: 1 / -1; }
-.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.25rem; }
-.day-input {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.4rem;
-  padding: 0.45rem 0.65rem;
-  color: var(--color-text-primary);
-  font-size: 0.825rem;
-  width: 100%;
-  box-sizing: border-box;
-  outline: none;
-  font-family: inherit;
-  transition: border-color 0.15s;
-}
-.day-input:focus { border-color: var(--color-primary); }
-
-.meal-row { display: flex; gap: 1.25rem; flex-wrap: wrap; padding: 0.5rem 0; }
-.meal-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 0.35rem 0.6rem;
-  border-radius: 0.4rem;
-  border: 1px solid var(--color-border);
-  transition: background 0.15s, border-color 0.15s;
-}
-.meal-label:has(input:checked) {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  font-weight: 600;
-}
-
-.day-photos-block { margin-top: 0.85rem; }
-.day-photos-hint { color: var(--color-text-secondary); font-weight: 400; }
-.day-photos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0; }
-.day-photo-thumb { position: relative; width: 96px; height: 72px; border-radius: 0.4rem; overflow: hidden; border: 1px solid var(--color-border); }
-.day-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.day-photo-rm {
-  position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; line-height: 1;
-  border: 0; border-radius: 999px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.7rem; cursor: pointer;
-}
-.day-photo-add {
-  display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
-  font-size: 0.8rem; padding: 0.35rem 0.6rem; border: 1px dashed var(--color-border); border-radius: 0.4rem;
-  color: var(--color-text-secondary);
-}
-.day-photo-add:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.day-photos-status { margin-left: 0.6rem; font-size: 0.75rem; color: var(--color-text-secondary); }
-
-.day-footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.85rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-border);
-}
-
-/* ── Images ─────────────────────────────────── */
-.file-input { padding: 0.35rem 0.5rem; }
-.img-preview {
-  max-height: 120px;
-  border-radius: 0.5rem;
-  object-fit: cover;
-  margin-bottom: 0.35rem;
-}
-.img-preview.qr { object-fit: contain; }
-.img-preview.hidden { display: none; }
-
-/* ── Trip photo gallery editor ───────────────── */
-.gallery-editor .gallery-grid {
-  columns: 5;
-  column-gap: 0.6rem;
-  margin-top: 0.6rem;
-}
-.gallery-editor .gallery-grid.hidden { display: none; }
-.gallery-editor [data-gallery-album-grid] {
-  max-height: 320px;
-  overflow-y: auto;
-  padding: 0.6rem;
-  border: 1px dashed var(--color-border);
-  border-radius: 0.5rem;
-  background: var(--color-surface);
-}
-.gallery-thumb {
-  position: relative;
-  break-inside: avoid;
-  margin-bottom: 0.6rem;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: var(--color-surface);
-}
-.gallery-thumb img { display: block; width: 100%; height: auto; }
-.gallery-thumb.is-selected { outline: 3px solid var(--color-coral); outline-offset: -3px; }
-.gallery-thumb-btn {
-  position: absolute; top: 0.3rem; right: 0.3rem;
-  width: 1.5rem; height: 1.5rem; border-radius: 50%;
-  border: none; cursor: pointer; font-size: 0.8rem; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(27,43,58,0.78); color: #fff;
-}
-.gallery-thumb.is-selected .gallery-thumb-btn { background: var(--color-coral); }
-.gallery-upload-btn {
-  display: inline-block;
-  background: var(--color-surface);
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-secondary, var(--color-navy));
-  padding: 0.5rem 1.1rem; border-radius: 0.5rem;
-  cursor: pointer; font-size: 0.85rem;
-}
-@media (max-width: 1024px) { .gallery-editor .gallery-grid { columns: 4; } }
-@media (max-width: 768px)  { .gallery-editor .gallery-grid { columns: 3; } }
-
-/* ── Bottom save bar ─────────────────────────── */
-.save-bar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--color-border);
-}
-.cancel-btn {
-  padding: 0.55rem 1.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  font-size: 0.875rem;
-  background: white;
-}
-
-/* ── Responsive ─────────────────────────────── */
-@media (max-width: 640px) {
-  .panel-grid { grid-template-columns: 1fr; }
-  .field.full { grid-column: 1; }
-  .day-grid { grid-template-columns: 1fr; }
-  .day-grid .full { grid-column: 1; }
-  .day-actions .day-move-btn { display: none; }
-  .edit-title { font-size: 1.1rem; }
-}
-</style>
 
 <script define:vars={{ itinerary }}>
 // ── Tab switching ─────────────────────────────
@@ -1093,11 +640,11 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       row.className = 'dyn-item';
       row.style.cssText = 'gap:0.5rem; align-items:flex-start;';
       row.innerHTML =
-        '<div style="flex:2;"><span class="fhint">Label</span>' +
+        '<div class="flex-[2]"><span class="fhint">Label</span>' +
           '<input type="text" class="finput tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
-        '<div style="flex:3;"><span class="fhint">Helper text (what this sharing means)</span>' +
+        '<div class="flex-[3]"><span class="fhint">Helper text (what this sharing means)</span>' +
           '<input type="text" class="finput tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
-        '<button type="button" class="rm-btn" style="margin-top:1.2rem;">✕</button>';
+        '<button type="button" class="rm-btn mt-[1.2rem]">✕</button>';
       row.querySelector('.tier-label').addEventListener('input', (e) => { tier.label = e.target.value; });
       row.querySelector('.tier-helper').addEventListener('input', (e) => { tier.helperText = e.target.value; });
       row.querySelector('.rm-btn').addEventListener('click', () => {
@@ -1119,15 +666,15 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       const head = document.createElement('div');
       head.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end;';
       head.innerHTML =
-        '<div style="flex:1; min-width:140px;"><span class="fhint">Start</span>' +
+        '<div class="flex-1 min-w-[140px]"><span class="fhint">Start</span>' +
           '<input type="date" class="finput dep-start" value="' + esc(dep.startDate) + '" /></div>' +
-        '<div style="flex:1; min-width:140px;"><span class="fhint">End</span>' +
+        '<div class="flex-1 min-w-[140px]"><span class="fhint">End</span>' +
           '<input type="date" class="finput dep-end" value="' + esc(dep.endDate) + '" /></div>' +
-        '<div style="flex:1; min-width:130px;"><span class="fhint">Status</span>' +
+        '<div class="flex-1 min-w-[130px]"><span class="fhint">Status</span>' +
           '<select class="finput dep-status">' +
             STATUSES.map(({ value, label }) => '<option value="' + value + '"' + (value === dep.status || (value === 'filling_fast' && dep.status === 'filling-fast') ? ' selected' : '') + '>' + label + '</option>').join('') +
           '</select></div>' +
-        '<button type="button" class="rm-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
+        '<button type="button" class="rm-btn dep-remove mb-[0.1rem]">✕ Date</button>';
       head.querySelector('.dep-start').addEventListener('input', (e) => { dep.startDate = e.target.value; });
       head.querySelector('.dep-end').addEventListener('input', (e) => { dep.endDate = e.target.value; });
       head.querySelector('.dep-status').addEventListener('change', (e) => { dep.status = e.target.value; });
@@ -1137,11 +684,11 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       const discount = document.createElement('div');
       discount.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; margin-top:0.75rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-bg-soft, #faf7f5);';
       discount.innerHTML =
-        '<div style="flex:1; min-width:150px;"><span class="fhint">Departure discount ₹</span>' +
+        '<div class="flex-1 min-w-[150px]"><span class="fhint">Departure discount ₹</span>' +
           '<input type="number" min="0" step="1" class="finput dep-discount" value="' + (dep.discountAmount != null ? dep.discountAmount : '') + '" placeholder="e.g. 2000" /></div>' +
-        '<div style="flex:2; min-width:220px;"><span class="fhint">Valid until (optional)</span>' +
+        '<div class="flex-[2] min-w-[220px]"><span class="fhint">Valid until (optional)</span>' +
           '<input type="datetime-local" class="finput dep-discount-end" value="' + esc(localDateTime(dep.discountEndsAt)) + '" /></div>' +
-        '<span class="fhint" style="flex-basis:100%;">This amount is deducted from every selected occupancy price. Leave the validity empty for a discount with no expiry.</span>';
+        '<span class="fhint basis-full">This amount is deducted from every selected occupancy price. Leave the validity empty for a discount with no expiry.</span>';
       discount.querySelector('.dep-discount').addEventListener('input', (e) => { dep.discountAmount = e.target.value === '' ? null : Number(e.target.value); });
       discount.querySelector('.dep-discount-end').addEventListener('input', (e) => { dep.discountEndsAt = e.target.value ? new Date(e.target.value).toISOString() : ''; });
       card.appendChild(discount);
@@ -1158,14 +705,14 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
         const r = document.createElement('div');
         r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
         r.innerHTML =
-          '<label style="display:flex; align-items:center; gap:0.4rem; flex:2; min-width:160px; cursor:pointer;">' +
+          '<label class="flex items-center gap-[0.4rem] flex-[2] min-w-[160px] cursor-pointer">' +
             '<input type="checkbox" class="off-on"' + (offered ? ' checked' : '') + ' />' +
             '<span>' + esc(tier.label || tierId) + '</span></label>' +
-          '<div style="flex:1; min-width:90px;"><span class="fhint">Price ₹</span>' +
+          '<div class="flex-1 min-w-[90px]"><span class="fhint">Price ₹</span>' +
             '<input type="number" class="finput off-price" value="' + (offer && offer.price != null ? offer.price : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
-          '<div style="flex:1; min-width:70px;"><span class="fhint">Cap</span>' +
+          '<div class="flex-1 min-w-[70px]"><span class="fhint">Cap</span>' +
             '<input type="number" class="finput off-cap" value="' + (offer && offer.cap != null ? offer.cap : '') + '"' + (offered ? '' : ' disabled') + ' /></div>' +
-          '<div style="flex:1; min-width:70px;"><span class="fhint">Booked</span>' +
+          '<div class="flex-1 min-w-[70px]"><span class="fhint">Booked</span>' +
             '<input type="number" class="finput off-booked" value="' + (offer && offer.booked != null ? offer.booked : 0) + '"' + (offered ? '' : ' disabled') + ' /></div>';
         const cb = r.querySelector('.off-on');
         const priceI = r.querySelector('.off-price');

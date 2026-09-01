@@ -128,8 +128,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <label><input id="select-all-visible" type="checkbox" /> Select all matching</label>
         <strong id="selected-count"></strong>
         <select id="bulk-status"><option value="">Choose new status…</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option><option>cancelled</option></select>
-        <select id="bulk-confirm-kind" style="display:none"><option value="advance_paid">Advance paid</option><option value="fully_paid">Fully paid</option></select>
-        <select id="bulk-cancel-kind" style="display:none"><option value="none">No refund</option><option value="refunded">Full refund — all paid</option></select>
+        <select id="bulk-confirm-kind" class="hidden"><option value="advance_paid">Advance paid</option><option value="fully_paid">Fully paid</option></select>
+        <select id="bulk-cancel-kind" class="hidden"><option value="none">No refund</option><option value="refunded">Full refund — all paid</option></select>
         <button id="apply-bulk-status" disabled>Update status</button>
         <button id="clear-selection">Clear</button>
       </div>

@@ -1,7 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { readFaq, listFaqs } from '../../../lib/content';
-import { ADMIN_CONTENT_INPUT_STYLE as inputStyle, ADMIN_CONTENT_LABEL_STYLE as labelStyle } from '../../../lib/adminStyles';
+import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 export const prerender = false;
 
 const { slug } = Astro.params;
@@ -10,44 +10,42 @@ if (!f) return Astro.redirect('/admin/faqs');
 
 const categories = Array.from(new Set(listFaqs().map(x => x.category).filter(Boolean)));
 
-const inputCls = 'w-full rounded-2xl px-4 py-3 text-sm outline-none';
-const labelCls = 'block text-xs font-semibold uppercase tracking-widest mb-1.5';
 ---
 
 <AdminLayout title="Edit FAQ" page="faqs">
-  <form method="POST" action="/api/admin/faqs/update" class="bg-white rounded-[2rem] p-6 max-w-2xl" style="border: 1px solid rgba(245,221,215,0.6);">
+  <form method="POST" action="/api/admin/faqs/update" class="bg-white rounded-[2rem] p-6 max-w-2xl border border-peach/60">
     <input type="hidden" name="slug" value={slug} />
     <div class="grid gap-4">
       <div>
-        <label class={labelCls} style={labelStyle}>Question</label>
-        <input type="text" name="question" required value={f.question ?? ''} class={inputCls} style={inputStyle} />
+        <label class={labelCls}>Question</label>
+        <input type="text" name="question" required value={f.question ?? ''} class={inputCls} />
       </div>
       <div>
-        <label class={labelCls} style={labelStyle}>Answer</label>
-        <textarea name="answer" rows="4" required class={inputCls} style={inputStyle}>{f.answer ?? ''}</textarea>
+        <label class={labelCls}>Answer</label>
+        <textarea name="answer" rows="4" required class={inputCls}>{f.answer ?? ''}</textarea>
       </div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <label class={labelCls} style={labelStyle}>Category</label>
-          <input type="text" name="category" list="faq-cats" value={f.category ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Category</label>
+          <input type="text" name="category" list="faq-cats" value={f.category ?? ''} class={inputCls} />
           <datalist id="faq-cats">{categories.map(c => <option value={c}></option>)}</datalist>
         </div>
         <div>
-          <label class={labelCls} style={labelStyle}>Order</label>
-          <input type="number" name="order" value={f.order ?? ''} class={inputCls} style={inputStyle} />
+          <label class={labelCls}>Order</label>
+          <input type="number" name="order" value={f.order ?? ''} class={inputCls} />
         </div>
       </div>
-      <label class="flex items-start gap-3 rounded-2xl px-4 py-3" style={inputStyle}>
+      <label class="flex items-start gap-3 rounded-2xl px-4 py-3 border border-peach/80 bg-white">
         <input type="checkbox" name="defaultOnTripPages" class="mt-1" checked={f.defaultOnTripPages === true} />
         <span>
-          <span class="block text-sm font-semibold" style="color: var(--color-navy);">Default on trip pages</span>
-          <span class="block text-xs mt-1" style="color: rgba(27,43,58,0.55);">Show this FAQ on every trip unless a trip hides it.</span>
+          <span class="block text-sm font-semibold text-navy">Default on trip pages</span>
+          <span class="block text-xs mt-1 text-navy/55">Show this FAQ on every trip unless a trip hides it.</span>
         </span>
       </label>
     </div>
     <div class="flex items-center gap-3 mt-6">
-      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white" style="background-color: var(--color-cta);">Save changes</button>
-      <a href="/admin/faqs/" class="text-sm font-medium" style="color: rgba(27,43,58,0.55);">Cancel</a>
+      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta">Save changes</button>
+      <a href="/admin/faqs/" class="text-sm font-medium text-navy/55">Cancel</a>
     </div>
   </form>
 </AdminLayout>
