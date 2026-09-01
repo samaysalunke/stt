@@ -165,15 +165,25 @@ async function pinListingOrder(page: Page) {
  * invariant to how many rows the DB happens to hold. Rows are `display:none`d
  * rather than removed so nothing re-lays-out around a missing node.
  *
- * Detection is structural, not per-route: a container qualifies when six or more
- * of its direct children are the same tag with the same class list, which is what
- * a rendered list looks like and what a hand-built layout block does not.
+ * Detection is structural, not per-route: a container qualifies when TWENTY or
+ * more of its direct children are the same tag with the same class list.
+ *
+ * The threshold is the whole design. At six it also caught hand-authored blocks —
+ * the ten field rows of `/admin/registrations/new` are ten sibling `<div>`s with
+ * one class between them, so the harness quietly hid most of that form and its
+ * baseline became a function of which rows happened to share a class string.
+ * Editing those classes then moved the snapshot for a reason that had nothing to
+ * do with how the page looks, which is the opposite of what this oracle is for.
+ * Twenty separates the two populations cleanly: the longest hand-built admin form
+ * is ten rows, and the DB-driven lists this exists for run to the hundreds.
  */
+const LIST_ROW_THRESHOLD = 20;
+
 async function capAdminLists(page: Page, keep = 3) {
-  await page.evaluate((keepCount) => {
+  await page.evaluate(([keepCount, threshold]) => {
     for (const container of Array.from(document.querySelectorAll('*'))) {
       const children = Array.from(container.children) as HTMLElement[];
-      if (children.length < 6) continue;
+      if (children.length < threshold) continue;
 
       const signature = (el: Element) => `${el.tagName}|${el.getAttribute('class') ?? ''}`;
       const counts = new Map<string, HTMLElement[]>();
@@ -183,11 +193,11 @@ async function capAdminLists(page: Page, keep = 3) {
       }
 
       for (const group of counts.values()) {
-        if (group.length < 6) continue;
+        if (group.length < threshold) continue;
         group.slice(keepCount).forEach((el) => { el.style.display = 'none'; });
       }
     }
-  }, keep);
+  }, [keep, LIST_ROW_THRESHOLD] as const);
 }
 
 // `/thank-you/` is a 301 to `/trips/` (booking confirmation moved inline onto the
