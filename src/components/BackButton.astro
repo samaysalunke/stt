@@ -10,8 +10,7 @@ const { fallback = '/', label = 'Back' } = Astro.props;
   href={fallback}
   data-back-button
   aria-label={label}
-  class="fixed top-4 left-4 z-30 inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium shadow-sm transition-colors"
-  style="border: 1px solid rgba(245,221,215,0.7); background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: var(--color-navy);"
+  class="fixed top-4 left-4 z-30 inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-peach/70 bg-white/85 px-3 py-2 text-sm font-medium text-navy shadow-sm backdrop-blur-[8px] transition-colors"
 >
   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />

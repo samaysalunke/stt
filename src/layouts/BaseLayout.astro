@@ -159,11 +159,10 @@ const orgSchema = {
       </script>
     )}
   </head>
-  <body class="min-h-screen flex flex-col" style="background-color: var(--color-gray-soft); color: var(--color-navy);">
+  <body class="min-h-screen flex flex-col bg-gray-soft text-navy">
     <a
       href="#main-content"
-      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
-      style="background-color: var(--color-cta);"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-pill)] focus:bg-cta focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white"
     >
       Skip to content
     </a>
@@ -186,8 +185,7 @@ const orgSchema = {
       href={`https://wa.me/${(settings.phone ?? '+917975027491').replace(/[^0-9]/g, '')}?text=Hi%2C%20I%27m%20interested%20in%20a%20trip%20with%20Seek%20the%20Thrill!`}
       target="_blank"
       rel="noopener noreferrer"
-      class="fixed bottom-24 right-5 lg:bottom-5 z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
-      style="background:#25D366;"
+      class="fixed bottom-24 right-5 lg:bottom-5 z-40 w-14 h-14 rounded-[var(--radius-pill)] bg-whatsapp flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-200"
       title="Chat with us on WhatsApp"
       aria-label="Chat with us on WhatsApp"
     >

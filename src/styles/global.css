@@ -15,7 +15,14 @@
   --color-peach: #F5DDD7;
   --color-white: #FFFFFF;
   --color-gray-soft: #F5F5F3;
-  --color-gray-text: #6B7280;
+  /* Body/secondary text. Darkened from #6B7280, which cleared AA on white
+     (4.83:1) but not on the two tinted surfaces we actually ship most body copy
+     on — --color-gray-soft (4.43:1) and --color-blush (4.34:1). Lighthouse
+     flagged it on /trips/ and the trip detail page. Now 5.54 / 5.08 / 4.98. */
+  --color-gray-text: #646B76;
+  /* WhatsApp's own brand green — a fixed external brand value, not ours to
+     retune. Tokenised only so it stops being a bare hex in the markup. */
+  --color-whatsapp: #25D366;
 
   /* Text-safe coral. `--color-coral` is a 3.0:1 contrast against white — fine as
      a large-display accent or a button *fill*, but it FAILS WCAG AA (4.5:1) as
@@ -43,7 +50,7 @@
   --color-gold: #E8725A;
   --color-surface: #F5F5F3;
   --color-text-primary: #1B2B3A;
-  --color-text-secondary: #6B7280;
+  --color-text-secondary: #646B76;
   --color-success: #22A654;
   --color-danger: #D93025;
   --color-border: #E8DDD9;

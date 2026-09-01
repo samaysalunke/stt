@@ -1,5 +1,6 @@
 ---
 import { readSiteSettings } from '../lib/content';
+import Button from './ui/Button.astro';
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -8,14 +9,14 @@ const instagram = settings.instagram ?? 'https://www.instagram.com/seekthethrill
 const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
 ---
 
-<footer style="background-color: var(--color-navy);" class="text-white">
+<footer class="bg-navy text-white">
   <div class="container-app py-14 lg:py-16">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
       <!-- Brand -->
       <div class="lg:col-span-1">
         <a href="/" class="flex items-center gap-2.5 mb-4 hover:opacity-90 transition-opacity">
-          <img src="/logo.jpg" alt="Seek the Thrill" class="h-9 w-auto rounded-lg" />
+          <img src="/logo.jpg" alt="" class="h-9 w-auto rounded-lg" />
           <span class="font-semibold text-sm text-white">Seek the Thrill</span>
         </a>
         <p class="text-white/60 text-sm leading-relaxed mb-6 max-w-xs">
@@ -39,7 +40,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       <!-- Links -->
       <div class="grid grid-cols-2 gap-8 lg:col-span-2 lg:grid-cols-3">
         <div>
-          <h4 class="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Explore</h4>
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4">Explore</h2>
           <ul class="space-y-3">
             <li><a href="/trips/" class="text-sm text-white/70 hover:text-white transition-colors">Upcoming Trips</a></li>
             <li><a href="/about/" class="text-sm text-white/70 hover:text-white transition-colors">Our Story</a></li>
@@ -47,7 +48,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
           </ul>
         </div>
         <div>
-          <h4 class="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Help</h4>
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4">Help</h2>
           <ul class="space-y-3">
             <li><a href="/faq/" class="text-sm text-white/70 hover:text-white transition-colors">FAQ</a></li>
             <li><a href="/contact/" class="text-sm text-white/70 hover:text-white transition-colors">Contact</a></li>
@@ -55,7 +56,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
           </ul>
         </div>
         <div>
-          <h4 class="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Legal</h4>
+          <h2 class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-4">Legal</h2>
           <ul class="space-y-3">
             <li><a href="/terms/" class="text-sm text-white/70 hover:text-white transition-colors">Terms &amp; Conditions</a></li>
             <li><a href="/cancellation/" class="text-sm text-white/70 hover:text-white transition-colors">Cancellation Policy</a></li>
@@ -67,33 +68,28 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
     </div>
 
     <!-- Newsletter signup -->
-    <div class="mt-10 pt-8 border-t" style="border-color: rgba(255,255,255,0.1);">
-      <p class="text-white/50 text-xs uppercase tracking-widest font-semibold mb-3">Stay in the loop</p>
+    <div class="mt-10 pt-8 border-t border-white/10">
+      <p class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3">Stay in the loop</p>
       <form id="footer-newsletter" class="flex gap-2 max-w-sm">
+        <label for="footer-newsletter-email" class="sr-only">Your email address</label>
         <input
+          id="footer-newsletter-email"
           type="email"
           name="email"
           placeholder="Your email"
           required
-          class="min-w-0 flex-1 px-4 py-2.5 rounded-full text-sm outline-none"
-          style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white;"
+          class="min-w-0 flex-1 rounded-[var(--radius-pill)] border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         />
-        <button
-          type="submit"
-          class="px-5 py-2.5 rounded-full text-sm font-semibold text-white flex-shrink-0"
-          style="background-color: var(--color-cta);"
-        >
-          Keep me posted
-        </button>
+        <Button type="submit" variant="cta" size="md" class="flex-shrink-0">Keep me posted</Button>
       </form>
       <p id="footer-nl-success" class="hidden text-white/60 text-sm mt-2">
         You're in. We'll be in touch when something good is coming.
       </p>
     </div>
 
-    <div class="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4" style="border-color: rgba(255,255,255,0.1);">
-      <p class="text-white/40 text-xs">© 2026 Seek the Thrill. All rights reserved.</p>
-      <p class="text-white/30 text-xs">This site uses analytics cookies. <a href="/privacy/" class="underline hover:text-white/60">Learn more.</a></p>
+    <div class="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-white/60 text-xs">© 2026 Seek the Thrill. All rights reserved.</p>
+      <p class="text-white/60 text-xs">This site uses analytics cookies. <a href="/privacy/" class="underline hover:text-white">Learn more.</a></p>
     </div>
   </div>
 </footer>

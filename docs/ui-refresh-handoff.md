@@ -9,12 +9,12 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 300/300 · `test:api` 153/153 ·
-  `test:e2e` 149/149 (118 functional + 30 visual + 1 redirect assertion). Everything
-  green — and the e2e run was deliberately done *immediately after* `test:api` mutated
-  content, the sequence that used to break the visual baselines (gotcha #7).
-- **Phase 0 = done. Phase 1 = done. Phase 1 review gate = CLEARED** (see
-  "Gate decisions" below). Phase 1.5 — the one-time token retune the gate authorised
-  — is also done. **Phase 2 is now unblocked.**
+  `test:e2e` 150/150 (118 functional + 30 visual + 1 redirect assertion + 1 new
+  header-menu a11y spec). Everything green — and the e2e run was deliberately done
+  *immediately after* `test:api` mutated content, the sequence that used to break the
+  visual baselines (gotcha #7).
+- **Phases 0, 1, 1.5 and 2 are done.** The Phase 1 review gate is cleared (see
+  "Gate decisions"). **Phase 3 (marketing/legal pages) is next.**
 
 ## Commits on the branch (newest first)
 
@@ -111,10 +111,10 @@ All configured assertions pass. Two things to know before anyone chases a number
 
 | audit | where | phase |
 |---|---|---|
-| `image-redundant-alt` | header `<img src="/logo.jpg" alt="Seek the Thrill">` sits inside `<a aria-label="Seek the Thrill home">`; alt duplicates the link name. Use `alt=""`. | 2 (Header) |
-| `label-content-name-mismatch` | same header brand link — visible text and accessible name diverge. | 2 (Header) |
-| `aria-hidden-focus` | `#menu-overlay` is `aria-hidden="true"` but contains focusable descendants. Keyboard users can tab into a hidden overlay. | 2 (Header) |
-| `heading-order` | footer `<h4>` follows no `<h3>`; on `/trips/` the card `<h3>`s follow no `<h2>`. | 2 (Footer) / 4 (trips index) |
+| `image-redundant-alt` | **Footer** (not Header) `<img src="/logo.jpg" alt="Seek the Thrill">` duplicates the adjacent link text. Use `alt=""`. — FIXED in Phase 2 | 2 |
+| `label-content-name-mismatch` | header + drawer brand links — visible text and accessible name diverge. — FIXED in Phase 2 | 2 |
+| `aria-hidden-focus` | `#menu-overlay` is `aria-hidden="true"` but contains focusable descendants. — FIXED in Phase 2 (`inert`) | 2 |
+| `heading-order` | footer `<h4>` follows no `<h3>` — FIXED in Phase 2; on `/trips/` the card `<h3>`s still follow no `<h2>` — open | 2 done / 4 open |
 
 ## What Phase 1 added (safe to build on)
 
@@ -240,9 +240,62 @@ Visual snapshots are `*-chromium-darwin.png` — platform-specific. Regenerate o
 different OS/CI or they will all "fail". The harness stubs `images.unsplash.com` with
 `public/logo.jpg` and freezes animations/fonts for determinism.
 
-## Next phases (from the plan — do not start before the gate clears)
+## Phase 2 — shared chrome (done)
 
-- **Phase 2** — shared chrome: `BaseLayout`, `Header` (has a ~90-rule
+Restyled `BaseLayout`, `Footer`, `Header`, `BackButton`, `ProfileChrome` and
+`LegalPageLayout` onto tokens, and cleared every Header/Footer accessibility audit
+Lighthouse had flagged. DOM-stable; no testid, form `id`/`name`, script hook or island
+was touched. Public inline `style="` 276 → **267**; `var(--color` in markup 402 → 395.
+
+**Measured result** (same lhci config, medians of 3):
+
+| route | a11y before | a11y after | remaining |
+|---|---|---|---|
+| `/` | 94 | **96** | `color-contrast` (Phase 4 files) |
+| `/trips/` | 89 | **94** | `color-contrast`, `heading-order` (Phase 4) |
+| `/trips/monsoon-meghalaya/` | 94 | **96** | `color-contrast` (Phase 4) |
+
+Perf held at 97–98; best-practices stays 78 and will not move (Clarity cookies).
+
+**Fixed**
+- `image-redundant-alt` — the culprit was **Footer**, not Header as first recorded:
+  `<img alt="Seek the Thrill">` next to a span already naming the link. Now `alt=""`.
+- `label-content-name-mismatch` — `aria-label="Seek the Thrill home"` on the header and
+  drawer brand links did not contain their own visible text ("by Zahra Shakir",
+  "Small groups. Offbeat India."). The aria-label is removed; the link content names it.
+  ProfileChrome's identical-looking aria-label is fine and was left alone — its visible
+  text *is* contained in the label.
+- `aria-hidden-focus` — the closed menu drawer was `aria-hidden` but still tabbable.
+  Now toggles `inert` alongside `aria-hidden`. **The drawer had zero e2e coverage**, so
+  `tests/e2e/header-menu.spec.ts` was added to hold the behaviour: inert when closed,
+  focusable when open, inert again after the close transition, focus returned to the
+  trigger.
+- `heading-order` — footer `<h4>`s with no preceding `<h2>`/`<h3>` became `<h2>`.
+- **`--color-gray-text` darkened `#6B7280` → `#646B76`.** It cleared AA on white
+  (4.83:1) but not on the tinted surfaces most body copy actually sits on:
+  gray-soft 4.43:1, blush 4.34:1. Now 5.54 / 5.08 / 4.98. This is a token used
+  site-wide, so it is the same kind of one-place fix as `--color-coral-ink`.
+- Header wordmark `<small>` went from white/0.5 to white/0.65. 0.5 cleared AA against
+  solid navy, but the header bar is navy at **92%** and so composites lighter over the
+  page behind it, dropping it below 4.5:1 on `/trips/`.
+- Footer `text-white/40` (3.59:1) and `/30` on navy → `/60` (6.16:1).
+- Coral-as-fill and coral-as-text through the chrome moved to `--color-cta` /
+  `--color-coral-ink` per the Phase 1.5 rule: drawer sign-in block, avatar fallback,
+  active drawer link, sign-out, legal eyebrow, legal support button, ProfileChrome
+  back link.
+- The footer newsletter input had **no label at all** (placeholder only) — added an
+  `sr-only` label plus an `id`. The form `id` and input `name` the script queries are
+  unchanged.
+- `--color-whatsapp` tokenised so the float button stops being a bare hex.
+
+**Still open in Phase 2's area — needs your call**
+- **Duplicate newsletter capture.** The homepage "Be first to know" band and the
+  footer's "Stay in the loop" are adjacent and functionally identical. Collapsing them
+  touches a real form `id`/`name` on the do-not-touch list, so it was left in place.
+
+## Next phases
+
+- ~~**Phase 2**~~ — done, see above. Original scope note: `BaseLayout`, `Header` (~90-rule
   `<style is:global>` — trim only 1:1 utility mappings), `Footer`,
   `LegalPageLayout`, `ProfileChrome`, `BackButton`, `PageLoader`. Zero testids here.
   Re-baseline snapshots once (chrome touches every page). DOM-stable.
@@ -264,7 +317,11 @@ different OS/CI or they will all "fail". The harness stubs `images.unsplash.com`
   styling reasons — see gotcha #7). Carry the Phase 1.5 rules in: `TripCard` should
   take `Button variant="outline"` (a grid of solid coral CTAs has no hierarchy) and
   `CardFooter` (its CTAs are currently on ragged baselines), and its coral price text
-  needs `text-coral-ink`.
+  needs `text-coral-ink`. Lighthouse's remaining `color-contrast` failures are all in
+  these files: `TripCard`'s "View Details" (`background-color: var(--color-coral)` with
+  a white label = 3.01:1) and its coral `text-xs` caption, `TestimonialCard`'s
+  `.testimonial-toggle`, and the trip detail page's hardcoded `#22A654` / `#DC2626`
+  heading colours.
 - **Phase 5** — `profile`, `u/[username]` (already zero inline styles),
   `photo-vault/*` (GLightbox — verify selectors), `ProfileTripCard`.
 - **Phase 6 (optional)** — admin. Needs a Playwright auth `storageState` fixture
