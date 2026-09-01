@@ -51,8 +51,6 @@ const cardImageAlt = `${tripName} group trip${location && !tripName.toLowerCase(
 
 const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : null;
 const isSoldOut = soldOut;
-// One capacity signal, only when stock is low.
-const showLowStock = !isSoldOut && spotsLeft != null && spotsLeft <= 3;
 const departureSummary = getDepartureSummary(departures);
 ---
 
@@ -160,9 +158,7 @@ const departureSummary = getDepartureSummary(departures);
         >
           View Details
         </a>
-        {showLowStock ? (
-          <p class="text-center text-xs" style="color: var(--color-coral);">Only {spotsLeft} spots left</p>
-        ) : hasComingSoon ? (
+        {hasComingSoon ? (
           <p class="text-center text-xs" style="color: var(--color-coral);">New dates — wishlist inside</p>
         ) : null}
       </div>

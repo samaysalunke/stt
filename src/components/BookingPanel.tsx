@@ -209,14 +209,6 @@ export default function BookingPanel({
             {departures.map((dep) => {
               const isSelected = dep.id === departureId;
               const isSoldOut = dep.soldOut;
-              const left = dep.spotsLeft;
-              const isLow = !isSoldOut && left != null && left <= 3;
-              const showSpotsLeft =
-                !isSoldOut && left != null && dep.totalCap != null && dep.totalCap > 0 && left / dep.totalCap < 0.8;
-              const pct =
-                dep.totalCap && dep.totalCap > 0 && left != null
-                  ? Math.min(100, ((dep.totalCap - left) / dep.totalCap) * 100)
-                  : 0;
               return (
                 <button
                   key={dep.id}
@@ -249,21 +241,6 @@ export default function BookingPanel({
                       <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" style={{ color: '#9A3412', background: '#FFF1E8' }}>
                         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: C.coral }} />
                         Filling fast
-                      </div>
-                    </div>
-                  ) : showSpotsLeft ? (
-                    <div className="mt-3">
-                      <div
-                        className="text-xs mb-1"
-                        style={{ color: isLow ? C.coral : C.gray, fontWeight: isLow ? 600 : 400 }}
-                      >
-                        {isLow ? `Only ${left} left` : `${left} of ${dep.totalCap} left`}
-                      </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: '#F5DDD7' }}>
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${pct}%`, background: isLow ? C.coral : C.navy }}
-                        />
                       </div>
                     </div>
                   ) : null}
