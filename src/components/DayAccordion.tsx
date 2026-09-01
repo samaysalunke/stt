@@ -73,7 +73,7 @@ export default function DayAccordion({ itinerary, tripName }: Props) {
               </div>
               <svg
                 className="flex-shrink-0 w-4 h-4 transition-transform duration-200"
-                style={{ transform: isOpen ? 'rotate(180deg)' : 'none', color: '#6B7280' }}
+                style={{ transform: isOpen ? 'rotate(180deg)' : 'none', color: 'var(--color-gray-text)' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -107,7 +107,7 @@ export default function DayAccordion({ itinerary, tripName }: Props) {
                     ))}
                   </div>
                 )}
-                <p className="text-sm leading-relaxed mb-4" style={{ color: '#6B7280' }}>
+                <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--color-gray-text)' }}>
                   {day.description}
                 </p>
 

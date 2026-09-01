@@ -86,7 +86,10 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
   <section class="py-16 lg:py-20 bg-gray-soft">
     <div class="container-app">
       <h2 class="font-display font-bold text-display-xl text-navy">
-        Where to, <span class="italic text-coral">wanderer?</span>
+        {/* On --color-gray-soft, coral is 2.75:1 — under even the 3:1 large-text
+            bound, which the "display size can stay text-coral" rule assumed held
+            everywhere. coral-ink is 4.62:1 on this surface. */}
+        Where to, <span class="italic text-coral-ink">wanderer?</span>
       </h2>
       <div class="mt-10 mb-8 flex items-end justify-between gap-6">
         <h3 class="font-display text-2xl text-navy">Featured Trips</h3>

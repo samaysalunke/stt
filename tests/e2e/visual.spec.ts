@@ -40,6 +40,9 @@ const ROUTES: { name: string; path: string }[] = [
   { name: 'custom-itineraries', path: '/custom-itineraries/' },
   { name: 'leaderboard', path: '/leaderboard/' },
   { name: 'photo-vault-index', path: '/photo-vault/' },
+  // Coverable since the qa-test-album fixture landed; the album page was
+  // previously unsnapshottable because src/content/albums/ was empty here.
+  { name: 'photo-vault-album', path: '/photo-vault/qa-test-album/' },
   { name: 'terms', path: '/terms/' },
   { name: 'privacy', path: '/privacy/' },
   { name: 'cancellation', path: '/cancellation/' },

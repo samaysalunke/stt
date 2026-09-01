@@ -50,7 +50,7 @@ const C = {
   navy: '#1B2B3A',
   peach: '#E8DDD9',
   blush: '#FDF0EC',
-  gray: '#6B7280',
+  gray: 'var(--color-gray-text)',
   cta: '#D95F3B',
 };
 
