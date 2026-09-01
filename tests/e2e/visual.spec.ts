@@ -148,6 +148,48 @@ async function pinListingOrder(page: Page) {
   });
 }
 
+/**
+ * Cap every repeated list on an admin page to its first few rows.
+ *
+ * Admin list pages render DB rows, not content files, and the dev DB holds 612
+ * customers — `/admin/customers` is a 95,000px-tall page whose full-page PNG is
+ * 7.4MB and which never settles between Playwright's two stability shots (the
+ * fixed header repaints at every scroll step of the stitch).
+ *
+ * Worse, those rows are written by `npm run test:api`, so a full-list baseline
+ * expires the moment anyone runs the API suite — the same trap documented on
+ * `pinListingOrder` above, one layer down.
+ *
+ * Capping the rows fixes both: the snapshot stays a styling oracle (chrome,
+ * filters, and the row treatment itself are all still captured) while becoming
+ * invariant to how many rows the DB happens to hold. Rows are `display:none`d
+ * rather than removed so nothing re-lays-out around a missing node.
+ *
+ * Detection is structural, not per-route: a container qualifies when six or more
+ * of its direct children are the same tag with the same class list, which is what
+ * a rendered list looks like and what a hand-built layout block does not.
+ */
+async function capAdminLists(page: Page, keep = 3) {
+  await page.evaluate((keepCount) => {
+    for (const container of Array.from(document.querySelectorAll('*'))) {
+      const children = Array.from(container.children) as HTMLElement[];
+      if (children.length < 6) continue;
+
+      const signature = (el: Element) => `${el.tagName}|${el.getAttribute('class') ?? ''}`;
+      const counts = new Map<string, HTMLElement[]>();
+      for (const child of children) {
+        const key = signature(child);
+        counts.set(key, [...(counts.get(key) ?? []), child]);
+      }
+
+      for (const group of counts.values()) {
+        if (group.length < 6) continue;
+        group.slice(keepCount).forEach((el) => { el.style.display = 'none'; });
+      }
+    }
+  }, keep);
+}
+
 // `/thank-you/` is a 301 to `/trips/` (booking confirmation moved inline onto the
 // book page). Screenshotting it produced a byte-duplicate of the trips-index
 // baseline, so it is asserted as a redirect rather than snapshotted.
@@ -179,6 +221,91 @@ test.describe('visual regression — public routes', () => {
           fullPage: true,
           animations: 'disabled',
           mask: [page.locator('[data-testid="discount-expiry"]')],
+          maxDiffPixelRatio: 0.01,
+        });
+      });
+    }
+  }
+});
+
+/**
+ * Admin visual baselines (Phase 6).
+ *
+ * The admin surface had no snapshot coverage at all, which is why Phase 6 was
+ * repeatedly deferred: 499 inline styles with no oracle is not a refactor, it is
+ * a rewrite with a screenshot review at the end. These are the Phase 0-equivalent
+ * baselines for admin — capture them BEFORE any restyling, and treat a diff on a
+ * token-migration commit as a regression unless the change is deliberate.
+ *
+ * Auth: the handoff claimed this needed a Playwright `storageState` fixture.
+ * It does not. `/api/admin/login` is a plain form POST that sets an `admin_token`
+ * cookie, and `page.request.post` writes that cookie straight into the test's
+ * context — one request per test, no fixture, no setup project.
+ *
+ * Routes are pinned to content slugs that exist in the repo (`src/content/**`)
+ * rather than to DB rows, so they resolve identically on a fresh checkout.
+ * `registrations/[slug]` is deliberately absent: its id is a DB row id and is
+ * not stable across `npm run test:api`.
+ */
+const ADMIN_ROUTES: { name: string; path: string }[] = [
+  { name: 'admin-login', path: '/admin/login' },
+  { name: 'admin-dashboard', path: '/admin/' },
+  { name: 'admin-trips', path: '/admin/trips' },
+  { name: 'admin-trips-new', path: '/admin/trips/new' },
+  { name: 'admin-trips-import', path: '/admin/trips/import' },
+  { name: 'admin-trip-detail', path: '/admin/trips/qa-test-bookable' },
+  { name: 'admin-registrations', path: '/admin/registrations' },
+  { name: 'admin-registrations-new', path: '/admin/registrations/new' },
+  { name: 'admin-registrations-import', path: '/admin/registrations/import' },
+  { name: 'admin-unpaid-leads', path: '/admin/registrations/unpaid-leads' },
+  { name: 'admin-customers', path: '/admin/customers' },
+  { name: 'admin-contacts', path: '/admin/contacts' },
+  { name: 'admin-analytics', path: '/admin/analytics' },
+  { name: 'admin-audit', path: '/admin/audit' },
+  { name: 'admin-broadcast', path: '/admin/broadcast' },
+  { name: 'admin-newsletter', path: '/admin/newsletter' },
+  { name: 'admin-email-logs', path: '/admin/email-logs' },
+  { name: 'admin-settings', path: '/admin/settings' },
+  { name: 'admin-settings-roles', path: '/admin/settings/roles' },
+  { name: 'admin-faqs', path: '/admin/faqs' },
+  { name: 'admin-faqs-new', path: '/admin/faqs/new' },
+  { name: 'admin-faq-detail', path: '/admin/faqs/what-if-i-need-to-cancel' },
+  { name: 'admin-testimonials', path: '/admin/testimonials' },
+  { name: 'admin-testimonials-new', path: '/admin/testimonials/new' },
+  { name: 'admin-testimonial-detail', path: '/admin/testimonials/riya-sharma' },
+  { name: 'admin-photo-vault', path: '/admin/photo-vault' },
+  { name: 'admin-photo-vault-new', path: '/admin/photo-vault/new' },
+];
+
+test.describe('visual regression — admin routes', () => {
+  for (const vp of VIEWPORTS) {
+    for (const route of ADMIN_ROUTES) {
+      test(`${route.name} @ ${vp.tag}`, async ({ page }) => {
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+
+        await page.route('**://images.unsplash.com/**', (r) =>
+          r.fulfill({ contentType: 'image/jpeg', body: LOCAL_IMG }),
+        );
+
+        // The login page itself must be shot logged-OUT, or it redirects away.
+        if (route.name !== 'admin-login') {
+          const login = await page.request.post('/api/admin/login', {
+            form: { password: process.env.ADMIN_PASSWORD || 'changeme' },
+          });
+          expect(login.ok(), 'admin login').toBeTruthy();
+        }
+
+        const resp = await page.goto(route.path, { waitUntil: 'networkidle' });
+        expect(resp?.status(), route.path).toBeLessThan(400);
+
+        await waitForHydration(page).catch(() => {});
+        await freezePage(page);
+        await capAdminLists(page);
+        await page.waitForTimeout(150); // let the frozen layout settle
+
+        await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
+          fullPage: true,
+          animations: 'disabled',
           maxDiffPixelRatio: 0.01,
         });
       });
