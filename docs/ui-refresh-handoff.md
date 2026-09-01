@@ -20,6 +20,7 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
+| `689b2dc` | Phase 2 — shared chrome onto tokens; chrome a11y cleared |
 | `ef4f7ad` | Make the visual harness deterministic (shuffle pin, dev toolbar, thank-you) |
 | `cf39bd8` | Phase 1.5 — retune tokens for contrast + hierarchy; handoff updated |
 | `e5208a2` | Phase 1 gate draft — homepage restyled onto primitives + tokens |
