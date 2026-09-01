@@ -4,7 +4,7 @@ import RegistrationCard from '../../../components/admin/RegistrationCard.astro';
 import { buildRegistrationsView, regStats, type RegTrip, type RegDeparture } from '../../../lib/registrationsView';
 import { buildDepartureOccupancy } from '../../../lib/occupancyMatrix';
 import { formatINR } from '../../../lib/utils';
-import { REG_STATUS_COLORS } from '../../../lib/registrationStatus';
+import { PAYMENT_STATUS_COLORS, REG_STATUS_COLORS } from '../../../lib/registrationStatus';
 export const prerender = false;
 
 const adminUser = Astro.locals.adminUser;
@@ -256,7 +256,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>
 
-<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, REG_STATUS_COLORS }}>
+<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_STATUS_COLORS, REG_STATUS_COLORS }}>
   // Reload after a bulk action while preserving the active filters in the URL,
   // so search/status/departure/history selections survive the round-trip.
   function reloadWithFilters() {
@@ -272,6 +272,41 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   }
 
   const badgeStyle = (s) => REG_STATUS_COLORS[s] || REG_STATUS_COLORS.pending;
+  const paymentLabel = (s) => ({
+    unpaid: 'Unpaid', advance_paid: 'Advance paid', fully_paid: 'Fully paid',
+    partial_refund: 'Partial refund', full_refund: 'Refunded',
+  })[s] || s;
+  const formatMoney = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
+
+  function applyPaymentResult(id, result) {
+    const row = document.querySelector(`.payment-badge[data-id="${id}"]`)?.closest('.reg-row');
+    const wrap = row?.querySelector('[data-sp]');
+    if (!row || !wrap) return;
+    const paymentStatus = result.payment_status;
+    const amountPaid = Number(result.amountPaid) || 0;
+    const total = Number(wrap.dataset.total) || 0;
+    wrap.dataset.currentPayment = paymentStatus;
+    wrap.dataset.paid = String(amountPaid);
+    const checkbox = row.querySelector('.registration-checkbox');
+    if (checkbox) {
+      checkbox.dataset.paymentStatus = paymentStatus;
+      checkbox.dataset.paid = String(amountPaid);
+    }
+    const badge = row.querySelector('.payment-badge');
+    if (badge) {
+      badge.textContent = paymentLabel(paymentStatus);
+      badge.style.cssText = PAYMENT_STATUS_COLORS[paymentStatus] || PAYMENT_STATUS_COLORS.unpaid;
+    }
+    const summaryAmount = row.querySelector('.payment-amount');
+    if (summaryAmount) summaryAmount.textContent = formatMoney(amountPaid);
+    const hero = row.querySelector('[data-payment-hero]');
+    if (hero) hero.textContent = `${paymentLabel(paymentStatus)} · ${formatMoney(amountPaid)}${total > 0 ? ` of ${formatMoney(total)}` : ''}`;
+    const paidField = row.querySelector('[data-payment-field="Amount paid"]');
+    if (paidField) paidField.innerHTML = `<span>Amount paid:</span> ${formatMoney(amountPaid)}`;
+    const balanceField = row.querySelector('[data-payment-field="Balance due"]');
+    if (balanceField) balanceField.innerHTML = `<span>Balance due:</span> ${formatMoney(Math.max(0, total - amountPaid))}`;
+    spSync(wrap);
+  }
 
   function toggleDetail(id) {
     const el = document.getElementById('detail-' + id);
@@ -379,6 +414,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       const data = await res.json().catch(() => null);
       btn.disabled = false;
       if (!res.ok || !data?.success || data.failed) alert(data?.error || data?.results?.find((x) => !x.success)?.error || 'Update failed.');
+      else if (url === '/api/admin/registrations/payment') applyPaymentResult(id, data.results[0]);
       else reloadWithFilters();
       return;
     }
@@ -621,12 +657,26 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     for (const b of selected) {
       const id = Number(b.dataset.registrationId);
       if (status === 'confirmed') {
-        const res = await fetch('/api/admin/update-registration', {
+        const alreadyConfirmed = b.dataset.status === 'confirmed';
+        const needsFullBalance = alreadyConfirmed
+          && confirmKind === 'fully_paid'
+          && b.dataset.paymentStatus !== 'fully_paid';
+        if (alreadyConfirmed && !needsFullBalance) continue;
+        const url = needsFullBalance
+          ? '/api/admin/registrations/payment'
+          : '/api/admin/update-registration';
+        const body = needsFullBalance
+          ? { ids: [id], action: 'full', method: 'bank_transfer', requestId: crypto.randomUUID() }
+          : { id, status: 'confirmed', payment_status: confirmKind, requestId: crypto.randomUUID() };
+        const res = await fetch(url, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, status: 'confirmed', payment_status: confirmKind, requestId: crypto.randomUUID() }),
+          body: JSON.stringify(body),
         });
         const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.success) failures.push(`#${id}: ${data?.error || 'failed'}`);
+        const paymentFailure = needsFullBalance && data?.results?.find((result) => !result.success);
+        if (!res.ok || !data?.success || paymentFailure) {
+          failures.push(`#${id}: ${data?.error || paymentFailure?.error || 'failed'}`);
+        }
       } else if (refundAll) {
         const paid = Number(b.dataset.paid) || 0;
         const refund = paid > 0 ? { kind: 'full', amount: paid, method: 'bank_transfer' } : undefined;

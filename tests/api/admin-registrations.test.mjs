@@ -254,3 +254,36 @@ test('TC-215 payment actions do not change status and status changes preserve pa
   // A confirmed, paid booking cannot be downgraded to lead without a refund first.
   assert.equal((await adminPost('/api/admin/update-registration', { id, status: 'lead' })).status, 400);
 });
+
+test('TC-215a a confirmed advance-paid booking can record its remaining balance', async () => {
+  const email = `qa-payment-balance-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'confirmed', full_name: 'Payment Balance User', email, phone: '9876543210', sendEmail: false,
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const before = await getRegByEmail(email);
+  assert.equal(before.status, 'confirmed');
+  assert.equal(before.payment_status, 'advance_paid');
+  assert.ok(before.amount_paid > 0 && before.amount_paid < before.total_amount);
+
+  const requestId = `qa-balance-${before.id}`;
+  const full = await adminPost('/api/admin/registrations/payment', {
+    ids: [before.id], action: 'full', requestId, method: 'bank_transfer',
+  });
+  assert.equal(full.status, 200, JSON.stringify(full.data));
+  assert.equal(full.data.failed, 0, JSON.stringify(full.data));
+  assert.equal(full.data.results[0].success, true, JSON.stringify(full.data));
+
+  const after = await getRegByEmail(email);
+  assert.equal(after.status, 'confirmed');
+  assert.equal(after.amount_paid, after.total_amount);
+  assert.equal(after.payment_status, 'fully_paid');
+
+  const duplicate = await adminPost('/api/admin/registrations/payment', {
+    ids: [before.id], action: 'full', requestId, method: 'bank_transfer',
+  });
+  assert.equal(duplicate.status, 200, JSON.stringify(duplicate.data));
+  assert.equal(duplicate.data.results[0].duplicate, true);
+  assert.equal((await getRegByEmail(email)).amount_paid, after.total_amount);
+});

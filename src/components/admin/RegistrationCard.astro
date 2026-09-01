@@ -100,7 +100,7 @@ const attributionFields = [
 ---
 <div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-phone={String(r.phone ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status}>
   <div class="reg-summary">
-    {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} data-paid={Number(r.amount_paid) || 0} /></label>}
+    {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} data-status={r.status} data-payment-status={payStatus} data-paid={Number(r.amount_paid) || 0} /></label>}
     <div class="reg-primary">
       <div class="name-line"><strong>{r.full_name}</strong><span class="status-badge" data-id={r.id} style={regStatusStyle(r.status)}>{r.status}</span>{r.payment_screenshot_url && <span class="screenshot-chip">📎 Screenshot</span>}</div>
       <div class="reg-contact">#{r.id} · {r.email}</div><div class="reg-contact">{r.phone}</div>
@@ -111,7 +111,7 @@ const attributionFields = [
     {r.status === 'wishlist' ? (
       <div class="reg-meta"><span class="reg-meta-label">Wishlisted</span><strong>{formatDateIN(r.wishlisted_at ?? r.created_at)}</strong><span>{r.wishlist_notified_at ? `Notified ${formatDateIN(r.wishlist_notified_at)}` : 'Not yet notified'}</span></div>
     ) : (
-      <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong>{formatINR(r.amount_paid)}{amountRefunded > 0 && <span class="refunded"> · Refunded {formatINR(amountRefunded)}</span>}</strong><span class="payment-badge" data-id={r.id} style={payStyle}>{paymentStatusLabel(payStatus)}</span></div>
+      <div class="reg-meta"><span class="reg-meta-label">Amount paid</span><strong class="payment-amount" data-id={r.id}>{formatINR(r.amount_paid)}{amountRefunded > 0 && <span class="refunded"> · Refunded {formatINR(amountRefunded)}</span>}</strong><span class="payment-badge" data-id={r.id} style={payStyle}>{paymentStatusLabel(payStatus)}</span></div>
     )}
     <div class="reg-actions"><button type="button" data-action="toggle-detail" data-id={r.id} aria-expanded="false" class="details-btn">View details</button></div>
   </div>
@@ -158,7 +158,7 @@ const attributionFields = [
         </>}
         {tripPaymentFields.length > 0 && <>
           <h3>Trip &amp; payment</h3>
-          <div class="fields">{tripPaymentFields.map((f) => <div><span>{f.label}:</span> {f.value}</div>)}</div>
+          <div class="fields">{tripPaymentFields.map((f) => <div data-payment-field={f.label}><span>{f.label}:</span> {f.value}</div>)}</div>
         </>}
         {attributionFields.length > 0 && (
           <details class="attribution">
@@ -187,7 +187,7 @@ const attributionFields = [
             <span class="sp-hero-label">Current status</span>
             <span class="sp-hero-status" style={regStatusStyle(r.status)}>{r.status}</span>
             {r.status !== 'wishlist' && (
-              <span class="sp-hero-pay">
+              <span class="sp-hero-pay" data-payment-hero={r.id}>
                 {paymentStatusLabel(payStatus)} · {formatINR(r.amount_paid)}{Number(r.total_amount) > 0 ? ` of ${formatINR(r.total_amount)}` : ''}{amountRefunded > 0 ? ` · refunded ${formatINR(amountRefunded)}` : ''}
               </span>
             )}
