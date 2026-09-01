@@ -21,10 +21,10 @@ function formatDate(d: string | null | undefined) {
 >
   <!-- Hero — simple text header -->
   <section class="max-w-2xl mx-auto px-5 pt-10 pb-6">
-    <h1 class="font-display text-[2.75rem] leading-[1.05]" style="color: var(--color-navy);">
+    <h1 class="font-display text-display-lg leading-[1.05] text-navy">
       The Vault
     </h1>
-    <p class="mt-2 font-display text-base italic" style="color: rgba(27,43,58,0.55);">
+    <p class="mt-2 font-display text-base italic text-gray-text">
       Every memory, raw and unedited.
     </p>
   </section>
@@ -43,8 +43,7 @@ function formatDate(d: string | null | undefined) {
             data-card-skeleton
             data-skeleton-ready={!image ? '' : undefined}
             href={`/photo-vault/${album.slug}/`}
-            class="album-card group block relative overflow-hidden rounded-3xl shadow-md hover:shadow-xl transition-all duration-300 reveal"
-            style="aspect-ratio: 5/6;"
+            class="album-card group relative block aspect-[5/6] overflow-hidden rounded-[var(--radius-card)] shadow-md transition-all duration-300 hover:shadow-xl reveal"
             data-title={title.toLowerCase()}
             data-date={album.date ?? ''}
           >
@@ -57,16 +56,16 @@ function formatDate(d: string | null | undefined) {
                 loading="lazy"
               />
             ) : (
-              <div class="h-full w-full" style="background-color: var(--color-peach);"></div>
+              <div class="h-full w-full bg-peach"></div>
             )}
-            <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);"></div>
+            <div class="u-overlay-scrim-bottom absolute inset-0"></div>
             {photos.length > 0 && (
-              <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-bold text-white backdrop-blur-sm" style="background: rgba(0,0,0,0.45);">
+              <div class="absolute top-3 right-3 rounded-[var(--radius-pill)] bg-black/45 px-2.5 py-1 text-xs font-bold text-white backdrop-blur-sm">
                 {photos.length} photos
               </div>
             )}
             <div class="absolute bottom-0 left-0 right-0 p-5">
-              <h3 class="font-extrabold text-lg text-white leading-tight mb-1" style="font-family: var(--font-display);">
+              <h3 class="font-display font-extrabold text-display-xs text-white leading-tight mb-1">
                 {title}
               </h3>
               {album.location && (
@@ -88,8 +87,8 @@ function formatDate(d: string | null | undefined) {
           );
         }) : (
           <div class="py-16 text-center">
-            <h2 class="font-display text-2xl" style="color: var(--color-navy);">No albums yet</h2>
-            <p class="mt-2 text-sm" style="color: var(--color-gray-text);">New memories will appear here soon.</p>
+            <h2 class="font-display text-display-sm text-navy">No albums yet</h2>
+            <p class="mt-2 text-sm text-gray-text">New memories will appear here soon.</p>
           </div>
         )}
       </div>

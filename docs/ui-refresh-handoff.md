@@ -11,9 +11,10 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Suite state at handoff:** `build` clean · `test:unit` 300/300 · `test:api` 153/153 ·
   `test:e2e` 150/150. Everything green. `test:unit` is 306 not 300 because the rebase
   brought in `main`'s new departure-summary tests.
-- **Phases 0, 1, 1.5, 2, 3 and 4 are done.** The Phase 1 review gate is cleared (see
-  "Gate decisions"). **Phase 5 (profile / photo-vault) is next — and it is now the
-  only place any public inline style survives.**
+- **Phases 0 through 5 are done.** The Phase 1 review gate is cleared (see "Gate
+  decisions"). Only **Phase 6 (admin, optional)** remains, and it was always optional.
+- **The public surface is finished: 303 inline styles at Phase 0 → 1**, and that one
+  is a data-driven per-photo `aspect-ratio` which is correct as an inline style.
 - **The branch was rebased onto `main` on 2026-09-01** and now contains all of it
   (`git merge-base --is-ancestor main ui-refresh` passes). A pre-rebase backup ref
   `ui-refresh-prerebase` exists — delete it once you are confident.
@@ -397,6 +398,34 @@ hero photos to dark ones, add a scrim floor behind the headline block, or move t
 accent to `--color-peach`. **Left alone deliberately — it changes a brand element and
 that is your call, not a cleanup decision.**
 
+## Phase 5 — account + photo vault (done)
+
+`profile.astro`, `u/[username].astro` and `ProfileTripCard.astro` were **already at zero
+inline styles**, so this phase was `photo-vault/index` (9) and `photo-vault/[slug]` (13
++ 1 dynamic). Public inline `style="` **23 → 1**; `var(--color` in markup 179 → 165.
+
+The single survivor is deliberate:
+`style={p.width && p.height ? \`aspect-ratio:${p.width}/${p.height};\` : ''}` — each
+photo carries its own intrinsic ratio, so it cannot become a utility class, and it is
+what reserves space and prevents layout shift in the masonry grid. There is a comment
+on it saying so. **It is not slop; do not "fix" it.**
+
+Contrast fixes, the same pattern as every other phase: `rgba(27,43,58,0.45–0.55)` body
+text on blush → `text-gray-text`; `var(--color-coral)` used as small text (the "by
+Zahra" byline and album subtitle, 2.70:1 on blush) → `text-coral-ink`.
+
+Reused `.u-overlay-scrim-bottom` from Phase 4 for the album card caption gradient
+instead of adding a fourth near-identical scrim utility — the two differed only by
+navy-vs-black tint and a transparent-vs-0.10 top stop, which is invisible over a photo.
+
+**GLightbox is UNVERIFIED at runtime, and you should know why.** The album detail page
+has no e2e coverage and `src/content/albums/` is **empty in this environment**, so there
+is no album to render and no lightbox to open — the vault index shows "No albums yet".
+What is verified: the `data-glightbox` / `data-gallery` / `data-title` attributes
+GLightbox binds to are untouched (`git diff` shows no change on any of them), and the
+import and init block are byte-identical. Only the anchor's `class` changed. **If you
+have album fixtures anywhere, open one album and click a photo before shipping.**
+
 ## Next phases
 
 - ~~**Phase 2**~~ — done, see above. Original scope note: `BaseLayout`, `Header` (~90-rule
@@ -426,11 +455,7 @@ that is your call, not a cleanup decision.**
   a white label = 3.01:1) and its coral `text-xs` caption, `TestimonialCard`'s
   `.testimonial-toggle`, and the trip detail page's hardcoded `#22A654` / `#DC2626`
   heading colours.
-- **Phase 5** — `profile`, `u/[username]` (already zero inline styles),
-  `photo-vault/*` (GLightbox — verify selectors), `ProfileTripCard`. `photo-vault/*`
-  now holds **every** remaining public inline style (23). Expect the same contrast
-  pattern as everywhere else: `rgba(27,43,58,0.45–0.55)` body text and
-  `var(--color-coral)` used as small text both fail AA.
+- ~~**Phase 5**~~ — done, see above.
 - **Phase 6 (optional)** — admin. Needs a Playwright auth `storageState` fixture
   first (doesn't exist). Prune legacy `--color-primary*` / `--color-accent*` /
   `--color-gold` aliases from `global.css` only after `grep` shows zero refs.
