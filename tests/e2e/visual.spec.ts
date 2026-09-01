@@ -165,25 +165,38 @@ async function pinListingOrder(page: Page) {
  * invariant to how many rows the DB happens to hold. Rows are `display:none`d
  * rather than removed so nothing re-lays-out around a missing node.
  *
- * Detection is structural, not per-route: a container qualifies when TWENTY or
- * more of its direct children are the same tag with the same class list.
+ * Detection is structural, not per-route. A container qualifies when four or more
+ * of its direct children are the same tag with the same class list AND the
+ * container is not inside a `<form>`.
  *
- * The threshold is the whole design. At six it also caught hand-authored blocks —
- * the ten field rows of `/admin/registrations/new` are ten sibling `<div>`s with
- * one class between them, so the harness quietly hid most of that form and its
- * baseline became a function of which rows happened to share a class string.
- * Editing those classes then moved the snapshot for a reason that had nothing to
- * do with how the page looks, which is the opposite of what this oracle is for.
- * Twenty separates the two populations cleanly: the longest hand-built admin form
- * is ten rows, and the DB-driven lists this exists for run to the hundreds.
+ * The form exclusion is what makes the low threshold safe, and getting here took
+ * two wrong turns worth recording:
+ *
+ *  - A bare count of six also matched hand-authored markup — the ten field rows of
+ *    `/admin/registrations/new` are ten sibling `<div>`s sharing one class — so the
+ *    harness hid most of that form, and its baseline became a function of which
+ *    rows happened to share a class string rather than of how the page renders.
+ *  - Raising the count to twenty fixed the forms but broke durability the other
+ *    way: any admin list holding four to nineteen rows went uncapped, so running
+ *    the functional e2e suite (which books trips and creates registrations) moved
+ *    the baselines for /admin/registrations, /admin/customers, /admin/email-logs
+ *    and /admin/registrations/unpaid-leads.
+ *
+ * Rendered rows and authored field rows are not distinguishable by count, because
+ * the populations overlap. They are distinguishable by container: a field row
+ * lives inside the form that submits it, a rendered list row does not. Hence four
+ * plus the `closest('form')` test, which caps a four-row list — the case a count
+ * alone could never reach without eating forms.
  */
-const LIST_ROW_THRESHOLD = 20;
+const LIST_ROW_THRESHOLD = 4;
 
 async function capAdminLists(page: Page, keep = 3) {
   await page.evaluate(([keepCount, threshold]) => {
     for (const container of Array.from(document.querySelectorAll('*'))) {
       const children = Array.from(container.children) as HTMLElement[];
       if (children.length < threshold) continue;
+      // Field rows belong to the form that submits them; rendered list rows do not.
+      if (container.closest('form')) continue;
 
       const signature = (el: Element) => `${el.tagName}|${el.getAttribute('class') ?? ''}`;
       const counts = new Map<string, HTMLElement[]>();
@@ -198,6 +211,38 @@ async function capAdminLists(page: Page, keep = 3) {
       }
     }
   }, [keep, LIST_ROW_THRESHOLD] as const);
+}
+
+/**
+ * Replace the text inside `selector` with fixed-length filler.
+ *
+ * For a page that is a live event feed, capping the row count is not enough:
+ * `/admin/audit` is ordered newest-first, so the three rows the cap leaves are
+ * *different rows* after anything writes to the DB, and the baseline moves on
+ * content even though the rendering never changed.
+ *
+ * Masking would fix that by painting the rows out, which also deletes the only
+ * thing worth snapshotting there — the row treatment itself. Stubbing keeps the
+ * real markup, the real classes and the real layout, and only makes the
+ * characters deterministic, so row heights stop depending on how long an actor's
+ * email happens to be.
+ *
+ * The filler contains a space on purpose. An unbreakable run of characters cannot
+ * wrap, so a solid token widened narrow table cells and pushed
+ * /admin/registrations out to a 554px-wide capture at a 390px viewport — the stub
+ * was distorting the very layout it exists to hold still.
+ */
+async function stubText(page: Page, selector: string) {
+  await page.evaluate((sel) => {
+    for (const root of Array.from(document.querySelectorAll(sel))) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+      for (const node of nodes) {
+        if (node.data.trim()) node.data = 'xxx xxx';
+      }
+    }
+  }, selector);
 }
 
 // `/thank-you/` is a 301 to `/trips/` (booking confirmation moved inline onto the
@@ -257,24 +302,38 @@ test.describe('visual regression — public routes', () => {
  * `registrations/[slug]` is deliberately absent: its id is a DB row id and is
  * not stable across `npm run test:api`.
  */
-const ADMIN_ROUTES: { name: string; path: string }[] = [
+/**
+ * `stub` marks a route whose visible copy is a live DB feed.
+ *
+ * Capping rows fixes how MANY rows a snapshot holds, not WHICH ones. These five
+ * are ordered newest-first or carry running totals, so after anything writes to
+ * the database — `test:api`, or the functional e2e suite booking a trip — the
+ * surviving rows are different rows and the counters have moved, and the baseline
+ * fails on content while the rendering is untouched.
+ *
+ * Stubbing their text makes them a pure layout-and-typography oracle: real
+ * markup, real classes, deterministic characters. What a stubbed route can no
+ * longer catch is a wrong *value* being rendered, which was never this harness's
+ * job — the functional e2e specs cover that.
+ */
+const ADMIN_ROUTES: { name: string; path: string; stub?: string }[] = [
   { name: 'admin-login', path: '/admin/login' },
   { name: 'admin-dashboard', path: '/admin/' },
   { name: 'admin-trips', path: '/admin/trips' },
   { name: 'admin-trips-new', path: '/admin/trips/new' },
   { name: 'admin-trips-import', path: '/admin/trips/import' },
   { name: 'admin-trip-detail', path: '/admin/trips/qa-test-bookable' },
-  { name: 'admin-registrations', path: '/admin/registrations' },
+  { name: 'admin-registrations', path: '/admin/registrations', stub: 'main' },
   { name: 'admin-registrations-new', path: '/admin/registrations/new' },
   { name: 'admin-registrations-import', path: '/admin/registrations/import' },
-  { name: 'admin-unpaid-leads', path: '/admin/registrations/unpaid-leads' },
-  { name: 'admin-customers', path: '/admin/customers' },
+  { name: 'admin-unpaid-leads', path: '/admin/registrations/unpaid-leads', stub: 'main' },
+  { name: 'admin-customers', path: '/admin/customers', stub: 'main' },
   { name: 'admin-contacts', path: '/admin/contacts' },
   { name: 'admin-analytics', path: '/admin/analytics' },
-  { name: 'admin-audit', path: '/admin/audit' },
+  { name: 'admin-audit', path: '/admin/audit', stub: 'main' },
   { name: 'admin-broadcast', path: '/admin/broadcast' },
   { name: 'admin-newsletter', path: '/admin/newsletter' },
-  { name: 'admin-email-logs', path: '/admin/email-logs' },
+  { name: 'admin-email-logs', path: '/admin/email-logs', stub: 'main' },
   { name: 'admin-settings', path: '/admin/settings' },
   { name: 'admin-settings-roles', path: '/admin/settings/roles' },
   { name: 'admin-faqs', path: '/admin/faqs' },
@@ -311,6 +370,7 @@ test.describe('visual regression — admin routes', () => {
         await waitForHydration(page).catch(() => {});
         await freezePage(page);
         await capAdminLists(page);
+        if (route.stub) await stubText(page, route.stub);
         await page.waitForTimeout(150); // let the frozen layout settle
 
         await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
