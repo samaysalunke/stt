@@ -18,7 +18,7 @@ function database() {
   db.exec(`
     CREATE TABLE registrations (
       id INTEGER PRIMARY KEY, full_name TEXT, email TEXT, phone TEXT,
-      trip_name TEXT, trip_date TEXT, payment_screenshot_url TEXT, amount_paid INTEGER
+      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, payment_screenshot_url TEXT, amount_paid INTEGER
     );
     CREATE TABLE telegram_notification_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +40,7 @@ function database() {
 }
 
 function seed(db: Database.Database, proof: string | null = null, amount = 0) {
-  db.prepare(`INSERT INTO registrations VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', 'Ladakh', '1 Sep – 8 Sep 2026', ?, ?)`).run(proof, amount);
+  db.prepare(`INSERT INTO registrations VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', '29', 'Female', 'Ladakh', '1 Sep – 8 Sep 2026', ?, ?)`).run(proof, amount);
 }
 
 function response(status: number, body: any) {
@@ -68,11 +68,15 @@ afterEach(() => {
 describe('Telegram formatting and upload confinement', () => {
   it('formats India time and includes only a positive cumulative paid amount', () => {
     expect(formatIndiaTimestamp('2026-08-29 12:00:00')).toMatch(/05:30 pm IST/i);
-    const base = { id: 42, full_name: 'Asha', email: 'a@example.com', phone: '9', trip_name: 'Ladakh', trip_date: 'Sep', payment_screenshot_url: null, amount_paid: 0 };
-    expect(formatTelegramMessage('lead', base, '2026-08-29 12:00:00')).toContain('NEW BOOKING LEAD');
-    expect(formatTelegramMessage('pending', base, '2026-08-29 12:00:00')).toContain('BOOKING PAYMENT PENDING');
-    expect(formatTelegramMessage('confirmed', base, '2026-08-29 12:00:00')).not.toContain('Amount paid');
-    expect(formatTelegramMessage('confirmed', { ...base, amount_paid: 12500 }, '2026-08-29 12:00:00')).toContain('Amount paid: ₹12,500');
+    const base = { id: 42, full_name: 'Asha', email: 'a@example.com', phone: '9', age: '29', gender: 'Female', trip_name: 'Ladakh', trip_date: 'Sep', payment_screenshot_url: null, amount_paid: 0 };
+    const lead = formatTelegramMessage('lead', base);
+    expect(lead).toContain('NEW BOOKING LEAD');
+    expect(lead).toContain('Age: 29');
+    expect(lead).toContain('Gender: Female');
+    expect(lead).not.toContain('Status time:');
+    expect(formatTelegramMessage('pending', base)).toContain('BOOKING PAYMENT PENDING');
+    expect(formatTelegramMessage('confirmed', base)).not.toContain('Amount paid');
+    expect(formatTelegramMessage('confirmed', { ...base, amount_paid: 12500 })).toContain('Amount paid: ₹12,500');
   });
 
   it('accepts only generated local JPG/PNG/PDF references', () => {

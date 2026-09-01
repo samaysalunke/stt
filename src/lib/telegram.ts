@@ -11,6 +11,8 @@ type RegistrationSnapshot = {
   full_name: string;
   email: string;
   phone: string;
+  age: string | null;
+  gender: string | null;
   trip_name: string;
   trip_date: string | null;
   payment_screenshot_url: string | null;
@@ -51,7 +53,6 @@ const field = (value: unknown, max: number) => clean(value).slice(0, max);
 export function formatTelegramMessage(
   eventType: TelegramEventType,
   registration: RegistrationSnapshot,
-  eventAt: string | Date,
   imageUnavailable = false,
 ): string {
   const heading: Record<TelegramEventType, string> = {
@@ -65,9 +66,10 @@ export function formatTelegramMessage(
     `Name: ${field(registration.full_name, 120)}`,
     `Email: ${field(registration.email, 254)}`,
     `Phone: ${field(registration.phone, 40)}`,
+    `Age: ${field(registration.age, 20) || 'Not specified'}`,
+    `Gender: ${field(registration.gender, 40) || 'Not specified'}`,
     `Trip: ${field(registration.trip_name, 180)}`,
     `Trip date: ${field(registration.trip_date, 120) || 'Not specified'}`,
-    `Status time: ${formatIndiaTimestamp(eventAt)}`,
   ];
   const paid = Number(registration.amount_paid) || 0;
   if (eventType === 'confirmed' && paid > 0) lines.push(`Amount paid: ₹${paid.toLocaleString('en-IN')}`);
@@ -201,7 +203,7 @@ export function claimTelegramEvents(db: Database.Database, limit = 10): ClaimedT
 
 export async function deliverClaimedTelegramEvent(db: Database.Database, event: ClaimedTelegramEvent): Promise<TelegramDeliveryState> {
   const registration = db.prepare(`
-    SELECT id, full_name, email, phone, trip_name, trip_date, payment_screenshot_url, amount_paid
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, payment_screenshot_url, amount_paid
     FROM registrations WHERE id=?
   `).get(event.registration_id) as RegistrationSnapshot | undefined;
   if (!registration) {
@@ -213,14 +215,14 @@ export async function deliverClaimedTelegramEvent(db: Database.Database, event: 
   try {
     let messageId: string;
     if (event.event_type === 'lead') {
-      messageId = await sendText(formatTelegramMessage('lead', registration, event.event_at));
+      messageId = await sendText(formatTelegramMessage('lead', registration));
     } else {
       const upload = resolveLocalPaymentUpload(registration.payment_screenshot_url);
       if (!upload.ok) {
         warning = `image_unavailable: ${upload.reason}`;
-        messageId = await sendText(formatTelegramMessage(event.event_type, registration, event.event_at, true));
+        messageId = await sendText(formatTelegramMessage(event.event_type, registration, true));
       } else {
-        const caption = formatTelegramMessage(event.event_type, registration, event.event_at);
+        const caption = formatTelegramMessage(event.event_type, registration);
         if (upload.kind === 'document') {
           messageId = await sendFile('sendDocument', 'document', upload, caption);
         } else {
