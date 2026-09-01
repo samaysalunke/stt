@@ -9,9 +9,13 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 306/306 · `test:api` 154/154 ·
-  `test:e2e` 120/120 functional · `visual` 85/85. Everything green.
+  `test:e2e` 120/120 functional · `visual` **81/85**.
+  **Correction (2026-09-02):** the `visual` 85/85 claim above did not survive a
+  re-run. `admin-dashboard` and `admin-customers` fail at both viewports, and they
+  fail on `dad6514` with no working-tree changes at all — verified by restoring
+  the tree and re-running. See "Admin badge baselines drift on data" below.
 - **Nothing is pushed.** The branch is **10 commits ahead of `origin/ui-refresh`**
-  as of 2026-09-02. PR #16 is still a draft showing the older tree. Owner has not
+  as of 2026-09-02 (12 with `fc320d7`). PR #16 is still a draft showing the older tree. Owner has not
   yet approved a push — ask before you do it.
 - **Phases 0 through 6 are done.** The Phase 1 review gate is cleared (see "Gate
   decisions"). No phase remains; what is left is the cleanup list at the bottom.
@@ -373,6 +377,40 @@ npx playwright test visual.spec.ts                 # must be 85/85
 Both earlier harness bugs would have been caught by that sequence. Neither was,
 because the commits that introduced them skipped it.
 
+### Admin badge baselines drift on data (open, found 2026-09-02)
+
+`stubText` normalises the *characters* in a row. It does not normalise the
+*class* on a status badge, and that class is chosen from the row's data. So the
+four remaining `visual` failures are pure colour:
+
+| route | baseline | now |
+|---|---|---|
+| `admin-customers` @ both viewports | amber status pill, pink trip pill on all 3 rows | row 1 green + blue, rows 2-3 no status pill at all + blue |
+| `admin-dashboard` @ both viewports | recent-registration badges one colour | another |
+
+Diff sizes are 1.5k px (dashboard) and 12k px (customers); the admin gate is
+`threshold: 0.05 / maxDiffPixelRatio: 0`, so any of it fails. Layout, type and
+spacing are pixel-identical — only the badge fills moved.
+
+This is **not** a rendering regression. It is the same class of churn
+`capAdminLists` and `stubText` were written for, one level deeper: the rows that
+survive the cap now carry different *statuses* than they did at capture, because
+`test:api` and the functional e2e specs write to the one shared dev SQLite at
+`data/seekthethrill.db`. There is no per-run DB snapshot.
+
+**Do not "fix" this by masking the badges.** That is the threshold-0.2 mistake
+again: item 2 of the open work is a status-badge palette change, and masking the
+badges blinds the gate to exactly the thing that work moves. Two honest options:
+
+1. **Snapshot/restore `data/seekthethrill.db` around the visual run** (copy aside
+   in a `globalSetup`, restore in `globalTeardown`, WAL files included). Makes
+   these baselines mean something. The real fix, and the bigger one.
+2. **Re-capture the four and accept they will drift again** on the next `test:api`
+   run. Cheap, dishonest, and it will re-fail for whoever runs the suite next.
+
+Verified pre-existing: restoring the tree to `dad6514` and re-running the four
+reproduces all four failures with no working-tree changes.
+
 ### Routes with no baseline, and why
 
 - `registrations/[slug]` — the id is a DB row id, not stable across `test:api`.
@@ -672,12 +710,18 @@ longer have to be kept in step by hand.
 Ordered by what a new session should pick up first. Items 1-3 are the remaining
 merge blockers; 4-6 are verification the owner has not asked for yet.
 
-1. **Delete `src/pages/ui-kit.astro`.** This is the one item that is arguably a
-   live defect: it is a **public route**, reachable by anyone at `/ui-kit`, and it
-   is a developer reference page. 191 lines. Nothing links to it. Remove it, then
-   re-run `visual` — it has no baseline, so nothing should move.
+1. ~~**Delete `src/pages/ui-kit.astro`.**~~ **Done — `fc320d7`.** The "live
+   defect" framing in this doc was wrong, and the correction is worth keeping:
+   the page already guarded itself with `import.meta.env.PROD` →
+   `Astro.response.status = 404` plus a conditional render, and shipped
+   `robots="noindex,nofollow"`. In production it served a 404 with a "Not found."
+   body. It was dead weight, not an exposure. Build clean after removal; it
+   carried no baseline, and the four `visual` failures seen on the same run
+   pre-date it (next item).
 
 2. **The status-badge palette (the last third of the deliberate-change work).**
+   Settle the DB-drift question above first — this work moves badge colours, and
+   right now the badge baselines cannot tell your change from a data write.
    ~230 hardcoded hex values remain in admin, nearly all one-off status-badge
    pairs: `#D1FAE5/#065F46` green, `#FEF9C3/#78350F` amber, `#DBEAFE/#1E40AF`
    blue, `#FEF2F2/#FECACA/#DC2626` red, `#F3F4F6/#374151` grey. Consolidate into a
