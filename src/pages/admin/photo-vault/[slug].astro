@@ -54,7 +54,7 @@ const legacyDate = isoDate ? '' : rawDate;
           {album.coverImage && (
             <div class="mb-[0.5rem]">
               <img src={album.coverImage} alt="Cover" class="max-h-[120px] rounded-[0.5rem] object-cover" />
-              <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.25rem;">Current cover</div>
+              <div class="text-[0.75rem] text-gray-text mt-[0.25rem]">Current cover</div>
             </div>
           )}
           <input type="file" name="coverImage" accept="image/*" class="form-input" onchange="previewImage(this,'cover-preview')" />
@@ -106,12 +106,12 @@ const legacyDate = isoDate ? '' : rawDate;
           ))}
         </div>
         <button type="button" id="save-captions-btn" class="bg-gray-soft border border-border text-gray-text py-[0.5rem] px-[1.25rem] rounded-[0.5rem] cursor-pointer text-[0.875rem] font-medium">Save Captions</button>
-        <span id="captions-status" style="font-size:0.8rem; color:var(--color-text-muted); margin-left:0.75rem;"></span>
+        <span id="captions-status" class="text-[0.8rem] text-gray-text ml-[0.75rem]"></span>
       </form>
     )}
 
     {photos.length === 0 && (
-      <p style="color:var(--color-text-muted); font-size:0.875rem; margin-bottom:1rem;">No photos yet. Add some below.</p>
+      <p class="text-gray-text text-[0.875rem] mb-[1rem]">No photos yet. Add some below.</p>
     )}
 
     <!-- Add photos -->
@@ -122,19 +122,19 @@ const legacyDate = isoDate ? '' : rawDate;
         📷 Choose Photos (multi-select)
       </label>
       <p class="img-hint"><strong>Recommended:</strong> Min 1200 px wide · Any aspect ratio · JPG or PNG · Max 10 MB each. Use multi-select to upload several photos at once.</p>
-      <div id="upload-status" style="margin-top:0.75rem; font-size:0.875rem; color:var(--color-text-muted);"></div>
+      <div id="upload-status" class="mt-[0.75rem] text-[0.875rem] text-gray-text"></div>
     </div>
   </div>
 </AdminLayout>
 
 <style>
-.form-section { background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; }
+.form-section { background:var(--color-white); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; }
 .section-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin:0 0 1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border); }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
 .form-group { display:flex; flex-direction:column; gap:0.35rem; }
 .form-group.full { grid-column:1/-1; }
 .form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
-.form-hint { font-size:0.75rem; color:var(--color-text-muted); }
+.form-hint { font-size:0.75rem; color:var(--color-gray-text); }
 .form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
 .form-input:focus { border-color:var(--color-primary); }
 

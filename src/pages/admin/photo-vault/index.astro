@@ -22,14 +22,14 @@ const albums = listAlbums();
       {albums.map(album => {
         const photos = Array.isArray(album.photos) ? album.photos : [];
         return (
-          <div style="background:var(--color-surface-elevated); border:1px solid var(--color-border); border-radius:0.75rem; overflow:hidden;">
+          <div class="bg-white border border-border rounded-[0.75rem] overflow-hidden">
             <div class="h-[160px] overflow-hidden bg-gray-soft relative">
               {album.coverImage ? (
                 <img src={album.coverImage} alt={album.name} class="w-full h-full object-cover" />
               ) : photos[0]?.image ? (
                 <img src={photos[0].image} alt={album.name} class="w-full h-full object-cover" />
               ) : (
-                <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--color-text-muted); font-size:2rem;">🖼️</div>
+                <div class="w-full h-full flex items-center justify-center text-gray-text text-[2rem]">🖼️</div>
               )}
               <div style={`position:absolute; top:0.5rem; right:0.5rem; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.7rem; font-weight:700; ${album.published ? 'background:#16a34a22; color:#16a34a;' : 'background:#6b728022; color:#6b7280;'}`}>
                 {album.published ? 'Published' : 'Draft'}
@@ -38,7 +38,7 @@ const albums = listAlbums();
             <div class="p-[1rem]">
               <div class="font-bold text-navy mb-[0.25rem]">{album.name ?? album.slug}</div>
               <div class="text-[0.8rem] text-gray-text mb-[0.15rem]">{album.location ?? ''}</div>
-              <div style="font-size:0.8rem; color:var(--color-text-muted);">{photos.length} photo{photos.length !== 1 ? 's' : ''}</div>
+              <div class="text-[0.8rem] text-gray-text">{photos.length} photo{photos.length !== 1 ? 's' : ''}</div>
               <div class="flex gap-[0.5rem] mt-[0.75rem]">
                 <a href={`/admin/photo-vault/${album.slug}`} class="flex-1 text-center text-[0.8rem] text-navy no-underline border border-navy rounded-[0.35rem] py-[0.3rem] px-[0.5rem] font-medium">Edit</a>
                 <button
