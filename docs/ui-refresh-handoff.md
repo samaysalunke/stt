@@ -20,6 +20,8 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
+| `ef4f7ad` | Make the visual harness deterministic (shuffle pin, dev toolbar, thank-you) |
+| `cf39bd8` | Phase 1.5 — retune tokens for contrast + hierarchy; handoff updated |
 | `e5208a2` | Phase 1 gate draft — homepage restyled onto primitives + tokens |
 | `61b6a92` | Phase 1 — design tokens in global.css + 13 primitives + `/ui-kit` gallery |
 | `6936cc7` | Phase 0 — visual-regression harness (`tests/e2e/visual.spec.ts`) + 32 baselines |
