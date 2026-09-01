@@ -2,6 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
 import TestimonialCard from '../components/TestimonialCard.astro';
+import Button from '../components/ui/Button.astro';
+import Section from '../components/ui/Section.astro';
+import Stat from '../components/ui/Stat.astro';
+import Icon from '../components/ui/Icon.astro';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
 
 const allTrips = listTrips();
@@ -36,7 +40,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
     class="relative min-h-screen flex flex-col items-center justify-start sm:justify-center overflow-hidden"
   >
     <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80" alt="Mountain landscape on an offbeat group trip in India" width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
-    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(8,12,24,0.6) 0%, rgba(8,12,24,0.4) 40%, rgba(8,12,24,0.75) 100%);"></div>
+    <div class="u-overlay-scrim absolute inset-0"></div>
 
     <div class="relative z-10 w-full max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto px-6 pt-8 sm:pt-0 flex flex-col items-center text-center">
 
@@ -46,9 +50,9 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       <p class="anim-fade-up font-display italic text-sm text-white/70 mb-5 sm:mb-10">by Zahra Shakir</p>
 
       <!-- Headline -->
-      <h1 class="anim-fade-up anim-delay-1 text-[2.1rem] sm:text-[2.6rem] md:text-5xl lg:text-6xl font-bold leading-tight mb-3 sm:mb-4 text-left w-full" style="font-family: var(--font-display); color: white;">
+      <h1 class="anim-fade-up anim-delay-1 font-display font-bold text-display-lg sm:text-display-xl mb-3 sm:mb-4 text-left w-full text-white">
         Offbeat group trips<br />
-        <span style="color: var(--color-coral); font-style: italic;">away from the crowds.</span>
+        <span class="italic text-coral">away from the crowds.</span>
       </h1>
 
       <!-- Subtext -->
@@ -57,26 +61,20 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
       </p>
 
       <!-- Stats card -->
-      <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2" style="background: rgba(15,20,35,0.65); backdrop-filter: blur(10px);">
-        <div class="text-center py-1">
-          <div class="text-xl lg:text-2xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">12–16</div>
-          <div class="text-xs uppercase tracking-wider text-white/45">Group Size</div>
-        </div>
-        <div class="text-center py-1 border-l border-white/10">
-          <div class="text-xl lg:text-2xl font-bold text-white mb-0.5" style="font-family: var(--font-display);">10+</div>
-          <div class="text-xs uppercase tracking-wider text-white/45">Destinations</div>
-        </div>
+      <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
+        <Stat value="12–16" label="Group Size" tone="light" class="py-1" />
+        <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
       </div>
 
       <!-- CTA -->
-      <a
+      <Button
         href="/trips/"
-        class="anim-fade-up anim-delay-3 w-full sm:w-auto sm:px-10 flex items-center justify-center gap-2 font-semibold text-white py-3.5 mb-4 sm:py-4 sm:mb-6 rounded-full text-base transition-all hover:opacity-90 hover:shadow-2xl"
-        style="background-color: var(--color-cta);"
+        variant="cta"
+        size="lg"
+        class="anim-fade-up anim-delay-3 w-full sm:w-auto mb-4 sm:mb-6"
       >
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg>
-        Join a Trip
-      </a>
+        <Icon name="users" /> Join a Trip
+      </Button>
 
       <!-- Social proof -->
       <p class="anim-fade-up anim-delay-4 text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
@@ -85,25 +83,25 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
   </section>
 
   <!-- ── UPCOMING TRIPS ────────────────────────────────────── -->
-  <section class="py-16 lg:py-20" style="background-color: var(--color-gray-soft);">
+  <section class="py-16 lg:py-20 bg-gray-soft">
     <div class="container-app">
-      <h2 class="whitespace-nowrap font-bold leading-[1.05] tracking-tight" style="font-family: var(--font-display); color: var(--color-navy); font-size: clamp(1.9rem, 8vw, 4rem);">
-        Where to, <span style="font-style: italic; color: var(--color-coral);">wanderer?</span>
+      <h2 class="font-display font-bold text-display-md sm:whitespace-nowrap sm:text-display-lg lg:text-display-xl text-navy">
+        Where to, <span class="italic text-coral">wanderer?</span>
       </h2>
       <div class="mt-10 mb-8 flex items-end justify-between gap-6">
-        <h3 class="font-display text-2xl" style="color: var(--color-navy);">Featured Trips</h3>
+        <h3 class="font-display text-2xl text-navy">Featured Trips</h3>
         <div class="flex items-center gap-3">
           {showCarouselArrows && (
             <div class="hidden gap-2 lg:flex">
-              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-9 w-9 place-items-center rounded-full border transition-opacity disabled:opacity-30" style="border-color: var(--color-peach); color: var(--color-navy);">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+                <Icon name="chevron-right" class="h-4 w-4 rotate-180" />
               </button>
-              <button id="featured-next" type="button" aria-label="More trips" class="grid h-9 w-9 place-items-center rounded-full border transition-opacity disabled:opacity-30" style="border-color: var(--color-peach); color: var(--color-navy);">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+              <button id="featured-next" type="button" aria-label="More trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+                <Icon name="chevron-right" class="h-4 w-4" />
               </button>
             </div>
           )}
-          <a href="/trips/" class="text-sm font-medium hover:underline" style="color: var(--color-coral);">See All →</a>
+          <a href="/trips/" class="inline-flex items-center gap-1 text-sm font-medium text-coral hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
       </div>
 
@@ -143,7 +141,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
           })}
         </div>
       ) : (
-        <p class="text-center py-12" style="color: var(--color-gray-text);">More trips coming soon. Stay tuned.</p>
+        <p class="text-center py-12 text-gray-text">More trips coming soon. Stay tuned.</p>
       )}
     </div>
   </section>
@@ -175,57 +173,49 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
   </script>
 
   <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
-  <section class="py-16 lg:py-20" style="background-color: var(--color-navy);">
-    <div class="container-app">
-      <h2 class="text-3xl lg:text-4xl font-bold text-white mb-14" style="font-family: var(--font-display);">
-        How it works
-      </h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-        {[
-          { num: '01', title: 'Pick a trip', desc: 'Browse upcoming destinations, find one that pulls you.' },
-          { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
-          { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
-        ].map((step) => (
-          <div class="reveal pt-6" style="border-top: 1px solid rgba(255,255,255,0.15);">
-            <div class="text-6xl font-bold mb-4 opacity-20 text-white" style="font-family: var(--font-display);">{step.num}</div>
-            <h3 class="text-xl font-bold text-white mb-3" style="font-family: var(--font-display);">{step.title}</h3>
-            <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
-          </div>
-        ))}
-      </div>
+  <Section as="section" tone="navy" space="md">
+    <h2 class="font-display font-bold text-display-md text-white mb-14">
+      How it works
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      {[
+        { num: '01', title: 'Pick a trip', desc: 'Browse upcoming destinations, find one that pulls you.' },
+        { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
+        { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
+      ].map((step) => (
+        <div class="reveal pt-6 border-t border-white/15">
+          <div class="font-display text-6xl font-bold mb-4 opacity-20 text-white">{step.num}</div>
+          <h3 class="font-display text-xl font-bold text-white mb-3">{step.title}</h3>
+          <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
+        </div>
+      ))}
     </div>
-  </section>
+  </Section>
 
   <!-- ── COMMUNITY ─────────────────────────────────────────── -->
   {featuredTestimonials.length > 0 && (
-    <section class="py-16 lg:py-20" style="background-color: var(--color-blush);">
-      <div class="container-app">
-        <div class="max-w-2xl mx-auto text-center mb-12">
-          <h2 class="text-3xl lg:text-4xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">
-            Who comes on these trips
-          </h2>
-          <p class="text-base leading-relaxed" style="color: var(--color-gray-text);">
-            Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out.
-          </p>
-        </div>
-        <div class="flex items-start gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
-          {featuredTestimonials.map((t, index) => (
-            <TestimonialCard testimonial={t} cardId={`home-${t.slug ?? index}`} surface="white" />
-          ))}
-        </div>
+    <Section
+      tone="blush"
+      title="Who comes on these trips"
+      intro="Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out."
+    >
+      <div class="flex items-start gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
+        {featuredTestimonials.map((t, index) => (
+          <TestimonialCard testimonial={t} cardId={`home-${t.slug ?? index}`} surface="white" />
+        ))}
       </div>
-    </section>
+    </Section>
   )}
 
   <!-- ── NEWSLETTER ─────────────────────────────────────────── -->
   <section
-    class="py-16 lg:py-20 relative"
-    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80'); background-size: cover; background-position: center;"
+    class="py-16 lg:py-20 relative bg-cover bg-center"
+    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80');"
   >
-    <div class="absolute inset-0" style="background: rgba(27,43,58,0.78);"></div>
+    <div class="u-overlay-scrim-flat absolute inset-0"></div>
     <div class="container-app relative">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl lg:text-4xl font-bold mb-3 text-white" style="font-family: var(--font-display);">
+        <h2 class="font-display font-bold text-display-md mb-3 text-white">
           Be first to know
         </h2>
         <p class="text-base mb-8 leading-relaxed text-white/75">
@@ -239,13 +229,11 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
             name="email"
             placeholder="Your email address"
             required
-            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 outline-none text-white placeholder:text-white/75"
-            style="border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08);"
+            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 border-white/25 bg-white/10 outline-none text-white placeholder:text-white/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           />
           <button
             type="submit"
-            class="px-7 py-3.5 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90 flex-shrink-0"
-            style="background-color: var(--color-cta);"
+            class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
           >
             Keep me posted
           </button>
