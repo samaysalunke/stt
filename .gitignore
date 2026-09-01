@@ -36,3 +36,6 @@ test-reports/
 .agents/
 skills-lock.json
 .lighthouseci/
+
+# Playwright writes this next to the config regardless of outputDir
+test-results/
