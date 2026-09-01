@@ -39,3 +39,6 @@ skills-lock.json
 
 # Playwright writes this next to the config regardless of outputDir
 test-results/
+
+# Isolated database for the visual snapshot suite (seeded per run)
+.visual-data/
