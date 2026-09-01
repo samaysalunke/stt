@@ -38,18 +38,14 @@
      Coral text on a navy band should stay `text-coral` (4.81:1). */
   --color-coral-ink: #B84E2B;
 
-  /* ── Aliases used by admin/legacy pages ─────────────────────── */
-  --color-primary: #1B2B3A;
-  --color-primary-dark: #111D27;
-  --color-primary-light: #FDF0EC;
-  --color-secondary: #F5DDD7;
-  --color-secondary-light: #FDF0EC;
-  --color-accent: #E8725A;
-  --color-accent-hover: #D45C44;
-  --color-accent-light: #FDF0EC;
-  --color-surface: #F5F5F3;
-  --color-text-primary: #1B2B3A;
-  --color-text-secondary: #646B76;
+  /* Two shades the brand set had no name for, kept when the admin/legacy
+     aliases were retired. The rest of that block was duplicate values under a
+     second name — --color-primary was --color-navy, --color-accent was
+     --color-coral, --color-surface was --color-gray-soft, --color-text-primary
+     was --color-navy again and --color-text-secondary was --color-gray-text —
+     so every call site now names the brand token directly. */
+  --color-navy-deep: #111D27;      /* was --color-primary-dark */
+  --color-coral-hover: #D45C44;    /* was --color-accent-hover */
   --color-success: #22A654;
   --color-danger: #D93025;
   /* Form-error pair, previously hardcoded as #FEE2E2 / #991B1B on the enquiry

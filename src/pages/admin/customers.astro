@@ -177,7 +177,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   <!-- Stat chips -->
   <div class="stat-chips">
     {[
-      ['Total', totalCustomers, 'var(--color-primary)'],
+      ['Total', totalCustomers, 'var(--color-navy)'],
       ['Confirmed', confirmedCustomers, 'var(--color-success)'],
       // #D97706 cleared AA only as large bold text (3.19:1 on white, and these
       // chips are 1.15rem/700). warning-ink is 7.09:1 and matches the pending pill.
@@ -416,26 +416,26 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 <style>
   .stat-chips { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.25rem; }
   .stat-chip { background:white; border:1px solid var(--color-border); border-radius:0.75rem; padding:0.55rem 0.85rem; display:flex; flex-direction:column; gap:0.15rem; min-width:100px; }
-  .stat-chip span { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-text-secondary); }
+  .stat-chip span { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--color-gray-text); }
   .stat-chip strong { font-size:1.15rem; }
   .cust-row { background:white; border:1px solid var(--color-border); border-radius:0.75rem; padding:0.85rem 1rem; }
   .cust-summary { display:grid; grid-template-columns:minmax(200px,2fr) minmax(120px,1fr) minmax(130px,1.2fr) minmax(100px,0.8fr) auto; gap:1rem; align-items:center; }
   .cust-primary { min-width:0; }
-  .cust-meta { display:flex; flex-direction:column; gap:0.15rem; font-size:0.76rem; color:var(--color-text-secondary); }
-  .meta-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-secondary); }
+  .cust-meta { display:flex; flex-direction:column; gap:0.15rem; font-size:0.76rem; color:var(--color-gray-text); }
+  .meta-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-gray-text); }
   .cust-toggle-btn { border:1px solid var(--color-coral); border-radius:999px; background:#fff; color:var(--color-coral); cursor:pointer; font-size:0.78rem; font-weight:700; padding:0.35rem 0.7rem; white-space:nowrap; justify-self:end; }
   .cust-detail { margin-top:0.85rem; padding-top:0.85rem; border-top:1px solid var(--color-border); }
   .cust-detail-grid { display:grid; grid-template-columns:1fr 1.4fr; gap:1.5rem; }
-  .detail-heading { margin:0 0 0.6rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-secondary); font-weight:700; }
+  .detail-heading { margin:0 0 0.6rem; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-gray-text); font-weight:700; }
   .detail-fields { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem 1rem; font-size:0.82rem; }
   .detail-fields > div { display:contents; }
-  .detail-fields span:first-child { color:var(--color-text-secondary); font-weight:600; }
+  .detail-fields span:first-child { color:var(--color-gray-text); font-weight:600; }
   .copy-btn { border:none; background:none; cursor:pointer; color:var(--color-coral); font-size:0.75rem; padding:0 0.2rem; }
-  .cust-edit-btn { border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-text-secondary); cursor:pointer; font-size:0.74rem; font-weight:700; padding:0.2rem 0.55rem; }
-  .cust-edit-form label { display:block; font-size:0.74rem; font-weight:600; color:var(--color-text-secondary); margin-bottom:0.4rem; }
+  .cust-edit-btn { border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-gray-text); cursor:pointer; font-size:0.74rem; font-weight:700; padding:0.2rem 0.55rem; }
+  .cust-edit-form label { display:block; font-size:0.74rem; font-weight:600; color:var(--color-gray-text); margin-bottom:0.4rem; }
   .cust-edit-form input { display:block; width:100%; box-sizing:border-box; margin-top:0.15rem; padding:0.4rem 0.55rem; border:1px solid var(--color-border); border-radius:0.4rem; font-size:0.82rem; color:var(--color-navy); }
   .cust-edit-save { padding:0.4rem 0.9rem; border:none; border-radius:0.4rem; background:var(--color-navy); color:#fff; font-weight:700; font-size:0.78rem; cursor:pointer; }
-  .cust-edit-cancel { padding:0.4rem 0.9rem; border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-text-secondary); font-weight:700; font-size:0.78rem; cursor:pointer; }
+  .cust-edit-cancel { padding:0.4rem 0.9rem; border:1px solid var(--color-border); border-radius:0.4rem; background:#fff; color:var(--color-gray-text); font-weight:700; font-size:0.78rem; cursor:pointer; }
   @media(max-width:900px) {
     .cust-summary { grid-template-columns:1fr auto; }
     .cust-meta:nth-child(n+3) { display:none; }

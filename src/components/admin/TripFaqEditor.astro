@@ -56,22 +56,22 @@ const initialTripFaqs = (Array.isArray(trip?.tripFaqs) ? trip.tripFaqs : [])
 
 <style is:global>
   .faq-editor-section { background:#fff; border:1px solid var(--color-border); border-radius:0.75rem; padding:1.25rem; margin-bottom:1rem; }
-  .faq-editor-section h2 { color:var(--color-text-primary); font-size:1rem; font-weight:700; margin:0; }
+  .faq-editor-section h2 { color:var(--color-navy); font-size:1rem; font-weight:700; margin:0; }
   .faq-editor-help, .faq-editor-empty { color:#7b8490; font-size:0.78rem; line-height:1.45; margin:0.25rem 0 0.9rem; }
   .faq-editor-empty { margin:0.75rem 0 0; }
   .faq-global-list { display:grid; gap:0.5rem; }
   .faq-global-row { display:flex; align-items:flex-start; gap:0.7rem; padding:0.75rem; border:1px solid var(--color-border); border-radius:0.6rem; cursor:pointer; }
-  .faq-global-row input { margin-top:0.2rem; accent-color:var(--color-primary); }
+  .faq-global-row input { margin-top:0.2rem; accent-color:var(--color-navy); }
   .faq-global-row span { display:flex; flex-direction:column; gap:0.15rem; min-width:0; }
-  .faq-global-row strong { color:var(--color-text-primary); font-size:0.85rem; line-height:1.35; }
+  .faq-global-row strong { color:var(--color-navy); font-size:0.85rem; line-height:1.35; }
   .faq-global-row small { color:var(--color-gray-text); font-size:0.7rem; }
   .faq-editor-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
   .trip-faq-card { border:1px solid var(--color-border); border-radius:0.65rem; padding:0.9rem; margin-top:0.65rem; }
   .trip-faq-fields { display:grid; gap:0.65rem; }
-  .trip-faq-fields label { color:var(--color-text-secondary); font-size:0.72rem; font-weight:600; }
+  .trip-faq-fields label { color:var(--color-gray-text); font-size:0.72rem; font-weight:600; }
   .trip-faq-fields input, .trip-faq-fields textarea { display:block; width:100%; margin-top:0.2rem; border:1px solid var(--color-border); border-radius:0.5rem; padding:0.65rem; font-size:0.85rem; outline:none; }
   .trip-faq-actions { display:flex; justify-content:flex-end; gap:0.35rem; margin-top:0.65rem; }
-  .trip-faq-actions button { border:1px solid var(--color-border); background:#fff; border-radius:0.4rem; padding:0.3rem 0.55rem; color:var(--color-text-secondary); font-size:0.72rem; cursor:pointer; }
+  .trip-faq-actions button { border:1px solid var(--color-border); background:#fff; border-radius:0.4rem; padding:0.3rem 0.55rem; color:var(--color-gray-text); font-size:0.72rem; cursor:pointer; }
   .trip-faq-actions .remove { color:var(--color-danger); }
 </style>
 

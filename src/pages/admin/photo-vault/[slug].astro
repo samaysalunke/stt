@@ -129,19 +129,19 @@ const legacyDate = isoDate ? '' : rawDate;
 
 <style>
 .form-section { background:var(--color-white); border:1px solid var(--color-border); border-radius:0.75rem; padding:1.5rem; }
-.section-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--color-text-primary); margin:0 0 1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border); }
+.section-title { font-family:var(--font-display); font-size:1.1rem; font-weight:700; color:var(--color-navy); margin:0 0 1.25rem; padding-bottom:0.75rem; border-bottom:1px solid var(--color-border); }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
 .form-group { display:flex; flex-direction:column; gap:0.35rem; }
 .form-group.full { grid-column:1/-1; }
-.form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
+.form-label { font-size:0.875rem; font-weight:600; color:var(--color-gray-text); }
 .form-hint { font-size:0.75rem; color:var(--color-gray-text); }
-.form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
-.form-input:focus { border-color:var(--color-primary); }
+.form-input { background:var(--color-gray-soft); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-navy); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
+.form-input:focus { border-color:var(--color-navy); }
 
 /* ===== Masonry photo grid (preserves portrait + landscape aspect ratios) ===== */
 #photo-grid { columns: 4; column-gap: 1rem; }
 .photo-card { break-inside: avoid; margin-bottom: 1rem; }
-.photo-thumb { position: relative; overflow: hidden; border-radius: 0.5rem; background: var(--color-surface); }
+.photo-thumb { position: relative; overflow: hidden; border-radius: 0.5rem; background: var(--color-gray-soft); }
 .photo-thumb img { display: block; width: 100%; height: auto; }
 .delete-photo-btn {
   position: absolute; top: 0.4rem; right: 0.4rem;
@@ -165,7 +165,7 @@ const legacyDate = isoDate ? '' : rawDate;
   line-height: 1.45;
   color: var(--color-gray-text);
 }
-.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+.img-hint strong { color: var(--color-gray-text); font-weight: 600; }
 </style>
 
 <script define:vars={{ slug, photos }}>

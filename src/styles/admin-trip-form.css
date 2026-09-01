@@ -19,7 +19,7 @@
   flex-wrap: wrap;
 }
 .back-link {
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   text-decoration: none;
   font-size: 0.875rem;
   white-space: nowrap;
@@ -28,7 +28,7 @@
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--color-navy);
   margin: 0;
   flex: 1;
 }
@@ -42,12 +42,12 @@
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   text-decoration: none;
   background: white;
 }
 .save-btn {
-  background: var(--color-primary);
+  background: var(--color-navy);
   color: white;
   padding: 0.55rem 1.5rem;
   border-radius: 0.5rem;
@@ -77,14 +77,14 @@
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   white-space: nowrap;
   transition: color 0.15s, border-color 0.15s;
 }
-.tab-btn:hover { color: var(--color-text-primary); }
+.tab-btn:hover { color: var(--color-navy); }
 .tab-btn.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--color-navy);
+  border-bottom-color: var(--color-navy);
 }
 
 /* ── Panels ──────────────────────────────────── */
@@ -106,7 +106,7 @@
 .flabel {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -130,7 +130,7 @@
   border: 1px solid var(--color-border);
   border-radius: 0.4rem;
   padding: 0.5rem 0.75rem;
-  color: var(--color-text-primary);
+  color: var(--color-navy);
   font-size: 0.875rem;
   outline: none;
   width: 100%;
@@ -138,7 +138,7 @@
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.finput:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(45,95,62,0.1); }
+.finput:focus { border-color: var(--color-navy); box-shadow: 0 0 0 2px rgba(45,95,62,0.1); }
 select.finput { cursor: pointer; }
 
 /* ── Dynamic lists ───────────────────────────── */
@@ -163,7 +163,7 @@ select.finput { cursor: pointer; }
 .add-btn {
   background: none;
   border: 1px dashed var(--color-border);
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   border-radius: 0.35rem;
   padding: 0.4rem 0.75rem;
   cursor: pointer;
@@ -171,7 +171,7 @@ select.finput { cursor: pointer; }
   font-weight: 500;
   align-self: flex-start;
 }
-.add-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.add-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
 /* ── Itinerary toolbar ───────────────────────── */
 .itin-toolbar {
@@ -183,7 +183,7 @@ select.finput { cursor: pointer; }
 .itin-count {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
 }
 .itin-tool-btn {
   background: white;
@@ -191,10 +191,10 @@ select.finput { cursor: pointer; }
   border-radius: 0.4rem;
   padding: 0.3rem 0.7rem;
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   cursor: pointer;
 }
-.itin-tool-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.itin-tool-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
 #add-day-btn {
   display: flex;
@@ -207,13 +207,13 @@ select.finput { cursor: pointer; }
   background: white;
   border: 1.5px dashed var(--color-border);
   border-radius: 0.6rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
 }
-#add-day-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+#add-day-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
 /* ── Accordion day cards ─────────────────────── */
 .day-card {
@@ -224,7 +224,7 @@ select.finput { cursor: pointer; }
   overflow: hidden;
   transition: box-shadow 0.15s;
 }
-.day-card:focus-within { box-shadow: 0 0 0 2px rgba(45,95,62,0.15); border-color: var(--color-primary); }
+.day-card:focus-within { box-shadow: 0 0 0 2px rgba(45,95,62,0.15); border-color: var(--color-navy); }
 
 .day-header {
   display: flex;
@@ -234,13 +234,13 @@ select.finput { cursor: pointer; }
   cursor: pointer;
   user-select: none;
 }
-.day-header:hover { background: var(--color-surface); }
+.day-header:hover { background: var(--color-gray-soft); }
 
 .day-num {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: var(--color-navy);
   color: white;
   font-size: 0.75rem;
   font-weight: 700;
@@ -250,13 +250,13 @@ select.finput { cursor: pointer; }
   flex-shrink: 0;
   font-family: var(--font-display);
 }
-.day-card.open .day-num { background: var(--color-accent); }
+.day-card.open .day-num { background: var(--color-coral); }
 
 .day-header-text { flex: 1; min-width: 0; }
 .day-title {
   font-weight: 700;
   font-size: 0.875rem;
-  color: var(--color-text-primary);
+  color: var(--color-navy);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -264,7 +264,7 @@ select.finput { cursor: pointer; }
 }
 .day-summary {
   font-size: 0.72rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   margin-top: 0.1rem;
   white-space: nowrap;
   overflow: hidden;
@@ -287,17 +287,17 @@ select.finput { cursor: pointer; }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   font-size: 0.7rem;
   padding: 0;
 }
-.day-move-btn:hover { background: var(--color-surface); border-color: var(--color-primary); color: var(--color-primary); }
+.day-move-btn:hover { background: var(--color-gray-soft); border-color: var(--color-navy); color: var(--color-navy); }
 .day-move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .day-chevron {
   width: 16px;
   height: 16px;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -317,13 +317,13 @@ select.finput { cursor: pointer; }
   margin-top: 0.85rem;
 }
 .day-grid .full { grid-column: 1 / -1; }
-.day-label { font-size: 0.75rem; color: var(--color-text-secondary); font-weight: 600; margin-bottom: 0.25rem; }
+.day-label { font-size: 0.75rem; color: var(--color-gray-text); font-weight: 600; margin-bottom: 0.25rem; }
 .day-input {
-  background: var(--color-surface);
+  background: var(--color-gray-soft);
   border: 1px solid var(--color-border);
   border-radius: 0.4rem;
   padding: 0.45rem 0.65rem;
-  color: var(--color-text-primary);
+  color: var(--color-navy);
   font-size: 0.825rem;
   width: 100%;
   box-sizing: border-box;
@@ -331,7 +331,7 @@ select.finput { cursor: pointer; }
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.day-input:focus { border-color: var(--color-primary); }
+.day-input:focus { border-color: var(--color-navy); }
 
 .meal-row { display: flex; gap: 1.25rem; flex-wrap: wrap; padding: 0.5rem 0; }
 .meal-label {
@@ -339,7 +339,7 @@ select.finput { cursor: pointer; }
   align-items: center;
   gap: 0.35rem;
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   cursor: pointer;
   padding: 0.35rem 0.6rem;
   border-radius: 0.4rem;
@@ -347,14 +347,14 @@ select.finput { cursor: pointer; }
   transition: background 0.15s, border-color 0.15s;
 }
 .meal-label:has(input:checked) {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  background: var(--color-blush);
+  border-color: var(--color-navy);
+  color: var(--color-navy);
   font-weight: 600;
 }
 
 .day-photos-block { margin-top: 0.85rem; }
-.day-photos-hint { color: var(--color-text-secondary); font-weight: 400; }
+.day-photos-hint { color: var(--color-gray-text); font-weight: 400; }
 .day-photos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0; }
 .day-photo-thumb { position: relative; width: 96px; height: 72px; border-radius: 0.4rem; overflow: hidden; border: 1px solid var(--color-border); }
 .day-photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -365,10 +365,10 @@ select.finput { cursor: pointer; }
 .day-photo-add {
   display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;
   font-size: 0.8rem; padding: 0.35rem 0.6rem; border: 1px dashed var(--color-border); border-radius: 0.4rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
 }
-.day-photo-add:hover { border-color: var(--color-primary); color: var(--color-primary); }
-.day-photos-status { margin-left: 0.6rem; font-size: 0.75rem; color: var(--color-text-secondary); }
+.day-photo-add:hover { border-color: var(--color-navy); color: var(--color-navy); }
+.day-photos-status { margin-left: 0.6rem; font-size: 0.75rem; color: var(--color-gray-text); }
 
 .day-footer {
   display: flex;
@@ -402,7 +402,7 @@ select.finput { cursor: pointer; }
   padding: 0.6rem;
   border: 1px dashed var(--color-border);
   border-radius: 0.5rem;
-  background: var(--color-surface);
+  background: var(--color-gray-soft);
 }
 .gallery-thumb {
   position: relative;
@@ -410,7 +410,7 @@ select.finput { cursor: pointer; }
   margin-bottom: 0.6rem;
   border-radius: 0.5rem;
   overflow: hidden;
-  background: var(--color-surface);
+  background: var(--color-gray-soft);
 }
 .gallery-thumb img { display: block; width: 100%; height: auto; }
 .gallery-thumb.is-selected { outline: 3px solid var(--color-coral); outline-offset: -3px; }
@@ -424,9 +424,9 @@ select.finput { cursor: pointer; }
 .gallery-thumb.is-selected .gallery-thumb-btn { background: var(--color-coral); }
 .gallery-upload-btn {
   display: inline-block;
-  background: var(--color-surface);
+  background: var(--color-gray-soft);
   border: 1px dashed var(--color-border);
-  color: var(--color-text-secondary, var(--color-navy));
+  color: var(--color-gray-text, var(--color-navy));
   padding: 0.5rem 1.1rem; border-radius: 0.5rem;
   cursor: pointer; font-size: 0.85rem;
 }
@@ -447,7 +447,7 @@ select.finput { cursor: pointer; }
   padding: 0.55rem 1.25rem;
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
-  color: var(--color-text-secondary);
+  color: var(--color-gray-text);
   text-decoration: none;
   font-size: 0.875rem;
   background: white;

@@ -34,7 +34,7 @@ function TestimonialCard({ t, highlighted }: { t: Testimonial; highlighted: bool
       }`}
     >
       <StarRating rating={t.rating} />
-      <p className="italic leading-relaxed mb-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+      <p className="italic leading-relaxed mb-4 text-sm" style={{ color: 'var(--color-gray-text)' }}>
         "{t.quote}"
       </p>
       <div className="flex items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
@@ -43,7 +43,7 @@ function TestimonialCard({ t, highlighted }: { t: Testimonial; highlighted: bool
         ) : (
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm"
-            style={{ background: 'var(--color-primary)' }}
+            style={{ background: 'var(--color-navy)' }}
           >
             {t.name.charAt(0)}
           </div>
@@ -52,10 +52,10 @@ function TestimonialCard({ t, highlighted }: { t: Testimonial; highlighted: bool
           <p className="font-semibold text-sm" style={{ fontFamily: 'var(--font-display)', color: '#1A1A1A' }}>
             {t.name}
           </p>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          <p className="text-xs" style={{ color: 'var(--color-gray-text)' }}>
             {t.location}
           </p>
-          <p className="text-xs" style={{ color: 'var(--color-accent)' }}>
+          <p className="text-xs" style={{ color: 'var(--color-coral)' }}>
             {t.tripName}
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function TestimonialCarousel({ testimonials }: Props) {
             className="h-2 rounded-full transition-all duration-300"
             style={{
               width: i === current ? '2rem' : '0.5rem',
-              background: i === current ? 'var(--color-accent)' : 'rgba(255,255,255,0.5)',
+              background: i === current ? 'var(--color-coral)' : 'rgba(255,255,255,0.5)',
             }}
             aria-label={`Go to testimonial ${i + 1}`}
           />

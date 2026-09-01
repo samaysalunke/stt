@@ -54,10 +54,10 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
 .form-group { display:flex; flex-direction:column; gap:0.35rem; }
 .form-group.full { grid-column:1/-1; }
-.form-label { font-size:0.875rem; font-weight:600; color:var(--color-text-secondary); }
+.form-label { font-size:0.875rem; font-weight:600; color:var(--color-gray-text); }
 .form-hint { font-size:0.75rem; color:var(--color-gray-text); }
-.form-input { background:var(--color-surface); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-text-primary); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
-.form-input:focus { border-color:var(--color-primary); }
+.form-input { background:var(--color-gray-soft); border:1px solid var(--color-border); border-radius:0.4rem; padding:0.5rem 0.75rem; color:var(--color-navy); font-size:0.875rem; outline:none; width:100%; box-sizing:border-box; }
+.form-input:focus { border-color:var(--color-navy); }
 
 /* ===== RESPONSIVE FIXES ===== */
 @media (max-width: 768px) {
@@ -71,7 +71,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
   line-height: 1.45;
   color: var(--color-gray-text);
 }
-.img-hint strong { color: var(--color-text-secondary); font-weight: 600; }
+.img-hint strong { color: var(--color-gray-text); font-weight: 600; }
 </style>
 
 <script>

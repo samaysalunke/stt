@@ -39,7 +39,7 @@ function StatItem({ value, label, suffix = '+', iconPath, shouldStart }: Stat & 
         <div className="flex justify-center mb-3 sm:mb-4">
           <svg
             className="w-10 h-10 sm:w-12 sm:h-12"
-            style={{ color: 'var(--color-accent)' }}
+            style={{ color: 'var(--color-coral)' }}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -50,13 +50,13 @@ function StatItem({ value, label, suffix = '+', iconPath, shouldStart }: Stat & 
       )}
       <div
         className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2"
-        style={{ fontFamily: 'var(--font-display)', color: iconPath ? 'white' : 'var(--color-primary)' }}
+        style={{ fontFamily: 'var(--font-display)', color: iconPath ? 'white' : 'var(--color-navy)' }}
       >
         {count.toLocaleString('en-IN')}{suffix}
       </div>
       <div
         className="text-sm sm:text-base lg:text-lg"
-        style={{ color: iconPath ? 'rgba(255,255,255,0.8)' : 'var(--color-text-secondary)' }}
+        style={{ color: iconPath ? 'rgba(255,255,255,0.8)' : 'var(--color-gray-text)' }}
       >
         {label}
       </div>

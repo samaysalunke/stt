@@ -44,7 +44,7 @@ function statusStyle(status: string) {
       <button
         class="contact-filter"
         data-filter={s}
-        style={`padding:0.35rem 0.9rem;border-radius:9999px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1.5px solid var(--color-border);background:${s==='all'?'var(--color-primary)':'var(--color-surface)'};color:${s==='all'?'white':'var(--color-text-secondary)'};`}
+        style={`padding:0.35rem 0.9rem;border-radius:9999px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1.5px solid var(--color-border);background:${s==='all'?'var(--color-navy)':'var(--color-gray-soft)'};color:${s==='all'?'white':'var(--color-gray-text)'};`}
       >
         {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
       </button>
@@ -187,9 +187,9 @@ function statusStyle(status: string) {
       // Update button styles
       document.querySelectorAll<HTMLButtonElement>('.contact-filter').forEach(b => {
         const active = b.dataset.filter === activeFilter;
-        b.style.background = active ? 'var(--color-primary)' : 'var(--color-surface)';
-        b.style.color = active ? 'white' : 'var(--color-text-secondary)';
-        b.style.borderColor = active ? 'var(--color-primary)' : 'var(--color-border)';
+        b.style.background = active ? 'var(--color-navy)' : 'var(--color-gray-soft)';
+        b.style.color = active ? 'white' : 'var(--color-gray-text)';
+        b.style.borderColor = active ? 'var(--color-navy)' : 'var(--color-border)';
       });
       applyContactFilter();
     });

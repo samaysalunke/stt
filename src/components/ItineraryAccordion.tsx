@@ -42,7 +42,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
           <div
             key={day.dayNumber}
             className="border rounded-xl overflow-hidden transition-all"
-            style={{ borderColor: isOpen ? 'var(--color-accent)' : 'var(--color-border)' }}
+            style={{ borderColor: isOpen ? 'var(--color-coral)' : 'var(--color-border)' }}
           >
             <button
               className="w-full flex items-center justify-between p-4 lg:p-5 text-left transition-colors"
@@ -54,15 +54,15 @@ export default function ItineraryAccordion({ itinerary }: Props) {
                 <span
                   className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold flex-shrink-0"
                   style={{
-                    backgroundColor: isOpen ? 'var(--color-accent)' : 'var(--color-primary-light)',
-                    color: isOpen ? 'white' : 'var(--color-primary)',
+                    backgroundColor: isOpen ? 'var(--color-coral)' : 'var(--color-blush)',
+                    color: isOpen ? 'white' : 'var(--color-navy)',
                     fontFamily: 'var(--font-display)',
                   }}
                 >
                   {day.dayNumber}
                 </span>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-accent)' }}>
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--color-coral)' }}>
                     Day {day.dayNumber}
                   </span>
                   <h4 className="font-bold text-base leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
@@ -72,7 +72,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
               </div>
               <svg
                 className="w-5 h-5 flex-shrink-0 transition-transform duration-300"
-                style={{ color: 'var(--color-text-secondary)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                style={{ color: 'var(--color-gray-text)', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -84,7 +84,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
             {isOpen && (
               <div className="px-4 lg:px-5 pb-5 bg-white border-t" style={{ borderColor: '#FFF3EC' }}>
                 {/* Activities */}
-                <p className="text-sm leading-relaxed mt-4 mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                <p className="text-sm leading-relaxed mt-4 mb-4" style={{ color: 'var(--color-gray-text)' }}>
                   {day.activities}
                 </p>
 
@@ -92,11 +92,11 @@ export default function ItineraryAccordion({ itinerary }: Props) {
                   {/* Accommodation */}
                   {day.accommodation && (
                     <div className="flex items-start gap-2.5">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-coral)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                       </svg>
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-wide mb-0.5" style={{ color: 'var(--color-text-secondary)' }}>Stay</div>
+                        <div className="text-xs font-bold uppercase tracking-wide mb-0.5" style={{ color: 'var(--color-gray-text)' }}>Stay</div>
                         <div className="text-sm font-medium">{day.accommodation}</div>
                       </div>
                     </div>
@@ -104,28 +104,28 @@ export default function ItineraryAccordion({ itinerary }: Props) {
 
                   {/* Meals */}
                   <div className="flex items-start gap-2.5">
-                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-coral)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                     <div>
-                      <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--color-text-secondary)' }}>Meals</div>
+                      <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--color-gray-text)' }}>Meals</div>
                       <div className="flex gap-1.5">
                         <MealIcon included={day.breakfast} label="Breakfast" />
                         <MealIcon included={day.lunch} label="Lunch" />
                         <MealIcon included={day.dinner} label="Dinner" />
                       </div>
-                      {day.mealsNotes && <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{day.mealsNotes}</p>}
+                      {day.mealsNotes && <p className="text-xs mt-1" style={{ color: 'var(--color-gray-text)' }}>{day.mealsNotes}</p>}
                     </div>
                   </div>
 
                   {/* Transport */}
                   {day.transport && (
                     <div className="flex items-start gap-2.5">
-                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-coral)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                       </svg>
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-wide mb-0.5" style={{ color: 'var(--color-text-secondary)' }}>Transport</div>
+                        <div className="text-xs font-bold uppercase tracking-wide mb-0.5" style={{ color: 'var(--color-gray-text)' }}>Transport</div>
                         <div className="text-sm font-medium">{day.transport}</div>
                       </div>
                     </div>
