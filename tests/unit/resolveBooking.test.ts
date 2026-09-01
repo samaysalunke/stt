@@ -582,3 +582,19 @@ describe('coming-soon departures', () => {
     expect(b.departures.find((d) => d.id === 'cs-2')!.comingSoon).toBe(true);
   });
 });
+
+describe('filling-fast departures', () => {
+  test('remain bookable and expose the manual urgency flag', () => {
+    const booking = resolveBooking(makeSingleTierTrip({
+      batches: [{
+        id: 'fast-1', startDate: FAR_FUTURE, endDate: FAR_FUTURE_END, status: 'filling_fast',
+        offers: [{ tierId: 'standard', price: 35000, cap: 15, booked: 4 }],
+      }],
+    }));
+
+    expect(booking.departures[0]).toMatchObject({
+      id: 'fast-1', fillingFast: true, soldOut: false, comingSoon: false,
+    });
+    expect(booking.fromPrice).toBe(35000);
+  });
+});

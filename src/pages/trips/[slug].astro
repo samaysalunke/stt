@@ -135,7 +135,7 @@ const departuresForPanel = departures.map((d) =>
   d.comingSoon
     ? {
         id: d.id, startDate: d.startDate, endDate: d.endDate, status: d.status,
-        comingSoon: true, priceConcealed: true,
+        comingSoon: true, fillingFast: false, priceConcealed: true,
         offers: [], totalCap: null, spotsLeft: null, soldOut: false,
       }
     : d,
@@ -278,6 +278,7 @@ const tripSchema: Record<string, any> = {
                 data-testid={`hero-departure-${departure.id}`}
                 data-sold-out={String(departure.soldOut)}
                 data-coming-soon={String(departure.comingSoon)}
+                data-filling-fast={String(departure.fillingFast)}
                 class:list={[
                   'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1 text-[11px] leading-tight text-white sm:px-3 sm:text-xs',
                   departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/45 opacity-65'
@@ -290,6 +291,8 @@ const tripSchema: Record<string, any> = {
                   <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>
                 ) : departure.comingSoon ? (
                   <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span>
+                ) : departure.fillingFast ? (
+                  <span class="mt-0.5 text-[10px] font-semibold" style="color:#FFB49F;">Filling fast</span>
                 ) : null}
               </span>
             ))}

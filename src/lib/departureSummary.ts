@@ -27,8 +27,9 @@ export function formatDepartureRange(startValue: string, endValue?: string): str
 
 export function getDepartureSummary(departures: ResolvedDeparture[]) {
   const chronological = (a: ResolvedDeparture, b: ResolvedDeparture) => a.startDate.localeCompare(b.startDate);
-  // Show open dates AND coming-soon dates (the latter labelled, not sold-out styled).
-  const relevant = departures.filter((d) => d.status === 'booking-open' || d.comingSoon);
+  // Show bookable dates (including manually labelled filling-fast dates) and
+  // coming-soon dates. Other operational statuses stay out of public summaries.
+  const relevant = departures.filter((d) => d.status === 'booking-open' || d.fillingFast || d.comingSoon);
   const available = relevant.filter((d) => !d.soldOut && !d.comingSoon).sort(chronological);
   const comingSoon = relevant.filter((d) => d.comingSoon).sort(chronological);
   const soldOut = relevant.filter((d) => d.soldOut && !d.comingSoon).sort(chronological);

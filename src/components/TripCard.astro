@@ -91,6 +91,7 @@ const departureSummary = getDepartureSummary(departures);
             <span
               data-sold-out={String(departure.soldOut)}
               data-coming-soon={String(departure.comingSoon)}
+              data-filling-fast={String(departure.fillingFast)}
               class:list={[
                 'flex flex-none flex-col justify-center rounded-lg px-2.5 py-1.5 text-xs font-semibold leading-tight text-white shadow-md backdrop-blur-sm',
                 departure.soldOut ? 'border border-white/20 bg-[#1B2B3A]/60 opacity-70'
@@ -100,7 +101,8 @@ const departureSummary = getDepartureSummary(departures);
             >
               <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>
               {departure.soldOut ? <span class="mt-0.5 text-[10px] text-white/75">Sold out</span>
-                : departure.comingSoon ? <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span> : null}
+                : departure.comingSoon ? <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span>
+                : departure.fillingFast ? <span class="mt-0.5 text-[10px] font-semibold text-white">Filling fast</span> : null}
             </span>
           ))}
           {departureSummary.moreAvailable > 0 && (

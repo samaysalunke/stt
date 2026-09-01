@@ -4,7 +4,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
 import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
 import TripGalleryEditor from '../../../components/admin/TripGalleryEditor.astro';
-import { readTrip, listAlbums, listFaqs } from '../../../lib/content';
+import { DEPARTURE_STATUSES, readTrip, listAlbums, listFaqs } from '../../../lib/content';
 import { editableBooking } from '../../../lib/tripEditor';
 
 const { slug } = Astro.params;
@@ -24,6 +24,10 @@ const itinerary = Array.isArray(trip.itinerary) ? trip.itinerary : [];
 // so saving never silently drops past/draft ones, and synthesizes offers from
 // legacy sharingOptions/flat-price so opening an old trip auto-migrates it.
 const { editorCatalog, editorDepartures } = editableBooking(trip);
+const departureStatusOptions = DEPARTURE_STATUSES.map((value) => ({
+  value,
+  label: value.replace(/[-_]/g, ' ').replace(/^./, (letter) => letter.toUpperCase()),
+}));
 
 // ── Trip photo gallery ──────────────────────────────────────────────────────
 // Albums (with per-photo dimensions) the admin can pick images from.
@@ -1173,9 +1177,9 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
 </script>
 
 <!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
-<script define:vars={{ editorCatalog, editorDepartures }}>
+<script define:vars={{ editorCatalog, editorDepartures, departureStatusOptions }}>
 (function () {
-  const STATUSES = ['booking-open', 'filling_fast', 'coming-soon', 'sold-out', 'draft', 'completed'];
+  const STATUSES = departureStatusOptions;
   // Working state (deep-cloned from server data).
   let catalog = JSON.parse(JSON.stringify(editorCatalog || []));
   let departures = JSON.parse(JSON.stringify(editorDepartures || []));
@@ -1289,7 +1293,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
           '<input type="date" class="finput dep-end" value="' + esc(dep.endDate) + '" /></div>' +
         '<div style="flex:1; min-width:130px;"><span class="fhint">Status</span>' +
           '<select class="finput dep-status">' +
-            STATUSES.map((s) => '<option value="' + s + '"' + (s === dep.status ? ' selected' : '') + '>' + s + '</option>').join('') +
+            STATUSES.map(({ value, label }) => '<option value="' + value + '"' + (value === dep.status || (value === 'filling_fast' && dep.status === 'filling-fast') ? ' selected' : '') + '>' + label + '</option>').join('') +
           '</select></div>' +
         '<button type="button" class="rm-btn dep-remove" style="margin-bottom:0.1rem;">✕ Date</button>';
       head.querySelector('.dep-start').addEventListener('input', (e) => { dep.startDate = e.target.value; });

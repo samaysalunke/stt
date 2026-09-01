@@ -25,6 +25,8 @@ interface Departure {
   soldOut: boolean;
   /** Published but not open for booking — price concealed, wishlist instead. */
   comingSoon?: boolean;
+  /** Admin-controlled urgency label; the departure remains normally bookable. */
+  fillingFast?: boolean;
   priceConcealed?: boolean;
   discountAmount?: number;
   discountEndsAt?: string | null;
@@ -242,6 +244,13 @@ export default function BookingPanel({
                     <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>Coming soon · wishlist to hear first</div>
                   ) : isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
+                  ) : dep.fillingFast ? (
+                    <div className="mt-2">
+                      <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" style={{ color: '#9A3412', background: '#FFF1E8' }}>
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: C.coral }} />
+                        Filling fast
+                      </div>
+                    </div>
                   ) : showSpotsLeft ? (
                     <div className="mt-3">
                       <div

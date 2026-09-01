@@ -212,6 +212,12 @@ export function isComingSoon(status: unknown): boolean {
   return s === 'coming-soon' || s === 'coming_soon';
 }
 
+/** True when a bookable departure should carry the manual urgency label. */
+export function isFillingFast(status: unknown): boolean {
+  const s = String(status ?? '').toLowerCase();
+  return s === 'filling-fast' || s === 'filling_fast';
+}
+
 export function upcomingBatches(trip: Record<string, any>): Array<Record<string, any>> {
   const batches = Array.isArray(trip?.batches) ? trip.batches : [];
   const today = new Date();
@@ -258,6 +264,8 @@ export interface ResolvedDeparture {
   soldOut: boolean;
   /** Published but not open for booking — price concealed, wishlist instead. */
   comingSoon: boolean;
+  /** Bookable departure carrying an admin-controlled urgency label. */
+  fillingFast: boolean;
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
@@ -421,6 +429,7 @@ function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
       ? offers.reduce((sum, o) => sum + (o.cap as number), 0)
       : null;
     const comingSoon = isComingSoon(b.status);
+    const fillingFast = isFillingFast(b.status);
     const statusSoldOut = b.status === 'sold-out' || b.status === 'sold_out';
     const soldOut = !comingSoon && (statusSoldOut || (spotsLeft != null && spotsLeft <= 0));
     return {
@@ -433,6 +442,7 @@ function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
       spotsLeft,
       soldOut,
       comingSoon,
+      fillingFast,
       discountAmount,
       discountEndsAt: discountAmount > 0 && b.discountEndsAt ? String(b.discountEndsAt) : null,
       discountActive: discountAmount > 0,

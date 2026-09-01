@@ -6,6 +6,7 @@ const departure = (id: string, startDate: string, soldOut = false, status = 'boo
   id, startDate, endDate: startDate, status,
   offers: [], totalCap: null, spotsLeft: null, soldOut,
   comingSoon: status === 'coming-soon',
+  fillingFast: status === 'filling_fast' || status === 'filling-fast',
 });
 
 describe('formatDepartureRange', () => {
@@ -56,5 +57,13 @@ describe('getDepartureSummary', () => {
     ]);
     expect(result.displayed.map(({ id }) => id)).toEqual(['open', 'cs1']);
     expect(result.moreAvailable).toBe(1);
+  });
+
+  it('includes a filling-fast departure as an available date', () => {
+    const result = getDepartureSummary([
+      departure('urgent', '2026-02-01', false, 'filling_fast'),
+      departure('open', '2026-03-01'),
+    ]);
+    expect(result.displayed.map(({ id }) => id)).toEqual(['urgent', 'open']);
   });
 });
