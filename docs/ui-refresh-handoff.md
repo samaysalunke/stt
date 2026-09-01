@@ -10,8 +10,14 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 306/306 · `test:api` 154/154 ·
   `test:e2e` 120/120 functional · `visual` 85/85. Everything green.
+- **Nothing is pushed.** The branch is **10 commits ahead of `origin/ui-refresh`**
+  as of 2026-09-02. PR #16 is still a draft showing the older tree. Owner has not
+  yet approved a push — ask before you do it.
 - **Phases 0 through 6 are done.** The Phase 1 review gate is cleared (see "Gate
-  decisions"). No phase remains.
+  decisions"). No phase remains; what is left is the cleanup list at the bottom.
+- **Read "The visual harness" section below before you touch a snapshot.** The
+  gate was wrong twice in ways that let real changes through, and the reasoning
+  behind its current settings is not guessable from the code.
 - **The public surface is finished: 303 inline styles at Phase 0 → 1**, and that one
   is a data-driven per-photo `aspect-ratio` which is correct as an inline style.
 - **The admin surface is finished: 499 inline styles at Phase 0 → 11**, all eleven
@@ -28,6 +34,11 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
+| `1f52f4a` | fix(a11y): admin secondary text now clears AA |
+| `4f24bfa` | test(e2e): make the admin gate able to see a colour change |
+| `141bf34` | fix(ui): define the three tokens admin was styling against |
+| `45e1ee7` | test(e2e): make the admin baselines survive a data write |
+| `517a96a` | docs: record Phase 6 in the handoff |
 | `8eb4b78` | feat(ui): Phase 6b — admin forms and editors onto tokens |
 | `32fb484` | test(e2e): stop the admin list cap from hiding form fields |
 | `c13fb03` | feat(ui): Phase 6a — admin chrome and list pages onto tokens |
@@ -268,6 +279,112 @@ Visual snapshots are `*-chromium-darwin.png` — platform-specific. Regenerate o
 different OS/CI or they will all "fail". The harness stubs `images.unsplash.com` with
 `public/logo.jpg` and freezes animations/fonts for determinism.
 
+## The visual harness — read before touching a snapshot
+
+`tests/e2e/visual.spec.ts` is the oracle the whole refresh leans on. It was wrong
+twice in ways that let real changes through, and every setting in it now exists
+for a reason that is not obvious from reading the code. All of this was learned on
+2026-09-02.
+
+### The two knobs, and why they differ between public and admin
+
+| | `threshold` (per pixel) | `maxDiffPixelRatio` |
+|---|---|---|
+| public routes | 0.2 (Playwright default) | 0.01 |
+| admin routes | **0.05** | **0** |
+
+`threshold` is how different a single pixel must be before it is counted at all.
+**Playwright's default 0.2 calls `rgb(130,138,147)` and `rgb(100,107,118)` the same
+pixel.** That is exactly the pair this refresh moves secondary text between —
+`text-navy/55` composited on white, versus `--color-gray-text`. At the default, the
+72-site admin contrast pass registered as **zero changed pixels on every route**.
+Tightening `maxDiffPixelRatio` cannot rescue that: if no pixel is ever counted, the
+ratio is zero however tight the bound.
+
+`maxDiffPixelRatio` is how many counted pixels are allowed. 1% of a tall admin page
+is ~10,000 pixels — more than recolouring every secondary label costs — so the old
+1% bound would have passed a restyle in silence even with a sane threshold.
+
+**Public still carries the loose pair, and this is a known hole.** Its routes render
+live DB copy — seat counts, prices, album contents — that `pinListingOrder`
+normalises the *order* of but not the *values* of. Measured churn after a
+`test:api` run is 2,429–10,740 pixels on `trip-book`, `photo-vault-index` and the
+404. That is a data problem, not a threshold problem; closing it needs a seeded
+database, not a tighter number. **Consequence: Phases 0–5 were verified under the
+blind gate.** The intended public changes are documented and real, but nobody has
+confirmed that nothing subtler rode along with them.
+
+### Determinism helpers, in the order they run
+
+1. `freezePage` — kills animations, hides the Astro dev toolbar, waits on fonts.
+2. `pinListingOrder` (public only) — trip listings are *shuffled* from a
+   SQLite-persisted counter that every content write bumps. Sorts by visible title.
+3. `capAdminLists` — hides all but the first 3 of any group of **4+ same-tag,
+   same-class siblings whose container is not inside a `<form>`**.
+4. `freezeCss` (per route) — CSS injected to pin values computed from data.
+5. `stubText` (per route) — replaces text with `'xxx xxx'`.
+
+### capAdminLists: the rule took three attempts
+
+- **6 siblings, no form test** — also matched hand-authored markup. The ten field
+  rows of `/admin/registrations/new` are ten sibling `<div>`s sharing one class, so
+  the harness hid most of that form and its baseline became a function of which
+  rows happened to share a class string.
+- **20 siblings** — fixed forms, broke durability the other way: any admin list of
+  4–19 rows went uncapped, so the functional e2e suite booking a trip moved four
+  baselines.
+- **4 siblings + `closest('form')` test** (current) — count cannot separate
+  rendered rows from authored field rows because the populations overlap.
+  *Container* can: a field row lives inside the form that submits it, a rendered
+  row does not. This also caps a four-row list, which no count alone could reach
+  without eating forms.
+
+It exists because `/admin/customers` renders 612 rows into a 95,000px page whose
+full-page PNG was 7.4MB and which never settled between Playwright's two stability
+shots.
+
+### stubText: capping fixes how many rows, not which ones
+
+`admin-dashboard`, `admin-registrations`, `admin-unpaid-leads`, `admin-customers`,
+`admin-email-logs` and `admin-audit` are newest-first or carry running totals, so
+after any write the surviving rows are *different rows*. Their text is replaced
+with fixed filler: real markup, real classes, deterministic characters.
+
+- **The filler contains a space on purpose.** An unbreakable token cannot wrap; a
+  solid `'xxxxxxxx'` widened narrow table cells enough to push
+  `/admin/registrations` to a 554px capture at a 390px viewport — the stub
+  distorting the layout it exists to hold still.
+- A stubbed route can no longer catch a wrong *value* rendering. That was never
+  this harness's job; the functional e2e specs cover it.
+- `admin-dashboard` also needs `freezeCss`, because the booking-growth bars carry a
+  data-derived inline `height` — one new confirmed seat rescales the chart.
+
+### How to verify a harness change (do this, it is cheap)
+
+Capturing and re-running twice proves nothing: the data has not moved in between.
+
+```bash
+npx playwright test visual.spec.ts -g "admin" --update-snapshots
+npm run test:api                                   # writes rows
+npx playwright test --grep-invert "visual regression"   # books trips, creates registrations
+npx playwright test visual.spec.ts                 # must be 85/85
+```
+
+Both earlier harness bugs would have been caught by that sequence. Neither was,
+because the commits that introduced them skipped it.
+
+### Routes with no baseline, and why
+
+- `registrations/[slug]` — the id is a DB row id, not stable across `test:api`.
+- `photo-vault/[slug]` — `src/content/albums/` is empty here, so it does not render.
+- `profile`, `u/[username]`, `unsubscribe` — auth/token routes.
+
+### Known flake, unrelated to the refresh
+
+Two full functional-e2e runs each failed one test, a different one each time
+(`coming-soon`, then `registration` Step 3); both passed on re-run and in
+isolation. **Re-run before investigating a single red spec.**
+
 ## Phase 2 — shared chrome (done)
 
 Restyled `BaseLayout`, `Footer`, `Header`, `BackButton`, `ProfileChrome` and
@@ -458,29 +575,22 @@ them are load-bearing:
   on a fresh checkout. `registrations/[slug]` is deliberately absent for that
   reason, and so is `photo-vault/[slug]` — `src/content/albums/` is empty here, so
   the route does not render.
-- `capAdminLists` caps every repeated list to three rows before the shot.
-  `/admin/customers` renders 612 DB rows into a 95,000px page whose full-page PNG
-  was 7.4MB and which never settled between Playwright's two stability shots.
-  Those rows are written by `test:api`, so an uncapped baseline expires on the
-  next API run — the same trap already documented on `pinListingOrder`.
-  **Verified**: the admin baselines survive a `test:api` run untouched.
+- `capAdminLists` caps repeated lists before the shot, and `stubText` replaces the
+  copy on the routes that are live DB feeds. Both are explained in "The visual
+  harness" below — that section supersedes what the original Phase 6 commits said.
 
-**The cap's threshold is load-bearing too, and the first value was wrong.** At six
-similar siblings it also matched hand-authored markup — the ten field rows of
-`/admin/registrations/new` are ten sibling `<div>`s sharing one class — so the
-harness hid most of that form and the baseline became a function of which rows
-happened to share a class string. Editing those classes moved the snapshot for a
-reason that had nothing to do with rendering. Raised to twenty (`32fb484`), which
-separates the populations cleanly: longest hand-built admin form is ten rows, the
-DB-driven lists run to the hundreds. **If you add a long admin list, check it is
-actually being capped; if you add a 20-field form, check it is not.**
+**Migration was mechanical.** Every swap is value-identical, including the legacy
+aliases — `--color-primary` is the same hex as `--color-navy`,
+`--color-text-secondary` the same as `--color-gray-text`. Font sizes and radii use
+arbitrary values (`text-[0.875rem]`, not `text-sm`) because the named utilities
+also set `line-height`, which the inline styles they replace left inherited.
+**Keep that rule if you extend this work.**
 
-**Migration was mechanical and gated on byte-identical snapshots.** Every swap is
-value-identical, including the legacy aliases — `--color-primary` is the same hex
-as `--color-navy`, `--color-text-secondary` the same as `--color-gray-text`. Font
-sizes and radii use arbitrary values (`text-[0.875rem]`, not `text-sm`) because
-the named utilities also set `line-height`, which the inline styles they replace
-left inherited. **Keep that rule if you extend this work.**
+> **Correction.** The 6a and 6b commit messages claim the snapshots stayed
+> "byte-identical". They stayed identical *under a gate that could not see a
+> colour change* — see "The visual harness". The swaps are still believed clean
+> because they are value-identical by construction, but the evidence was weaker
+> than those messages state. Nobody has re-verified 6a/6b under the tight gate.
 
 **Two bugs the gate caught. Both generalise:**
 
@@ -557,23 +667,56 @@ longer have to be kept in step by hand.
 - ~~**Phase 5**~~ — done, see above.
 - ~~**Phase 6**~~ — done, see above.
 
-## Open work (no phase left; these are cleanups)
+## Open work — start here
 
-1. **The deliberate-change commit.** Bundle the three things that all move pixels
-   and all want one review: the `--color-text-muted` / `--color-surface-elevated`
-   dead-token fixes, the admin a11y contrast pass (coral-as-small-text still
-   appears in admin chrome and several list pages — same rule as every other
-   phase, `text-coral-ink` on light surfaces), and the status-badge palette
-   consolidation. Re-baseline the affected admin snapshots with the diffs reviewed.
-2. **Prune the legacy aliases.** `--color-primary*` / `--color-accent*` are now
+Ordered by what a new session should pick up first. Items 1-3 are the remaining
+merge blockers; 4-6 are verification the owner has not asked for yet.
+
+1. **Delete `src/pages/ui-kit.astro`.** This is the one item that is arguably a
+   live defect: it is a **public route**, reachable by anyone at `/ui-kit`, and it
+   is a developer reference page. 191 lines. Nothing links to it. Remove it, then
+   re-run `visual` — it has no baseline, so nothing should move.
+
+2. **The status-badge palette (the last third of the deliberate-change work).**
+   ~230 hardcoded hex values remain in admin, nearly all one-off status-badge
+   pairs: `#D1FAE5/#065F46` green, `#FEF9C3/#78350F` amber, `#DBEAFE/#1E40AF`
+   blue, `#FEF2F2/#FECACA/#DC2626` red, `#F3F4F6/#374151` grey. Consolidate into a
+   semantic palette next to the existing `--color-{danger,success,warning}-*`
+   triples. This moves pixels — review the diffs, then re-baseline. **Check the
+   contrast of each pair as you go**; several were never measured.
+   `grep -roE '#[0-9a-fA-F]{3,8}\b' src/pages/admin src/components/admin | wc -l`
+   is the counter.
+
+3. **Prune the legacy aliases.** `--color-primary*` / `--color-accent*` are now
    only reachable from the three surviving `<style is:global>` blocks and
    `admin-trip-form.css`; `grep` before deleting. `--color-gold` is already gone.
-3. **Delete `src/pages/ui-kit.astro`** before merge.
+   Note `--color-primary-dark` (`#111D27`) and `--color-accent-hover` (`#D45C44`)
+   have no brand-token equivalent — decide whether to keep or map them.
+
 4. **Re-run Lighthouse on `/`.** The hero contrast item (`add0a77`) was closed but
-   never rescored; the PR still claims 100 on the strength of the old run.
-5. **GLightbox is still unverified** — `src/content/albums/` is empty here, so no
-   album renders. Attributes are untouched; only the anchor `class` changed. Needs
-   someone with fixtures.
+   never rescored; the PR still claims 100 on the strength of the pre-fix run.
+
+5. **GLightbox is unverified at runtime.** `src/content/albums/` is empty here, so
+   no album renders and no lightbox can be opened. The `data-glightbox` /
+   `data-gallery` / `data-title` attributes are untouched and the init block is
+   unchanged — only the anchor's `class` changed. **Needs someone with fixtures.**
+
+6. **Public routes under the tight gate.** Phases 0-5 were verified with
+   `threshold: 0.2`, which cannot see a moderate colour change (see "The visual
+   harness"). Running public at `threshold: 0.05` would show whether anything
+   unintended rode along with the intended token retune. Expect false failures
+   from live DB copy; the useful output is *which* diffs are data and which are
+   rendering. **The owner was offered this on 2026-09-02 and declined for now** —
+   do not spend a session on it unless asked.
+
+### What the owner has been told, so you do not re-litigate it
+
+The public-facing effect of this branch was walked through on 2026-09-02:
+`--color-cta` `#D95F3B → #C6472A` (every CTA button, deeper), `--color-gray-text`
+`#6B7280 → #646B76` (all body copy, slightly darker), new `--color-coral-ink` for
+small coral text (prices, "Read more", "See All"), a darker hero scrim, and a
+fluid `clamp()` heading scale. All deliberate AA fixes, all acknowledged. Admin
+work has zero customer impact — it is behind login and `noindex`.
 
 ## Hard constraints (unchanged from plan)
 
