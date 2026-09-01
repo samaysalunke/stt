@@ -1,0 +1,25 @@
+=== STT slop metrics — 2026-09-01 10:40 — ui-refresh ===
+metric                         public    admin
+inline style="                    303      518
+var(--color in markup             419      651
+hardcoded #hex                    122      193
+style is:global blocks              4        5
+
+distinct data-testid: 24
+
+--- top public offenders (inline style) ---
+  67 src/pages/trips/[slug].astro
+  49 src/pages/custom-itineraries.astro
+  31 src/pages/leaderboard.astro
+  28 src/pages/index.astro
+  16 src/components/TripCard.astro
+  15 src/pages/about.astro
+  13 src/pages/photo-vault/[slug].astro
+  13 src/pages/faq.astro
+  10 src/pages/terms.astro
+   9 src/pages/photo-vault/index.astro
+   9 src/pages/contact.astro
+   6 src/pages/trips/[slug]/book.astro
+   6 src/pages/404.astro
+   6 src/components/TestimonialCard.astro
+   5 src/pages/unsubscribe.astro
