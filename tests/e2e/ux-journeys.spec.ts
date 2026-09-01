@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { gotoHydrated, waitForHydration } from './helpers';
 
 // Shared fixture — uses the same qa-test-bookable trip (legacy flat-price schema)
 const TRIP_URL = '/trips/qa-test-bookable/';
@@ -10,13 +11,14 @@ const BOOK_PARAMS = '?batch=qa-bookable-2099&tier=standard';
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function goToStep2(page: any) {
-  await page.goto(`${BOOK_URL}${BOOK_PARAMS}`);
+  await gotoHydrated(page, `${BOOK_URL}${BOOK_PARAMS}`);
   await page.locator('text=Continue to your details').click();
   await expect(page.locator('text=Full Name').first()).toBeVisible({ timeout: 10_000 });
 }
 
 async function selectDetailBooking(page: any) {
   await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
+  await waitForHydration(page);
   await page.locator('[data-testid^="departure-"]').first().click();
   await page.locator('[data-testid^="tier-"]').first().click();
 }
@@ -44,7 +46,13 @@ async function fillAllStep2(page: any, overrides: Record<string, string> = {}) {
     await page.getByPlaceholder('Search city…').fill(vals.city);
     await page.getByRole('option', { name: vals.city, exact: true }).click();
   }
-  if (vals.state)          await ti.nth(3).fill(vals.state); // nth 2 is city search
+  // State is a searchable dropdown too — typing into its search box without
+  // picking an option leaves the field unset and blocks the step.
+  if (vals.state) {
+    await page.getByRole('button', { name: 'Select your state' }).click();
+    await page.getByPlaceholder('Search state…').fill(vals.state);
+    await page.getByRole('option', { name: vals.state, exact: true }).click();
+  }
   if (vals.instagram)      await ti.nth(4).fill(vals.instagram);
   if (vals.emergencyName)  await ti.nth(5).fill(vals.emergencyName);
 
@@ -71,7 +79,11 @@ async function goToStep3(page: any, overrides: Record<string, string> = {}) {
 test.describe('WF-1: Discovery journey — browsing to booking CTA', () => {
   test('home page loads with headline and trips CTA', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Go where the').first()).toBeVisible({ timeout: 15_000 });
+    // Assert on the h1 itself rather than a copy fragment — the old
+    // 'Go where the' assertion silently rotted when the headline was rewritten.
+    const headline = page.locator('h1').first();
+    await expect(headline).toBeVisible({ timeout: 15_000 });
+    await expect(headline).toContainText(/\S/);
     const ctaLink = page.locator('a[href*="/trips"]').first();
     await expect(ctaLink).toBeVisible();
   });
@@ -197,56 +209,49 @@ test.describe('WF-2: Step 2 field-level validation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Workflow 3 — Register without paying
-// Full journey: Step 1 → 2 → 3 → T&C → "Register without paying" → lead state
+// Workflow 3 — Pay-later journey
+// The lead is created at Step 2, so Step 3's secondary "I'll pay later" action
+// parks the registration in a lead-hold state without a T&C gate.
+// Full journey: Step 1 → 2 → 3 → "I'll pay later" → lead-hold state
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('WF-3: Register without paying journey', () => {
-  test('"Register without paying" requires T&C to be checked', async ({ page }) => {
-    await goToStep3(page);
-    // Do NOT check T&C
-    await page.locator('button:has-text("Register without paying")').click();
-    await expect(page.locator('text=Please accept the Terms and Cancellation Policy')).toBeVisible({ timeout: 5_000 });
-    // Should still be on Step 3, not a confirmation state
-    await expect(page.locator('button:has-text("Register without paying")')).toBeVisible();
+test.describe('WF-3: Pay-later journey', () => {
+  test('"I\'ll pay later" is reachable without checking T&C', async ({ page }) => {
+    await goToStep3(page, { email: `wf3-x-${Date.now()}@example.invalid` });
+    // Do NOT check T&C — the pay-later path is not gated on consent.
+    await page.locator("button:has-text(\"I'll pay later\")").click();
+    await expect(page.locator("text=We're holding your details")).toBeVisible({ timeout: 15_000 });
+    expect(page.url()).toMatch(/\/book/);
   });
 
-  test('"Register without paying" shows in-page lead confirmation state', async ({ page }) => {
+  test('"I\'ll pay later" shows in-page lead-hold state', async ({ page }) => {
     await goToStep3(page, { email: `wf3-a-${Date.now()}@example.invalid` });
-
-    // Accept T&C
-    await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
-    await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
-
-    await page.locator('button:has-text("Register without paying")').click();
+    await page.locator("button:has-text(\"I'll pay later\")").click();
 
     // Should stay on the same URL (no redirect)
     await expect(page).not.toHaveURL(/\/thank-you/, { timeout: 5_000 });
     expect(page.url()).toMatch(/\/book/);
 
-    // Lead confirmation should appear in-page
-    await expect(page.locator("text=You're registered — but your spot is not secured")).toBeVisible({ timeout: 15_000 });
+    // Lead-hold state appears in-page
+    await expect(page.locator("text=We're holding your details")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("text=the spot isn't confirmed until the advance lands")).toBeVisible();
   });
 
-  test('lead confirmation does not use confirmed language', async ({ page }) => {
+  test('lead-hold state does not use confirmed-spot language', async ({ page }) => {
     await goToStep3(page, { email: `wf3-b-${Date.now()}@example.invalid` });
-    await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
-    await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
-    await page.locator('button:has-text("Register without paying")').click();
-    await expect(page.locator("text=You're registered — but your spot is not secured")).toBeVisible({ timeout: 15_000 });
+    await page.locator("button:has-text(\"I'll pay later\")").click();
+    await expect(page.locator("text=We're holding your details")).toBeVisible({ timeout: 15_000 });
     // Must NOT show success/confirmed-spot language
-    await expect(page.locator("text=You're in")).not.toBeVisible();
-    await expect(page.locator("text=your spot is confirmed")).not.toBeVisible();
-    await expect(page.locator("text=Congratulations")).not.toBeVisible();
+    await expect(page.locator("text=You're in. Spot confirmed.")).not.toBeVisible();
+    await expect(page.locator('text=your seat on')).not.toBeVisible();
+    await expect(page.locator('text=welcome aboard')).not.toBeVisible();
   });
 
-  test('lead confirmation has "Pay now" button that returns to payment form', async ({ page }) => {
+  test('lead-hold state has "Pay now & confirm" that returns to the payment form', async ({ page }) => {
     await goToStep3(page, { email: `wf3-c-${Date.now()}@example.invalid` });
-    await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
-    await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
-    await page.locator('button:has-text("Register without paying")').click();
-    await expect(page.locator('button:has-text("Pay now")')).toBeVisible({ timeout: 15_000 });
-    // Clicking "Pay now" returns to the payment form
-    await page.locator('button:has-text("Pay now")').click();
+    await page.locator("button:has-text(\"I'll pay later\")").click();
+    await expect(page.locator('button:has-text("Pay now & confirm")')).toBeVisible({ timeout: 15_000 });
+    // Clicking it returns to the payment form
+    await page.locator('button:has-text("Pay now & confirm")').click();
     await expect(page.locator('text=How to pay')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('text=Upload payment screenshot')).toBeVisible();
   });
@@ -264,16 +269,9 @@ test.describe('WF-4: Step navigation and payment tab interactions', () => {
     await expect(page.locator('text=Your Trip').first()).toBeVisible();
   });
 
-  test('"Change" in booking summary returns to Step 1 without losing Step 2 data', async ({ page }) => {
-    await goToStep3(page);
-    await page.locator('button:has-text("Change")').click();
-    // Should be back at Step 1
-    await expect(page.locator('text=Continue to your details')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('text=Your Trip').first()).toBeVisible();
-    // Navigate forward again — Step 2 form should still be filled
-    await page.locator('text=Continue to your details').click();
-    await expect(page.locator('input[type="text"]').nth(0)).toHaveValue('Journey Tester', { timeout: 5_000 });
-  });
+  // Removed: the "Change" button in the Step 3 booking summary no longer exists —
+  // the summary is read-only and the only back-nav is browser back (covered by
+  // "Browser back on Step 2 returns to Step 1" above).
 
   test('Step 3 step bar shows steps 1 & 2 as completed', async ({ page }) => {
     await goToStep3(page);

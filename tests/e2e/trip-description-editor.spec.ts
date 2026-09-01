@@ -12,7 +12,12 @@ test.describe('trip description editor', () => {
   test('loads plain text and synchronizes supported formatting as Markdown', async ({ page }) => {
     await page.goto('/admin/trips/qa-test-bookable');
     await page.getByRole('button', { name: 'Content', exact: true }).click();
-    const editor = page.locator('[data-rich-text-editor]');
+    // The page now hosts more than one rich-text editor (description +
+    // highlights), so scope to the one bound to the description field rather
+    // than matching the bare attribute.
+    const editor = page
+      .locator('[data-rich-text-editor]')
+      .filter({ has: page.locator('textarea[name="description"]') });
     const surface = editor.locator('[contenteditable="true"]');
     const markdown = editor.locator('textarea[name="description"]');
 

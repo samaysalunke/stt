@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 // ── Trip details page (qa-test-bookable) ─────────────────────────────────────
 // This trip uses the legacy schema (flat price, no occupancy chooser).
@@ -9,6 +10,7 @@ const BOOK_URL = '/trips/qa-test-bookable/book';
 
 async function waitForPanel(page: any) {
   await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
+  await waitForHydration(page);
 }
 
 async function selectBooking(page: any) {
@@ -94,6 +96,7 @@ test('book page Step 2 blocks advance with missing required field', async ({ pag
 
 // ── Book page — Step 3 ────────────────────────────────────────────────────────
 async function fillStep2AndAdvance(page: any) {
+  await waitForHydration(page);
   await page.locator('text=Continue to your details').click();
   await expect(page.locator('text=Full Name').first()).toBeVisible({ timeout: 10_000 });
 
@@ -104,7 +107,11 @@ async function fillStep2AndAdvance(page: any) {
   await page.getByRole('button', { name: 'Select your city' }).click();
   await page.getByPlaceholder('Search city…').fill('Mumbai');
   await page.getByRole('option', { name: 'Mumbai', exact: true }).click();
-  await textInputs.nth(3).fill('Maharashtra');          // State (nth 2 is city search)
+  // State is a searchable dropdown, not a text input — typing into its search
+  // box without picking an option leaves the field unset and blocks the step.
+  await page.getByRole('button', { name: 'Select your state' }).click();
+  await page.getByPlaceholder('Search state…').fill('Maharashtra');
+  await page.getByRole('option', { name: 'Maharashtra', exact: true }).click();
   await textInputs.nth(4).fill('@qa_pw');               // Instagram
   await textInputs.nth(5).fill('QA Emergency');         // Emergency Name
 
@@ -129,14 +136,15 @@ test('book page Step 3 shows booking summary, payment instructions, and upload z
   await expect(page.locator('text=How to pay')).toBeVisible();
   // Screenshot upload always visible
   await expect(page.locator('text=Upload payment screenshot')).toBeVisible();
-  // Secondary action present
-  await expect(page.locator('button:has-text("Register without paying")')).toBeVisible();
+  // Secondary "pay later" action present (the lead is already created at Step 2,
+  // so this path no longer gates on T&C — it just parks the registration).
+  await expect(page.locator("button:has-text(\"I'll pay later\")")).toBeVisible();
 });
 
 test('book page Step 3 always shows the honesty line', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
-  await expect(page.locator('text=Spots are confirmed only after we verify').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("text=This spot isn't held yet").first()).toBeVisible({ timeout: 10_000 });
 });
 
 test('book page Step 3 "Confirm my spot" is disabled without a screenshot', async ({ page }) => {
@@ -145,12 +153,25 @@ test('book page Step 3 "Confirm my spot" is disabled without a screenshot', asyn
   await expect(page.locator('button:has-text("Confirm my spot")')).toBeDisabled({ timeout: 10_000 });
 });
 
-test('book page Step 3 T&C required for "Register without paying"', async ({ page }) => {
+test('book page Step 3 "Confirm my spot" stays disabled until both consent boxes are checked', async ({ page }) => {
   await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
   await fillStep2AndAdvance(page);
-  // Do NOT check T&C — submit should show error
-  await page.locator('button:has-text("Register without paying")').click();
-  await expect(page.locator('text=Please accept the Terms and Cancellation Policy')).toBeVisible({ timeout: 5_000 });
+  const confirm = page.locator('button:has-text("Confirm my spot")');
+  await expect(confirm).toBeDisabled({ timeout: 10_000 });
+  await page.locator('label').filter({ hasText: 'Terms and Conditions' }).locator('input[type="checkbox"]').check();
+  await page.locator('label').filter({ hasText: 'Cancellation Policy' }).locator('input[type="checkbox"]').check();
+  // Still disabled — the payment screenshot is the remaining gate.
+  await expect(confirm).toBeDisabled();
+});
+
+test('book page Step 3 "I\'ll pay later" parks the registration as a lead', async ({ page }) => {
+  await page.goto(`${BOOK_URL}?batch=qa-bookable-2099&tier=standard`);
+  await fillStep2AndAdvance(page);
+  await page.locator("button:has-text(\"I'll pay later\")").click();
+  // Lands on the lead-hold state, not a confirmed-spot state.
+  await expect(page.locator("text=We're holding your details")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('button:has-text("Pay now & confirm")')).toBeVisible();
+  await expect(page.locator('text=Spot confirmed')).toHaveCount(0);
 });
 
 test('book page redirects to trip page when batch param is invalid', async ({ page }) => {

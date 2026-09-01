@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 // qa-test-coming-soon has one bookable date (qa-cs-open-2099) and one
 // coming-soon date (qa-cs-soon-2099).
@@ -27,6 +28,7 @@ test('coming-soon date has no real price in the page HTML', async ({ page }) => 
 test('selecting the coming-soon date switches the panel to wishlist mode', async ({ page }) => {
   await page.goto(TRIP_URL);
   await page.waitForSelector('[data-testid^="departure-"]', { timeout: 15_000 });
+  await waitForHydration(page);
 
   // Bookable date → price + occupancy + Save my spot
   await page.locator('[data-testid="departure-qa-cs-open-2099"]').click();
@@ -35,13 +37,18 @@ test('selecting the coming-soon date switches the panel to wishlist mode', async
   // Coming-soon date → blurred price, wishlist form, no occupancy
   await page.locator('[data-testid="departure-qa-cs-soon-2099"]').click();
   await expect(page.locator('#wishlist-form')).toBeVisible();
-  await expect(page.locator('#booking-panel-cta')).toHaveCount(0);
+  // The panel reuses #booking-panel-cta for both states, so assert on the kind
+  // of control rather than its absence: wishlist mode must render the form's
+  // submit button, never the anchor that links through to checkout.
+  await expect(page.locator('a#booking-panel-cta')).toHaveCount(0);
+  await expect(page.locator('#wishlist-form button#booking-panel-cta')).toBeVisible();
   await expect(page.locator('text=Choose occupancy')).toHaveCount(0);
 });
 
 test('signed-out visitor can submit the wishlist form and see confirmation', async ({ page }) => {
   await page.goto(TRIP_URL);
   await page.waitForSelector('[data-testid="departure-qa-cs-soon-2099"]', { timeout: 15_000 });
+  await waitForHydration(page);
   await page.locator('[data-testid="departure-qa-cs-soon-2099"]').click();
 
   await page.locator('#wishlist-form input[type="text"]').fill('E2E Wishlister');
