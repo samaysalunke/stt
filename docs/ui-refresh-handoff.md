@@ -9,13 +9,14 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 306/306 · `test:api` 154/154 ·
-  `test:e2e` 120/120 functional · `visual` **81/85**.
-  **Correction (2026-09-02):** the `visual` 85/85 claim above did not survive a
-  re-run. `admin-dashboard` and `admin-customers` fail at both viewports, and they
-  fail on `dad6514` with no working-tree changes at all — verified by restoring
-  the tree and re-running. See "Admin badge baselines drift on data" below.
+  `--project=chromium` 119/119 functional · `--project=visual` 86/86.
+  Green, and green *after* a full `test:api` + functional run, which is a stronger
+  claim than this doc could make before `1d76433` — see "The visual suite owns its
+  own database". The functional count moved 120 → 119 only because
+  `visual.spec.ts`'s thank-you redirect assertion travelled with the file into the
+  visual project.
 - **Nothing is pushed.** The branch is **10 commits ahead of `origin/ui-refresh`**
-  as of 2026-09-02 (12 with `fc320d7`). PR #16 is still a draft showing the older tree. Owner has not
+  as of 2026-09-02 (14 with `1d76433`). PR #16 is still a draft showing the older tree. Owner has not
   yet approved a push — ask before you do it.
 - **Phases 0 through 6 are done.** The Phase 1 review gate is cleared (see "Gate
   decisions"). No phase remains; what is left is the cleanup list at the bottom.
@@ -270,18 +271,25 @@ Baselines archived in `docs/slop-baseline.txt`, `docs/bundle-baseline.txt`,
 
 ```
 npm run build                       # must stay clean; watch better-sqlite3 externalization
-npm run test:unit                   # 300/300
-npm run test:api                    # 153/153 — proves backend untouched
-npm run test:e2e                    # 150/150 (functional + visual)
-npx playwright test tests/e2e/visual.spec.ts                    # 32 snapshots
-npx playwright test tests/e2e/visual.spec.ts --update-snapshots # after an INTENDED visual change (Phase 3)
+npm run test:unit                   # 306/306
+npm run test:api                    # 154/154 — proves backend untouched
+npx playwright test --project=chromium  # 119/119 functional
+npx playwright test --project=visual    # 86/86 snapshots (seeds its own DB first)
+npx playwright test --project=visual --update-snapshots  # after an INTENDED visual change
 bash scripts/slop-metrics.sh        # track the cleanup
 npm run perf:lhci                   # Lighthouse (not yet baselined)
 ```
 
-Visual snapshots are `*-chromium-darwin.png` — platform-specific. Regenerate on a
-different OS/CI or they will all "fail". The harness stubs `images.unsplash.com` with
-`public/logo.jpg` and freezes animations/fonts for determinism.
+`npm run test:e2e` (bare `playwright test`) still runs everything: the functional
+project, the visual seed, then the visual project. The split matters when you are
+iterating — `--project=visual` boots the second dev server and reseeds, and
+`--project=chromium` leaves it alone.
+
+Visual snapshots are `*-darwin.png` — platform-specific. Regenerate on a different
+OS/CI or they will all "fail". The project name is deliberately not in the
+filename (renaming a project would orphan all 86). The harness stubs
+`images.unsplash.com` with `public/logo.jpg` and freezes animations/fonts for
+determinism.
 
 ## The visual harness — read before touching a snapshot
 
@@ -368,48 +376,60 @@ with fixed filler: real markup, real classes, deterministic characters.
 Capturing and re-running twice proves nothing: the data has not moved in between.
 
 ```bash
-npx playwright test visual.spec.ts -g "admin" --update-snapshots
-npm run test:api                                   # writes rows
-npx playwright test --grep-invert "visual regression"   # books trips, creates registrations
-npx playwright test visual.spec.ts                 # must be 85/85
+npx playwright test --project=visual --update-snapshots
+npm run test:api                  # writes rows to the shared dev DB
+npx playwright test --project=chromium   # books trips, creates registrations
+npx playwright test --project=visual     # must be 86/86
 ```
 
-Both earlier harness bugs would have been caught by that sequence. Neither was,
-because the commits that introduced them skipped it.
+All three harness bugs would have been caught by that sequence; none was, because
+the commits that introduced them skipped it. It was run in full for `1d76433` and
+passes — 86/86, then 154/154, then 119/119, then 86/86 — which is the first time
+that has been true.
 
-### Admin badge baselines drift on data (open, found 2026-09-02)
+### The visual suite owns its own database (`1d76433`)
 
-`stubText` normalises the *characters* in a row. It does not normalise the
-*class* on a status badge, and that class is chosen from the row's data. So the
-four remaining `visual` failures are pure colour:
+`stubText` normalises the *characters* in a row. It does not normalise the *class*
+on a status badge, and that class is chosen from the row's data. So on 2026-09-02
+`admin-dashboard` and `admin-customers` failed at both viewports on a completely
+clean tree: layout and type pixel-identical, only the badge fills moved, because
+`test:api` and the functional specs write registrations to the shared dev SQLite
+and the surviving rows carried different statuses than at capture.
 
-| route | baseline | now |
-|---|---|---|
-| `admin-customers` @ both viewports | amber status pill, pink trip pill on all 3 rows | row 1 green + blue, rows 2-3 no status pill at all + blue |
-| `admin-dashboard` @ both viewports | recent-registration badges one colour | another |
+Masking the badges would have "fixed" it and been the threshold-0.2 mistake a
+third time — the next piece of open work is the status-badge palette, and masking
+blinds the gate to exactly what that work moves. So the data got pinned instead:
 
-Diff sizes are 1.5k px (dashboard) and 12k px (customers); the admin gate is
-`threshold: 0.05 / maxDiffPixelRatio: 0`, so any of it fails. Layout, type and
-spacing are pixel-identical — only the badge fills moved.
+- **`visual` is its own Playwright project**, on its own dev server at
+  **port 4322**, with **`DATA_DIR=.visual-data`** (gitignored). The functional
+  `chromium` project keeps the shared `data/` database and `:4321`. Nothing but
+  the seed writes to `.visual-data`.
+- **`visual-seed`** is a setup project the `visual` project declares as a
+  dependency, so it cannot be skipped. It requests `/` first — `src/lib/db.ts`
+  creates the schema lazily, so a fresh `.visual-data` has no tables until
+  something asks for a page — then runs `scripts/seed-visual-db.mjs`.
+- **`tests/e2e/fixtures/visual-dataset.mjs`** is the dataset: 8 registrations
+  covering every `REG_STATUS` and both confirmed payment states, plus contacts,
+  newsletter, email log, audit and one itinerary lead. Emails are `.test`
+  (RFC 2606) — nothing here can be mistaken for a real person.
+- The seed **does not create the schema.** `src/lib/db.ts` owns the DDL; a
+  fixture that redeclares it drifts from it. The seed inserts only columns
+  `PRAGMA table_info` reports, so adding a column does not break it, and it
+  **refuses to run against `./data`**.
+- Volatile tables — `admin_sessions`, `user_sessions`, the three `analytics_*`,
+  `payment_events`, `broadcast_log`, the two caches — are wiped and *not*
+  repopulated, so a login or a page view cannot accumulate across runs.
+  `sqlite_sequence` is reset so registration ids are 1..n every time.
 
-This is **not** a rendering regression. It is the same class of churn
-`capAdminLists` and `stubText` were written for, one level deeper: the rows that
-survive the cap now carry different *statuses* than they did at capture, because
-`test:api` and the functional e2e specs write to the one shared dev SQLite at
-`data/seekthethrill.db`. There is no per-run DB snapshot.
+Two things to know before you touch it:
 
-**Do not "fix" this by masking the badges.** That is the threshold-0.2 mistake
-again: item 2 of the open work is a status-badge palette change, and masking the
-badges blinds the gate to exactly the thing that work moves. Two honest options:
-
-1. **Snapshot/restore `data/seekthethrill.db` around the visual run** (copy aside
-   in a `globalSetup`, restore in `globalTeardown`, WAL files included). Makes
-   these baselines mean something. The real fix, and the bigger one.
-2. **Re-capture the four and accept they will drift again** on the next `test:api`
-   run. Cheap, dishonest, and it will re-fail for whoever runs the suite next.
-
-Verified pre-existing: restoring the tree to `dad6514` and re-running the four
-reproduces all four failures with no working-tree changes.
+1. **A new fixture row must survive the page's own parsing.** `audit_log`'s
+   `previousValue` / `newValue` are JSON documents that `/admin/audit` feeds to
+   `JSON.parse`; bare strings 500 the page. The seed will happily write them.
+2. **`reuseExistingServer: false` on the visual server is deliberate.** A reused
+   server may be pointed at a different `DATA_DIR`, and knowing which database is
+   behind a snapshot is the entire point. Two visual runs at once will collide on
+   4322.
 
 ### Routes with no baseline, and why
 
@@ -720,8 +740,9 @@ merge blockers; 4-6 are verification the owner has not asked for yet.
    pre-date it (next item).
 
 2. **The status-badge palette (the last third of the deliberate-change work).**
-   Settle the DB-drift question above first — this work moves badge colours, and
-   right now the badge baselines cannot tell your change from a data write.
+   Now unblocked: the badge baselines are reproducible as of `1d76433`, and the
+   fixture puts every `REG_STATUS` and both confirmed payment states on screen, so
+   a palette change shows up as a diff you can review rather than as noise.
    ~230 hardcoded hex values remain in admin, nearly all one-off status-badge
    pairs: `#D1FAE5/#065F46` green, `#FEF9C3/#78350F` amber, `#DBEAFE/#1E40AF`
    blue, `#FEF2F2/#FECACA/#DC2626` red, `#F3F4F6/#374151` grey. Consolidate into a
