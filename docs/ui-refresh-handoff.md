@@ -9,11 +9,12 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 300/300 · `test:api` 153/153 ·
-  `test:e2e` 150/150 (118 functional + 32 visual). Everything green.
-- **Phase 0 = done. Phase 1 = done. Currently parked at the Phase 1 review gate**
-  (blocking) — awaiting the user's sign-off on visual direction before any further
-  page migration. Do not start Phase 2/3 until the user answers the 3 gate questions
-  (below).
+  `test:e2e` 149/149 (118 functional + 30 visual + 1 redirect assertion). Everything
+  green — and the e2e run was deliberately done *immediately after* `test:api` mutated
+  content, the sequence that used to break the visual baselines (gotcha #7).
+- **Phase 0 = done. Phase 1 = done. Phase 1 review gate = CLEARED** (see
+  "Gate decisions" below). Phase 1.5 — the one-time token retune the gate authorised
+  — is also done. **Phase 2 is now unblocked.**
 
 ## Commits on the branch (newest first)
 
@@ -25,17 +26,93 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 | `d05e5d0` | Phase 0 — slop metrics tooling + baselines (`scripts/slop-metrics.sh`, `docs/*-baseline.txt`) |
 | `0e93d8b` | Repair 13 stale e2e specs so the suite was green before touching UI |
 
-## The 3 open gate questions (user must answer before proceeding)
+## Gate decisions (settled — do not reopen)
 
-1. **Visual direction.** The homepage restyle is "keep the look, kill the slop" — near
-   pixel-equivalent, just primitives + tokens instead of inline styles. If the user
-   wants a real visual *refresh* (type proportions, button shape, spacing, colour
-   shifts), tune the tokens/primitives **once** now, before pages consume them.
-2. **Icons.** Currently a local zero-dependency `src/components/ui/Icon.astro` (12
-   glyphs, name→paths map). Alternative from the plan: add `astro-icon` +
-   `@iconify-json/lucide` (build-time, still zero runtime, but a dependency).
-3. **Lighthouse baseline.** `npm run perf:lhci` was NOT captured in Phase 0 (deferred).
-   Run it before Phase 2 or take first reading at end of Phase 2.
+1. **Visual direction → refresh, tuned once at the token layer.** Chosen over "keep
+   the look" because the baseline had four defects that are *token*-level, and every
+   page in Phases 2–5 would otherwise inherit them. See "Phase 1.5" below.
+2. **Icons → keep the local `src/components/ui/Icon.astro`.** 12 glyphs; `astro-icon`
+   + `@iconify-json/lucide` buys convenience for two dependencies and a build
+   integration. Revisit only if Phase 4/5 pushes past ~25 glyphs.
+3. **Lighthouse → captured.** Numbers and the audit findings are in "Lighthouse
+   baseline" below.
+
+## Phase 1.5 — the one-time token retune (done)
+
+Token/primitive layer only. No page migration, so the slop counters are unchanged
+(public inline styles still 276) and `data-testid` count is still 24.
+
+**Contrast — this was the headline finding, and Lighthouse confirmed it independently.**
+
+| | on white | on gray-soft | on blush | on navy |
+|---|---|---|---|---|
+| `--color-coral` `#E8725A` | 3.01 | 2.75 | 2.70 | 4.81 |
+| `--color-coral-ink` `#B84E2B` (new) | 5.04 | 4.62 | 4.53 | 2.86 |
+
+- **`--color-coral-ink` added.** Plain coral is a 3.01:1 contrast on white — fine as a
+  large-display accent, fails WCAG AA (4.5:1) as body-size text, which is how it was
+  being used for prices, "Read more" and "See All". Rule, also documented in
+  `global.css` and demonstrated on `/ui-kit`:
+  - coral as text at normal size → `text-coral-ink`
+  - coral as text at display size → `text-coral` is fine (AA large = 3:1)
+  - **on navy the rule inverts** — `text-coral` is 4.81:1 there, `text-coral-ink` 2.86:1.
+- **`--color-cta` darkened `#D95F3B` → `#C6472A`.** A white button label on the old
+  value was **3.72:1 — failing AA at the 14px semibold our buttons actually render
+  at**. This token fills every CTA on the public site, so the failure was site-wide;
+  one token fixed all 11 consuming files. Now 4.84:1.
+- **`Button` variants now form a real hierarchy.** `primary` was `bg-coral` (white
+  label at 3.01:1) and `cta` was `bg-cta` — two near-identical corals, which is why
+  coral read as "everything" and therefore as nothing. `primary` is now navy
+  (14.45:1). Use `cta` for the one action a page is asking for, `primary` for ordinary
+  affirmative actions, `outline` for repeated actions in a list — a grid of cards
+  should not be a wall of solid coral.
+
+**Type scale is now fluid.** Every `--text-display-*` step is a `clamp()` interpolating
+between a 320px minimum and a 1280px maximum. Maxima are a clean 1.25 major third off
+3.25rem (3.25 / 2.6 / 2.08 / 1.664 / 1.331); minima are compressed to ~1.15 so mobile
+stays dense. Two consequences:
+- **Gotcha #7 is structurally dead.** Headings can no longer overflow a narrow
+  viewport, so they no longer need `sm:`/`lg:` size ladders or `clamp()` one-offs —
+  write `text-display-xl` once. The homepage `h1` and the "Where to, wanderer?" heading
+  were both simplified this way (the `sm:whitespace-nowrap` guard is gone).
+- Desktop sizes are unchanged at 1280px, so wide-viewport layouts did not move.
+
+**Other primitive changes**
+- **`CardFooter.astro` (new).** `mt-auto` footer region for `Card`. Without it, a row of
+  cards whose titles differ in length puts its CTAs on ragged baselines — visible in the
+  Phase 0 homepage baseline. `/ui-kit` demos it with a deliberately two-line title.
+- `Button` now uses `rounded-[var(--radius-pill)]` instead of a hardcoded
+  `rounded-full`; `Card` was already on its token.
+- `Field.astro` error text and required marker moved to `text-coral-ink` — form errors
+  at `text-xs` were the worst contrast offender on the site.
+- Homepage "How it works" numerals were `opacity-20 text-white` on navy — effectively
+  invisible. Now `text-peach/70`: legible, and deliberately *not* coral, so a
+  decorative numeral never reads as an action.
+
+## Lighthouse baseline (captured 2026-09-01, pre-Phase-2)
+
+Desktop preset, 3 runs/URL, medians. Reports in `test-reports/lighthouse/`.
+
+| route | perf | a11y | best-practices | SEO | LCP | CLS | TBT |
+|---|---|---|---|---|---|---|---|
+| `/` | 97 | 94 | 78 | 100 | ~1.19s | 0.007 | 0 |
+| `/trips/` | 97 | 89 | 78 | 100 | ~1.17s | 0.003 | 0 |
+| `/trips/monsoon-meghalaya/` | 97 | 94 | 78 | 100 | ~1.17s | 0.000 | 0 |
+
+All configured assertions pass. Two things to know before anyone chases a number:
+
+- **Best-practices 78 is not a UI problem and will not move with UI work.** It is
+  entirely Microsoft Clarity: `third-party-cookies` + the matching `inspector-issues`
+  cookie warnings from `clarity.ms` / `c.bing.com`. Out of scope for this refresh.
+- **The a11y failures are real and located.** `color-contrast` is addressed by Phase
+  1.5 above. The rest are page-level and belong to the phase that owns the file:
+
+| audit | where | phase |
+|---|---|---|
+| `image-redundant-alt` | header `<img src="/logo.jpg" alt="Seek the Thrill">` sits inside `<a aria-label="Seek the Thrill home">`; alt duplicates the link name. Use `alt=""`. | 2 (Header) |
+| `label-content-name-mismatch` | same header brand link — visible text and accessible name diverge. | 2 (Header) |
+| `aria-hidden-focus` | `#menu-overlay` is `aria-hidden="true"` but contains focusable descendants. Keyboard users can tab into a hidden overlay. | 2 (Header) |
+| `heading-order` | footer `<h4>` follows no `<h3>`; on `/trips/` the card `<h3>`s follow no `<h2>`. | 2 (Footer) / 4 (trips index) |
 
 ## What Phase 1 added (safe to build on)
 
@@ -109,7 +186,37 @@ Baselines archived in `docs/slop-baseline.txt`, `docs/bundle-baseline.txt`,
 6. **Dev server pileups.** Playwright's `reuseExistingServer: true` can grab a stale
    `astro dev` on :4321. If a run hangs on "Timed out waiting for webServer":
    `pkill -f 'astro dev'; lsof -ti:4321 | xargs kill -9`.
-7. **Homepage 320px overflow** — a fixed `text-display-*` with `whitespace-nowrap` on
+7. **The visual harness was not deterministic — trip listings are SHUFFLED.**
+   `sortTripsByPriority(..., contentSeededRandom())` seeds a PRNG from
+   `getContentVersion()`, and that counter is **persisted in SQLite**
+   (`app_meta.content_version`), bumped by every writer in `src/lib`, and therefore
+   monotonic forever. Every `npm run test:api` run creates and deletes trips and so
+   reseeds the shuffle. Net effect: **a baseline containing a trip listing was only
+   valid until the next content write anywhere**, and would then "fail" with a
+   full-page diff that was pure reordering and said nothing about styling. This is
+   what made `home` and `trips-index` look like regressions after an api run.
+   **Fixed** in `visual.spec.ts` by `pinListingOrder()` — sorts trip cards by visible
+   title before the shot and rewinds the carousel's `scrollLeft` (the carousel script
+   measures offsets on hydration against the *pre-sort* order, and that scroll offset
+   survives a reorder). Verified by bumping `content_version` by 13 and re-running:
+   31/31 pass. Full styling coverage is retained — a real card regression still diffs.
+   Without this, Phase 4's "snapshots byte-identical" gate was unenforceable.
+8. **Astro's dev toolbar was baked into all 32 Phase 0 baselines** — the dark pill on
+   the viewport-height line, occluding page content behind it. Hidden in `freezePage`
+   via `astro-dev-toolbar { display: none }` rather than `devToolbar` in
+   `astro.config.mjs`, so the do-not-touch config stays untouched.
+9. **No backticks inside `page.addStyleTag({ content: ` ... ` })`.** The CSS lives in a
+   template literal, so a backtick in a *comment* terminates it and the spec fails to
+   parse. Cost a full e2e run to spot.
+10. **`/thank-you/` is a 301 to `/trips/`** (confirmation moved inline onto the book
+    page). It was being screenshotted, producing two byte-duplicates of the
+    trips-index baselines — doubling the flake for zero coverage. Now asserted as a
+    redirect instead; snapshot count 32 → 30, e2e total 150 → 149.
+11. **Gotcha #1 is narrower than first written.** `thank-you.astro` *does* use
+    `return Astro.redirect('/trips/', 301)` in frontmatter and builds fine. The
+    breakage is specifically an **early/conditional** return with code after it, not a
+    return as the sole frontmatter statement.
+12. **Homepage 320px overflow** — a fixed `text-display-*` with `whitespace-nowrap` on
    "Where to, wanderer?" overflowed narrow viewports (original used fluid `clamp`).
    Fixed with `text-display-md sm:whitespace-nowrap sm:text-display-lg …`. Watch for
    this pattern when converting other fluid headings.
@@ -137,12 +244,25 @@ different OS/CI or they will all "fail". The harness stubs `images.unsplash.com`
   `<style is:global>` — trim only 1:1 utility mappings), `Footer`,
   `LegalPageLayout`, `ProfileChrome`, `BackButton`, `PageLoader`. Zero testids here.
   Re-baseline snapshots once (chrome touches every page). DOM-stable.
+  Fold in while you are in these files:
+  - the three Header/Footer a11y audits in the Lighthouse table above
+    (`image-redundant-alt`, `label-content-name-mismatch`, `aria-hidden-focus`,
+    `heading-order`) — all four are small and all four are in Phase 2's files;
+  - **duplicate newsletter capture.** The homepage "Be first to know" band and the
+    footer's "Stay in the loop" are adjacent and identical in function — two email
+    forms stacked. Worth collapsing to one, but the footer form carries a real
+    `id`/`name`, which is on the do-not-touch list — **get sign-off before removing
+    it**, do not fold it in silently.
 - **Phase 3** — marketing/legal pages (index already done). Intended visual change;
   review diffs then `--update-snapshots`. Delete old `src/components/Badge.astro`.
 - **Phase 4** — booking flow: `trips/index`, `trips/[slug]` (67 inline styles,
   densest file), `trips/[slug]/book`, `TripCard`, `TestimonialCard`. **All 24
   testids live here or in do-not-touch islands.** Hard gate: e2e unchanged + these
-  routes' snapshots byte-identical.
+  routes' snapshots reviewed then re-baselined (they now change *only* for real
+  styling reasons — see gotcha #7). Carry the Phase 1.5 rules in: `TripCard` should
+  take `Button variant="outline"` (a grid of solid coral CTAs has no hierarchy) and
+  `CardFooter` (its CTAs are currently on ragged baselines), and its coral price text
+  needs `text-coral-ink`.
 - **Phase 5** — `profile`, `u/[username]` (already zero inline styles),
   `photo-vault/*` (GLightbox — verify selectors), `ProfileTripCard`.
 - **Phase 6 (optional)** — admin. Needs a Playwright auth `storageState` fixture

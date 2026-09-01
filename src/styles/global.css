@@ -3,13 +3,33 @@
 @theme {
   /* ── STT Brand Tokens ─────────────────────────────────────── */
   --color-coral: #E8725A;
-  --color-cta: #D95F3B;
+  /* Button fill. Darkened from #D95F3B: a white button label on the old value
+     was 3.72:1, which fails WCAG AA (4.5:1) at the 14px semibold our buttons
+     actually render at — and this token fills every CTA on the public site, so
+     the failure was site-wide. #C6472A puts a white label at 4.84:1.
+     Confirmed by the Lighthouse baseline, which flagged the homepage CTA anchor
+     under `color-contrast`. */
+  --color-cta: #C6472A;
   --color-blush: #FDF0EC;
   --color-navy: #1B2B3A;
   --color-peach: #F5DDD7;
   --color-white: #FFFFFF;
   --color-gray-soft: #F5F5F3;
   --color-gray-text: #6B7280;
+
+  /* Text-safe coral. `--color-coral` is a 3.0:1 contrast against white — fine as
+     a large-display accent or a button *fill*, but it FAILS WCAG AA (4.5:1) as
+     body-size text. `--color-coral-ink` is the same hue darkened to clear 4.5:1
+     on all three light surfaces we ship (white 5.04:1, --color-gray-soft 4.62:1,
+     --color-blush 4.53:1).
+
+     Rule: coral-as-text at normal size  → text-coral-ink
+           coral-as-text at display size → text-coral is fine (AA large = 3:1)
+           coral-as-fill (buttons)       → bg-cta
+
+     coral-ink is for LIGHT surfaces only — on --color-navy it drops to 2.86:1.
+     Coral text on a navy band should stay `text-coral` (4.81:1). */
+  --color-coral-ink: #B84E2B;
 
   /* ── Aliases used by admin/legacy pages ─────────────────────── */
   --color-primary: #1B2B3A;
@@ -35,12 +55,28 @@
 
   /* Display type scale (Fraunces). Use for headings via `text-display-*`;
      replaces the per-heading `text-[2.1rem] sm:text-[2.6rem] …` arbitrary values
-     scattered across pages. Body copy keeps Tailwind's default `text-*` scale. */
-  --text-display-xs: 1.25rem;   --text-display-xs--line-height: 1.35;
-  --text-display-sm: 1.5rem;    --text-display-sm--line-height: 1.3;
-  --text-display-md: 1.875rem;  --text-display-md--line-height: 1.2;
-  --text-display-lg: 2.5rem;    --text-display-lg--line-height: 1.1;
-  --text-display-xl: 3.25rem;   --text-display-xl--line-height: 1.05;
+     scattered across pages. Body copy keeps Tailwind's default `text-*` scale.
+
+     Fluid by construction: every step is a `clamp()` interpolating between a
+     320px-viewport minimum and a 1280px maximum. Two consequences, both
+     deliberate:
+       1. A heading can no longer overflow a narrow viewport, so headings do NOT
+          need `sm:`/`lg:` size variants or `clamp()` one-offs at the call site —
+          write `text-display-xl` once. (This is the structural fix for the
+          320px overflow that bit the homepage `h1`.)
+       2. The maxima form a clean 1.25 major-third scale off 3.25rem
+          (3.25 / 2.6 / 2.08 / 1.664 / 1.331); the minima are compressed to a
+          ~1.15 ratio so mobile stays dense rather than shouty. */
+  --text-display-xs: clamp(1.2rem,   1.1563rem + 0.2183vw, 1.331rem);
+  --text-display-xs--line-height: 1.35;
+  --text-display-sm: clamp(1.45rem,  1.3787rem + 0.3567vw, 1.664rem);
+  --text-display-sm--line-height: 1.3;
+  --text-display-md: clamp(1.7rem,   1.5733rem + 0.6333vw, 2.08rem);
+  --text-display-md--line-height: 1.22;
+  --text-display-lg: clamp(1.95rem,  1.7333rem + 1.0833vw, 2.6rem);
+  --text-display-lg--line-height: 1.12;
+  --text-display-xl: clamp(2.25rem,  1.9167rem + 1.6667vw, 3.25rem);
+  --text-display-xl--line-height: 1.05;
 
   /* ── Radii ─────────────────────────────────────────────────── */
   --radius-card: 1.5rem;   /* the `rounded-3xl` used on every card shell today */

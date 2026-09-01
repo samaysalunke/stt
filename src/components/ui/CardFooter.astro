@@ -1,0 +1,22 @@
+---
+/**
+ * Footer region for <Card>. Pins itself to the bottom of the card (`mt-auto`)
+ * so that a row of cards whose bodies differ in height — a two-line title next
+ * to a one-line title — still lines its calls-to-action up on one baseline.
+ *
+ * Requires the card to be a flex column, which <Card> and <CardBody> already
+ * are. Place it as the last child of <CardBody>.
+ */
+interface Props {
+  pad?: 'none' | 'sm' | 'md';
+  class?: string;
+}
+
+const { pad = 'none', class: className, ...rest } = Astro.props;
+
+const pads = { none: '', sm: 'pt-3', md: 'pt-5' } as const;
+---
+
+<div class:list={['mt-auto flex flex-col gap-2', pads[pad], className]} {...rest}>
+  <slot />
+</div>

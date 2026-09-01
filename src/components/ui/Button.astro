@@ -27,14 +27,25 @@ const {
 } = Astro.props;
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-full font-semibold ' +
+  'inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] font-semibold ' +
   'transition-all duration-150 hover:-translate-y-0.5 ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral ' +
   'disabled:opacity-40 disabled:pointer-events-none aria-disabled:opacity-40 aria-disabled:pointer-events-none';
 
+/**
+ * Hierarchy, deliberately: `primary` is navy, `cta` is coral. They used to be
+ * two near-identical corals, which is why coral read as "everything" and
+ * therefore as nothing. Navy also fixes contrast — a white label on the old
+ * `bg-coral` was 3.01:1 (fails AA); on navy it is 14.45:1, on the retuned
+ * `bg-cta` 4.84:1.
+ *
+ * Use `cta` for the one action a page is actually asking for, `primary` for
+ * ordinary affirmative actions, `outline` for repeated actions in a list (a
+ * grid of cards should not be a wall of solid coral).
+ */
 const variants: Record<string, string> = {
-  primary: 'bg-coral text-white hover:brightness-105 shadow-card',
-  cta: 'bg-cta text-white hover:brightness-105 shadow-card',
+  primary: 'bg-navy text-white hover:brightness-125 shadow-card',
+  cta: 'bg-cta text-white hover:brightness-110 shadow-card',
   outline: 'border border-current bg-transparent hover:bg-navy/5',
   ghost: 'bg-transparent hover:bg-navy/5',
 };

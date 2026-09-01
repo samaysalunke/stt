@@ -10,6 +10,7 @@ import Badge from '../components/ui/Badge.astro';
 import Card from '../components/ui/Card.astro';
 import CardMedia from '../components/ui/CardMedia.astro';
 import CardBody from '../components/ui/CardBody.astro';
+import CardFooter from '../components/ui/CardFooter.astro';
 import Section from '../components/ui/Section.astro';
 import Field from '../components/ui/Field.astro';
 import Input from '../components/ui/Input.astro';
@@ -84,14 +85,42 @@ const iconNames = ['map-pin', 'arrow-right', 'chevron-right', 'chevron-down', 'm
               <span slot="overlay" class="absolute left-3 top-3"><Badge value="booking-open" /></span>
             </CardMedia>
             <CardBody>
-              <h3 class="text-display-sm font-display">Sample trip {i + 1}</h3>
+              <h3 class="text-display-sm font-display">
+                {i === 1 ? 'Sample trip with a much longer two-line title' : `Sample trip ${i + 1}`}
+              </h3>
               <p class="inline-flex items-center gap-1.5 text-sm text-gray-text">
-                <Icon name="map-pin" class="text-coral" /> Somewhere offbeat
+                <Icon name="map-pin" class="text-coral-ink" /> Somewhere offbeat
               </p>
-              <Button variant="primary" size="md" block class="mt-auto">View details</Button>
+              <CardFooter>
+                <Button variant="outline" size="md" block>View details</Button>
+              </CardFooter>
             </CardBody>
           </Card>
         ))}
+      </div>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-display-sm font-display text-coral">Coral: fill vs. ink</h2>
+      <p class="max-w-2xl text-sm text-gray-text">
+        <code>--color-coral</code> is a display/decorative accent and a 3.01:1 contrast on
+        white &mdash; it fails WCAG AA as body-size text. Use <code>text-coral-ink</code>
+        (5.04:1) whenever coral has to be <em>read</em> at normal size. On navy the rule
+        inverts: <code>text-coral</code> is 4.81:1 there, <code>text-coral-ink</code> only 2.86:1.
+      </p>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded-[var(--radius-card)] bg-white p-5 shadow-card">
+          <p class="text-sm text-coral">text-coral on white &mdash; 3.01:1, fails AA</p>
+          <p class="mt-2 text-sm text-coral-ink">text-coral-ink on white &mdash; 5.04:1, passes</p>
+        </div>
+        <div class="rounded-[var(--radius-card)] bg-blush p-5">
+          <p class="text-sm text-coral">text-coral on blush &mdash; 2.70:1, fails AA</p>
+          <p class="mt-2 text-sm text-coral-ink">text-coral-ink on blush &mdash; 4.53:1, passes</p>
+        </div>
+        <div class="rounded-[var(--radius-card)] bg-navy p-5">
+          <p class="text-sm text-coral">text-coral on navy &mdash; 4.81:1, passes</p>
+          <p class="mt-2 text-sm text-coral-ink">text-coral-ink on navy &mdash; 2.86:1, fails AA</p>
+        </div>
       </div>
     </section>
 

@@ -18,9 +18,9 @@ const { label, for: htmlFor, required, hint, error, class: className, ...rest } 
 
 <div class:list={['flex flex-col gap-1.5', className]} {...rest}>
   <label class="text-sm font-medium text-navy" for={htmlFor}>
-    {label}{required && <span class="text-coral"> *</span>}
+    {label}{required && <span class="text-coral-ink"> *</span>}
   </label>
   <slot />
   {hint && !error && <p class="text-xs text-gray-text">{hint}</p>}
-  {error && <p class="text-xs text-coral">{error}</p>}
+  {error && <p class="text-xs text-coral-ink">{error}</p>}
 </div>
