@@ -8,15 +8,21 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Branch:** `ui-refresh` (off `main`). `main` untouched. Do **not** work on `main`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
-- **Suite state at handoff:** `build` clean · `test:unit` 306/306 · `test:api` 154/154 ·
-  `--project=chromium` 119/119 functional · `--project=visual` 86/86.
+- **Suite state at handoff:** `build` clean · `test:unit` 308/308 · `test:api` 154/154 ·
+  `--project=chromium` 121/121 functional · `--project=visual` 88/88.
   Green, and green *after* a full `test:api` + functional run, which is a stronger
   claim than this doc could make before `1d76433` — see "The visual suite owns its
-  own database". The functional count moved 120 → 119 only because
-  `visual.spec.ts`'s thank-you redirect assertion travelled with the file into the
-  visual project.
+  own database". Counts moved for reasons, not drift: functional 120 → 119 when
+  `visual.spec.ts`'s thank-you redirect assertion travelled into the visual
+  project, then → 121 with the two lightbox specs; visual 85 → 86 with that
+  redirect test, → 88 with the album route; unit 306 → 308 with the two palette
+  assertions.
+- **Lighthouse (built site, 2026-09-02):** `/` 97 · 100 · 78 · 100;
+  `/trips/` and the trip detail page 96 · 100 · 78 · 100
+  (perf · a11y · best-practices · SEO). Best-practices is Clarity's cookies and
+  nothing else.
 - **Nothing is pushed.** The branch is **10 commits ahead of `origin/ui-refresh`**
-  as of 2026-09-02 (14 with `1d76433`). PR #16 is still a draft showing the older tree. Owner has not
+  as of 2026-09-02 (18 with `8a63406`). PR #16 is still a draft showing the older tree. Owner has not
   yet approved a push — ask before you do it.
 - **Phases 0 through 6 are done.** The Phase 1 review gate is cleared (see "Gate
   decisions"). No phase remains; what is left is the cleanup list at the bottom.
@@ -434,8 +440,39 @@ Two things to know before you touch it:
 ### Routes with no baseline, and why
 
 - `registrations/[slug]` — the id is a DB row id, not stable across `test:api`.
-- `photo-vault/[slug]` — `src/content/albums/` is empty here, so it does not render.
 - `profile`, `u/[username]`, `unsubscribe` — auth/token routes.
+- `photo-vault/[slug]` **now has one**: `src/content/albums/qa-test-album.yaml`
+  gives the album page something to render. `copy-seed.js` skips `qa-test-*`, so
+  the fixture never reaches the production volume.
+
+### The two knobs, revisited a third time (`38a2556`)
+
+`threshold: 0.05` was still too loose. The palette work swapped the email log's
+"sent" green from `#DCFCE7` to `#D1FAE5` — 11/255 on one channel, about 4% — and
+the suite passed. There is no principled place to put that line, so the admin
+gate is now **`threshold: 0`** with **`maxDiffPixels: 60`**.
+
+- Exact matching only became affordable once the data was pinned (`1d76433`).
+- The 60 is antialiasing on rounded card corners, which genuinely jitters run to
+  run: at a zero budget, five or six routes fail per run, a different five each
+  time, at 1-22 pixels. 60 sits above the measured worst case and two orders
+  below one status pill (~1 200 pixels). A *ratio* cannot do this job — 1% of a
+  tall admin page is ~10 000 pixels, a whole restyle.
+- Verified by reverting the email-log green and watching the suite fail on it.
+
+**Public routes still run `maxDiffPixelRatio: 0.01`** and still cannot see a
+colour-only change: the homepage `text-coral → text-coral-ink` fix passed the
+gate and had to be re-baselined by hand. Same fix available — seed the public
+data too — see "Still open".
+
+### prepareShot: the dev server can reload underneath a test
+
+Freezing, ordering and stubbing are injected CSS and DOM mutation, so a
+navigation throws them away — and HMR navigates whenever a source file is edited
+while a run is in flight. That produced a 1.37M-pixel `trips-index` failure that
+was pure card reordering and passed on its own a minute later. `prepareShot()`
+counts `load` events during preparation and redoes the work once if the page
+moved under it; a second reload fails the test rather than looping.
 
 ### Known flake, unrelated to the refresh
 
@@ -688,10 +725,11 @@ longer have to be kept in step by hand.
 - **Three `<style is:global>` blocks** — the rich-text editor, the FAQ editor and
   the analytics chart. Their selectors target markup those pages build at runtime,
   which scoped styles would not reach.
-- **~230 hardcoded hex values** remain in admin, nearly all one-off status-badge
-  pairs (`#D1FAE5/#065F46`, `#FEF9C3/#78350F`, `#DBEAFE/#1E40AF`, …). Consolidating
-  them into a semantic status palette is a real change with real pixel movement —
-  worth doing, but as its own reviewed commit.
+- ~~**~230 hardcoded hex values**~~ — done in `38a2556`. What is left in
+  `src/pages/admin` is 84 values, and they are deliberate: `#fff`, the WhatsApp
+  transcript palette in `/admin/analytics`, Google's brand hexes on the OAuth
+  button, a few neutral borders and table rules, and the hex quoted inside the
+  comments that explain the swaps.
 
 ## Next phases
 
@@ -717,62 +755,79 @@ longer have to be kept in step by hand.
   styling reasons — see gotcha #7). Carry the Phase 1.5 rules in: `TripCard` should
   take `Button variant="outline"` (a grid of solid coral CTAs has no hierarchy) and
   `CardFooter` (its CTAs are currently on ragged baselines), and its coral price text
-  needs `text-coral-ink`. Lighthouse's remaining `color-contrast` failures are all in
-  these files: `TripCard`'s "View Details" (`background-color: var(--color-coral)` with
-  a white label = 3.01:1) and its coral `text-xs` caption, `TestimonialCard`'s
-  `.testimonial-toggle`, and the trip detail page's hardcoded `#22A654` / `#DC2626`
-  heading colours.
+  needs `text-coral-ink`. **Update (2026-09-02):** Lighthouse now reports zero
+  `color-contrast` violations on all three audited public URLs, so the list that
+  used to sit here is closed as far as axe is concerned. The white-on-coral button
+  label is the exception it does not catch — see "Still open" item 1.
 - ~~**Phase 5**~~ — done, see above.
 - ~~**Phase 6**~~ — done, see above.
 
 ## Open work — start here
 
-Ordered by what a new session should pick up first. Items 1-3 are the remaining
-merge blockers; 4-6 are verification the owner has not asked for yet.
+Everything the previous handoff listed is done. What remains below is what this
+session either found or deliberately did not take, with the reasoning.
 
-1. ~~**Delete `src/pages/ui-kit.astro`.**~~ **Done — `fc320d7`.** The "live
-   defect" framing in this doc was wrong, and the correction is worth keeping:
-   the page already guarded itself with `import.meta.env.PROD` →
-   `Astro.response.status = 404` plus a conditional render, and shipped
-   `robots="noindex,nofollow"`. In production it served a 404 with a "Not found."
-   body. It was dead weight, not an exposure. Build clean after removal; it
-   carried no baseline, and the four `visual` failures seen on the same run
-   pre-date it (next item).
+### Done in this session (2026-09-02, later)
 
-2. **The status-badge palette (the last third of the deliberate-change work).**
-   Now unblocked: the badge baselines are reproducible as of `1d76433`, and the
-   fixture puts every `REG_STATUS` and both confirmed payment states on screen, so
-   a palette change shows up as a diff you can review rather than as noise.
-   ~230 hardcoded hex values remain in admin, nearly all one-off status-badge
-   pairs: `#D1FAE5/#065F46` green, `#FEF9C3/#78350F` amber, `#DBEAFE/#1E40AF`
-   blue, `#FEF2F2/#FECACA/#DC2626` red, `#F3F4F6/#374151` grey. Consolidate into a
-   semantic palette next to the existing `--color-{danger,success,warning}-*`
-   triples. This moves pixels — review the diffs, then re-baseline. **Check the
-   contrast of each pair as you go**; several were never measured.
-   `grep -roE '#[0-9a-fA-F]{3,8}\b' src/pages/admin src/components/admin | wc -l`
-   is the counter.
+1. **`src/pages/ui-kit.astro` deleted — `fc320d7`.** The "live defect" framing in
+   the old list was wrong and is worth not repeating: the page already guarded
+   itself with `import.meta.env.PROD` → `Astro.response.status = 404` plus a
+   conditional render, and shipped `robots="noindex,nofollow"`. In production it
+   served a 404 with a "Not found." body. Dead weight, not an exposure.
 
-3. **Prune the legacy aliases.** `--color-primary*` / `--color-accent*` are now
-   only reachable from the three surviving `<style is:global>` blocks and
-   `admin-trip-form.css`; `grep` before deleting. `--color-gold` is already gone.
-   Note `--color-primary-dark` (`#111D27`) and `--color-accent-hover` (`#D45C44`)
-   have no brand-token equivalent — decide whether to keep or map them.
+2. **The visual suite owns its database — `1d76433`.** See "The visual suite owns
+   its own database" above. This one was not on the list; it had to happen first,
+   because the admin badge baselines could not tell a palette change from a
+   `test:api` run.
 
-4. **Re-run Lighthouse on `/`.** The hero contrast item (`add0a77`) was closed but
-   never rescored; the PR still claims 100 on the strength of the pre-fix run.
+3. **The status palette — `38a2556`.** Eleven one-off pill pairs collapsed into
+   `success/danger/warning/caution/info/neutral/interest/muted`, each a surface
+   plus a measured ink. Measuring as it went turned up **ten pairs that never
+   cleared AA** — 2.31:1 at the worst (`#E7F8F2/#10B981`, the trip_lead role
+   pill). Nearly all were the same mistake: a single hue painted as
+   `background:<hue>22; color:<hue>`, which puts a mid-tone on its own 13% tint.
+   A surface/ink pair cannot fail that way.
 
-5. **GLightbox is unverified at runtime.** `src/content/albums/` is empty here, so
-   no album renders and no lightbox can be opened. The `data-glightbox` /
-   `data-gallery` / `data-title` attributes are untouched and the init block is
-   unchanged — only the anchor's `class` changed. **Needs someone with fixtures.**
+4. **Legacy aliases retired — `eb5111f`.** Seven of the nine were a second name
+   for an existing brand token; 138 call sites now name the brand token directly.
+   `--color-primary-dark` and `--color-accent-hover` were the two real shades and
+   survive as `--color-navy-deep` and `--color-coral-hover`.
 
-6. **Public routes under the tight gate.** Phases 0-5 were verified with
-   `threshold: 0.2`, which cannot see a moderate colour change (see "The visual
-   harness"). Running public at `threshold: 0.05` would show whether anything
-   unintended rode along with the intended token retune. Expect false failures
-   from live DB copy; the useful output is *which* diffs are data and which are
-   rendering. **The owner was offered this on 2026-09-02 and declined for now** —
-   do not spend a session on it unless asked.
+5. **Lighthouse re-run, and GLightbox covered — `8a63406`.** Current numbers on
+   the built site: `/` **97 perf · 100 a11y · 78 best-practices · 100 SEO**;
+   `/trips/` and the trip detail page **96 · 100 · 78 · 100**. The album fixture
+   (`src/content/albums/qa-test-album.yaml`, skipped by `copy-seed.js`) makes the
+   lightbox testable at all; `tests/e2e/photo-vault-lightbox.spec.ts` asserts it
+   opens over the page, advances and closes.
+
+**Best practices is 78 on every public page for exactly one reason:** Microsoft
+Clarity's third-party cookies (`CLID`, `SM`, `MUID` from `clarity.ms`). It is an
+analytics decision, not a defect. Nothing in the codebase will move that number.
+
+### Still open
+
+1. **The public CTA fill fails AA and only the owner can decide it.** White text
+   on `--color-cta` (#D95F3B) is 3.71:1 and on `--color-coral` (#E8725A) is
+   3.01:1, at 16px semibold — normal-size text, so the bound is 4.5:1. This is
+   every primary button on the site. Fixing it means darkening the brand CTA
+   again (it already moved once this branch, #D95F3B ← the original). Lighthouse
+   does not currently flag it because axe treats those labels as large text at
+   the rendered size, so the score says 100 while the buttons are still under
+   bound at normal size. **A brand decision, not a code decision.**
+
+2. **The public gate still cannot see a colour-only change.** Public routes run
+   `maxDiffPixelRatio: 0.01` because they read live DB copy. The homepage
+   `text-coral → text-coral-ink` fix in `8a63406` passed the gate unchanged and
+   had to be re-baselined by hand. The fix is the same one the admin routes got:
+   give the public routes a seeded database and drop the tolerance. That is a
+   session of work and the owner declined the earlier, cheaper version of it on
+   2026-09-02 — but the reason for declining (false failures from live data) is
+   exactly what `1d76433` now knows how to remove.
+
+3. **`--color-surface-elevated` and `--color-text-muted` are still referenced by
+   eight inline styles in `photo-vault/*` and still do not exist.** Those rules
+   do nothing today: muted captions render inherited navy, one card has no
+   background. Unchanged from the earlier handoff.
 
 ### What the owner has been told, so you do not re-litigate it
 
