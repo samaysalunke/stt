@@ -118,7 +118,7 @@ function formatTs(unix: number) {
                     const text = [prev ? `Before:\n${prev}` : '', next ? `After:\n${next}` : ''].filter(Boolean).join('\n\n');
                     return (
                       <details>
-                        <summary class="cursor-pointer text-xs font-medium text-coral">view</summary>
+                        <summary class="cursor-pointer text-xs font-medium text-coral-ink">view</summary>
                         <pre class="mt-2 p-3 rounded-xl text-xs whitespace-pre-wrap max-w-xs bg-blush text-navy max-h-[200px] overflow-y-auto font-mono"
                             >{text}</pre>
                       </details>

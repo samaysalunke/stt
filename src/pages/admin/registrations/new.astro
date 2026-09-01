@@ -12,7 +12,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 <AdminLayout title="Add Registration" page="registrations">
   <div class="flex items-center justify-between mb-[1.25rem]">
     <p class="text-[0.875rem] text-gray-text m-0">Add a single registration manually (e.g. an offline or phone booking).</p>
-    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral no-underline">← Back to registrations</a>
+    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral-ink no-underline">← Back to registrations</a>
   </div>
 
   {tripsData.length === 0 ? (

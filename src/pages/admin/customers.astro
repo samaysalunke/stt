@@ -232,7 +232,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
               <div class="cust-primary">
                 <div class="flex items-center gap-[0.5rem] flex-wrap">
                   <strong class="text-navy">{displayName}</strong>
-                  {c.username && <span class="text-[0.72rem] bg-blush text-coral py-[0.15rem] px-[0.45rem] rounded-full font-semibold">@{c.username}</span>}
+                  {c.username && <span class="text-[0.72rem] bg-blush text-coral-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">@{c.username}</span>}
                   {c.role && <span class="text-[0.72rem] bg-[#F3F4F6] text-[#374151] py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{c.role}</span>}
                 </div>
                 <div class="text-[0.78rem] text-gray-text mt-[0.1rem]">{c.email}</div>
@@ -338,7 +338,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                   <!-- Links -->
                   <div class="flex flex-wrap gap-[0.5rem] mt-[1rem]">
                     <a href={`/admin/registrations/?search=${encodeURIComponent(c.email)}`}
-                       class="py-[0.35rem] px-[0.7rem] border border-coral text-coral rounded-[0.4rem] text-[0.78rem] font-semibold no-underline">
+                       class="py-[0.35rem] px-[0.7rem] border border-coral text-coral-ink rounded-[0.4rem] text-[0.78rem] font-semibold no-underline">
                       View registrations →
                     </a>
                     {c.username && c.showTripsPublicly && (

@@ -8,7 +8,7 @@ const testimonials = listTestimonials();
 
 <AdminLayout title="Testimonials" page="testimonials">
   <div class="flex items-center justify-between mb-6">
-    <p class="text-sm text-navy/55">
+    <p class="text-sm text-gray-text">
       {testimonials.length} testimonial{testimonials.length === 1 ? '' : 's'} · shown on the homepage and trip pages
     </p>
     <a href="/admin/testimonials/new/"
@@ -18,7 +18,7 @@ const testimonials = listTestimonials();
 
   {testimonials.length === 0 ? (
     <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
-      <p class="text-sm text-navy/50">No testimonials yet. Add the first one.</p>
+      <p class="text-sm text-gray-text">No testimonials yet. Add the first one.</p>
     </div>
   ) : (
     <div class="grid gap-4 sm:grid-cols-2">
@@ -32,7 +32,7 @@ const testimonials = listTestimonials();
                 </svg>
               ))}
               {t.featured && (
-                <span class="ml-2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral/12 text-coral"
+                <span class="ml-2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral/12 text-coral-ink"
                      >Featured</span>
               )}
             </div>
@@ -41,10 +41,10 @@ const testimonials = listTestimonials();
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold text-navy">{t.name}</p>
-              <p class="text-[11px] text-navy/50">{[t.location, t.tripName].filter(Boolean).join(' · ')}</p>
+              <p class="text-[11px] text-gray-text">{[t.location, t.tripName].filter(Boolean).join(' · ')}</p>
             </div>
             <div class="flex items-center gap-2">
-              <a href={`/admin/testimonials/${t.slug}/`} class="text-sm font-medium text-coral">Edit</a>
+              <a href={`/admin/testimonials/${t.slug}/`} class="text-sm font-medium text-coral-ink">Edit</a>
               <form method="POST" action="/api/admin/testimonials/delete"
                     onsubmit="return confirm('Delete this testimonial?');">
                 <input type="hidden" name="slug" value={t.slug} />

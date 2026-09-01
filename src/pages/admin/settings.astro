@@ -32,7 +32,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- Contact & Social -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">Contact &amp; Social</h2>
-      <p class="text-sm mb-5 text-navy/50">Shown in the footer, contact page and trip pages.</p>
+      <p class="text-sm mb-5 text-gray-text">Shown in the footer, contact page and trip pages.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label class={labelCls}>Email</label>
@@ -60,7 +60,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- Payment Details -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">Payment Details</h2>
-      <p class="text-sm mb-5 text-navy/50">Shown on trip booking forms and in payment reminder emails.</p>
+      <p class="text-sm mb-5 text-gray-text">Shown on trip booking forms and in payment reminder emails.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
           <label class={labelCls}>UPI ID</label>
@@ -88,22 +88,22 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- Policies & Payment -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">Legal Page Overrides</h2>
-      <p class="text-sm mb-5 text-navy/50">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Overrides support Markdown for headings, bold text, lists, and links.</p>
+      <p class="text-sm mb-5 text-gray-text">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Overrides support Markdown for headings, bold text, lists, and links.</p>
       <div class="grid gap-4">
         <div>
-          <label class={labelCls}>Cancellation policy <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Cancellation policy <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
           <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls}>{s.cancellationPolicy ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="cancellationUpdatedAt" value={s.cancellationUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls}>Terms &amp; conditions <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Terms &amp; conditions <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
           <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls}>{s.termsAndConditions ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="termsUpdatedAt" value={s.termsUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls}>Privacy policy <span class="text-navy/40 normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Privacy policy <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
           <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls}>{s.privacyPolicy ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="privacyUpdatedAt" value={s.privacyUpdatedAt ?? '2026-08-01'} class={inputCls} />
@@ -114,7 +114,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- Site -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">Site</h2>
-      <p class="text-sm mb-5 text-navy/50">Analytics, search-engine verification and footer.</p>
+      <p class="text-sm mb-5 text-gray-text">Analytics, search-engine verification and footer.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label class={labelCls}>Google Analytics ID</label>
@@ -127,17 +127,17 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
         <div>
           <label class={labelCls}>Google Search Console verification</label>
           <input type="text" name="googleSiteVerification" value={s.googleSiteVerification ?? ''} placeholder="Content value only" class={inputCls} />
-          <p class="text-xs mt-1.5 text-navy/45">Paste the content value from Google’s HTML meta tag.</p>
+          <p class="text-xs mt-1.5 text-gray-text">Paste the content value from Google’s HTML meta tag.</p>
         </div>
         <div>
           <label class={labelCls}>Bing Webmaster Tools verification</label>
           <input type="text" name="bingSiteVerification" value={s.bingSiteVerification ?? ''} placeholder="Content value only" class={inputCls} />
-          <p class="text-xs mt-1.5 text-navy/45">Paste the content value from Bing’s msvalidate.01 meta tag.</p>
+          <p class="text-xs mt-1.5 text-gray-text">Paste the content value from Bing’s msvalidate.01 meta tag.</p>
         </div>
         <div class="sm:col-span-2">
           <label class={labelCls}>Homepage Instagram images</label>
           <textarea name="instagramImages" rows="5" placeholder="One image URL per line (blank = default images)" class={inputCls}>{(s.instagramImages ?? []).join('\n')}</textarea>
-          <p class="text-xs mt-1.5 text-navy/45">One image URL per line. Shown in the homepage Instagram grid. Leave blank to use defaults.</p>
+          <p class="text-xs mt-1.5 text-gray-text">One image URL per line. Shown in the homepage Instagram grid. Leave blank to use defaults.</p>
         </div>
       </div>
     </section>
@@ -145,7 +145,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     <!-- About Page -->
     <section class={cardCls} style={cardStyle}>
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">About Page</h2>
-      <p class="text-sm mb-5 text-navy/50">Copy for the <a href="/about/" target="_blank" class="underline text-coral">/about</a> page. Leave any field blank to use the built-in default.</p>
+      <p class="text-sm mb-5 text-gray-text">Copy for the <a href="/about/" target="_blank" class="underline text-coral-ink">/about</a> page. Leave any field blank to use the built-in default.</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2">
           <label class={labelCls}>Portrait photo</label>
@@ -169,7 +169,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
             alt="New About page portrait preview"
             class="mt-3 hidden h-48 w-36 rounded-xl object-cover"
           />
-          <p class="text-xs mt-1.5 text-navy/45">JPG, PNG or WebP · max 10 MB. Leave empty to keep the current portrait.</p>
+          <p class="text-xs mt-1.5 text-gray-text">JPG, PNG or WebP · max 10 MB. Leave empty to keep the current portrait.</p>
         </div>
         <div>
           <label class={labelCls}>Byline name</label>
@@ -184,7 +184,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
           <textarea name="aboutQuote" rows="3" class={inputCls}>{aboutValue(s.aboutQuote, ABOUT_DEFAULTS.quote)}</textarea>
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls}>Body <span class="text-navy/40 normal-case tracking-[0]">(one paragraph per blank line)</span></label>
+          <label class={labelCls}>Body <span class="text-gray-text normal-case tracking-[0]">(one paragraph per blank line)</span></label>
           <textarea name="aboutBody" rows="6" class={inputCls}>{aboutValue(s.aboutBody, ABOUT_DEFAULTS.body)}</textarea>
         </div>
         <div class="sm:col-span-2">
@@ -234,7 +234,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
   <!-- Account -->
   <section class={cardCls} style={cardStyle}>
     <h2 class="font-display text-lg font-semibold mb-1 text-navy">Account</h2>
-    <p class="text-sm mb-5 text-navy/50">Signed in as Zahra · Super Admin.</p>
+    <p class="text-sm mb-5 text-gray-text">Signed in as Zahra · Super Admin.</p>
     <form method="POST" action="/api/admin/logout">
       <button type="submit"
               class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors text-danger border border-danger"

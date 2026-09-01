@@ -60,14 +60,14 @@ function statusStyle(status: string) {
                   {c.status ?? 'new'}
                 </span>
               </div>
-              <a href={`mailto:${c.email}`} class="text-coral text-[0.82rem] break-all">{c.email}</a>
+              <a href={`mailto:${c.email}`} class="text-coral-ink text-[0.82rem] break-all">{c.email}</a>
               <p class="mt-[0.25rem] mx-[0] mb-[0] text-[0.85rem] text-navy">{c.subject}</p>
             </div>
             <div class="flex flex-col items-end gap-[0.4rem] flex-none">
               <span class="text-[0.75rem] text-gray-text whitespace-nowrap">{fmt(c.created_at as string)}</span>
               <button
                 onclick={`toggleContact(${c.id})`}
-                class="text-[0.75rem] text-coral bg-transparent border border-coral rounded-[0.5rem] py-[0.2rem] px-[0.7rem] cursor-pointer"
+                class="text-[0.75rem] text-coral-ink bg-transparent border border-coral rounded-[0.5rem] py-[0.2rem] px-[0.7rem] cursor-pointer"
               >
                 View
               </button>

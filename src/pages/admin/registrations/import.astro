@@ -12,7 +12,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 <AdminLayout title="Import Registrations" page="registrations">
   <div class="flex items-center justify-between mb-[1.25rem]">
     <p class="text-[0.875rem] text-gray-text m-0">Bulk-add registrations to one trip + departure from a CSV. Preview before importing.</p>
-    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral no-underline">← Back to registrations</a>
+    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral-ink no-underline">← Back to registrations</a>
   </div>
 
   {tripsData.length === 0 ? (
@@ -51,8 +51,8 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       <div class="flex items-center justify-between">
         <label class={labelCls}>Registrants CSV</label>
         <div class="flex gap-[1rem]">
-          <button id="template-btn" type="button" class="text-[0.82rem] font-semibold text-coral bg-transparent border-none cursor-pointer">↓ Download template</button>
-          <label class="text-[0.82rem] font-semibold text-coral cursor-pointer">Upload .csv
+          <button id="template-btn" type="button" class="text-[0.82rem] font-semibold text-coral-ink bg-transparent border-none cursor-pointer">↓ Download template</button>
+          <label class="text-[0.82rem] font-semibold text-coral-ink cursor-pointer">Upload .csv
             <input id="csv-file" type="file" accept=".csv,text/csv" class="hidden" />
           </label>
         </div>

@@ -84,7 +84,7 @@ const statusLabels: Record<string, string> = {
 <AdminLayout title="Trips" page="trips">
   <div class="flex items-center justify-between mb-6">
     <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-      <p id="trip-count" class="text-sm text-navy/55">
+      <p id="trip-count" class="text-sm text-gray-text">
         {visibleTripCount} of {trips.length} trips
       </p>
       <label class="flex items-center gap-2 text-sm cursor-pointer text-navy">
@@ -100,7 +100,7 @@ const statusLabels: Record<string, string> = {
 
   {trips.length === 0 ? (
     <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
-      <p class="text-sm mb-4 text-navy/50">No trips yet.</p>
+      <p class="text-sm mb-4 text-gray-text">No trips yet.</p>
       <a href="/admin/trips/new" class="rounded-full px-6 py-3 text-sm font-semibold text-white inline-block bg-cta">Create your first trip</a>
     </div>
   ) : (
@@ -116,8 +116,8 @@ const statusLabels: Record<string, string> = {
           <div class="flex items-start justify-between gap-3 mb-3">
             <div class="min-w-0">
               <h3 class="font-display text-base font-semibold truncate text-navy">{trip.name || trip.slug}</h3>
-              <p class="text-[11px] truncate text-navy/45">{trip.slug}</p>
-              <p class="mt-1 text-[11px] text-navy/55">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
+              <p class="text-[11px] truncate text-gray-text">{trip.slug}</p>
+              <p class="mt-1 text-[11px] text-gray-text">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
                   style={`background:${statusColors[trip._derivedStatus]}22; color:${statusColors[trip._derivedStatus]};`}>
@@ -127,15 +127,15 @@ const statusLabels: Record<string, string> = {
 
           <div class="grid grid-cols-3 gap-2 mb-4 text-center">
             <div class="rounded-xl py-2 bg-gray-soft">
-              <div class="text-[10px] uppercase tracking-wide text-navy/45">{trip._hasSharing ? 'From' : 'Price'}</div>
+              <div class="text-[10px] uppercase tracking-wide text-gray-text">{trip._hasSharing ? 'From' : 'Price'}</div>
               <div class="text-sm font-semibold text-navy">{trip._fromPrice ? `₹${Number(trip._fromPrice).toLocaleString('en-IN')}` : '—'}</div>
             </div>
             <div class="rounded-xl py-2 bg-gray-soft">
-              <div class="text-[10px] uppercase tracking-wide text-navy/45">Next batch</div>
+              <div class="text-[10px] uppercase tracking-wide text-gray-text">Next batch</div>
               <div class="text-sm font-semibold text-navy">{trip._leadTotal != null ? `${trip._leadBooked ?? 0}/${trip._leadTotal}` : '—'}</div>
             </div>
             <div class="rounded-xl py-2 bg-gray-soft">
-              <div class="text-[10px] uppercase tracking-wide text-navy/45">{trip._departureCount > 1 ? `${trip._departureCount} dates` : 'Starts'}</div>
+              <div class="text-[10px] uppercase tracking-wide text-gray-text">{trip._departureCount > 1 ? `${trip._departureCount} dates` : 'Starts'}</div>
               <div class="text-xs font-semibold text-navy">{fmtDay(trip._leadStart)}</div>
             </div>
           </div>
@@ -153,7 +153,7 @@ const statusLabels: Record<string, string> = {
               <option value="medium" selected={trip._priority === 'medium'}>Medium</option>
               <option value="low" selected={trip._priority === 'low'}>Low</option>
             </select>
-            <span class="priority-state w-12 text-[11px] text-navy/55" aria-live="polite"></span>
+            <span class="priority-state w-12 text-[11px] text-gray-text" aria-live="polite"></span>
           </div>
 
           <div class="mt-auto flex items-center gap-2 pt-1">
@@ -168,7 +168,7 @@ const statusLabels: Record<string, string> = {
       ))}
     </div>
     <div id="no-visible-trips" class="bg-white rounded-[2rem] p-10 text-center border border-peach/60" hidden={visibleTripCount > 0}>
-      <p class="text-sm text-navy/50">No active trips. Uncheck “Hide completed trips” to view completed trips.</p>
+      <p class="text-sm text-gray-text">No active trips. Uncheck “Hide completed trips” to view completed trips.</p>
     </div>
     </>
   )}

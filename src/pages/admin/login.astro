@@ -33,9 +33,9 @@ const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADM
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
             </svg>
           </div>
-          <span class="text-[10px] font-semibold uppercase tracking-widest text-coral">Admin Portal</span>
+          <span class="text-[10px] font-semibold uppercase tracking-widest text-coral-ink">Admin Portal</span>
           <h1 class="font-display text-2xl font-semibold mt-1 text-navy">Welcome back</h1>
-          <p class="text-sm mt-1 text-navy/50">Sign in to manage Seek the Thrill</p>
+          <p class="text-sm mt-1 text-gray-text">Sign in to manage Seek the Thrill</p>
         </div>
 
         {hasNoRoleError && (
@@ -74,7 +74,7 @@ const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADM
 
         {hasPasswordFallback && (
           <details class="mt-5">
-            <summary class="text-xs text-center cursor-pointer text-navy/40">
+            <summary class="text-xs text-center cursor-pointer text-gray-text">
               Password fallback
             </summary>
             <form method="POST" action="/api/admin/login" class="mt-4">
@@ -99,12 +99,12 @@ const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADM
 
         <div class="flex items-center justify-center gap-2 mt-6">
           <span class="w-2 h-2 rounded-full bg-success"></span>
-          <span class="text-xs text-navy/50">Secure connection verified</span>
+          <span class="text-xs text-gray-text">Secure connection verified</span>
         </div>
       </div>
 
       <p class="text-center mt-5">
-        <a href="/" class="text-sm text-navy/50 no-underline">← Back to website</a>
+        <a href="/" class="text-sm text-gray-text no-underline">← Back to website</a>
       </p>
     </div>
   </body>

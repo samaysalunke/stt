@@ -15,13 +15,13 @@ for (const f of faqs) {
 
 <AdminLayout title="FAQ" page="faqs">
   <div class="flex items-center justify-between mb-6">
-    <p class="text-sm text-navy/55">{faqs.length} question{faqs.length === 1 ? '' : 's'} · shown on the public FAQ page</p>
+    <p class="text-sm text-gray-text">{faqs.length} question{faqs.length === 1 ? '' : 's'} · shown on the public FAQ page</p>
     <a href="/admin/faqs/new/" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy">+ New</a>
   </div>
 
   {faqs.length === 0 ? (
     <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
-      <p class="text-sm text-navy/50">No FAQs yet. Add the first one.</p>
+      <p class="text-sm text-gray-text">No FAQs yet. Add the first one.</p>
     </div>
   ) : (
     categoryOrder.map(cat => (
@@ -35,10 +35,10 @@ for (const f of faqs) {
                 <span class="inline-block mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={f.defaultOnTripPages === true ? 'background:rgba(34,166,84,0.1);color:#178443;' : 'background:#f3f4f6;color:#6b7280;'}>
                   {f.defaultOnTripPages === true ? 'Default on trips' : 'Not default on trips'}
                 </span>
-                <p class="text-xs mt-1 line-clamp-2 text-navy/55">{f.answer}</p>
+                <p class="text-xs mt-1 line-clamp-2 text-gray-text">{f.answer}</p>
               </div>
               <div class="flex items-center gap-3 flex-none">
-                <a href={`/admin/faqs/${f.slug}/`} class="text-sm font-medium text-coral">Edit</a>
+                <a href={`/admin/faqs/${f.slug}/`} class="text-sm font-medium text-coral-ink">Edit</a>
                 <form method="POST" action="/api/admin/faqs/delete" onsubmit="return confirm('Delete this FAQ?');">
                   <input type="hidden" name="slug" value={f.slug} />
                   <button type="submit" class="text-sm font-medium text-danger">Delete</button>

@@ -34,13 +34,13 @@ const categories = Array.from(new Set(listFaqs().map(f => f.category).filter(Boo
         <input type="checkbox" name="defaultOnTripPages" class="mt-1" />
         <span>
           <span class="block text-sm font-semibold text-navy">Default on trip pages</span>
-          <span class="block text-xs mt-1 text-navy/55">Show this FAQ on every trip unless a trip hides it.</span>
+          <span class="block text-xs mt-1 text-gray-text">Show this FAQ on every trip unless a trip hides it.</span>
         </span>
       </label>
     </div>
     <div class="flex items-center gap-3 mt-6">
       <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta">Create</button>
-      <a href="/admin/faqs/" class="text-sm font-medium text-navy/55">Cancel</a>
+      <a href="/admin/faqs/" class="text-sm font-medium text-gray-text">Cancel</a>
     </div>
   </form>
 </AdminLayout>
