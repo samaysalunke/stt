@@ -203,6 +203,36 @@ html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::afte
     background: rgba(27, 43, 58, 0.78);
   }
 
+  /* Hero variant of `.u-overlay-scrim` with a contrast floor.
+
+     The shared scrim dips to 0.40 alpha at 40% height — exactly where the hero
+     headline sits. Over a light region of the photo that composites to a
+     background luminance of ~0.34, where `--color-coral` measures 1.12:1 and
+     even pure white reaches only 2.69:1. Both fail AA-large (3:1), so hero
+     legibility depended on the photo happening to be dark behind the copy.
+     The Phase 0 baseline shows the failure plainly: the coral headline lands
+     on the white snow peak.
+
+     Coral is the binding constraint. It needs 0.75 alpha behind it to clear
+     3:1 against a pure-white worst case; white body copy would have been fine
+     at 0.62. The floor below never drops under 0.75, so the accent holds
+     whatever photo is swapped in. Full-bleed and vertical, so it does not
+     drift as the copy column re-centres between breakpoints.
+
+     At 0.76: coral 3.12:1 (AA-large), white 9.38:1, white/70 body 5.58:1.
+
+     Kept separate from `.u-overlay-scrim` so the ui-kit card demo that shares
+     that utility is not darkened along with the hero. */
+  .u-overlay-scrim-hero {
+    background: linear-gradient(
+      to bottom,
+      rgba(8, 12, 24, 0.78) 0%,
+      rgba(8, 12, 24, 0.76) 40%,
+      rgba(8, 12, 24, 0.76) 72%,
+      rgba(8, 12, 24, 0.84) 100%
+    );
+  }
+
   /* Bottom-anchored navy scrim for a full-bleed hero — keeps overlaid copy
      legible without darkening the whole image. */
   .u-overlay-scrim-bottom {
