@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/ui/Button.astro';
 ---
 
 <BaseLayout
@@ -7,22 +8,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   description="The page you're looking for doesn't exist. There are still trips to look through."
   robots="noindex, follow"
 >
-  <div class="min-h-screen flex items-center justify-center py-20 px-4" style="background-color: var(--color-gray-soft);">
+  <div class="min-h-screen flex items-center justify-center py-20 px-4 bg-gray-soft">
     <div class="max-w-md w-full text-center">
-      <div class="text-8xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-peach);">404</div>
-      <h1 class="text-2xl lg:text-3xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+      <div class="text-8xl font-bold mb-4 font-display text-peach">404</div>
+      <h1 class="text-display-md font-display font-bold mb-3 text-navy">
         This page isn't here.
       </h1>
-      <p class="text-base mb-10" style="color: var(--color-gray-text);">
+      <p class="text-base mb-10 text-gray-text">
         The page you're looking for doesn't exist. There are still trips to look through.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/" class="font-semibold text-white px-8 py-3.5 rounded-full hover:opacity-90 transition-all" style="background-color: var(--color-coral);">
-          Back to home
-        </a>
-        <a href="/trips/" class="font-semibold px-8 py-3.5 rounded-full border-2 hover:opacity-80 transition-all" style="border-color: var(--color-navy); color: var(--color-navy);">
-          See upcoming trips
-        </a>
+        <Button href="/" variant="cta" size="lg">Back to home</Button>
+        <Button href="/trips/" variant="outline" size="lg" class="border-2 text-navy">See upcoming trips</Button>
       </div>
     </div>
   </div>

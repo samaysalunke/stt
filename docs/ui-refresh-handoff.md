@@ -9,12 +9,13 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
 - **Suite state at handoff:** `build` clean · `test:unit` 300/300 · `test:api` 153/153 ·
-  `test:e2e` 150/150 (118 functional + 30 visual + 1 redirect assertion + 1 new
-  header-menu a11y spec). Everything green — and the e2e run was deliberately done
-  *immediately after* `test:api` mutated content, the sequence that used to break the
-  visual baselines (gotcha #7).
-- **Phases 0, 1, 1.5 and 2 are done.** The Phase 1 review gate is cleared (see
-  "Gate decisions"). **Phase 3 (marketing/legal pages) is next.**
+  `test:e2e` 150/150. Everything green. `test:unit` is 306 not 300 because the rebase
+  brought in `main`'s new departure-summary tests.
+- **Phases 0, 1, 1.5, 2 and 3 are done.** The Phase 1 review gate is cleared (see
+  "Gate decisions"). **Phase 4 (booking flow) is next.**
+- **The branch was rebased onto `main` on 2026-09-01** and now contains all of it
+  (`git merge-base --is-ancestor main ui-refresh` passes). A pre-rebase backup ref
+  `ui-refresh-prerebase` exists — delete it once you are confident.
 
 ## Commits on the branch (newest first)
 
@@ -293,6 +294,44 @@ Perf held at 97–98; best-practices stays 78 and will not move (Clarity cookies
 - **Duplicate newsletter capture.** The homepage "Be first to know" band and the
   footer's "Stay in the loop" are adjacent and functionally identical. Collapsing them
   touches a real form `id`/`name` on the do-not-touch list, so it was left in place.
+
+## Phase 3 — marketing + legal pages (done)
+
+Eleven pages converted to tokens; **every one is now at zero inline `style=`**, including
+the two dynamic `style={...}` expressions on the leaderboard. Public inline `style="`
+**267 → 123**, `var(--color` in markup 395 → 270, hardcoded hex 129 → 116.
+
+Pages: `404`, `about`, `cancellation`, `contact`, `custom-itineraries` (was the densest
+public file at 49), `faq`, `leaderboard`, `login`, `privacy`, `terms`, `unsubscribe`.
+The dead `src/components/Badge.astro` was deleted — it had zero importers.
+
+**Contrast fixes found along the way** (all measured, all were failing):
+- FAQ category headings — coral on gray-soft, 2.75:1 → `text-coral-ink`
+- about-page byline and signature — coral on blush, 2.70:1 → `text-coral-ink`
+- about-page eyebrow/signoff — navy at 55% on blush → `text-gray-text`
+- login footnote — navy at 40% on gray-soft → `text-gray-text`
+- leaderboard active tab — white on coral, 3.01:1 → `bg-cta`
+- cancellation "partial refund" amber accent — `#c97816` was 3.40:1 on the white
+  card → `#a9640f`, 4.65:1. The green and red accents already passed.
+
+**New tokens**: `--color-danger-surface` / `--color-danger-ink` (the enquiry form's
+error pair, previously hardcoded `#FEE2E2` / `#991B1B` — tokenised because the Phase 4
+booking forms need the same treatment) and a `.u-fade-to-white` utility for the
+signed-out leaderboard's truncation fade.
+
+**One test was rewritten, deliberately.** `WF-7.3 km tab is default` read the
+leaderboard tab's inline `style` attribute looking for the string "coral". The tabs are
+class-driven now, so it asserts the visible outcome instead: the active tab has a filled
+background, the inactive ones do not. Behaviour unchanged; the assertion was coupled to
+markup this phase intentionally removed.
+
+**Method note.** The repetitive `style="color: var(--color-*)"` → utility conversions
+were done with a small mapper (kept at
+`scratchpad/destyle.py`, not committed) that reports every declaration it could not map
+rather than dropping it. Worth rebuilding for Phase 6 (admin) if that is ever attempted
+— it is 518 inline styles. **Do not blanket-`replace` a background declaration without
+adding the replacement class**: doing exactly that silently stripped the
+custom-itineraries hero CTA's fill, and only a screenshot review caught it.
 
 ## Next phases
 

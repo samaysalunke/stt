@@ -146,7 +146,9 @@ const refundWindows = [
   .refund-card { position: relative; min-height: 15.5rem; padding: 1.35rem; border: 1px solid var(--color-border); border-radius: 1.25rem; background: white; box-shadow: 0 8px 30px rgba(27, 43, 58, 0.05); overflow: hidden; }
   .refund-card::after { content: ''; position: absolute; inset: auto -2rem -3.5rem auto; width: 8rem; height: 8rem; border-radius: 50%; background: var(--card-accent); opacity: 0.08; }
   .refund-card-positive { --card-accent: #16834a; }
-  .refund-card-partial { --card-accent: #c97816; }
+  /* Darkened from #c97816, which was 3.40:1 on the white card and so failed AA
+     for the refund label and detail text that inherit it. Now 4.65:1. */
+  .refund-card-partial { --card-accent: #a9640f; }
   .refund-card-none { --card-accent: #c84236; }
   .refund-card-top { display: flex; align-items: center; justify-content: space-between; color: var(--card-accent); }
   .refund-period { font-size: 1.05rem; font-weight: 700; color: var(--color-navy); }

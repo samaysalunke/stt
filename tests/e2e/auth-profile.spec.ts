@@ -178,11 +178,20 @@ test.describe('WF-7: Leaderboard page', () => {
 
   test('WF-7.3 km tab is default (no ?tab param)', async ({ page }) => {
     await page.goto('/leaderboard');
-    // km from home tab should be "active" (coral background)
+    // The km tab should be the active one. This used to read the inline `style`
+    // attribute for the string "coral"; the tabs are class-driven now, so it
+    // asserts the visible outcome instead — the active tab has a filled
+    // background and the inactive ones do not.
     const kmTab = page.locator('a[href="?tab=km"]');
+    const daysTab = page.locator('a[href="?tab=days"]');
     await expect(kmTab).toBeVisible({ timeout: 10_000 });
-    const bg = await kmTab.evaluate(el => (el as HTMLElement).style.background);
-    expect(bg).toContain('coral');
+
+    const bg = (el: HTMLElement) => getComputedStyle(el).backgroundColor;
+    const kmBg = await kmTab.evaluate(bg);
+    const daysBg = await daysTab.evaluate(bg);
+
+    expect(kmBg).not.toBe(daysBg);
+    expect(kmBg).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
   });
 
   test('WF-7.4 clicking Days outdoors tab updates URL to ?tab=days', async ({ page }) => {

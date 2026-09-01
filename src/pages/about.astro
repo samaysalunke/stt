@@ -39,18 +39,18 @@ const aboutSchema = {
   nav="none"
 >
   <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(aboutSchema)} /></Fragment>
-  <div style="background-color: var(--color-blush);">
+  <div class="bg-blush">
     <!-- Top bar -->
     <header class="mx-auto flex max-w-2xl items-center justify-between px-5 pt-5">
-      <a href="/" id="about-back" aria-label="Back" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
+      <a href="/" id="about-back" aria-label="Back" class="grid h-9 w-9 place-items-center rounded-[var(--radius-pill)] text-navy transition-colors hover:bg-white/70">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </a>
-      <span class="text-[11px] uppercase tracking-[0.25em]" style="color: rgba(27,43,58,0.55);">
-        by <span class="font-display italic normal-case tracking-normal" style="color: var(--color-coral);">{bylineName}</span>
+      <span class="text-[11px] uppercase tracking-[0.25em] text-gray-text">
+        by <span class="font-display italic normal-case tracking-normal text-coral-ink">{bylineName}</span>
       </span>
-      <button id="about-share" aria-label="Share" class="grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-white/70" style="color: var(--color-navy);">
+      <button id="about-share" aria-label="Share" class="grid h-9 w-9 place-items-center rounded-[var(--radius-pill)] text-navy transition-colors hover:bg-white/70">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
         </svg>
@@ -61,32 +61,32 @@ const aboutSchema = {
     <section class="mx-auto mt-6 max-w-2xl px-5">
       <div class="relative">
         <img src={founderImg} alt={bylineName} class="aspect-[4/5] w-full rounded-sm object-cover" loading="lazy" />
-        <div class="absolute -bottom-6 left-1/2 w-[88%] -translate-x-1/2 rounded-md bg-white px-5 py-4 text-center" style="box-shadow: 0 10px 30px -12px rgba(15,23,42,0.25);">
-          <h1 class="font-display text-xl leading-snug" style="color: var(--color-navy);">{caption}</h1>
+        <div class="absolute -bottom-6 left-1/2 w-[88%] -translate-x-1/2 rounded-md bg-white px-5 py-4 text-center shadow-media">
+          <h1 class="font-display text-display-xs leading-snug text-navy">{caption}</h1>
         </div>
       </div>
     </section>
 
     <!-- Pull quote -->
     <section class="mx-auto max-w-2xl px-8 pt-16 pb-6">
-      <blockquote class="font-display italic leading-snug" style="font-size: 1.35rem; color: var(--color-navy);">
+      <blockquote class="font-display italic leading-snug text-display-xs text-navy">
         &ldquo;{quote}&rdquo;
       </blockquote>
     </section>
 
     <!-- Body paragraphs -->
-    <section class="mx-auto max-w-2xl space-y-5 px-8 pb-12 text-[15px] leading-relaxed" style="color: rgba(27,43,58,0.85);">
+    <section class="mx-auto max-w-2xl space-y-5 px-8 pb-12 text-[15px] leading-relaxed text-navy/85">
       {bodyParas.map((p: string) => <p>{p}</p>)}
     </section>
 
     <!-- Dark principles block -->
-    <section style="background-color: var(--color-navy);">
+    <section class="bg-navy">
       <div class="mx-auto max-w-2xl px-8 py-14 text-white">
-        <h2 class="text-center font-display text-3xl leading-tight">{principlesHeading}</h2>
+        <h2 class="text-center font-display text-display-md leading-tight">{principlesHeading}</h2>
         <div class="mt-10 space-y-9 text-center">
           {principles.map((p) => (
             <div>
-              <p class="font-display text-3xl italic" style="color: var(--color-coral);">{p.n}.</p>
+              <p class="font-display text-display-md italic text-coral">{p.n}.</p>
               <p class="mt-2 font-display text-lg text-white">{p.t}</p>
               <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/65">{p.d}</p>
             </div>
@@ -97,16 +97,16 @@ const aboutSchema = {
 
     <!-- Signature -->
     <section class="mx-auto max-w-2xl px-8 py-14 text-center">
-      <p class="text-[15px] leading-relaxed" style="color: rgba(27,43,58,0.8);">
+      <p class="text-[15px] leading-relaxed text-navy/80">
         {signature}
       </p>
-      <p class="mt-10 text-[10px] uppercase tracking-[0.3em]" style="color: rgba(27,43,58,0.55);">{signoff}</p>
-      <p class="mt-3 font-display text-5xl italic" style="color: var(--color-coral);">{signName}</p>
+      <p class="mt-10 text-[10px] uppercase tracking-[0.3em] text-gray-text">{signoff}</p>
+      <p class="mt-3 font-display text-5xl italic text-coral-ink">{signName}</p>
     </section>
 
     <!-- CTA -->
     <section class="mx-auto max-w-2xl px-5 pb-12">
-      <a href="/trips/" class="flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-base font-medium text-white" style="background-color: var(--color-coral);">
+      <a href="/trips/" class="flex w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-cta px-6 py-4 text-base font-medium text-white">
         {ctaLabel}
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />

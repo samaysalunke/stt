@@ -53,6 +53,11 @@
   --color-text-secondary: #646B76;
   --color-success: #22A654;
   --color-danger: #D93025;
+  /* Form-error pair, previously hardcoded as #FEE2E2 / #991B1B on the enquiry
+     form. Tokenised because the booking flow needs the same treatment.
+     6.80:1 ink-on-surface, 8.2:1 ink-on-white. */
+  --color-danger-surface: #FEE2E2;
+  --color-danger-ink: #991B1B;
   --color-border: #E8DDD9;
 
   /* ── Typography ────────────────────────────────────────────── */
@@ -194,6 +199,12 @@ html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::afte
   }
   .u-overlay-scrim-flat {
     background: rgba(27, 43, 58, 0.78);
+  }
+
+  /* Bottom-anchored fade to the page surface — used to soften the cut-off edge
+     of a truncated list (the signed-out leaderboard preview). */
+  .u-fade-to-white {
+    background: linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.95) 40%, white 100%);
   }
 
   .reveal {

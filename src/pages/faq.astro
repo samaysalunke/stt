@@ -47,23 +47,23 @@ const faqSchema = faqs.length > 0 ? {
   )}
 
   <!-- Header -->
-  <section class="py-16" style="background-color: var(--color-blush);">
+  <section class="py-16 bg-blush">
     <div class="container-app text-center">
-      <h1 class="text-5xl lg:text-6xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+      <h1 class="text-display-xl font-display font-bold mb-3 text-navy">
         Questions
       </h1>
-      <p class="text-base" style="color: var(--color-gray-text);">
+      <p class="text-base text-gray-text">
         Answers to things people actually ask.
       </p>
     </div>
   </section>
 
   <!-- FAQ Sections -->
-  <section class="py-14 lg:py-20" style="background-color: var(--color-gray-soft);">
+  <section class="py-14 lg:py-20 bg-gray-soft">
     <div class="container-app max-w-3xl">
       {categories.map((category) => (
         <div class="mb-12">
-          <h2 class="text-2xl font-bold mb-5" style="font-family: var(--font-display); color: var(--color-coral);">
+          <h2 class="text-display-sm font-display font-bold mb-5 text-coral-ink">
             {category.name}
           </h2>
           <div class="space-y-2">
@@ -71,17 +71,14 @@ const faqSchema = faqs.length > 0 ? {
               <details
                 data-card-skeleton
                 data-skeleton-ready
-                class="bg-white rounded-xl overflow-hidden border group"
-                style="border-color: var(--color-border);"
+                class="bg-white rounded-xl overflow-hidden border border-border group"
               >
                 <summary
-                  class="px-5 py-4 font-medium text-sm cursor-pointer select-none flex items-center justify-between list-none"
-                  style="color: var(--color-navy);"
+                  class="px-5 py-4 font-medium text-sm cursor-pointer select-none flex items-center justify-between list-none text-navy"
                 >
                   {item.q}
                   <svg
-                    class="w-4 h-4 flex-shrink-0 ml-3 transition-transform duration-200 group-open:rotate-180"
-                    style="color: var(--color-gray-text);"
+                    class="w-4 h-4 flex-shrink-0 ml-3 text-gray-text transition-transform duration-200 group-open:rotate-180"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -89,7 +86,7 @@ const faqSchema = faqs.length > 0 ? {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </summary>
-                <div class="px-5 pb-5 pt-1 text-sm leading-relaxed" style="color: var(--color-gray-text);">
+                <div class="px-5 pb-5 pt-1 text-sm leading-relaxed text-gray-text">
                   {item.a}
                 </div>
               </details>
@@ -99,15 +96,14 @@ const faqSchema = faqs.length > 0 ? {
       ))}
 
       <!-- Still have questions -->
-      <div class="mt-10 text-center p-8 rounded-2xl" data-card-skeleton data-skeleton-ready style="background-color: var(--color-blush);">
-        <h3 class="font-bold text-lg mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Still have a question?</h3>
-        <p class="text-sm mb-5" style="color: var(--color-gray-text);">WhatsApp is the fastest way to reach us.</p>
+      <div class="mt-10 text-center p-8 rounded-2xl bg-blush" data-card-skeleton data-skeleton-ready>
+        <h3 class="font-display font-bold text-display-xs mb-2 text-navy">Still have a question?</h3>
+        <p class="text-sm mb-5 text-gray-text">WhatsApp is the fastest way to reach us.</p>
         <a
           href="https://wa.me/917975027491?text=Hi%2C%20I%20have%20a%20question%20about%20a%20Seek%20the%20Thrill%20trip."
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 font-semibold text-white text-sm px-6 py-3 rounded-full"
-          style="background-color: var(--color-coral);"
+          class="inline-flex items-center gap-2 font-semibold text-white text-sm px-6 py-3 rounded-[var(--radius-pill)] bg-cta"
         >
           Ask on WhatsApp →
         </a>

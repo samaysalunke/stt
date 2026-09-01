@@ -84,30 +84,30 @@ function homeCity(latLng: string | null): string {
   <div class="container-app py-10 max-w-2xl mx-auto">
 
     <div class="mb-8">
-      <h1 class="text-3xl font-bold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">Leaderboard</h1>
-      <p class="text-sm" style="color: var(--color-gray-text);">Ranked by adventures taken with Seek the Thrill.</p>
+      <h1 class="text-3xl font-bold mb-2 font-display text-navy">Leaderboard</h1>
+      <p class="text-sm text-gray-text">Ranked by adventures taken with Seek the Thrill.</p>
     </div>
 
     <!-- Tabs -->
     <div class="flex gap-2 mb-8 flex-wrap">
       {(['km', 'days', 'destinations'] as const).map((t) => (
         <a href={`?tab=${t}`}
-           class={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${tab === t ? 'text-white' : ''}`}
-           style={tab === t
-             ? 'background: var(--color-coral); color: white;'
-             : 'border: 1px solid var(--color-peach); color: var(--color-navy);'}>
+           class:list={[
+             'rounded-[var(--radius-pill)] px-4 py-2 text-sm font-medium transition-colors',
+             tab === t ? 'bg-cta text-white' : 'border border-peach text-navy',
+           ]}>
           {tabMeta[t].label}
         </a>
       ))}
     </div>
 
     {rows.length === 0 ? (
-      <div class="rounded-2xl p-12 text-center" data-card-skeleton data-skeleton-ready style="background: var(--color-blush);">
-        <p class="text-lg font-semibold mb-2" style="font-family: var(--font-display); color: var(--color-navy);">No data yet</p>
-        <p class="text-sm" style="color: var(--color-gray-text);">Stats appear once trip bookings are confirmed.</p>
+      <div class="rounded-2xl p-12 text-center bg-blush" data-card-skeleton data-skeleton-ready>
+        <p class="text-lg font-semibold mb-2 font-display text-navy">No data yet</p>
+        <p class="text-sm text-gray-text">Stats appear once trip bookings are confirmed.</p>
       </div>
     ) : (
-      <div class="rounded-2xl overflow-hidden relative" style="border: 1px solid rgba(245,221,215,0.6);">
+      <div class="rounded-2xl overflow-hidden relative border border-peach/60">
 
         {rows.map((row, i) => {
           const isMe = row.userId === user?.id;
@@ -121,19 +121,22 @@ function homeCity(latLng: string | null): string {
             <div
               data-card-skeleton
               data-skeleton-ready={!row.avatarUrl ? '' : undefined}
-              class={`flex items-center gap-3 px-4 py-4 border-b transition-colors ${isMe ? 'ring-1 ring-inset' : ''}`}
-              style={`
-                border-color: rgba(245,221,215,0.6);
-                ${isMe ? 'background: rgba(245,221,215,0.25); ring-color: var(--color-coral);' : i % 2 === 0 ? 'background: white;' : 'background: rgba(245,221,215,0.08);'}
-                ${blurred ? 'filter: blur(5px); pointer-events: none; user-select: none;' : ''}
-              `}
+              class:list={[
+                'flex items-center gap-3 border-b border-peach/60 px-4 py-4 transition-colors',
+                isMe
+                  ? 'bg-peach/25 ring-1 ring-inset ring-coral'
+                  : i % 2 === 0
+                    ? 'bg-white'
+                    : 'bg-peach/[0.08]',
+                blurred && 'pointer-events-none select-none blur-[5px]',
+              ]}
             >
               <!-- Rank -->
               <div class="w-8 text-center flex-shrink-0">
                 {medal ? (
                   <span class="text-lg">{medal}</span>
                 ) : (
-                  <span class="text-sm font-bold" style="color: var(--color-gray-text);">{row.rank}</span>
+                  <span class="text-sm font-bold text-gray-text">{row.rank}</span>
                 )}
               </div>
 
@@ -141,27 +144,27 @@ function homeCity(latLng: string | null): string {
               {row.avatarUrl ? (
                 <img data-skeleton-image src={row.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
               ) : (
-                <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                     style="background: var(--color-coral);">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 bg-cta"
+                    >
                   {(row.displayName ?? '?')[0].toUpperCase()}
                 </div>
               )}
 
               <!-- Name + city -->
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold truncate" style="color: var(--color-navy);">
+                <p class="text-sm font-semibold truncate text-navy">
                   {row.displayName ?? 'Traveller'}
-                  {isMe && <span class="ml-1 text-xs font-normal" style="color: var(--color-coral);">(you)</span>}
+                  {isMe && <span class="ml-1 text-xs font-normal text-coral-ink">(you)</span>}
                 </p>
-                <p class="text-xs truncate" style="color: var(--color-gray-text);">
+                <p class="text-xs truncate text-gray-text">
                   {row.username ? `@${row.username}` : ''}{city ? (row.username ? ' · ' : '') + city : ''}
                 </p>
               </div>
 
               <!-- Stat -->
               <div class="text-right flex-shrink-0">
-                <p class="text-sm font-bold" style="color: var(--color-navy);">{val}{unit ? <span class="ml-0.5 text-xs font-normal" style="color: var(--color-gray-text);">{unit}</span> : ''}</p>
-                <p class="text-xs" style="color: var(--color-gray-text);">{row.tripsCount} trip{row.tripsCount !== 1 ? 's' : ''}</p>
+                <p class="text-sm font-bold text-navy">{val}{unit ? <span class="ml-0.5 text-xs font-normal text-gray-text">{unit}</span> : ''}</p>
+                <p class="text-xs text-gray-text">{row.tripsCount} trip{row.tripsCount !== 1 ? 's' : ''}</p>
               </div>
             </div>
           );
@@ -169,11 +172,10 @@ function homeCity(latLng: string | null): string {
 
         <!-- Blur CTA overlay for rows 11-20 when not logged in -->
         {!user && rows.length > 10 && (
-          <div class="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-6 pt-20"
-               style="background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.95) 40%, white 100%); pointer-events: none;">
-            <p class="text-sm font-semibold mb-3 pointer-events-auto" style="color: var(--color-navy);">Sign in to see the full leaderboard</p>
-            <a href="/login" class="pointer-events-auto px-6 py-2.5 rounded-full text-sm font-semibold text-white"
-               style="background: var(--color-coral);">
+          <div class="u-fade-to-white pointer-events-none absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-6 pt-20">
+            <p class="text-sm font-semibold mb-3 pointer-events-auto text-navy">Sign in to see the full leaderboard</p>
+            <a href="/login" class="pointer-events-auto px-6 py-2.5 rounded-full text-sm font-semibold text-white bg-cta"
+              >
               Sign in
             </a>
           </div>
@@ -183,33 +185,33 @@ function homeCity(latLng: string | null): string {
 
     <!-- Pinned: logged-in user outside top 20 -->
     {myEntry && !myInTop20 && (
-      <div class="mt-4 rounded-2xl overflow-hidden" data-card-skeleton data-skeleton-ready={!myEntry.avatarUrl ? '' : undefined} style="border: 2px solid var(--color-coral);">
-        <div class="flex items-center gap-3 px-4 py-4" style="background: rgba(245,221,215,0.25);">
+      <div class="mt-4 rounded-2xl overflow-hidden border-2 border-coral" data-card-skeleton data-skeleton-ready={!myEntry.avatarUrl ? '' : undefined}>
+        <div class="flex items-center gap-3 px-4 py-4 bg-peach/25">
           <div class="w-8 text-center flex-shrink-0">
-            <span class="text-sm font-bold" style="color: var(--color-navy);">{myEntry.rank}</span>
+            <span class="text-sm font-bold text-navy">{myEntry.rank}</span>
           </div>
           {myEntry.avatarUrl ? (
             <img data-skeleton-image src={myEntry.avatarUrl} alt="" class="w-9 h-9 rounded-full object-cover flex-shrink-0" referrerpolicy="no-referrer" />
           ) : (
-            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                 style="background: var(--color-coral);">
+            <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 bg-cta"
+                >
               {(myEntry.displayName ?? '?')[0].toUpperCase()}
             </div>
           )}
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold truncate" style="color: var(--color-navy);">
-              {myEntry.displayName ?? 'You'} <span class="text-xs font-normal" style="color: var(--color-coral);">(you)</span>
+            <p class="text-sm font-semibold truncate text-navy">
+              {myEntry.displayName ?? 'You'} <span class="text-xs font-normal text-coral-ink">(you)</span>
             </p>
             {myEntry.username && (
-              <p class="text-xs" style="color: var(--color-gray-text);">@{myEntry.username}</p>
+              <p class="text-xs text-gray-text">@{myEntry.username}</p>
             )}
           </div>
           <div class="text-right flex-shrink-0">
-            <p class="text-sm font-bold" style="color: var(--color-navy);">
+            <p class="text-sm font-bold text-navy">
               {getValue(myEntry, tabMeta[tab].valueKey)}
-              {tabMeta[tab].unit && <span class="ml-0.5 text-xs font-normal" style="color: var(--color-gray-text);">{tabMeta[tab].unit}</span>}
+              {tabMeta[tab].unit && <span class="ml-0.5 text-xs font-normal text-gray-text">{tabMeta[tab].unit}</span>}
             </p>
-            <p class="text-xs" style="color: var(--color-gray-text);">{myEntry.tripsCount} trip{myEntry.tripsCount !== 1 ? 's' : ''}</p>
+            <p class="text-xs text-gray-text">{myEntry.tripsCount} trip{myEntry.tripsCount !== 1 ? 's' : ''}</p>
           </div>
         </div>
       </div>
@@ -217,10 +219,10 @@ function homeCity(latLng: string | null): string {
 
     <!-- CTA for users not on the leaderboard -->
     {user && !myEntry && (
-      <div class="mt-8 rounded-2xl p-6 text-center" data-card-skeleton data-skeleton-ready style="background: var(--color-blush);">
-        <p class="text-sm font-medium mb-1" style="color: var(--color-navy);">You're not on the leaderboard yet</p>
-        <p class="text-xs mb-4" style="color: var(--color-gray-text);">Stats appear once your trip booking is confirmed.</p>
-        <a href="/trips/" class="text-sm font-semibold" style="color: var(--color-coral);">Explore trips →</a>
+      <div class="mt-8 rounded-2xl p-6 text-center bg-blush" data-card-skeleton data-skeleton-ready>
+        <p class="text-sm font-medium mb-1 text-navy">You're not on the leaderboard yet</p>
+        <p class="text-xs mb-4 text-gray-text">Stats appear once your trip booking is confirmed.</p>
+        <a href="/trips/" class="text-sm font-semibold text-coral-ink">Explore trips →</a>
       </div>
     )}
 
