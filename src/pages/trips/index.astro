@@ -30,23 +30,24 @@ const listingSchema = {
   <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(listingSchema)} /></Fragment>
 
   <!-- Page header -->
-  <section class="py-10 lg:py-12" style="background-color: var(--color-blush);">
+  <section class="py-10 lg:py-12 bg-blush">
     <div class="container-app text-center">
-      <h1 class="text-4xl lg:text-5xl font-bold mb-3" style="font-family: var(--font-display); color: var(--color-navy);">
+      <h1 class="text-4xl lg:text-5xl font-bold mb-3 font-display text-navy">
         Upcoming trips
       </h1>
-      <p class="text-base max-w-md mx-auto leading-relaxed" style="color: var(--color-gray-text);">
+      <p class="text-base max-w-md mx-auto leading-relaxed text-gray-text">
         Small groups. Handpicked routes.
       </p>
     </div>
   </section>
 
   <!-- Trip grid -->
-  <section class="py-14 lg:py-18" style="background-color: var(--color-gray-soft);">
+  <section class="py-14 lg:py-18 bg-gray-soft">
+    <h2 class="sr-only">All upcoming trips</h2>
     <div class="container-app">
       {trips.length === 0 ? (
         <div class="text-center py-20">
-          <p class="text-base" style="color: var(--color-gray-text);">Nothing open right now. The next trip will show up here when it's ready.</p>
+          <p class="text-base text-gray-text">Nothing open right now. The next trip will show up here when it's ready.</p>
         </div>
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">

@@ -97,25 +97,25 @@ const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplas
   hideWhatsApp={true}
 >
   <!-- Slim trip header -->
-  <div class="border-b" style="border-color: var(--color-peach);">
+  <div class="border-b border-peach">
     <div class="container-app py-4 flex items-center gap-3">
-      <a href={`/trips/${slug}/`} data-back-link class="flex items-center gap-1.5 text-sm transition-colors hover:opacity-70" style="color: var(--color-coral);">
+      <a href={`/trips/${slug}/`} data-back-link class="flex items-center gap-1.5 text-sm transition-colors hover:opacity-70 text-coral-ink">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
         Back
       </a>
-      <span class="text-sm" style="color: rgba(27,43,58,0.3);">/</span>
-      <span class="text-sm font-medium truncate" style="color: var(--color-navy);">{tripName}</span>
+      <span class="text-sm text-navy/30" aria-hidden="true">/</span>
+      <span class="text-sm font-medium truncate text-navy">{tripName}</span>
     </div>
   </div>
 
   <div class="container-app py-10 lg:py-14">
     <div class="max-w-lg mx-auto">
-      <h1 class="text-2xl font-bold mb-1" style="font-family: var(--font-display); color: var(--color-navy);">
+      <h1 class="text-2xl font-bold mb-1 font-display text-navy">
         Save your spot
       </h1>
-      <p class="text-sm mb-8" style="color: var(--color-gray-text);">A few spots are still open. If this one is calling you, don't wait.</p>
+      <p class="text-sm mb-8 text-gray-text">A few spots are still open. If this one is calling you, don't wait.</p>
 
       <BookingCheckout
         slug={slug!}

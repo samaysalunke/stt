@@ -11,8 +11,9 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Suite state at handoff:** `build` clean · `test:unit` 300/300 · `test:api` 153/153 ·
   `test:e2e` 150/150. Everything green. `test:unit` is 306 not 300 because the rebase
   brought in `main`'s new departure-summary tests.
-- **Phases 0, 1, 1.5, 2 and 3 are done.** The Phase 1 review gate is cleared (see
-  "Gate decisions"). **Phase 4 (booking flow) is next.**
+- **Phases 0, 1, 1.5, 2, 3 and 4 are done.** The Phase 1 review gate is cleared (see
+  "Gate decisions"). **Phase 5 (profile / photo-vault) is next — and it is now the
+  only place any public inline style survives.**
 - **The branch was rebased onto `main` on 2026-09-01** and now contains all of it
   (`git merge-base --is-ancestor main ui-refresh` passes). A pre-rebase backup ref
   `ui-refresh-prerebase` exists — delete it once you are confident.
@@ -225,7 +226,11 @@ Baselines archived in `docs/slop-baseline.txt`, `docs/bundle-baseline.txt`,
     `return Astro.redirect('/trips/', 301)` in frontmatter and builds fine. The
     breakage is specifically an **early/conditional** return with code after it, not a
     return as the sole frontmatter statement.
-12. **Homepage 320px overflow** — a fixed `text-display-*` with `whitespace-nowrap` on
+12. **A `{/* … */}` comment inside a ternary branch breaks the compiler here.**
+    Adding one at the top of `TripCard`'s footer block produced
+    `Expected ")" but found "$$render"`. Same family as gotcha #1 — put the comment in
+    the frontmatter instead. Cost a build cycle.
+13. **Homepage 320px overflow** — a fixed `text-display-*` with `whitespace-nowrap` on
    "Where to, wanderer?" overflowed narrow viewports (original used fluid `clamp`).
    Fixed with `text-display-md sm:whitespace-nowrap sm:text-display-lg …`. Watch for
    this pattern when converting other fluid headings.
@@ -338,6 +343,58 @@ rather than dropping it. Worth rebuilding for Phase 6 (admin) if that is ever at
 adding the replacement class**: doing exactly that silently stripped the
 custom-itineraries hero CTA's fill, and only a screenshot review caught it.
 
+## Phase 4 — booking flow (done)
+
+`TripCard`, `TestimonialCard`, `trips/index`, `trips/[slug]` (was 68 inline styles, the
+densest file in the repo) and `trips/[slug]/book`. Public inline `style="` **123 → 23**,
+and **all 23 that remain are in `photo-vault/*`, i.e. Phase 5**. `var(--color` in markup
+270 → 179, hardcoded hex 116 → 104.
+
+**The hard gate held.** All 24 `data-testid`s unchanged, all 120 functional e2e specs
+green, no island prop, form `id`/`name`, `fetch` URL or script-queried hook touched.
+
+**Accessibility — this phase closed out the audit:**
+
+| route | a11y at Phase 0 | now |
+|---|---|---|
+| `/` | 94 | 96 |
+| `/trips/` | 89 | **100** |
+| `/trips/monsoon-meghalaya/` | 94 | **100** |
+
+- `TripCard` "View Details" and the trip-detail price badge were white-on-coral at
+  3.01:1 and ~3.0:1 → `bg-cta` (4.84:1).
+- `TestimonialCard`'s "Read more" — coral at 12px, 3.01:1 on white and 2.70:1 on
+  blush → `text-coral-ink`.
+- The trip-detail "what's included" headings were hardcoded `#22A654` (**3.16:1**,
+  failing) and `#DC2626`. New `--color-success-ink` (`#157A3F`, 5.40:1); the red uses
+  `--color-danger-ink`. `--color-success` is left alone as a fill/indicator.
+- `heading-order` on `/trips/` — the page went `h1` straight to the card `h3`s. Fixed
+  with an `sr-only` `<h2>` naming the grid, *not* by changing `TripCard`'s `h3`, which
+  is correct on the homepage where it sits under a real `h2`.
+
+**Design: how the coral overload was actually resolved.** The handoff previously
+suggested `TripCard` take `Button variant="outline"`. That was the wrong call — "View
+Details" is the card's primary action and the site's conversion path, and weakening it
+to get hierarchy trades the wrong thing. The real problem was that *everything else* on
+the card was also coral: the price, "Coming soon", the location pin, the caption. Those
+are information, not actions. Moving them to navy/gray/ink leaves the CTA as the only
+coral element on the card, which is the hierarchy the rule was after, with a stronger
+CTA rather than a weaker one.
+
+**Card CTA alignment.** `TripCard`'s footer block is bottom-anchored, so the
+coming-soon caption rendered *below* the button pushed that card's button up and broke
+the button baseline against a neighbouring card without a caption. The caption now
+renders above the CTA. There is a comment in the frontmatter explaining the ordering —
+keep it if you reorder that block.
+
+**Known and accepted:** `/` still reports one `color-contrast` item, the hero's italic
+coral "away from the crowds." It measures 4.81:1 against the scrim over dark imagery
+(AA-large needs 3:1) but is genuinely indeterminate over a bright hero photo, because
+the headline sits on a photograph that changes. Options if you want it closed: constrain
+hero photos to dark ones, add a scrim floor behind the headline block, or move the
+accent to `--color-peach`. **Left alone deliberately — it changes a brand element and
+that is your call, not a cleanup decision.**
+
 ## Next phases
 
 - ~~**Phase 2**~~ — done, see above. Original scope note: `BaseLayout`, `Header` (~90-rule
@@ -368,7 +425,10 @@ custom-itineraries hero CTA's fill, and only a screenshot review caught it.
   `.testimonial-toggle`, and the trip detail page's hardcoded `#22A654` / `#DC2626`
   heading colours.
 - **Phase 5** — `profile`, `u/[username]` (already zero inline styles),
-  `photo-vault/*` (GLightbox — verify selectors), `ProfileTripCard`.
+  `photo-vault/*` (GLightbox — verify selectors), `ProfileTripCard`. `photo-vault/*`
+  now holds **every** remaining public inline style (23). Expect the same contrast
+  pattern as everywhere else: `rgba(27,43,58,0.45–0.55)` body text and
+  `var(--color-coral)` used as small text both fail AA.
 - **Phase 6 (optional)** — admin. Needs a Playwright auth `storageState` fixture
   first (doesn't exist). Prune legacy `--color-primary*` / `--color-accent*` /
   `--color-gold` aliases from `global.css` only after `grep` shows zero refs.

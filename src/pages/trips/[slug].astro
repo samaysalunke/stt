@@ -241,15 +241,14 @@ const tripSchema: Record<string, any> = {
   <!-- ── HERO ─────────────────────────────────────────────── -->
   <section
     data-testid="trip-hero"
-    class="relative min-w-0 overflow-hidden"
-    style="height: clamp(360px, 70svh, 680px); max-height: 100svh;"
+    class="relative min-w-0 overflow-hidden h-[clamp(360px,70svh,680px)] max-h-[100svh]"
   >
     <img src={heroImg} alt={trip.imageAlt || generatedSeo.imageAlt} width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
-    <div class="absolute inset-0" style="background: linear-gradient(to top, rgba(27,43,58,0.9) 0%, rgba(27,43,58,0.3) 55%, rgba(0,0,0,0.1) 100%);"></div>
+    <div class="u-overlay-scrim-bottom absolute inset-0"></div>
 
     <div class="absolute inset-x-0 bottom-0 py-4 sm:pb-8">
       <div class="container-app min-w-0">
-        <h1 class="mb-3 break-words text-[clamp(1.75rem,8vw,3rem)] font-bold leading-[1.05] text-white md:text-4xl lg:text-5xl" style="font-family: var(--font-display);">
+        <h1 class="mb-3 break-words text-[clamp(1.75rem,8vw,3rem)] font-bold leading-[1.05] text-white md:text-4xl lg:text-5xl font-display">
           {tripName}
         </h1>
         <!-- Quick pills -->
@@ -292,7 +291,7 @@ const tripSchema: Record<string, any> = {
                 ) : departure.comingSoon ? (
                   <span class="mt-0.5 text-[10px] text-white/75">Coming soon</span>
                 ) : departure.fillingFast ? (
-                  <span class="mt-0.5 text-[10px] font-semibold" style="color:#FFB49F;">Filling fast</span>
+                  <span class="mt-0.5 text-[10px] font-semibold text-peach">Filling fast</span>
                 ) : null}
               </span>
             ))}
@@ -303,7 +302,7 @@ const tripSchema: Record<string, any> = {
         )}
         <div class="mt-2 flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {fromPrice != null ? (
-            <span class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm" style="background-color: rgba(232,114,90,0.85);">
+            <span class="flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-cta px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm">
               {priceSummary.originalFromPrice != null && <span class="line-through opacity-80">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
               from {formattedLead} / person
               {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="ml-1" client:load />}
@@ -321,38 +320,38 @@ const tripSchema: Record<string, any> = {
   <!-- ── MAIN LAYOUT ──────────────────────────────────────── -->
   <!-- Compact, semantic trip summary. The visually hidden heading preserves a
        useful section name for assistive technology without adding visual bulk. -->
-  <section data-testid="trip-at-a-glance" aria-labelledby="trip-at-a-glance-heading" style="background-color: #f7f5f1;">
+  <section data-testid="trip-at-a-glance" aria-labelledby="trip-at-a-glance-heading" class="bg-gray-soft">
     <h2 id="trip-at-a-glance-heading" class="sr-only">Trip at a glance</h2>
     <dl class="container-app grid grid-cols-2 py-3 sm:py-4 md:grid-cols-4">
-      <div data-testid="glance-duration" class="min-w-0 border-b border-r px-3 py-3 sm:px-5 md:border-b-0 md:px-6" style="border-color: var(--color-border);">
-        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
-          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div data-testid="glance-duration" class="min-w-0 border-b border-r px-3 py-3 sm:px-5 md:border-b-0 md:px-6 border-border">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs text-gray-text">
+          <svg class="h-4 w-4 flex-none text-coral-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           Duration
         </dt>
-        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{durationAtAGlance}</dd>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base text-navy">{durationAtAGlance}</dd>
       </div>
-      <div data-testid="glance-departures" class="min-w-0 border-b px-3 py-3 sm:px-5 md:border-b-0 md:border-r md:px-6" style="border-color: var(--color-border);">
-        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
-          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>
+      <div data-testid="glance-departures" class="min-w-0 border-b px-3 py-3 sm:px-5 md:border-b-0 md:border-r md:px-6 border-border">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs text-gray-text">
+          <svg class="h-4 w-4 flex-none text-coral-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M5 11h14M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>
           Departures
         </dt>
-        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{departureAtAGlance}</dd>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base text-navy">{departureAtAGlance}</dd>
       </div>
-      <div data-testid="glance-price" class="min-w-0 border-r px-3 py-3 sm:px-5 md:px-6" style="border-color: var(--color-border);">
-        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
-          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <div data-testid="glance-price" class="min-w-0 border-r px-3 py-3 sm:px-5 md:px-6 border-border">
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs text-gray-text">
+          <svg class="h-4 w-4 flex-none text-coral-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 3h12M6 8h12m-12 5 8.5 8M6 13h3c6.667 0 6.667-10 0-10" />
           </svg>
           {allComingSoon ? 'Price' : 'Starting from'}
         </dt>
-        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{allComingSoon ? 'Coming soon' : priceAtAGlance}</dd>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base text-navy">{allComingSoon ? 'Coming soon' : priceAtAGlance}</dd>
       </div>
       <div data-testid="glance-group-size" class="min-w-0 px-3 py-3 sm:px-5 md:px-6">
-        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs" style="color: var(--color-gray-text);">
-          <svg class="h-4 w-4 flex-none" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m7-10a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 010 7.75" /></svg>
+        <dt class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] sm:text-xs text-gray-text">
+          <svg class="h-4 w-4 flex-none text-coral-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2m7-10a4 4 0 100-8 4 4 0 000 8zm13 10v-2a4 4 0 010 7.75" /></svg>
           Group size
         </dt>
-        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base" style="color: var(--color-navy);">{groupSizeAtAGlance}</dd>
+        <dd class="mt-1 min-w-0 break-words text-sm font-bold leading-snug sm:text-base text-navy">{groupSizeAtAGlance}</dd>
       </div>
     </dl>
   </section>
@@ -369,11 +368,11 @@ const tripSchema: Record<string, any> = {
         <!-- What this trip feels like -->
         {description && (
           <section data-trip-feels>
-            <h2 class="text-2xl font-bold mb-4" style="font-family: var(--font-display); color: var(--color-navy);">What this trip feels like</h2>
+            <h2 class="text-2xl font-bold mb-4 font-display text-navy">What this trip feels like</h2>
             <div id="trip-feels-content" data-trip-feels-text class="trip-description-collapsed min-w-0 overflow-hidden">
               <MarkdownContent content={description} variant="rich-text" />
             </div>
-            <button type="button" data-trip-feels-toggle aria-expanded="false" aria-controls="trip-feels-content" class="mt-2 hidden cursor-pointer text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read more</button>
+            <button type="button" data-trip-feels-toggle aria-expanded="false" aria-controls="trip-feels-content" class="mt-2 hidden cursor-pointer text-sm font-semibold hover:underline text-coral-ink">Read more</button>
           </section>
         )}
 
@@ -406,18 +405,18 @@ const tripSchema: Record<string, any> = {
         <!-- Highlights -->
         {highlights.length > 0 && (
           <section data-highlights>
-            <h2 class="text-2xl font-bold mb-5" style="font-family: var(--font-display); color: var(--color-navy);">Things you'll probably talk about later</h2>
+            <h2 class="text-2xl font-bold mb-5 font-display text-navy">Things you'll probably talk about later</h2>
             <ul id="highlights-list" data-highlights-list class="highlights-collapsed grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-hidden">
               {highlights.map((h: string) => (
-                <li class="flex items-start gap-2.5 text-sm" style="color: var(--color-navy);">
-                  <svg class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--color-coral);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <li class="flex items-start gap-2.5 text-sm text-navy">
+                  <svg class="w-5 h-5 flex-shrink-0 mt-0.5 text-coral-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                   </svg>
                   {h}
                 </li>
               ))}
             </ul>
-            <button type="button" data-highlights-toggle aria-expanded="false" aria-controls="highlights-list" class="mt-3 hidden cursor-pointer text-sm font-semibold hover:underline" style="color: var(--color-coral);">Read more</button>
+            <button type="button" data-highlights-toggle aria-expanded="false" aria-controls="highlights-list" class="mt-3 hidden cursor-pointer text-sm font-semibold hover:underline text-coral-ink">Read more</button>
           </section>
         )}
 
@@ -450,8 +449,8 @@ const tripSchema: Record<string, any> = {
         <!-- Photos strip -->
         {tripPhotos.length > 0 && (
           <section>
-            <h2 class="font-display text-3xl lg:text-4xl mb-2" style="color: var(--color-navy);">Photos</h2>
-            <p class="text-sm mb-4" style="color: var(--color-gray-text);">From the trail. No filters, no staging.</p>
+            <h2 class="font-display text-3xl lg:text-4xl mb-2 text-navy">Photos</h2>
+            <p class="text-sm mb-4 text-gray-text">From the trail. No filters, no staging.</p>
             <div class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {tripPhotos.map((photo, index) => (
                 <img
@@ -475,9 +474,8 @@ const tripSchema: Record<string, any> = {
               data-testid="accommodation-gallery-toggle"
               aria-expanded="false"
               aria-controls="accommodation-gallery-region"
-              class="flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white px-5 py-4 text-left text-xl font-semibold"
-              style="border-color: var(--color-border); color: var(--color-navy); font-family: var(--font-display);"
-            >
+              class="flex w-full cursor-pointer items-center justify-between rounded-xl border bg-white px-5 py-4 text-left text-xl font-semibold border-border text-navy font-display"
+             >
               <span>Where will you stay?</span>
               <svg data-accommodation-chevron class="h-5 w-5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -513,8 +511,8 @@ const tripSchema: Record<string, any> = {
                 ))}
               </div>
               <div class="mt-3 flex justify-end gap-2">
-                <button type="button" data-testid="accommodation-gallery-previous" aria-label="Previous accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40" style="border-color: var(--color-border); color: var(--color-navy);">Previous</button>
-                <button type="button" data-testid="accommodation-gallery-next" aria-label="Next accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40" style="border-color: var(--color-border); color: var(--color-navy);">Next</button>
+                <button type="button" data-testid="accommodation-gallery-previous" aria-label="Previous accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 border-border text-navy">Previous</button>
+                <button type="button" data-testid="accommodation-gallery-next" aria-label="Next accommodation photo" class="cursor-pointer rounded-full border bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 border-border text-navy">Next</button>
               </div>
             </div>
           </section>
@@ -523,7 +521,7 @@ const tripSchema: Record<string, any> = {
         <!-- Itinerary -->
         {itinerary.length > 0 && (
           <section>
-            <h2 class="text-2xl font-bold mb-6" style="font-family: var(--font-display); color: var(--color-navy);">The plan</h2>
+            <h2 class="text-2xl font-bold mb-6 font-display text-navy">The plan</h2>
             <DayAccordion itinerary={itinerary} tripName={tripName} client:visible />
           </section>
         )}
@@ -531,11 +529,11 @@ const tripSchema: Record<string, any> = {
         <!-- Included / Excluded -->
         {(included.length > 0 || excluded.length > 0) && (
           <section>
-            <h2 class="text-2xl font-bold mb-6" style="font-family: var(--font-display); color: var(--color-navy);">What's included</h2>
+            <h2 class="text-2xl font-bold mb-6 font-display text-navy">What's included</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {included.length > 0 && (
                 <div>
-                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: #22A654;">
+                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2 text-success-ink">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -543,8 +541,8 @@ const tripSchema: Record<string, any> = {
                   </h3>
                   <ul class="space-y-2">
                     {included.map((item: string) => (
-                      <li class="flex items-start gap-2 text-sm" style="color: var(--color-navy);">
-                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: #22A654;" fill="currentColor" viewBox="0 0 20 20">
+                      <li class="flex items-start gap-2 text-sm text-navy">
+                        <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-success-ink" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                         </svg>
                         {item}
@@ -555,7 +553,7 @@ const tripSchema: Record<string, any> = {
               )}
               {excluded.length > 0 && (
                 <div>
-                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: #DC2626;">
+                  <h3 class="text-sm font-semibold mb-3 flex items-center gap-2 text-danger-ink">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -563,7 +561,7 @@ const tripSchema: Record<string, any> = {
                   </h3>
                   <ul class="space-y-2">
                     {excluded.map((item: string) => (
-                      <li class="flex items-start gap-2 text-sm" style="color: var(--color-gray-text);">
+                      <li class="flex items-start gap-2 text-sm text-gray-text">
                         <svg class="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
@@ -580,8 +578,8 @@ const tripSchema: Record<string, any> = {
         <!-- Important info -->
         {trip.importantNotes && (
           <section>
-            <div class="rounded-xl p-5" style="background-color: var(--color-blush); border-left: 4px solid var(--color-coral);">
-              <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Important</h3>
+            <div class="rounded-xl border-l-4 border-coral bg-blush p-5">
+              <h3 class="font-semibold text-sm mb-2 text-navy">Important</h3>
               <MarkdownContent content={trip.importantNotes} variant="rich-text" class="important-note-body" />
             </div>
           </section>
@@ -590,8 +588,8 @@ const tripSchema: Record<string, any> = {
         <!-- Meeting point -->
         {trip.meetingPoint && (
           <section class="pb-4">
-            <h3 class="font-semibold text-sm mb-2" style="color: var(--color-navy);">Meeting Point</h3>
-            <p class="text-sm leading-relaxed" style="color: var(--color-gray-text);">{trip.meetingPoint}</p>
+            <h3 class="font-semibold text-sm mb-2 text-navy">Meeting Point</h3>
+            <p class="text-sm leading-relaxed text-gray-text">{trip.meetingPoint}</p>
           </section>
         )}
 
@@ -601,7 +599,7 @@ const tripSchema: Record<string, any> = {
       <div class="lg:sticky lg:top-24 space-y-5 mt-10 lg:mt-0">
 
         <!-- Booking card -->
-        <div id="booking-panel" class="bg-white rounded-2xl overflow-hidden scroll-mt-24" style="box-shadow: var(--shadow-lifted); border-top: 4px solid var(--color-coral);">
+        <div id="booking-panel" class="bg-white rounded-2xl overflow-hidden scroll-mt-24 shadow-lifted border-t-4 border-coral">
           <div class="p-6">
 
             {showBookingPanel ? (
@@ -621,31 +619,31 @@ const tripSchema: Record<string, any> = {
               <>
                 {fromPrice != null && (
                   <div class="mb-5">
-                    {priceSummary.originalFromPrice != null && <span class="mr-2 text-sm line-through" style="color: var(--color-gray-text);">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
-                    <span class="text-sm mr-1" style="color: var(--color-gray-text);">from</span>
-                    <span class="text-3xl font-bold" style="font-family: var(--font-display); color: var(--color-coral);">{formattedLead}</span>
-                    <span class="text-sm ml-1" style="color: var(--color-gray-text);">/ person</span>
+                    {priceSummary.originalFromPrice != null && <span class="mr-2 text-sm line-through text-gray-text">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
+                    <span class="text-sm mr-1 text-gray-text">from</span>
+                    <span class="text-3xl font-bold font-display text-coral-ink">{formattedLead}</span>
+                    <span class="text-sm ml-1 text-gray-text">/ person</span>
                     {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="mt-1 block text-xs font-semibold" client:load />}
                   </div>
                 )}
-                <div class="w-full py-3.5 rounded-full text-center text-sm font-medium" style="background-color: #f3f4f6; color: var(--color-gray-text);">
+                <div class="w-full rounded-[var(--radius-pill)] bg-gray-soft py-3.5 text-center text-sm font-medium text-gray-text">
                   {isSoldOut ? 'Sold out' : 'Registration closed'}
                 </div>
               </>
             )}
 
             <!-- Duration + group size -->
-            <div class="mt-5 pt-4 border-t grid grid-cols-2 gap-3 text-sm" style="border-color: var(--color-peach);">
+            <div class="mt-5 pt-4 border-t grid grid-cols-2 gap-3 text-sm border-peach">
               {trip.duration && (
                 <div>
-                  <div class="text-xs" style="color: var(--color-gray-text);">Duration</div>
-                  <div class="font-medium mt-0.5" style="color: var(--color-navy);">{trip.duration}</div>
+                  <div class="text-xs text-gray-text">Duration</div>
+                  <div class="font-medium mt-0.5 text-navy">{trip.duration}</div>
                 </div>
               )}
               {firstDeparture?.totalCap && (
                 <div>
-                  <div class="text-xs" style="color: var(--color-gray-text);">Group size</div>
-                  <div class="font-medium mt-0.5" style="color: var(--color-navy);">Max {firstDeparture.totalCap}</div>
+                  <div class="text-xs text-gray-text">Group size</div>
+                  <div class="font-medium mt-0.5 text-navy">Max {firstDeparture.totalCap}</div>
                 </div>
               )}
             </div>
@@ -653,14 +651,13 @@ const tripSchema: Record<string, any> = {
         </div>
 
         <!-- Trust card -->
-        <div class="rounded-xl p-4 text-sm leading-relaxed flex items-center justify-between gap-3" style="background-color: var(--color-blush); color: var(--color-navy);">
+        <div class="rounded-xl p-4 text-sm leading-relaxed flex items-center justify-between gap-3 bg-blush text-navy">
           <span>Run by Zahra and a small team who've actually done these routes. Real humans, one WhatsApp away.</span>
           <a
             href={whatsappLink}
             target="_blank"
             rel="noopener noreferrer"
-            class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-            style="background:#25D366;"
+            class="shrink-0 w-9 h-9 rounded-[var(--radius-pill)] bg-whatsapp flex items-center justify-center"
             title="Chat with us on WhatsApp"
             aria-label="Chat with us on WhatsApp"
           >
@@ -676,11 +673,11 @@ const tripSchema: Record<string, any> = {
     <!-- ── CLOSED / SOLD-OUT STATE ────────────────────────── -->
     {!showBookingPanel && (
       <div class="mt-16">
-        <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl" style="box-shadow: var(--shadow-card);">
-          <p class="text-base font-medium mb-4" style="color: var(--color-navy);">
+        <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl shadow-card">
+          <p class="text-base font-medium mb-4 text-navy">
             {isSoldOut ? 'All spots on this trip are filled.' : noUpcomingDates ? 'New dates for this trip are coming soon.' : 'Registration for this trip is currently closed.'}
           </p>
-          <a href="/trips/" class="inline-block font-semibold text-white px-6 py-3 rounded-full" style="background-color: var(--color-coral);">
+          <a href="/trips/" class="inline-block font-semibold text-white px-6 py-3 rounded-full bg-cta">
             See other trips →
           </a>
         </div>
@@ -690,8 +687,8 @@ const tripSchema: Record<string, any> = {
     <!-- Global testimonials -->
     {tripTestimonials.length > 0 && (
       <section class="mt-16">
-        <h2 class="font-display mb-2 text-3xl lg:text-4xl" style="color: var(--color-navy);">What they said</h2>
-        <p class="mb-4 text-sm" style="color: var(--color-gray-text);">Real words. Zero editing.</p>
+        <h2 class="font-display mb-2 text-3xl lg:text-4xl text-navy">What they said</h2>
+        <p class="mb-4 text-sm text-gray-text">Real words. Zero editing.</p>
         <div class="flex items-start gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tripTestimonials.map((t: any, index: number) => (
             <TestimonialCard testimonial={t} cardId={`trip-${slug}-${t.slug ?? index}`} />
@@ -702,17 +699,17 @@ const tripSchema: Record<string, any> = {
 
     {tripFaqs.length > 0 && (
       <section class="mx-auto mt-16 max-w-3xl" aria-labelledby="trip-faq-heading">
-        <h2 id="trip-faq-heading" class="mb-6 text-2xl font-bold" style="font-family: var(--font-display); color: var(--color-navy);">Frequently asked questions</h2>
+        <h2 id="trip-faq-heading" class="mb-6 text-2xl font-bold font-display text-navy">Frequently asked questions</h2>
         <div class="space-y-2">
           {tripFaqs.map((faq) => (
-            <details class="group overflow-hidden rounded-xl border bg-white" style="border-color: var(--color-border);">
-              <summary class="flex cursor-pointer list-none select-none items-center justify-between px-5 py-4 text-sm font-medium" style="color: var(--color-navy);">
+            <details class="group overflow-hidden rounded-xl border bg-white border-border">
+              <summary class="flex cursor-pointer list-none select-none items-center justify-between px-5 py-4 text-sm font-medium text-navy">
                 <span>{faq.question}</span>
-                <svg class="ml-3 h-4 w-4 flex-shrink-0 transition-transform duration-200 group-open:rotate-180" style="color: var(--color-gray-text);" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg class="ml-3 h-4 w-4 flex-shrink-0 transition-transform duration-200 group-open:rotate-180 text-gray-text" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </summary>
-              <div class="px-5 pb-5 pt-1 text-sm leading-relaxed" style="color: var(--color-gray-text);">{faq.answer}</div>
+              <div class="px-5 pb-5 pt-1 text-sm leading-relaxed text-gray-text">{faq.answer}</div>
             </details>
           ))}
         </div>
@@ -722,12 +719,11 @@ const tripSchema: Record<string, any> = {
 
   <!-- Mobile sticky booking bar -->
   {showBookingPanel && (
-    <div id="booking-sticky" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t px-5 py-3 transition-all duration-300" style="border-color: var(--color-peach); box-shadow: 0 -4px 12px rgba(0,0,0,0.08);">
+    <div id="booking-sticky" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-peach px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-all duration-300">
       <a
         id="sticky-cta"
         href="#booking-panel"
-        class="block w-full text-center font-semibold text-white px-7 py-3 rounded-full text-sm"
-        style="background-color: var(--color-cta);"
+        class="block w-full rounded-[var(--radius-pill)] bg-cta px-7 py-3 text-center text-sm font-semibold text-white"
       >
         {isOpen ? 'Save my spot →' : 'Wishlist now →'}
       </a>

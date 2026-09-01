@@ -58,6 +58,9 @@
      6.80:1 ink-on-surface, 8.2:1 ink-on-white. */
   --color-danger-surface: #FEE2E2;
   --color-danger-ink: #991B1B;
+  /* --color-success (#22A654) is 3.16:1 on white and fails AA as text. Kept as
+     a fill/indicator; this is the readable variant for text, at 5.40:1. */
+  --color-success-ink: #157A3F;
   --color-border: #E8DDD9;
 
   /* ── Typography ────────────────────────────────────────────── */
@@ -199,6 +202,17 @@ html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::afte
   }
   .u-overlay-scrim-flat {
     background: rgba(27, 43, 58, 0.78);
+  }
+
+  /* Bottom-anchored navy scrim for a full-bleed hero — keeps overlaid copy
+     legible without darkening the whole image. */
+  .u-overlay-scrim-bottom {
+    background: linear-gradient(
+      to top,
+      rgba(27, 43, 58, 0.90) 0%,
+      rgba(27, 43, 58, 0.30) 55%,
+      rgba(0, 0, 0, 0.10) 100%
+    );
   }
 
   /* Bottom-anchored fade to the page surface — used to soften the cut-off edge
