@@ -66,6 +66,22 @@ export function regStats(rs: Reg[]): RegStats {
   };
 }
 
+/**
+ * History is chronological, not an availability state. A future departure can
+ * be sold out while its registrations still need day-to-day administration.
+ */
+export function isHistoricalDeparture(
+  departure: Pick<RegDeparture, 'startDate' | 'status'>,
+  today = new Date(),
+): boolean {
+  if (!departure.startDate) return true;
+  const start = new Date(departure.startDate);
+  start.setHours(0, 0, 0, 0);
+  const day = new Date(today);
+  day.setHours(0, 0, 0, 0);
+  return start < day || departure.status === 'completed' || departure.status === 'draft';
+}
+
 export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const isTripLead = adminUser?.role === 'trip_lead';
   const allowedBatchIds: string[] | null = isTripLead ? (adminUser?.tripIds ?? []) : null;
@@ -128,9 +144,10 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
           const cap = metered ? offers.reduce((n: number, o: any) => n + Number(o.cap || 0), 0) : null;
           const booked = offers.reduce((n: number, o: any) => n + Number(o.booked || 0), 0);
           const soldOut = d.status === 'sold-out' || d.status === 'sold_out' || (cap !== null && booked >= cap);
-          const start = new Date(d.startDate);
-          start.setHours(0, 0, 0, 0);
-          const historical = !d.startDate || start < today || d.status === 'completed' || d.status === 'draft' || soldOut;
+          const historical = isHistoricalDeparture(
+            { startDate: String(d.startDate || ''), status: String(d.status || 'booking-open') },
+            today,
+          );
           return {
             id,
             startDate: String(d.startDate || ''),
@@ -160,14 +177,15 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
           !d.soldOut &&
           (d.cap === null || d.booked < d.cap),
       );
+      const currentDeps = departures.filter((d) => !d.historical);
       const regCount = departures.reduce((n, d) => n + d.regs.length, 0);
       return {
         slug: String(trip.slug),
         name,
         active: activeDeps.length > 0,
-        nextDate: activeDeps[0]?.startDate ?? departures[0]?.startDate ?? '9999',
+        nextDate: activeDeps[0]?.startDate ?? currentDeps[0]?.startDate ?? departures[0]?.startDate ?? '9999',
         departures,
-        historical: activeDeps.length === 0,
+        historical: currentDeps.length === 0,
         regCount,
       };
     })
