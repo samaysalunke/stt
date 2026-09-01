@@ -21,14 +21,19 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
-| `689b2dc` | Phase 2 — shared chrome onto tokens; chrome a11y cleared |
-| `ef4f7ad` | Make the visual harness deterministic (shuffle pin, dev toolbar, thank-you) |
-| `cf39bd8` | Phase 1.5 — retune tokens for contrast + hierarchy; handoff updated |
-| `e5208a2` | Phase 1 gate draft — homepage restyled onto primitives + tokens |
-| `61b6a92` | Phase 1 — design tokens in global.css + 13 primitives + `/ui-kit` gallery |
-| `6936cc7` | Phase 0 — visual-regression harness (`tests/e2e/visual.spec.ts`) + 32 baselines |
-| `d05e5d0` | Phase 0 — slop metrics tooling + baselines (`scripts/slop-metrics.sh`, `docs/*-baseline.txt`) |
-| `0e93d8b` | Repair 13 stale e2e specs so the suite was green before touching UI |
+| `8ab0846` | feat(ui): Phase 3 — marketing and legal pages onto tokens |
+| `4b88e1a` | chore: ignore Playwright's test-results directory |
+| `588d985` | docs: record the Phase 2 commit in the handoff table |
+| `f6a38cf` | feat(ui): Phase 2 — shared chrome onto tokens, chrome a11y cleared |
+| `ec00641` | docs: record Phase 1.5 and harness-fix commits in the handoff table |
+| `d767fa8` | fix(test): make the visual harness deterministic |
+| `012b700` | feat(ui): Phase 1.5 — retune tokens for contrast and hierarchy |
+| `c70646d` | docs: UI refresh session handoff |
+| `83fbc67` | feat(ui): Phase 1 gate draft — restyle homepage onto primitives + tokens |
+| `5f01a76` | feat(ui): Phase 1 — design tokens + primitive component layer |
+| `135b9b6` | test(e2e): add visual-regression harness + Phase 0 baselines |
+| `17a32e3` | chore(ui-refresh): capture Phase 0 baselines for the UI refresh |
+| `5cb6a3b` | test(e2e): repair 13 stale specs so the suite is green before the UI refresh |
 
 ## Gate decisions (settled — do not reopen)
 
