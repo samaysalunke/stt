@@ -69,10 +69,13 @@ function fmtUpdatedAt(value: string | null) {
 }
 
 // Display vocabulary for the derived trip state (computed from departures).
-const statusColors: Record<string, string> = {
-  'booking-open': '#16a34a',
-  'hidden':       '#6b7280',
-  'sold-out':     '#dc2626',
+// Surface/ink pairs from the status palette. These were single hues painted as
+// `background:<hue>22; color:<hue>`, which put 2.9:1 green and 3.3:1 grey text
+// on their own 13% tints — the same pattern the photo-vault pills used.
+const statusStyles: Record<string, string> = {
+  'booking-open': 'background:var(--color-success-surface); color:var(--color-success-surface-ink);',
+  'hidden':       'background:var(--color-muted-surface); color:var(--color-muted-ink);',
+  'sold-out':     'background:var(--color-danger-surface); color:var(--color-danger-ink);',
 };
 const statusLabels: Record<string, string> = {
   'booking-open': 'Booking Open',
@@ -120,7 +123,7 @@ const statusLabels: Record<string, string> = {
               <p class="mt-1 text-[11px] text-gray-text">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                  style={`background:${statusColors[trip._derivedStatus]}22; color:${statusColors[trip._derivedStatus]};`}>
+                  style={statusStyles[trip._derivedStatus]}>
               {statusLabels[trip._derivedStatus]}
             </span>
           </div>

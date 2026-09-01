@@ -176,18 +176,22 @@ export const prerender = false;
 
     <style is:global>
       :root { color-scheme: light; }
-      body { margin: 0; min-height: 100vh; background: #ece5dd; color: #1b2b3a; font-family: var(--font-sans); }
+      body { margin: 0; min-height: 100vh; background: #ece5dd; color: var(--color-navy); font-family: var(--font-sans); }
       .analytics-shell { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
 
       /* WhatsApp-style header bar */
-      .topbar { height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #1b2b3a; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); position: relative; z-index: 2; }
+      .topbar { height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: var(--color-navy); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); position: relative; z-index: 2; }
       .topbar h1 { margin: 0; font-family: var(--font-display); font-size: 18px; }
       .topbar p { margin: 1px 0 0; font-size: 12px; color: rgba(255,255,255,.6); }
       .back-link { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: none; color: #fff; background: transparent; }
       .back-link:hover { background: rgba(255,255,255,.12); }
       svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-      /* Chat surface — subtle paper texture like WhatsApp */
+      /* Chat surface — subtle paper texture like WhatsApp.
+         #ece5dd (paper), #d6f0c8 (outgoing bubble) and #f3eee8 (composer/table
+         head) are WhatsApp's own transcript palette, kept literal for the same
+         reason --color-whatsapp is: they are an external brand's values being
+         imitated deliberately, not ours to retune. */
       .history { overflow-y: auto; padding: 16px clamp(10px, 3vw, 28px); background-color: #ece5dd; background-image: radial-gradient(rgba(27,43,58,.035) 1px, transparent 1px); background-size: 22px 22px; }
 
       .empty { max-width: 560px; margin: 6vh auto 0; text-align: center; }
@@ -201,7 +205,7 @@ export const prerender = false;
       .bubble { position: relative; max-width: min(75%, 620px); white-space: pre-wrap; line-height: 1.5; font-size: 14.5px; padding: 8px 12px 9px; border-radius: 12px; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
       .assistant .bubble { background: #fff; border-top-left-radius: 3px; }
       .user .bubble { background: #d6f0c8; border-top-right-radius: 3px; }
-      .bubble.error { background: #fff1f1; color: #991b1b; }
+      .bubble.error { background: var(--color-danger-surface); color: var(--color-danger-ink); }
       /* little tail triangles */
       .assistant .bubble::before { content: ''; position: absolute; top: 0; left: -7px; width: 0; height: 0; border: 7px solid transparent; border-top-color: #fff; border-right: 0; }
       .user .bubble::before { content: ''; position: absolute; top: 0; right: -7px; width: 0; height: 0; border: 7px solid transparent; border-top-color: #d6f0c8; border-left: 0; }
@@ -210,18 +214,18 @@ export const prerender = false;
       .composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px clamp(8px, 3vw, 20px); background: #f3eee8; border-top: 1px solid rgba(27,43,58,.08); }
       .composer input { min-width: 0; height: 44px; border: 1px solid transparent; border-radius: 22px; padding: 0 16px; font: inherit; outline: none; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
       .composer input:focus { border-color: rgba(232,114,90,.4); }
-      .composer button { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; border: none; background: #e8725a; color: #fff; box-shadow: 0 2px 6px rgba(232,114,90,.4); }
-      .composer button:hover { background: #d9624b; }
+      .composer button { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; border: none; background: var(--color-coral); color: #fff; box-shadow: 0 2px 6px rgba(232,114,90,.4); }
+      .composer button:hover { background: var(--color-accent-hover); }
       .composer :disabled { opacity: .55; cursor: not-allowed; }
 
       /* Suggestion + selection pills — clearly tappable */
       .chips, .selection { display: flex; flex-wrap: wrap; gap: 8px; }
       .empty .chips { justify-content: center; }
-      .chip, .selection button { border: 1px solid rgba(232,114,90,.5); background: #fff; color: #c2563f; font-weight: 600; border-radius: 999px; padding: 9px 15px; font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(27,43,58,.08); transition: background .15s, color .15s, transform .05s; }
-      .chip:hover, .selection button:hover { background: #e8725a; color: #fff; border-color: #e8725a; }
+      .chip, .selection button { border: 1px solid rgba(232,114,90,.5); background: #fff; color: var(--color-coral-ink); font-weight: 600; border-radius: 999px; padding: 9px 15px; font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px rgba(27,43,58,.08); transition: background .15s, color .15s, transform .05s; }
+      .chip:hover, .selection button:hover { background: var(--color-coral); color: #fff; border-color: var(--color-coral); }
       .chip:active, .selection button:active { transform: scale(.97); }
       .selection { margin-top: 2px; }
-      .selection button { color: #1b2b3a; border-color: rgba(27,43,58,.2); font-weight: 500; }
+      .selection button { color: var(--color-navy); border-color: rgba(27,43,58,.2); font-weight: 500; }
       .selection button:disabled { opacity: .5; cursor: default; }
       .followups { max-width: 75%; margin-top: 2px; }
 

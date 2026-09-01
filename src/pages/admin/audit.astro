@@ -67,9 +67,9 @@ function formatTs(unix: number) {
     <p class="text-sm mt-1 text-gray-text">{total} total entries · read-only</p>
   </div>
   {filterEmail && (
-    <div class="bg-[#DBEAFE] border border-[#93C5FD] rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-[#1E40AF] mb-[1rem] flex items-center justify-between gap-[0.5rem] flex-wrap">
+    <div class="bg-info-surface border border-info-border rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-info-ink mb-[1rem] flex items-center justify-between gap-[0.5rem] flex-wrap">
       <span>Showing audit entries for registrations by <strong>{filterEmail}</strong> ({emailRegIds.length} registration{emailRegIds.length !== 1 ? 's' : ''})</span>
-      <a href="/admin/audit" class="font-bold text-[#1E40AF] underline">Clear filter</a>
+      <a href="/admin/audit" class="font-bold text-info-ink underline">Clear filter</a>
     </div>
   )}
 

@@ -3,6 +3,9 @@ import {
   assertTransition,
   derivePaymentStatus,
   paymentStatusLabel,
+  PAYMENT_STATUSES,
+  paymentStatusStyle,
+  REG_STATUSES,
   regStatusStyle,
 } from '../../src/lib/registrationStatus';
 
@@ -79,7 +82,19 @@ describe('labels and styles', () => {
     expect(['unpaid', 'advance_paid', 'fully_paid', 'partial_refund', 'full_refund'].map(paymentStatusLabel))
       .toEqual(['Unpaid', 'Advance paid', 'Fully paid', 'Partial refund', 'Refunded']);
   });
-  it('has a cancelled status colour', () => {
-    expect(regStatusStyle('cancelled')).toMatch(/#334155/i);
+  it('styles every status from the shared palette, with no bare hex', () => {
+    for (const status of REG_STATUSES) {
+      const style = regStatusStyle(status);
+      expect(style, status).toMatch(/background:var\(--color-[a-z-]+-surface\);color:var\(--color-[a-z-]+-ink\);/);
+      expect(style, status).not.toMatch(/#[0-9a-f]{3,8}/i);
+    }
+  });
+  it('styles every payment status from the shared palette', () => {
+    for (const status of PAYMENT_STATUSES) {
+      expect(paymentStatusStyle(status), status).not.toMatch(/#[0-9a-f]{3,8}/i);
+    }
+  });
+  it('falls back to the pending pill for an unknown status', () => {
+    expect(regStatusStyle('not-a-status')).toBe(regStatusStyle('pending'));
   });
 });

@@ -148,7 +148,9 @@ if (!isTripLead && customerEmails.length > 0) {
   }
 }
 
-const payStyle = (paid: number) => paid <= 0 ? 'background:#FEE2E2;color:#991B1B;' : 'background:#DBEAFE;color:#1E40AF;';
+const payStyle = (paid: number) => paid <= 0
+  ? 'background:var(--color-danger-surface);color:var(--color-danger-ink);'
+  : 'background:var(--color-info-surface);color:var(--color-info-ink);';
 const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : (total && total > 0 && paid >= total) ? 'Fully paid' : paid > 0 ? 'Part paid' : 'Unpaid';
 ---
 
@@ -167,7 +169,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   </div>
 
   {capped && (
-    <div class="bg-[#FEF9C3] border border-warning-border rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-[#78350F] mb-[1rem]">
+    <div class="bg-caution-surface border border-warning-border rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-caution-ink mb-[1rem]">
       More than 1 000 customers found — showing the 1 000 most recent. Use Export CSV to get the full list.
     </div>
   )}
@@ -177,9 +179,11 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     {[
       ['Total', totalCustomers, 'var(--color-primary)'],
       ['Confirmed', confirmedCustomers, 'var(--color-success)'],
-      ['Pending', pendingCustomers, '#D97706'],
+      // #D97706 cleared AA only as large bold text (3.19:1 on white, and these
+      // chips are 1.15rem/700). warning-ink is 7.09:1 and matches the pending pill.
+      ['Pending', pendingCustomers, 'var(--color-warning-ink)'],
       ['Unpaid confirmed/pending', unpaidCustomers, 'var(--color-danger)'],
-      ['Repeat (2+ trips)', repeatCustomers, '#7C3AED'],
+      ['Repeat (2+ trips)', repeatCustomers, 'var(--color-interest-ink)'],
     ].map(([label, value, color]) => (
       <div class="stat-chip"><span>{label}</span><strong style={`color:${color}`}>{value}</strong></div>
     ))}
@@ -233,7 +237,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                 <div class="flex items-center gap-[0.5rem] flex-wrap">
                   <strong class="text-navy">{displayName}</strong>
                   {c.username && <span class="text-[0.72rem] bg-blush text-coral-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">@{c.username}</span>}
-                  {c.role && <span class="text-[0.72rem] bg-[#F3F4F6] text-[#374151] py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{c.role}</span>}
+                  {c.role && <span class="text-[0.72rem] bg-muted-surface text-muted-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{c.role}</span>}
                 </div>
                 <div class="text-[0.78rem] text-gray-text mt-[0.1rem]">{c.email}</div>
                 {c.phone && <div class="text-[0.78rem] text-gray-text">{c.phone}</div>}
@@ -242,9 +246,9 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
               <div class="cust-meta">
                 <span class="meta-label">Bookings</span>
                 <div class="flex gap-[0.3rem] flex-wrap">
-                  {c.confirmed > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-[#D1FAE5] text-[#065F46]">{c.confirmed} conf</span>}
+                  {c.confirmed > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-success-surface text-success-surface-ink">{c.confirmed} conf</span>}
                   {c.pending > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-warning-surface text-warning-ink">{c.pending} pend</span>}
-                  {c.lead > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-[#FEF9C3] text-[#78350F]">{c.lead} lead</span>}
+                  {c.lead > 0 && <span class="py-[0.1rem] px-[0.4rem] rounded-full text-[0.7rem] font-bold bg-caution-surface text-caution-ink">{c.lead} lead</span>}
                   {c.confirmed === 0 && c.pending === 0 && c.lead === 0 && <span class="text-[0.75rem] text-gray-text">{c.total_regs} reg{c.total_regs !== 1 ? 's' : ''}</span>}
                 </div>
               </div>

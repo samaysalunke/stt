@@ -83,13 +83,20 @@ export function assertTransition(from: string, to: string, ctx: TransitionCtx): 
   if (problem) throw new Error(problem);
 }
 
+/**
+ * Status pills. Each pair is a `--color-*-surface` plus the ink measured to be
+ * readable on it; see the status badge palette in `src/styles/global.css` for
+ * the ratios. These strings are inlined as `style=` on both the server render
+ * and the client script, which is why they are custom properties rather than
+ * Tailwind classes — there is no class list to extend at that point.
+ */
 export const REG_STATUS_COLORS: Record<string, string> = {
-  confirmed: 'background:#D1FAE5;color:#065F46;',
-  rejected: 'background:#FEE2E2;color:#991B1B;',
-  lead: 'background:#FEF9C3;color:#78350F;',
-  wishlist: 'background:#E0E7FF;color:#3730A3;',
-  cancelled: 'background:#E2E8F0;color:#334155;',
-  pending: 'background:#FEF3C7;color:#92400E;',
+  confirmed: 'background:var(--color-success-surface);color:var(--color-success-surface-ink);',
+  rejected: 'background:var(--color-danger-surface);color:var(--color-danger-ink);',
+  lead: 'background:var(--color-caution-surface);color:var(--color-caution-ink);',
+  wishlist: 'background:var(--color-interest-surface);color:var(--color-interest-ink);',
+  cancelled: 'background:var(--color-neutral-surface);color:var(--color-neutral-ink);',
+  pending: 'background:var(--color-warning-surface);color:var(--color-warning-ink);',
 };
 
 /** Moved here from utils.ts so server + client can't drift. */
@@ -98,11 +105,11 @@ export function regStatusStyle(status: string): string {
 }
 
 export const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  unpaid: 'background:#FEE2E2;color:#991B1B;',
-  advance_paid: 'background:#DBEAFE;color:#1E40AF;',
-  fully_paid: 'background:#D1FAE5;color:#065F46;',
-  partial_refund: 'background:#FEF3C7;color:#92400E;',
-  full_refund: 'background:#E2E8F0;color:#334155;',
+  unpaid: 'background:var(--color-danger-surface);color:var(--color-danger-ink);',
+  advance_paid: 'background:var(--color-info-surface);color:var(--color-info-ink);',
+  fully_paid: 'background:var(--color-success-surface);color:var(--color-success-surface-ink);',
+  partial_refund: 'background:var(--color-warning-surface);color:var(--color-warning-ink);',
+  full_refund: 'background:var(--color-neutral-surface);color:var(--color-neutral-ink);',
 };
 
 export function paymentStatusLabel(s: string): string {

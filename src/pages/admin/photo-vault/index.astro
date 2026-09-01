@@ -31,7 +31,7 @@ const albums = listAlbums();
               ) : (
                 <div class="w-full h-full flex items-center justify-center text-gray-text text-[2rem]">🖼️</div>
               )}
-              <div style={`position:absolute; top:0.5rem; right:0.5rem; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.7rem; font-weight:700; ${album.published ? 'background:#16a34a22; color:#16a34a;' : 'background:#6b728022; color:#6b7280;'}`}>
+              <div style={`position:absolute; top:0.5rem; right:0.5rem; padding:0.2rem 0.6rem; border-radius:9999px; font-size:0.7rem; font-weight:700; ${album.published ? 'background:var(--color-success-surface);color:var(--color-success-surface-ink);' : 'background:var(--color-muted-surface);color:var(--color-muted-ink);'}`}>
                 {album.published ? 'Published' : 'Draft'}
               </div>
             </div>
@@ -42,7 +42,7 @@ const albums = listAlbums();
               <div class="flex gap-[0.5rem] mt-[0.75rem]">
                 <a href={`/admin/photo-vault/${album.slug}`} class="flex-1 text-center text-[0.8rem] text-navy no-underline border border-navy rounded-[0.35rem] py-[0.3rem] px-[0.5rem] font-medium">Edit</a>
                 <button
-                  class="delete-album-btn flex-1 text-[0.8rem] text-[#dc2626] bg-transparent border border-[#dc2626] rounded-[0.35rem] py-[0.3rem] px-[0.5rem] cursor-pointer font-medium"
+                  class="delete-album-btn flex-1 text-[0.8rem] text-danger-ink bg-transparent border border-danger-ink rounded-[0.35rem] py-[0.3rem] px-[0.5rem] cursor-pointer font-medium"
                   data-slug={album.slug}
                   data-name={album.name ?? album.slug}
                  

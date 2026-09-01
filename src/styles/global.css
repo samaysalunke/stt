@@ -57,6 +57,9 @@
      6.80:1 ink-on-surface, 8.2:1 ink-on-white. */
   --color-danger-surface: #FEE2E2;
   --color-danger-ink: #991B1B;
+  /* Matches --color-warning-border's role: the hairline on an advisory box.
+     Border colour is not a text-contrast question; it pairs with the surface. */
+  --color-danger-border: #FECACA;
   /* --color-success (#22A654) is 3.16:1 on white and fails AA as text. Kept as
      a fill/indicator; this is the readable variant for text, at 5.40:1. */
   --color-success-ink: #157A3F;
@@ -67,6 +70,45 @@
   --color-warning-surface: #FEF3C7;
   --color-warning-border: #FCD34D;
   --color-warning-ink: #92400E;
+
+  /* ── Status badge palette ───────────────────────────────────
+     The admin surface renders ~11 distinct status pills — registration status,
+     payment status, email delivery, contact resolution — and every one of them
+     was a one-off `background:#XXXXXX;color:#XXXXXX` pair written at the call
+     site. Same meaning, different hex, depending on the file: "sent" in the
+     email log was #DCFCE7/#166534 while "confirmed" three files over was
+     #D1FAE5/#065F46.
+
+     Each pair below is a surface plus the ink that is readable on it. Ratios are
+     measured, not assumed — two of the pairs this replaces did not clear AA:
+       #F3F4F6/#6B7280 (4.39) and #E5E7EB/#6B7280 (3.90), the "inactive"/"muted"
+       chips, now --color-muted-* at 9.37
+       #FEF2F2/#DC2626 (4.41), the roles-page error text, now --color-danger-*
+     Existing `--color-danger-*` (6.80) and `--color-warning-*` (6.37) are part
+     of this family and are reused as-is.
+
+     Note the one asymmetry: `--color-success-ink` (#157A3F) is the readable
+     green on WHITE (5.40) and is used as body text on the public trip page.
+     `--color-success-surface-ink` is the darker green for text on the mint pill
+     (6.78). They are not interchangeable — #157A3F on mint is 4.76, which
+     passes, but reads washed out next to the other pills. */
+  --color-success-surface: #D1FAE5;
+  --color-success-surface-ink: #065F46;   /* 6.78:1 on the surface, 7.68:1 on white */
+  --color-info-surface: #DBEAFE;
+  --color-info-ink: #1E40AF;              /* 7.15:1 — advance paid, audit action chips */
+  --color-info-border: #93C5FD;           /* hairline for the audit filter banner */
+  --color-caution-surface: #FEF9C3;
+  --color-caution-ink: #78350F;           /* 8.45:1 — leads: a softer amber than `warning`,
+                                             kept distinct because a lead and a pending
+                                             registration sit in the same list */
+  --color-interest-surface: #E0E7FF;
+  --color-interest-ink: #3730A3;          /* 8.06:1 — wishlist */
+  --color-interest-border: #C7D2FE;
+  --color-interest-fill: #4338CA;         /* button fill; 7.90:1 with white text */
+  --color-neutral-surface: #E2E8F0;
+  --color-neutral-ink: #334155;           /* 8.40:1 — cancelled, refunded */
+  --color-muted-surface: #F3F4F6;
+  --color-muted-ink: #374151;             /* 9.37:1 — role chips, inactive subscribers */
   --color-border: #E8DDD9;
 
   /* ── Typography ────────────────────────────────────────────── */

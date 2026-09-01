@@ -37,7 +37,7 @@ function fmt(date: string) {
         <div class="bg-white border border-peach/60 rounded-[1.25rem] py-[1rem] px-[1.15rem] flex flex-col gap-[0.6rem]">
           <div class="flex items-start justify-between gap-[0.5rem]">
             <span class="font-semibold text-navy break-all text-[0.9rem]">{s.email}</span>
-            <span style={`flex:none;padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${s.active ? 'background:#D1FAE5;color:#065F46;' : 'background:#F3F4F6;color:#6B7280;'}`}>
+            <span style={`flex:none;padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.7rem;font-weight:700;${s.active ? 'background:var(--color-success-surface);color:var(--color-success-surface-ink);' : 'background:var(--color-muted-surface);color:var(--color-muted-ink);'}`}>
               {s.active ? 'active' : 'unsubscribed'}
             </span>
           </div>

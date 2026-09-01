@@ -148,8 +148,8 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
     function showMsg(text, ok) {
       msg.style.display = 'block';
       msg.textContent = text;
-      msg.style.background = ok ? 'rgba(34,166,84,0.10)' : '#FEE2E2';
-      msg.style.color = ok ? 'var(--color-success)' : '#991B1B';
+      msg.style.background = ok ? 'var(--color-success-surface)' : 'var(--color-danger-surface)';
+      msg.style.color = ok ? 'var(--color-success-surface-ink)' : 'var(--color-danger-ink)';
     }
 
     form?.addEventListener('submit', async (e) => {

@@ -34,7 +34,7 @@ const error   = Astro.url.searchParams.get('error');
     </div>
   )}
   {error && (
-    <div class="rounded-2xl px-4 py-3 mb-6 text-sm bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]">
+    <div class="rounded-2xl px-4 py-3 mb-6 text-sm bg-danger-surface border border-danger-border text-danger-ink">
       {error === 'last_owner' ? "Can't remove the last owner." :
        error === 'self'       ? "Can't remove your own owner role." :
        error === 'not_found'  ? 'User not found.' : 'Something went wrong.'}
@@ -75,9 +75,9 @@ const error   = Astro.url.searchParams.get('error');
                 </td>
                 <td class="px-6 py-4">
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
-                    style={u.role === 'owner' ? 'background: rgba(232,114,90,0.12); color: var(--color-coral);' :
-                           u.role === 'ops'   ? 'background: rgba(59,130,246,0.1); color: #3B82F6;' :
-                                                'background: rgba(16,185,129,0.1); color: #10B981;'}>
+                    style={u.role === 'owner' ? 'background: var(--color-blush); color: var(--color-coral-ink);' :
+                           u.role === 'ops'   ? 'background: var(--color-info-surface); color: var(--color-info-ink);' :
+                                                'background: var(--color-success-surface); color: var(--color-success-surface-ink);'}>
                     {u.role}
                   </span>
                 </td>
@@ -90,7 +90,7 @@ const error   = Astro.url.searchParams.get('error');
                       <input type="hidden" name="action" value="remove-form" />
                       <input type="hidden" name="userId" value={u.userId} />
                       <input type="hidden" name="role" value={u.role} />
-                      <button type="submit" class="text-xs font-medium hover:opacity-70 transition-opacity text-[#DC2626]"
+                      <button type="submit" class="text-xs font-medium hover:opacity-70 transition-opacity text-danger-ink"
                              >Remove</button>
                     </form>
                   ) : (

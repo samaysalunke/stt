@@ -12,9 +12,15 @@ function fmt(date: string) {
   return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+// A contact is resolved or it is waiting on us — the same two roles a
+// registration's confirmed/pending pills carry, so they share the tokens.
+const RESOLVED_PILL = 'background:var(--color-success-surface);color:var(--color-success-surface-ink);';
+const OPEN_PILL = 'background:var(--color-warning-surface);color:var(--color-warning-ink);';
+// The reopen button is a de-emphasised action, not a status.
+const REOPEN_BTN = 'background:var(--color-muted-surface);color:var(--color-muted-ink);';
+
 function statusStyle(status: string) {
-  if (status === 'resolved') return 'background:#D1FAE5;color:#065F46;';
-  return 'background:#FEF3C7;color:#92400E;';
+  return status === 'resolved' ? RESOLVED_PILL : OPEN_PILL;
 }
 ---
 
@@ -92,7 +98,7 @@ function statusStyle(status: string) {
               <button
                 onclick={`toggleResolved(${c.id}, '${c.status ?? 'new'}')`}
                 id={`resolve-btn-${c.id}`}
-                style={`padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${(c.status ?? 'new') === 'resolved' ? 'background:#F3F4F6;color:#6B7280;' : 'background:#D1FAE5;color:#065F46;'}`}
+                style={`padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${(c.status ?? 'new') === 'resolved' ? REOPEN_BTN : RESOLVED_PILL}`}
               >
                 {(c.status ?? 'new') === 'resolved' ? '↩ Reopen' : '✓ Mark Resolved'}
               </button>
@@ -129,7 +135,7 @@ function statusStyle(status: string) {
           const badge = row.querySelector('span[style*="border-radius:9999px"]') as HTMLElement | null;
           if (badge) {
             badge.textContent = newStatus;
-            badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${newStatus === 'resolved' ? 'background:#D1FAE5;color:#065F46;' : 'background:#FEF3C7;color:#92400E;'}`;
+            badge.style.cssText = `padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${newStatus === 'resolved' ? RESOLVED_PILL : OPEN_PILL}`;
           }
         }
       });
@@ -137,7 +143,7 @@ function statusStyle(status: string) {
       const resolveBtn = document.getElementById('resolve-btn-' + id) as HTMLButtonElement | null;
       if (resolveBtn) {
         resolveBtn.textContent = newStatus === 'resolved' ? '↩ Reopen' : '✓ Mark Resolved';
-        resolveBtn.style.cssText = `padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${newStatus === 'resolved' ? 'background:#F3F4F6;color:#6B7280;' : 'background:#D1FAE5;color:#065F46;'}`;
+        resolveBtn.style.cssText = `padding:0.5rem 1rem;border-radius:0.5rem;font-size:0.82rem;font-weight:700;cursor:pointer;border:none;white-space:nowrap;${newStatus === 'resolved' ? REOPEN_BTN : RESOLVED_PILL}`;
         resolveBtn.setAttribute('onclick', `toggleResolved(${id}, '${newStatus}')`);
       }
       // Apply active filter

@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { listTrips, tripHasUpcomingDates, tripCardSummary, resolveBooking } from '../../lib/content';
 import { getDb } from '../../lib/db';
 import { getBookingGrowthWeek } from '../../lib/adminDashboard';
+import { regStatusStyle } from '../../lib/registrationStatus';
 export const prerender = false;
 
 const db = getDb();
@@ -37,12 +38,10 @@ function inr(n: number) {
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}k`;
   return `₹${n}`;
 }
-function statusStyle(status: string) {
-  if (status === 'confirmed') return 'background:#D1FAE5;color:#065F46;';
-  if (status === 'rejected') return 'background:#FEE2E2;color:#991B1B;';
-  if (status === 'cancelled') return 'background:#E2E8F0;color:#334155;';
-  return 'background:#FEF3C7;color:#92400E;';
-}
+// Was a local copy of REG_STATUS_COLORS that had drifted: it knew about four
+// statuses, so a lead or a wishlist row on the dashboard rendered with the
+// pending amber. `regStatusStyle` keeps the same pending fallback.
+const statusStyle = regStatusStyle;
 
 const kpis = [
   { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} confirmed seat${totalBookings === 1 ? '' : 's'} · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },

@@ -82,11 +82,13 @@ const last24Hours = (db.prepare(`
   WHERE datetime(created_at) >= datetime('now', '-24 hours')
 `).get() as { count: number }).count;
 
+// `sent` was #DCFCE7/#166534 here and #D1FAE5/#065F46 everywhere else — the
+// same "this worked" green, mixed. One pair now.
 const statusStyles: Record<Status, string> = {
-  sent: 'background:#DCFCE7;color:#166534;',
-  failed: 'background:#FEE2E2;color:#991B1B;',
-  skipped: 'background:#FEF3C7;color:#92400E;',
-  triggered: 'background:#DBEAFE;color:#1E40AF;',
+  sent: 'background:var(--color-success-surface);color:var(--color-success-surface-ink);',
+  failed: 'background:var(--color-danger-surface);color:var(--color-danger-ink);',
+  skipped: 'background:var(--color-warning-surface);color:var(--color-warning-ink);',
+  triggered: 'background:var(--color-info-surface);color:var(--color-info-ink);',
 };
 
 const templateLabels: Record<string, string> = {

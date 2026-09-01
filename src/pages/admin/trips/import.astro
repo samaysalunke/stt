@@ -46,7 +46,7 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
 
     <!-- Preview / errors -->
     <div id="preview-box" class="hidden mt-6">
-      <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm bg-[#FEF2F2] text-danger-ink"></div>
+      <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm bg-danger-surface text-danger-ink"></div>
       <div id="preview-list" class="flex flex-col gap-2"></div>
       <div id="confirm-row" class="hidden items-center gap-3 mt-5">
         <button id="confirm-btn" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta"></button>
@@ -119,7 +119,7 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
           <p class="text-[11px] text-gray-text">${p.slug} · ${p.status}</p>
         </div>
         <span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full" style="${
-          p.action === 'overwrite' ? 'background:#FEF3C7;color:#92400E;' : 'background:#D1FAE5;color:#065F46;'
+          p.action === 'overwrite' ? 'background:var(--color-warning-surface);color:var(--color-warning-ink);' : 'background:var(--color-success-surface);color:var(--color-success-surface-ink);'
         }">${p.action}</span>
       </div>`).join('');
 

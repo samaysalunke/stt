@@ -90,7 +90,7 @@ function fmt(d: string) {
                   <td class="py-[0.75rem] px-[1rem] text-gray-text">{fmt(log.sent_at)}</td>
                   <td class="py-[0.75rem] px-[1rem] text-right text-navy">{log.recipient_count}</td>
                   <td class="py-[0.75rem] px-[1rem] text-right">
-                    <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? '#D1FAE5' : '#FEE2E2'}; color: ${log.status === 'sent' ? '#065F46' : '#991B1B'};`}>
+                    <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? 'var(--color-success-surface)' : 'var(--color-danger-surface)'}; color: ${log.status === 'sent' ? 'var(--color-success-surface-ink)' : 'var(--color-danger-ink)'};`}>
                       {log.status}
                     </span>
                   </td>
@@ -130,18 +130,18 @@ function fmt(d: string) {
       });
       const data = await res.json();
       if (data.success) {
-        status.style.background = '#D1FAE5';
-        status.style.color = '#065F46';
+        status.style.background = 'var(--color-success-surface)';
+        status.style.color = 'var(--color-success-surface-ink)';
         status.textContent = `Sent to ${data.sent} subscriber${data.sent !== 1 ? 's' : ''}${data.failed ? ` (${data.failed} failed)` : ''}.`;
         form!.reset();
       } else {
-        status.style.background = '#FEE2E2';
-        status.style.color = '#991B1B';
+        status.style.background = 'var(--color-danger-surface)';
+        status.style.color = 'var(--color-danger-ink)';
         status.textContent = data.error ?? 'Something went wrong.';
       }
     } catch {
-      status.style.background = '#FEE2E2';
-      status.style.color = '#991B1B';
+      status.style.background = 'var(--color-danger-surface)';
+      status.style.color = 'var(--color-danger-ink)';
       status.textContent = 'Network error. Please try again.';
     }
     status.style.display = 'block';

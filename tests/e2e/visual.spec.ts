@@ -253,6 +253,39 @@ test('thank-you redirects to the trips listing', async ({ page }) => {
   await expect(page).toHaveURL(/\/trips\/$/);
 });
 
+/**
+ * Everything a shot needs done to the live page — freezing, ordering, stubbing —
+ * re-applied if the dev server reloaded underneath it.
+ *
+ * All of that work is injected CSS and DOM mutation, so a navigation throws it
+ * away. The dev server's HMR does exactly that: edit a `.astro` file while a run
+ * is in flight and the page reloads mid-test, arriving at the screenshot with
+ * the animations unfrozen, the trip cards back in their shuffled order and
+ * Astro's dev toolbar visible again. That produced a 1.37M-pixel "failure" on
+ * trips-index that passed on its own a minute later — a diff that was pure
+ * reordering and said nothing about the page.
+ *
+ * The listener is attached after the initial `goto`, so `loads` counts only
+ * reloads that happen during preparation. One retry is enough: a second reload
+ * inside the same test would mean something is reloading continuously, and a
+ * loop would hide that rather than report it.
+ */
+async function prepareShot(page: Page, prep: () => Promise<void>) {
+  let loads = 0;
+  const onLoad = () => { loads += 1; };
+  page.on('load', onLoad);
+  try {
+    await prep();
+    if (loads > 0) {
+      loads = 0;
+      await prep();
+      expect(loads, 'page kept reloading while preparing the shot').toBe(0);
+    }
+  } finally {
+    page.off('load', onLoad);
+  }
+}
+
 test.describe('visual regression — public routes', () => {
   for (const vp of VIEWPORTS) {
     for (const route of ROUTES) {
@@ -267,10 +300,12 @@ test.describe('visual regression — public routes', () => {
         // /this-route-does-not-exist intentionally 404s; every other route is 200.
         expect(resp?.status(), route.path).toBeLessThan(route.name === 'not-found' ? 500 : 400);
 
-        await waitForHydration(page).catch(() => {});
-        await freezePage(page);
-        await pinListingOrder(page);
-        await page.waitForTimeout(150); // let the frozen layout settle
+        await prepareShot(page, async () => {
+          await waitForHydration(page).catch(() => {});
+          await freezePage(page);
+          await pinListingOrder(page);
+          await page.waitForTimeout(150); // let the frozen layout settle
+        });
 
         await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
           fullPage: true,
@@ -386,12 +421,14 @@ test.describe('visual regression — admin routes', () => {
         const resp = await page.goto(route.path, { waitUntil: 'networkidle' });
         expect(resp?.status(), route.path).toBeLessThan(400);
 
-        await waitForHydration(page).catch(() => {});
-        await freezePage(page);
-        await capAdminLists(page);
-        if (route.freezeCss) await page.addStyleTag({ content: route.freezeCss });
-        if (route.stub) await stubText(page, route.stub);
-        await page.waitForTimeout(150); // let the frozen layout settle
+        await prepareShot(page, async () => {
+          await waitForHydration(page).catch(() => {});
+          await freezePage(page);
+          await capAdminLists(page);
+          if (route.freezeCss) await page.addStyleTag({ content: route.freezeCss });
+          if (route.stub) await stubText(page, route.stub);
+          await page.waitForTimeout(150); // let the frozen layout settle
+        });
 
         await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
           fullPage: true,
@@ -411,8 +448,27 @@ test.describe('visual regression — admin routes', () => {
           // default the admin a11y pass registered as zero changed pixels on
           // every route. maxDiffPixelRatio cannot rescue that: no pixel is ever
           // counted, so the ratio is 0 no matter how tight the bound.
-          threshold: 0.05,
-          maxDiffPixelRatio: 0,
+          //
+          // 0.05 was the first correction and it was still too loose. The badge
+          // palette work swapped the email log's "sent" green from #DCFCE7 to
+          // #D1FAE5 — an 11/255 delta on one channel, about 4% — and the suite
+          // passed. Anything short of exact leaves a band of colour changes the
+          // gate cannot see, and there is no principled place to put the line.
+          //
+          // Exact matching is affordable only because the data is pinned too:
+          // the visual project runs against its own seeded database (see
+          // playwright.config.ts), so the render is deterministic.
+          //
+          // What is left is antialiasing on rounded card corners, which does
+          // jitter run to run: at threshold 0 with a zero budget, five or six
+          // routes fail per run, a different five each time, at 1-22 pixels.
+          // Hence an absolute budget rather than a ratio. 60 sits well above the
+          // 22-pixel worst case measured across repeat runs and two orders below
+          // the smallest change worth catching — one stubbed status pill is
+          // ~1 200 pixels. A ratio cannot do this job: 1% of a tall admin page
+          // is ~10 000 pixels, which is a whole restyle.
+          threshold: 0,
+          maxDiffPixels: 60,
         });
       });
     }

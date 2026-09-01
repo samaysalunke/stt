@@ -39,19 +39,19 @@ const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADM
         </div>
 
         {hasNoRoleError && (
-          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]"
+          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-danger-surface border border-danger-border text-danger-ink"
               >
             Your Google account doesn't have admin access. Contact the owner to get a role assigned.
           </div>
         )}
         {hasOAuthError && (
-          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]"
+          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-danger-surface border border-danger-border text-danger-ink"
               >
             Something went wrong with Google sign-in. Please try again.
           </div>
         )}
         {hasPasswordError && (
-          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]"
+          <div class="rounded-2xl px-4 py-3 mb-5 text-sm bg-danger-surface border border-danger-border text-danger-ink"
               >
             Incorrect password. Please try again.
           </div>

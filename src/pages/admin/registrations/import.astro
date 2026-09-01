@@ -160,17 +160,17 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       return true;
     }
     const badge = (n, label, color) => `<span style="padding:0.2rem 0.6rem;border-radius:9999px;font-size:0.75rem;font-weight:700;${color}">${n} ${label}</span>`;
-    const actionStyle = (a) => a === 'create' ? 'background:#D1FAE5;color:#065F46;' : a === 'skip' ? 'background:#FEF3C7;color:#92400E;' : 'background:#FEE2E2;color:#991B1B;';
+    const actionStyle = (a) => a === 'create' ? 'background:var(--color-success-surface);color:var(--color-success-surface-ink);' : a === 'skip' ? 'background:var(--color-warning-surface);color:var(--color-warning-ink);' : 'background:var(--color-danger-surface);color:var(--color-danger-ink);';
 
     function renderPreview(data) {
       previewBox.style.display = 'block';
       previewSummary.innerHTML =
-        badge(data.counts.create, 'create', 'background:#D1FAE5;color:#065F46;') +
-        badge(data.counts.skip, 'skip', 'background:#FEF3C7;color:#92400E;') +
-        badge(data.counts.error, 'error', 'background:#FEE2E2;color:#991B1B;') +
-        badge(data.counts.superseded || 0, 'superseded', 'background:#E5E7EB;color:#374151;') +
-        (data.totals || []).map(t => badge(t.lead + t.pending + t.confirmed, `${t.tierId}: ${t.confirmed} confirmed`, 'background:#DBEAFE;color:#1E40AF;')).join('') +
-        (data.capacity || []).filter(c => c.conflict).map(c => badge(c.totalConfirmed, `${c.tierId} over cap ${c.cap} (${c.existingConfirmed} existing + ${c.proposedConfirmed} proposed)`, 'background:#FEE2E2;color:#991B1B;')).join('');
+        badge(data.counts.create, 'create', 'background:var(--color-success-surface);color:var(--color-success-surface-ink);') +
+        badge(data.counts.skip, 'skip', 'background:var(--color-warning-surface);color:var(--color-warning-ink);') +
+        badge(data.counts.error, 'error', 'background:var(--color-danger-surface);color:var(--color-danger-ink);') +
+        badge(data.counts.superseded || 0, 'superseded', 'background:var(--color-muted-surface);color:var(--color-muted-ink);') +
+        (data.totals || []).map(t => badge(t.lead + t.pending + t.confirmed, `${t.tierId}: ${t.confirmed} confirmed`, 'background:var(--color-info-surface);color:var(--color-info-ink);')).join('') +
+        (data.capacity || []).filter(c => c.conflict).map(c => badge(c.totalConfirmed, `${c.tierId} over cap ${c.cap} (${c.existingConfirmed} existing + ${c.proposedConfirmed} proposed)`, 'background:var(--color-danger-surface);color:var(--color-danger-ink);')).join('');
       const overrideRow = document.getElementById('capacity-override-row');
       overrideRow.style.display = data.hasCapacityConflict ? 'flex' : 'none';
       if (!data.hasCapacityConflict) document.getElementById('capacityOverride').checked = false;
