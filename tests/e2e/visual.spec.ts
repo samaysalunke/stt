@@ -276,6 +276,11 @@ test.describe('visual regression — public routes', () => {
           fullPage: true,
           animations: 'disabled',
           mask: [page.locator('[data-testid="discount-expiry"]')],
+          // Public routes render live DB copy — seat counts, prices, album
+          // contents — that `pinListingOrder` normalises the ORDER of but not the
+          // VALUES of. Measured churn after a test:api run is 2.4k-10.7k pixels
+          // on trip-book, photo-vault and 404, all under this bound. It is a
+          // tolerance for data, not for rendering: a restyle moves far more.
           maxDiffPixelRatio: 0.01,
         });
       });
@@ -316,9 +321,23 @@ test.describe('visual regression — public routes', () => {
  * longer catch is a wrong *value* being rendered, which was never this harness's
  * job — the functional e2e specs cover that.
  */
-const ADMIN_ROUTES: { name: string; path: string; stub?: string }[] = [
+const ADMIN_ROUTES: {
+  name: string;
+  path: string;
+  stub?: string;
+  /** CSS injected before the shot, to pin values the page computes from data. */
+  freezeCss?: string;
+}[] = [
   { name: 'admin-login', path: '/admin/login' },
-  { name: 'admin-dashboard', path: '/admin/' },
+  // Stats dashboard: every number is a live query, and the booking-growth bars
+  // carry a data-derived inline height. Stubbing settles the text; the bars need
+  // the height pinned too, or a single new confirmed seat rescales the chart.
+  {
+    name: 'admin-dashboard',
+    path: '/admin/',
+    stub: 'main',
+    freezeCss: '.h-36 .rounded-t-lg { height: 50% !important; background: rgba(232,114,90,0.8) !important; }',
+  },
   { name: 'admin-trips', path: '/admin/trips' },
   { name: 'admin-trips-new', path: '/admin/trips/new' },
   { name: 'admin-trips-import', path: '/admin/trips/import' },
@@ -370,13 +389,30 @@ test.describe('visual regression — admin routes', () => {
         await waitForHydration(page).catch(() => {});
         await freezePage(page);
         await capAdminLists(page);
+        if (route.freezeCss) await page.addStyleTag({ content: route.freezeCss });
         if (route.stub) await stubText(page, route.stub);
         await page.waitForTimeout(150); // let the frozen layout settle
 
         await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
           fullPage: true,
           animations: 'disabled',
-          maxDiffPixelRatio: 0.01,
+          // Two knobs, and the second one matters more than it looks.
+          //
+          // maxDiffPixelRatio is how many pixels may differ. Zero here, unlike the
+          // public routes above: capping and stubbing already removed the data
+          // churn that forces those to carry a 1% allowance, and 1% of a tall
+          // admin page is ~10k pixels — more than a colour-only change to every
+          // secondary label costs, so a 1% gate would pass a restyle in silence.
+          //
+          // threshold is how different a single pixel must be before it counts at
+          // all, and Playwright's default of 0.2 is loose enough to call
+          // rgb(130,138,147) and rgb(100,107,118) the same pixel. That is the
+          // exact pair this file's contrast work moves text between, so at the
+          // default the admin a11y pass registered as zero changed pixels on
+          // every route. maxDiffPixelRatio cannot rescue that: no pixel is ever
+          // counted, so the ratio is 0 no matter how tight the bound.
+          threshold: 0.05,
+          maxDiffPixelRatio: 0,
         });
       });
     }
