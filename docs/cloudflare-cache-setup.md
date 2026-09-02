@@ -151,6 +151,26 @@ Must read `public, max-age=86400, stale-while-revalidate=604800` — **not**
 `immutable`. If it still says `immutable`, 3a is not deployed; do not add this
 rule yet.
 
+## 5b. Cache Rule — self-hosted fonts
+
+- **Expression:** `starts_with(http.request.uri.path, "/fonts/")`
+- **Cache eligibility:** Eligible; **Edge TTL: 1 month**
+
+The webfonts moved off fonts.googleapis.com and into `public/fonts/`. That
+removed a render-blocking third-party stylesheet, but the files now come from
+our origin — and the origin cannot set a useful TTL on them: static assets are
+served by the node adapter's handler, which runs before `src/middleware.ts`, so
+they leave the origin as `public, max-age=0`. This rule is the only thing giving
+them an edge TTL.
+
+**1 month, not 1 year, and not `immutable`.** These filenames are not
+content-hashed, so a replaced face has to be able to propagate. If you do swap a
+font file, purge `/fonts/*` — nothing purges it automatically.
+
+```bash
+curl -sI https://www.seekthethrill.in/fonts/manrope-latin.woff2 | grep -iE 'cf-cache-status|cache-control'
+```
+
 ## 6. Zone settings
 
 Speed → Optimization, and SSL/TLS → Edge Certificates:
