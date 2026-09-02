@@ -785,6 +785,77 @@ longer have to be kept in step by hand.
   button, a few neutral borders and table rules, and the hex quoted inside the
   comments that explain the swaps.
 
+## Phase 7 — splitting the admin console out of the public stylesheet (done)
+
+`BaseLayout` and `AdminLayout` both imported `global.css`, so Vite hoisted a
+single CSS chunk holding every utility Tailwind generated for the whole project,
+and **every public pageview downloaded the admin console's utilities**. This
+predates the refresh, but the refresh made it worse: Phase 6 put admin onto the
+same primitives, which added utilities to that shared chunk.
+
+Now three files:
+
+| file | role |
+|---|---|
+| `src/styles/tokens.css` | `@theme`, keyframes, `@layer base`, hand-written utilities — everything that does not depend on which sources were scanned |
+| `src/styles/global.css` | public entry: `@import "tailwindcss"` + `@source not "../pages/admin"` + `@source not "../layouts/AdminLayout.astro"`, then `tokens.css` |
+| `src/styles/admin.css` | admin entry: `@import "tailwindcss"` (default scan, deliberately a superset) + `tokens.css` |
+
+`AdminLayout.astro` and the two admin pages that import a stylesheet directly
+(`admin/login`, `admin/analytics` — neither uses `AdminLayout`) now import
+`admin.css`. Nothing else changed; all 88 visual baselines pass untouched.
+
+**Why `admin.css` scans everything rather than just `pages/admin`.** Admin
+renders shared components — `components/ui/*`, the React editors — so a
+`source(none)` entry would need every one of them listed, and a missed branch
+means a missing class on a page no baseline covers. The cost of the superset is
+one extra cached file for a handful of authenticated users. If you ever do
+narrow it, the rule is: **a tree excluded from `global.css` must be scanned by
+`admin.css`, or its classes ship in neither bundle.**
+
+### Measured (built with `npx astro build`, bytes of the stylesheets a public page links)
+
+| build | files | raw | gzip |
+|---|---|---|---|
+| `main` (production today) | 2 | 57,295 | 11,493 |
+| this branch, before the split | 2 | 78,316 | 14,906 |
+| this branch, after the split | **1** | **67,258** | **12,719** |
+
+So the split gives back 11,058 B raw / 2,187 B gzipped per first pageview and
+drops one render-blocking request. Against production the branch still costs
++1,226 B gzipped — that is real new CSS the refresh uses (the primitives, the
+token utilities), not dead weight.
+
+Of the 67,258 B public bundle, 9,405 B is utilities that appear on no rendered
+public page. Do not chase it: it is auth-gated routes (`/profile/`, the booking
+step behind a session), JS-toggled classes, and `components/ui` variants a page
+may pass tomorrow — `Button`'s four variants all compile whether or not a page
+uses them, because Tailwind scans the source text of the variant map.
+
+### What was measured and rejected
+
+- **Consolidating `backdrop-blur-[4px]` / `[8px]` / `-sm` / `-md`** — four
+  variants at ~605 B each because each re-emits the whole `backdrop-filter` var
+  chain. Collapsing to two saves ~1.2 KB raw (~150 B gzipped) but changes blur
+  radii, so it churns baselines. Not worth it for that.
+- **Dropping unused `Button` variants** (`hover:brightness-125` renders on no
+  public page) — ~250 B raw, and it removes a documented API.
+- **The bare `.transition` utility (478 B)** is a false positive: Tailwind's
+  scanner sees the word `transition` in the hand-written `<style>` blocks in
+  `Header.astro` / `PageLoader.astro` and generates the class. Harmless, and not
+  fixable without mangling real CSS.
+
+### Verify after touching either entry
+
+```bash
+npx astro build
+# the two entries must produce two different chunks:
+curl -s localhost:PORT/about/      | grep -o '/_astro/[^"]*\.css'   # public
+curl -s localhost:PORT/admin/login/ | grep -o '/_astro/[^"]*\.css'  # admin
+npx playwright test --project=visual   # 88 baselines, must pass untouched
+```
+
+
 ## Next phases
 
 - ~~**Phase 2**~~ — done, see above. Original scope note: `BaseLayout`, `Header` (~90-rule

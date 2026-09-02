@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Admin console stylesheet. Scans the whole project rather than just
+   `pages/admin` — admin renders shared components (`components/ui`, the React
+   editors) and the cost of a superset here is one extra cached file for a
+   handful of authenticated users, against the risk of a missing class in a
+   branch no visual test covers.
+
+   The public site loads `global.css`, which excludes this tree. */
+
+@import "./tokens.css";
