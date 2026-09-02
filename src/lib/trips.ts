@@ -108,6 +108,11 @@ export function tripPublicationStatus(trip: Record<string, any>): PublicationSta
   return 'published';
 }
 
+/** The display name for a trip, with the same precedence everywhere. */
+export function tripName(trip: Record<string, any>): string {
+  return String(trip?.title || trip?.name || trip?.slug || '');
+}
+
 export function isTripPublic(trip: Record<string, any>): boolean {
   const status = tripPublicationStatus(trip);
   if (status === 'test' && process.env.ALLOW_TEST_CONTENT === 'true') return true;

@@ -10,8 +10,17 @@
  * Keep every fallback here so a replacement is one edit, not nine.
  */
 
-/** Hero/cover stand-in for a trip or page with no image set. */
-export const FALLBACK_HERO = '/images/og-default.jpg';
-
-/** Gallery stand-ins for a trip with no photos and no linked album. */
-export const FALLBACK_PHOTOS: readonly string[] = [FALLBACK_HERO];
+/**
+ * Hero/cover stand-in for a trip or page with no image set.
+ *
+ * TO REPLACE IT, SWAP THE FILE — no code change needed. It currently ships as a
+ * copy of og-default.jpg, which is a brand card rather than a photograph and
+ * reads poorly at 4:3 on a trip card. A real wide landscape photo dropped at
+ * `public/images/fallback-hero.jpg` is the intended contents; the filename is
+ * deliberately its own slot so that swap does not disturb the OG default.
+ *
+ * There is intentionally no gallery equivalent: a trip with no real
+ * photographs shows no photo strip rather than stock images under a heading
+ * that reads "From the trail. No filters, no staging."
+ */
+export const FALLBACK_HERO = '/images/fallback-hero.jpg';

@@ -66,7 +66,18 @@ const orgSchema = {
         '@type': 'ContactPoint', telephone: settings.phone ?? '+91-7975027491',
         contactType: 'customer service', areaServed: 'IN', availableLanguage: ['en'],
       },
-      sameAs: [settings.instagram, settings.facebook, settings.youtube, settings.linkedin].filter(Boolean),
+      // Entity disambiguation: this is how an answer engine decides "Seek the
+      // Thrill" names a real operator rather than a phrase. One corroborating
+      // link is thin evidence, so every profile that genuinely exists belongs
+      // here — a Google Business Profile especially, being the strongest
+      // corroboration for a local business.
+      sameAs: [
+        settings.instagram,
+        settings.facebook,
+        settings.youtube,
+        settings.linkedin,
+        settings.googleBusinessProfile,
+      ].filter(Boolean),
     },
     { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/'), worksFor: { '@id': orgId } },
   ],
@@ -83,13 +94,13 @@ const orgSchema = {
     {settings.googleSiteVerification && <meta name="google-site-verification" content={settings.googleSiteVerification} />}
     {settings.bingSiteVerification && <meta name="msvalidate.01" content={settings.bingSiteVerification} />}
 
-    <!-- Fonts: Fraunces (display) + DM Sans (body) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts: Fraunces (display) + DM Sans (body), self-hosted.
+         @font-face lives in src/styles/fonts.css so it ships inside the app's
+         own CSS bundle — no render-blocking request to fonts.googleapis.com.
+         Only the two latin faces that render above the fold are preloaded;
+         latin-ext and italic stay lazy behind their unicode-range. -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/dm-sans-latin.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-latin.woff2" crossorigin />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />

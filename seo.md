@@ -38,8 +38,10 @@ put in place, the open fixes it left behind, and the conventions to keep followi
 - Unpublished/test trip detail now returns a real **404** (was a redirect).
 
 ### Discovery surfaces
-- `src/pages/sitemap.xml.ts` — `isTripListable`/`isAlbumPublic` gating, `escapeXml` + slug
-  `encodeURIComponent`, trailing slashes, `/cancellation/` added.
+- `src/pages/sitemap.xml.ts` — `isTripListable` gating, `escapeXml` + slug
+  `encodeURIComponent`, trailing slashes, `/cancellation/` added. **No album URLs** — the
+  photo vault is deliberately `noindex`, and this file has never imported `isAlbumPublic`
+  (an earlier revision of this doc claimed it did).
 - `src/pages/feed.xml.ts` — new Atom feed of listable trips. Linked from `BaseLayout`.
 
 ### Structured data
@@ -99,8 +101,11 @@ put in place, the open fixes it left behind, and the conventions to keep followi
   redirect to a listing, which reads as a soft-404 to crawlers.
 
 ### Canonical & URLs
-- One origin: `https://seekthethrill.in`, lowercase, trailing slash on pages. Keep
+- One origin: `https://www.seekthethrill.in`, lowercase, trailing slash on pages. Keep
   middleware, `SEO.astro` canonical, sitemap, and internal links all emitting that shape.
+  It comes from `SITE_URL`; `src/lib/siteUrl.ts` and `astro.config.mjs` must keep the same
+  fallback, and nothing may hardcode the apex — middleware 308s apex → www, so an apex
+  link costs a redirect hop.
 - Every internal link to a page uses the trailing-slash form to avoid a redirect hop.
 - New private route prefixes must be added to **both** the middleware non-indexable list
   and the `X-Robots-Tag` private list (they are separate arrays — keep them in sync).

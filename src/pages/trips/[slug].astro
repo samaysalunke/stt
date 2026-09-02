@@ -6,7 +6,9 @@ import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
 import MarkdownContent from '../../components/MarkdownContent.astro';
 import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
+import { buildBreadcrumb } from '../../lib/breadcrumbs';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
+import { FALLBACK_HERO } from '../../lib/images';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 import { generateTripSeo, markdownToPlainText } from '../../lib/tripSeo';
 
@@ -41,19 +43,20 @@ const whatsappLink = settings.whatsappLink ?? 'https://wa.me/917975027491';
 
 const tripName = (trip.title as string) || (trip.name as string) || slug!;
 const description = (trip.description as string) || (trip.shortDescription as string) || '';
-const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
+// Local, not hotlinked: this value flows into Event.image in the JSON-LD, the
+// OG image, and the Twitter card. Structured data must not depend on a host we
+// do not own — if the photo moves, the rich result degrades on our own page.
+const heroImg = trip.coverImage || trip.featuredImage || FALLBACK_HERO;
 const generatedSeo = generateTripSeo(trip);
 const searchDescription = markdownToPlainText(trip.seoDescription || generatedSeo.seoDescription);
 
 // ── Photos strip ──────────────────────────────────────────────────────────
 // Photos come from the trip's curated `gallery` (album-picked + trip-only
-// uploads). Falls back to a legacy linked album, then to stock photos.
-const FALLBACK_PHOTOS = [
-  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&q=80',
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80',
-  'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=900&q=80',
-];
+// uploads), then a legacy linked album. There is deliberately NO stock
+// fallback: the section is headed "Photos — From the trail. No filters, no
+// staging", and four hotlinked Unsplash images under that heading are a claim
+// about the business that is not true. A trip with no real photographs shows
+// no photo strip — the section already renders conditionally.
 // Primary source: the curated per-trip gallery (album-picked + trip-only uploads).
 let tripPhotos: Array<{ image: string; width?: number | null; height?: number | null }> =
   (Array.isArray(trip.gallery) ? trip.gallery : [])
@@ -67,8 +70,6 @@ if (tripPhotos.length === 0 && trip.linkedAlbumSlug) {
       .map((p: any) => ({ image: p.image, width: p.width ?? null, height: p.height ?? null }));
   }
 }
-if (tripPhotos.length === 0) tripPhotos = FALLBACK_PHOTOS.slice(0, 5).map((image) => ({ image }));
-
 // Accommodation photos are intentionally independent: no album or stock fallback.
 const accommodationPhotoUrls = new Set<string>();
 const accommodationPhotos: Array<{ image: string; width: number | null; height: number | null }> = [];
@@ -173,15 +174,10 @@ const slugJson = JSON.stringify(slug);
 const canonicalUrl = siteUrl(`/trips/${slug}/`);
 // schema.org image URLs must be absolute; heroImg may be a site-relative path.
 const heroImgAbs = heroImg.startsWith('http') ? heroImg : `${SITE_ORIGIN}${heroImg}`;
-const breadcrumbSchema = {
-  '@type': 'BreadcrumbList',
-  '@id': `${canonicalUrl}#breadcrumb`,
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl('/') },
-    { '@type': 'ListItem', position: 2, name: 'Trips', item: siteUrl('/trips/') },
-    { '@type': 'ListItem', position: 3, name: tripName, item: canonicalUrl },
-  ],
-};
+const breadcrumbSchema = buildBreadcrumb([
+  { name: 'Trips', path: '/trips/' },
+  { name: tripName, path: `/trips/${slug}/` },
+]);
 const eventSchemas = departures.map((departure) => {
   const cheapestOffer = departure.offers.filter((offer) => offer.available).sort((a, b) => a.price - b.price)[0];
   return {

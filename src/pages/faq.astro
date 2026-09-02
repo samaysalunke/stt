@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { listFaqs } from '../lib/content';
-import { siteUrl } from '../lib/siteUrl';
+import { buildBreadcrumb } from '../lib/breadcrumbs';
 
 // Build category groups from the FAQ collection, preserving order.
 const faqs = listFaqs();
@@ -18,13 +18,7 @@ const categories = categoryOrder.map((name) => ({ name, questions: grouped[name]
 const faqSchema = faqs.length > 0 ? {
   '@context': 'https://schema.org',
   '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: siteUrl('/') },
-        { '@type': 'ListItem', position: 2, name: 'FAQ', item: siteUrl('/faq/') },
-      ],
-    },
+    buildBreadcrumb([{ name: 'FAQ', path: '/faq/' }]),
     {
       '@type': 'FAQPage',
       mainEntity: faqs.filter((f: any) => f.question && f.answer).map((f: any) => ({

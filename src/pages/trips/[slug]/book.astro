@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import BookingCheckout from '../../../components/BookingCheckout';
 import { readTrip, readSiteSettings, resolveBooking, isTripPublic, isTripDeleted, resolveTripSlugAlias } from '../../../lib/content';
+import { FALLBACK_HERO } from '../../../lib/images';
 import { getDb } from '../../../lib/db';
 
 export const prerender = false;
@@ -85,7 +86,7 @@ if (user) {
   };
 }
 
-const heroImg = trip.coverImage || trip.featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
+const heroImg = trip.coverImage || trip.featuredImage || FALLBACK_HERO;
 ---
 
 <BaseLayout

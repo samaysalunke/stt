@@ -209,6 +209,7 @@ export default config({
         facebook: fields.url({ label: 'Facebook URL' }),
         youtube: fields.url({ label: 'YouTube URL' }),
         linkedin: fields.url({ label: 'LinkedIn URL' }),
+        googleBusinessProfile: fields.url({ label: 'Google Business Profile URL' }),
         tripsCompleted: fields.integer({ label: 'Trips Completed', defaultValue: 25 }),
         happyTravelers: fields.integer({ label: 'Happy Travelers', defaultValue: 500 }),
         destinationsCovered: fields.integer({ label: 'Destinations Covered', defaultValue: 15 }),

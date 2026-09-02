@@ -50,6 +50,23 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
           <label class={labelCls}>Instagram URL</label>
           <input type="text" name="instagram" value={s.instagram ?? ''} class={inputCls} />
         </div>
+        <div>
+          <label class={labelCls}>Facebook URL</label>
+          <input type="text" name="facebook" value={s.facebook ?? ''} class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls}>YouTube URL</label>
+          <input type="text" name="youtube" value={s.youtube ?? ''} class={inputCls} />
+        </div>
+        <div>
+          <label class={labelCls}>LinkedIn URL</label>
+          <input type="text" name="linkedin" value={s.linkedin ?? ''} class={inputCls} />
+        </div>
+        <div class="sm:col-span-2">
+          <label class={labelCls}>Google Business Profile URL</label>
+          <input type="text" name="googleBusinessProfile" value={s.googleBusinessProfile ?? ''} class={inputCls} />
+          <p class="mt-1 text-xs text-gray-500">Every link here tells search and answer engines this is the same real business. Fill in each profile that actually exists — leave the rest blank.</p>
+        </div>
         <div class="sm:col-span-2">
           <label class={labelCls}>Address</label>
           <input type="text" name="address" value={s.address ?? ''} class={inputCls} />

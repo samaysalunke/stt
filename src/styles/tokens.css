@@ -5,6 +5,8 @@
    Nothing here depends on which pages Tailwind scanned; put anything that does
    into the entry that needs it. */
 
+@import "./fonts.css";
+
 @theme {
   /* ── STT Brand Tokens ─────────────────────────────────────── */
   --color-coral: #E8725A;
