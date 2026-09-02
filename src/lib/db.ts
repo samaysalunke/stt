@@ -154,6 +154,11 @@ function initializeSchema(db: Database.Database) {
   // Indices for customer directory aggregation
   try { db.exec('CREATE INDEX IF NOT EXISTS registrations_email_lower ON registrations(lower(trim(email)))'); } catch {}
   try { db.exec('CREATE INDEX IF NOT EXISTS registrations_batch_id ON registrations(batch_id)'); } catch {}
+  // Customer directory joins users by normalised email and pulls audit rows by
+  // target — without these the page falls back to a full users scan per
+  // registration and a full audit_log scan, which times out on prod-size data.
+  try { db.exec('CREATE INDEX IF NOT EXISTS users_email_lower ON users(lower(trim(email)))'); } catch {}
+  try { db.exec('CREATE INDEX IF NOT EXISTS audit_log_target ON audit_log(targetType, targetId)'); } catch {}
 
   // feature/coming-soon — wishlists on coming-soon departures
   //  - users.phone: the profile phone (until now only ever stored per-registration)

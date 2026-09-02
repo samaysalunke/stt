@@ -33,6 +33,11 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/** Wrap a search term for `LIKE ? ESCAPE '\'`, escaping the wildcards it may contain. */
+export function likeTerm(value: string): string {
+  return `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
 export function isValidPhone(phone: string): boolean {
   return /^[+]?[\d\s\-()]{8,15}$/.test(phone.trim());
 }

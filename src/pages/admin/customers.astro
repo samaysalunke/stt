@@ -1,6 +1,10 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getDb } from '../../lib/db';
+import {
+  buildCustomerQuery, countCustomers, customerStats,
+  CUSTOMER_ORDER_BY, CUSTOMER_TYPES, PAGE_COLUMNS,
+} from '../../lib/customersView';
 import { formatDateIN, formatDateFromUnix, formatDateTimeFromUnix, formatINR, regStatusStyle } from '../../lib/utils';
 export const prerender = false;
 
@@ -8,53 +12,28 @@ const adminUser = Astro.locals.adminUser;
 if (!adminUser) return Astro.redirect('/admin/login');
 
 const isTripLead = adminUser.role === 'trip_lead';
-const allowedBatchIds: string[] | null = isTripLead ? (adminUser.tripIds ?? []) : null;
 
 const db = getDb();
 
-// Build batch_id WHERE clause for trip_lead scoping (mirrors registrations.astro)
-const batchWhere = allowedBatchIds === null
-  ? ''
-  : allowedBatchIds.length > 0
-    ? `WHERE r.batch_id IN (${allowedBatchIds.map(() => '?').join(',')})`
-    : 'WHERE 1=0';
-const batchParams: string[] = allowedBatchIds?.length ? allowedBatchIds : [];
+const PAGE_SIZE = 50;
+// Lower-cased to match the CSV export, whose LIKE clause lowercases both sides —
+// otherwise a capitalised term filters the page and the download differently.
+const q = (Astro.url.searchParams.get('q') ?? '').trim().toLowerCase().slice(0, 200);
+const requestedType = Astro.url.searchParams.get('customer_type') ?? '';
+const customerType = (CUSTOMER_TYPES as readonly string[]).includes(requestedType) ? requestedType : '';
+const requestedPage = Math.max(1, Number.parseInt(Astro.url.searchParams.get('page') ?? '1', 10) || 1);
 
-// Customer aggregation — identity fields from most recent registration per email
-const customerSQL = `
-  SELECT
-    lower(trim(r.email))                                                                         AS email,
-    (SELECT full_name FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS full_name,
-    (SELECT phone     FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS phone,
-    (SELECT city      FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS city,
-    COUNT(*)                                                                                     AS total_regs,
-    SUM(CASE WHEN r.status = 'confirmed' THEN 1 ELSE 0 END)                                     AS confirmed,
-    SUM(CASE WHEN r.status = 'pending'   THEN 1 ELSE 0 END)                                     AS pending,
-    SUM(CASE WHEN r.status = 'lead'      THEN 1 ELSE 0 END)                                     AS lead,
-    SUM(CASE WHEN r.status = 'rejected'  THEN 1 ELSE 0 END)                                     AS rejected,
-    SUM(COALESCE(r.amount_paid, 0))                                                              AS total_paid,
-    max(r.payment_date)                                                                          AS last_payment_date,
-    max(r.created_at)                                                                            AS last_reg_at,
-    (SELECT COALESCE(trip_slug, trip_name) FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS latest_trip,
-    u.id                                                                                         AS user_id,
-    u.displayName,
-    u.avatarUrl,
-    u.username,
-    u.leaderboardOptOut,
-    u.showTripsPublicly,
-    u.createdAt                                                                                  AS account_created_at,
-    u.lastLoginAt,
-    CASE max(CASE ur.role WHEN 'owner' THEN 3 WHEN 'ops' THEN 2 WHEN 'trip_lead' THEN 1 ELSE 0 END)
-      WHEN 3 THEN 'owner' WHEN 2 THEN 'ops' WHEN 1 THEN 'trip_lead' ELSE NULL
-    END                                                                                          AS role
-  FROM registrations r
-  LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(r.email))
-  LEFT JOIN user_roles ur ON ur.userId = u.id
-  ${batchWhere}
-  GROUP BY lower(trim(r.email))
-  ORDER BY last_reg_at DESC
-  LIMIT 1001
-`;
+const query = buildCustomerQuery(adminUser, { q, customerType });
+
+// Chips count the search results, not the page, and deliberately ignore the type
+// filter — they are the type categories, so honouring it would zero out the rest.
+const stats = customerStats(query);
+// With no type filter the chip total already is the match count; only the
+// narrower case needs its own pass over the aggregation.
+const total = customerType ? countCustomers(query) : stats.total;
+const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+const page = Math.min(requestedPage, totalPages);
+const offset = (page - 1) * PAGE_SIZE;
 
 type Customer = {
   email: string; full_name: string | null; phone: string | null; city: string | null;
@@ -63,22 +42,28 @@ type Customer = {
   latest_trip: string | null; user_id: string | null; displayName: string | null;
   avatarUrl: string | null; username: string | null; leaderboardOptOut: number;
   showTripsPublicly: number; account_created_at: number | null; lastLoginAt: number | null;
-  role: string | null;
 };
 
-const rawCustomers = (batchParams.length > 0
-  ? db.prepare(customerSQL).all(...batchParams)
-  : db.prepare(customerSQL).all()) as Customer[];
+const customers = db.prepare(`
+  ${query.cte}
+  SELECT ${PAGE_COLUMNS} FROM customers
+  ${query.where}
+  ${CUSTOMER_ORDER_BY}
+  LIMIT ? OFFSET ?
+`).all(...query.params, PAGE_SIZE, offset) as Customer[];
 
-const capped = rawCustomers.length > 1000;
-const customers = capped ? rawCustomers.slice(0, 1000) : rawCustomers;
+function pageHref(nextPage: number) {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (customerType) params.set('customer_type', customerType);
+  params.set('page', String(nextPage));
+  return `?${params}`;
+}
 
-// Stat chips
-const totalCustomers = customers.length;
-const confirmedCustomers = customers.filter(c => c.confirmed > 0).length;
-const pendingCustomers = customers.filter(c => c.pending > 0).length;
-const unpaidCustomers = customers.filter(c => Number(c.total_paid) === 0 && (c.confirmed + c.pending) > 0).length;
-const repeatCustomers = customers.filter(c => c.total_regs >= 2).length;
+const exportParams = new URLSearchParams({ type: 'customers' });
+if (q) exportParams.set('q', q);
+if (customerType) exportParams.set('customer_type', customerType);
+const exportHref = `/api/admin/export?${exportParams}`;
 
 // Registrations for detail drawers (grouped by normalised email)
 const customerEmails = customers.map(c => c.email);
@@ -109,6 +94,24 @@ if (userIds.length > 0) {
     `SELECT userId, kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId IN (${ph})`
   ).all(...userIds) as Record<string, any>[];
   for (const row of lbRows) leaderboardByUserId.set(row.userId, row);
+}
+
+// Admin role per user, looked up separately rather than joined into the customer
+// aggregation: `user_roles` has a row per role, so joining it there multiplies
+// registrations before the GROUP BY and inflates every count and sum.
+const ROLE_RANK: Record<string, number> = { owner: 3, ops: 2, trip_lead: 1 };
+const roleByUserId = new Map<string, string>();
+if (userIds.length > 0) {
+  const ph = userIds.map(() => '?').join(',');
+  const roleRows = db.prepare(
+    `SELECT userId, role FROM user_roles WHERE userId IN (${ph})`
+  ).all(...userIds) as { userId: string; role: string }[];
+  for (const row of roleRows) {
+    const held = roleByUserId.get(row.userId);
+    if (!held || (ROLE_RANK[row.role] ?? 0) > (ROLE_RANK[held] ?? 0)) {
+      roleByUserId.set(row.userId, row.role);
+    }
+  }
 }
 
 // Audit timeline entries per customer email (last 8 audit entries for their registrations)
@@ -158,78 +161,73 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
   <div class="flex items-center justify-between mb-[1.25rem] flex-wrap gap-[0.75rem]">
     <div>
       <h1 class="font-display text-[1.5rem] font-extrabold text-navy mt-[0] mx-[0] mb-[0.2rem]">Customers</h1>
-      <p class="text-gray-text text-[0.875rem] m-0">{totalCustomers} customer{totalCustomers !== 1 ? 's' : ''} · read-only{capped ? ' · showing first 1 000' : ''}</p>
+      <p class="text-gray-text text-[0.875rem] m-0">{total} customer{total !== 1 ? 's' : ''} · read-only</p>
     </div>
     {!isTripLead && (
-      <a id="customers-export" href="/api/admin/export?type=customers"
+      <a id="customers-export" href={exportHref}
          class="py-[0.45rem] px-[1rem] bg-navy text-white rounded-[0.5rem] text-[0.875rem] font-semibold no-underline">
         ↓ Export CSV
       </a>
     )}
   </div>
 
-  {capped && (
-    <div class="bg-caution-surface border border-warning-border rounded-[0.75rem] py-[0.6rem] px-[1rem] text-[0.82rem] text-caution-ink mb-[1rem]">
-      More than 1 000 customers found — showing the 1 000 most recent. Use Export CSV to get the full list.
-    </div>
-  )}
-
-  <!-- Stat chips -->
+  <!-- Stat chips. These count the whole search, not the page, and ignore the
+       type filter — they are the type categories themselves. -->
   <div class="stat-chips">
     {[
-      ['Total', totalCustomers, 'var(--color-navy)'],
-      ['Confirmed', confirmedCustomers, 'var(--color-success)'],
+      ['Total', stats.total, 'var(--color-navy)'],
+      ['Confirmed', stats.confirmed, 'var(--color-success)'],
       // #D97706 cleared AA only as large bold text (3.19:1 on white, and these
       // chips are 1.15rem/700). warning-ink is 7.09:1 and matches the pending pill.
-      ['Pending', pendingCustomers, 'var(--color-warning-ink)'],
-      ['Unpaid confirmed/pending', unpaidCustomers, 'var(--color-danger)'],
-      ['Repeat (2+ trips)', repeatCustomers, 'var(--color-interest-ink)'],
+      ['Pending', stats.pending, 'var(--color-warning-ink)'],
+      ['Unpaid confirmed/pending', stats.unpaid, 'var(--color-danger)'],
+      ['Repeat (2+ trips)', stats.repeat, 'var(--color-interest-ink)'],
     ].map(([label, value, color]) => (
       <div class="stat-chip"><span>{label}</span><strong style={`color:${color}`}>{value}</strong></div>
     ))}
   </div>
 
-  <!-- Search toolbar -->
-  <div class="flex gap-[0.5rem] my-[1rem] mx-[0] flex-wrap items-center">
-    <input id="cust-search" type="search" placeholder="Search name, email, phone, username, city…"
+  <!-- Search toolbar. No `page` field: submitting a new search drops it and
+       lands back on page 1, which is what you want after changing the filter. -->
+  <form method="GET" class="flex gap-[0.5rem] my-[1rem] mx-[0] flex-wrap items-center">
+    <input name="q" type="search" value={q} placeholder="Search name, email, phone, username, city…"
            class="flex-1 min-w-[200px] py-[0.5rem] px-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.875rem]" />
-    <select id="cust-type-filter"
+    <select name="customer_type"
             class="py-[0.5rem] px-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.875rem]">
-      <option value="">All customers</option>
-      <option value="has-account">Has account</option>
-      <option value="no-account">No account</option>
-      <option value="repeat">Repeat (2+ trips)</option>
-      <option value="confirmed">Has confirmed</option>
-      <option value="pending">Has pending</option>
-      <option value="unpaid">Unpaid</option>
+      {[
+        ['', 'All customers'],
+        ['has-account', 'Has account'],
+        ['no-account', 'No account'],
+        ['repeat', 'Repeat (2+ trips)'],
+        ['confirmed', 'Has confirmed'],
+        ['pending', 'Has pending'],
+        ['unpaid', 'Unpaid'],
+      ].map(([value, label]) => (
+        <option value={value} selected={customerType === value}>{label}</option>
+      ))}
     </select>
-  </div>
+    <button type="submit" class="py-[0.5rem] px-[1rem] bg-coral text-white rounded-[0.5rem] text-[0.875rem] font-semibold border-none cursor-pointer">Search</button>
+    {(q || customerType) && (
+      <a href="/admin/customers/" class="py-[0.5rem] px-[0.9rem] border border-border text-gray-text rounded-[0.5rem] text-[0.875rem] font-semibold no-underline">Clear</a>
+    )}
+  </form>
 
   <!-- Customer table -->
   {customers.length === 0 ? (
     <div class="bg-white border border-border rounded-[1.25rem] p-[3rem] text-center text-gray-text">
-      No customers found.
+      {q || customerType ? 'No customers match your search.' : 'No customers found.'}
     </div>
   ) : (
     <div id="cust-list" class="flex flex-col gap-[0.6rem]">
       {customers.map((c, i) => {
         const regs = regsByEmail.get(c.email) ?? [];
         const lb = c.user_id ? leaderboardByUserId.get(c.user_id) : null;
+        const role = c.user_id ? roleByUserId.get(c.user_id) ?? null : null;
         const auditEntries = auditByEmail.get(c.email) ?? [];
         const displayName = c.full_name ?? c.displayName ?? c.email;
         const payState = Number(c.total_paid) === 0 ? 'Unpaid' : payLabel(Number(c.total_paid), null);
         return (
-          <div class="cust-row"
-               data-name={String(c.full_name ?? c.displayName ?? '').toLowerCase()}
-               data-email={c.email}
-               data-phone={String(c.phone ?? '').toLowerCase()}
-               data-username={String(c.username ?? '').toLowerCase()}
-               data-city={String(c.city ?? '').toLowerCase()}
-               data-confirmed={c.confirmed > 0 ? '1' : '0'}
-               data-pending={c.pending > 0 ? '1' : '0'}
-               data-unpaid={Number(c.total_paid) === 0 && (c.confirmed + c.pending) > 0 ? '1' : '0'}
-               data-repeat={c.total_regs >= 2 ? '1' : '0'}
-               data-has-account={c.user_id ? '1' : '0'}>
+          <div class="cust-row">
 
             <!-- Summary row -->
             <div class="cust-summary">
@@ -237,7 +235,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                 <div class="flex items-center gap-[0.5rem] flex-wrap">
                   <strong class="text-navy">{displayName}</strong>
                   {c.username && <span class="text-[0.72rem] bg-blush text-coral-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">@{c.username}</span>}
-                  {c.role && <span class="text-[0.72rem] bg-muted-surface text-muted-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{c.role}</span>}
+                  {role && <span class="text-[0.72rem] bg-muted-surface text-muted-ink py-[0.15rem] px-[0.45rem] rounded-full font-semibold">{role}</span>}
                 </div>
                 <div class="text-[0.78rem] text-gray-text mt-[0.1rem]">{c.email}</div>
                 {c.phone && <div class="text-[0.78rem] text-gray-text">{c.phone}</div>}
@@ -321,7 +319,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                         {c.username && <div><span>Username</span><span>@{c.username} <button onclick={`copyText('@${c.username}')`} class="copy-btn" title="Copy username">⧉</button></span></div>}
                         <div><span>Joined</span><span>{formatDateFromUnix(c.account_created_at)}</span></div>
                         {c.lastLoginAt && <div><span>Last login</span><span>{formatDateFromUnix(c.lastLoginAt)}</span></div>}
-                        {c.role && <div><span>Admin role</span><span>{c.role}</span></div>}
+                        {role && <div><span>Admin role</span><span>{role}</span></div>}
                         <div><span>Show trips</span><span>{c.showTripsPublicly ? 'Public' : 'Private'}</span></div>
                         <div><span>Leaderboard</span><span>{c.leaderboardOptOut ? 'Opted out' : 'Active'}</span></div>
                       </div>
@@ -408,9 +406,13 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     </div>
   )}
 
-  <div id="cust-empty" class="hidden bg-white border border-border rounded-[1.25rem] p-[3rem] text-center text-gray-text">
-    No customers match your search.
-  </div>
+  {totalPages > 1 && (
+    <div class="flex items-center justify-center gap-[0.75rem] mt-[1.5rem]">
+      {page > 1 && <a href={pageHref(page - 1)} class="py-[0.5rem] px-[1rem] rounded-full text-[0.85rem] font-semibold border border-border text-navy no-underline">← Prev</a>}
+      <span class="text-[0.85rem] text-gray-text">Page {page} of {totalPages}</span>
+      {page < totalPages && <a href={pageHref(page + 1)} class="py-[0.5rem] px-[1rem] rounded-full text-[0.85rem] font-semibold border border-border text-navy no-underline">Next →</a>}
+    </div>
+  )}
 </AdminLayout>
 
 <style>
@@ -525,49 +527,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
     });
   });
 
-  // Client-side search + filter
-  const searchInput = document.getElementById('cust-search') as HTMLInputElement | null;
-  const typeFilter = document.getElementById('cust-type-filter') as HTMLSelectElement | null;
-  const list = document.getElementById('cust-list');
-  const emptyMsg = document.getElementById('cust-empty');
-  const exportLink = document.getElementById('customers-export') as HTMLAnchorElement | null;
-
-  function updateExportLink() {
-    if (!exportLink) return;
-    const params = new URLSearchParams({ type: 'customers' });
-    const q = searchInput?.value.trim();
-    const customerType = typeFilter?.value;
-    if (q) params.set('q', q);
-    if (customerType) params.set('customer_type', customerType);
-    exportLink.href = `/api/admin/export?${params}`;
-  }
-
-  function applyFilters() {
-    const q = searchInput?.value.toLowerCase().trim() ?? '';
-    const type = typeFilter?.value ?? '';
-    const rows = document.querySelectorAll<HTMLElement>('.cust-row');
-    let visible = 0;
-    rows.forEach(row => {
-      const matchSearch = !q || ['data-name','data-email','data-phone','data-username','data-city'].some(
-        attr => (row.getAttribute(attr) ?? '').includes(q)
-      );
-      const matchType = !type ||
-        (type === 'has-account' && row.dataset.hasAccount === '1') ||
-        (type === 'no-account' && row.dataset.hasAccount === '0') ||
-        (type === 'repeat' && row.dataset.repeat === '1') ||
-        (type === 'confirmed' && row.dataset.confirmed === '1') ||
-        (type === 'pending' && row.dataset.pending === '1') ||
-        (type === 'unpaid' && row.dataset.unpaid === '1');
-      const show = matchSearch && matchType;
-      row.style.display = show ? '' : 'none';
-      if (show) visible++;
-    });
-    if (list) list.style.display = visible === 0 ? 'none' : '';
-    if (emptyMsg) emptyMsg.style.display = visible === 0 ? '' : 'none';
-    updateExportLink();
-  }
-
-  searchInput?.addEventListener('input', applyFilters);
-  typeFilter?.addEventListener('change', applyFilters);
-  updateExportLink();
+  // Search and filtering are server-side (the GET form above). They used to run
+  // in the browser over every rendered row, which locked the tab once the list
+  // grew past a few hundred customers.
 </script>

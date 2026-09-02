@@ -1,5 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
+import { likeTerm } from '../../../lib/utils';
+import {
+  buildCustomerQuery, CUSTOMER_ORDER_BY, CUSTOMER_TYPES, EXPORT_COLUMNS,
+} from '../../../lib/customersView';
 import type { AdminUser } from '../../../lib/admin-session';
 
 function toCSV(rows: Record<string, any>[]): string {
@@ -14,10 +18,6 @@ function toCSV(rows: Record<string, any>[]): string {
     ...rows.map(row => headers.map(h => escape(row[h])).join(',')),
   ];
   return lines.join('\r\n');
-}
-
-function likeTerm(value: string): string {
-  return `%${value.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
 export const GET: APIRoute = async ({ url, locals }) => {
@@ -85,59 +85,22 @@ export const GET: APIRoute = async ({ url, locals }) => {
     rows = getDb().prepare('SELECT * FROM newsletter_subscribers ORDER BY id DESC').all() as Record<string, any>[];
     filename = `newsletter-${date}.csv`;
   } else if (type === 'customers') {
-    const isTripLead = adminUser?.role === 'trip_lead';
-    const allowedBatchIds: string[] | null = isTripLead ? (adminUser?.tripIds ?? []) : null;
-    const batchWhere = allowedBatchIds === null ? '' :
-      allowedBatchIds.length > 0 ? `WHERE r.batch_id IN (${allowedBatchIds.map(() => '?').join(',')})` : 'WHERE 1=0';
-    const batchParams: string[] = allowedBatchIds?.length ? allowedBatchIds : [];
     const search = (url.searchParams.get('q') ?? '').trim().toLowerCase().slice(0, 200);
     const requestedCustomerType = url.searchParams.get('customer_type') ?? '';
-    const customerTypes = ['has-account', 'no-account', 'repeat', 'confirmed', 'pending', 'unpaid'];
-    const customerType = customerTypes.includes(requestedCustomerType) ? requestedCustomerType : '';
-    const filters: string[] = [];
-    const filterParams: string[] = [];
-    if (search) {
-      filters.push("(lower(COALESCE(full_name, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(email, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(phone, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(username, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(city, '')) LIKE ? ESCAPE '\\')");
-      const term = likeTerm(search);
-      filterParams.push(term, term, term, term, term);
-    }
-    if (customerType === 'has-account') filters.push('user_id IS NOT NULL');
-    if (customerType === 'no-account') filters.push('user_id IS NULL');
-    if (customerType === 'repeat') filters.push('total_regs >= 2');
-    if (customerType === 'confirmed') filters.push('confirmed > 0');
-    if (customerType === 'pending') filters.push('pending > 0');
-    if (customerType === 'unpaid') filters.push('total_paid = 0 AND (confirmed + pending) > 0');
+    const customerType = (CUSTOMER_TYPES as readonly string[]).includes(requestedCustomerType)
+      ? requestedCustomerType
+      : '';
 
-    const sql = `
-      WITH customers AS (
-      SELECT
-        lower(trim(r.email)) AS email,
-        (SELECT full_name FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS full_name,
-        (SELECT phone     FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS phone,
-        (SELECT city      FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS city,
-        COUNT(*) AS total_regs,
-        SUM(CASE WHEN r.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
-        SUM(CASE WHEN r.status='pending'   THEN 1 ELSE 0 END) AS pending,
-        SUM(CASE WHEN r.status='lead'      THEN 1 ELSE 0 END) AS lead,
-        SUM(CASE WHEN r.status='wishlist'  THEN 1 ELSE 0 END) AS wishlist,
-        SUM(CASE WHEN r.status='rejected'  THEN 1 ELSE 0 END) AS rejected,
-        SUM(CASE WHEN r.status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
-        SUM(COALESCE(r.amount_paid, 0)) AS total_paid,
-        SUM(COALESCE(r.amount_refunded, 0)) AS total_refunded,
-        max(r.payment_date) AS last_payment_date,
-        max(r.created_at)   AS last_reg_at,
-        (SELECT COALESCE(trip_slug, trip_name) FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS latest_trip,
-        u.id AS user_id, u.username, u.displayName
-      FROM registrations r
-      LEFT JOIN users u ON lower(trim(u.email)) = lower(trim(r.email))
-      ${batchWhere}
-      GROUP BY lower(trim(r.email))
-      )
-      SELECT * FROM customers
-      ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}
-      ORDER BY last_reg_at DESC
-    `;
-    rows = getDb().prepare(sql).all(...batchParams, ...filterParams) as Record<string, any>[];
+    // EXPORT_COLUMNS rather than `SELECT *`: toCSV() derives its header row from
+    // the keys of the first object, so any column added to the shared
+    // aggregation would otherwise silently widen this download.
+    const query = buildCustomerQuery(adminUser, { q: search, customerType });
+    rows = getDb().prepare(`
+      ${query.cte}
+      SELECT ${EXPORT_COLUMNS} FROM customers
+      ${query.where}
+      ${CUSTOMER_ORDER_BY}
+    `).all(...query.params) as Record<string, any>[];
     filename = `customers-${date}.csv`;
   } else {
     return new Response('Invalid type', { status: 400 });
