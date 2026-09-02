@@ -46,6 +46,19 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 
 | SHA | Summary |
 |---|---|
+| `20e4683` | perf(ui): stop shipping the admin console's CSS to public pages |
+| `d827b91` | test(visual): put the public routes under the exact gate |
+| `0da57b7` | fix(a11y): white initials on the admin avatar, and a retraction |
+| `f974f04` | refactor(ui): one token for the warm panel surface |
+| `ae9dedf` | docs: bring the handoff up to the end of the cleanup list |
+| `8a63406` | test(e2e): cover GLightbox, and close the last public contrast item |
+| `eb5111f` | refactor(ui): retire the legacy colour aliases |
+| `38a2556` | feat(ui): one status palette for admin, and fix what it exposed |
+| `8710c32` | docs: describe the seeded visual database, not the drift |
+| `1d76433` | test(visual): give the snapshot suite its own database |
+| `c2ac5b3` | docs: record the admin badge baselines drifting on data |
+| `fc320d7` | chore(ui): remove the ui-kit gallery page |
+| `dad6514` | docs: hand off the visual harness, not just the phase list |
 | `1f52f4a` | fix(a11y): admin secondary text now clears AA |
 | `4f24bfa` | test(e2e): make the admin gate able to see a colour change |
 | `141bf34` | fix(ui): define the three tokens admin was styling against |
@@ -57,23 +70,24 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 | `aba4d02` | test(e2e): capture Phase 6 admin visual baselines |
 | `add0a77` | fix(a11y): give the hero copy a contrast floor |
 | `aa4c720` | chore(ui): drop the unused --color-gold token |
-| `6aface7` | feat(ui): Phase 5 — account and photo vault onto tokens |
-| `206a7f7` | docs: record the Phase 4 commit in the handoff table |
-| `7389da4` | feat(ui): Phase 4 — booking flow onto tokens, a11y audit closed |
-| `88945c1` | docs: refresh the commit table with post-rebase SHAs |
-| `8ab0846` | feat(ui): Phase 3 — marketing and legal pages onto tokens |
-| `4b88e1a` | chore: ignore Playwright's test-results directory |
-| `588d985` | docs: record the Phase 2 commit in the handoff table |
-| `f6a38cf` | feat(ui): Phase 2 — shared chrome onto tokens, chrome a11y cleared |
-| `ec00641` | docs: record Phase 1.5 and harness-fix commits in the handoff table |
-| `d767fa8` | fix(test): make the visual harness deterministic |
-| `012b700` | feat(ui): Phase 1.5 — retune tokens for contrast and hierarchy |
-| `c70646d` | docs: UI refresh session handoff |
-| `83fbc67` | feat(ui): Phase 1 gate draft — restyle homepage onto primitives + tokens |
-| `5f01a76` | feat(ui): Phase 1 — design tokens + primitive component layer |
-| `135b9b6` | test(e2e): add visual-regression harness + Phase 0 baselines |
-| `17a32e3` | chore(ui-refresh): capture Phase 0 baselines for the UI refresh |
-| `5cb6a3b` | test(e2e): repair 13 stale specs so the suite is green before the UI refresh |
+| `253cb03` | docs: record the Phase 5 commit in the handoff table |
+| `7cbca91` | feat(ui): Phase 5 — account and photo vault onto tokens |
+| `c085245` | docs: record the Phase 4 commit in the handoff table |
+| `4f53ea0` | feat(ui): Phase 4 — booking flow onto tokens, a11y audit closed |
+| `98c4faf` | docs: refresh the commit table with post-rebase SHAs |
+| `a016683` | feat(ui): Phase 3 — marketing and legal pages onto tokens |
+| `cce547f` | chore: ignore Playwright's test-results directory |
+| `73627fb` | docs: record the Phase 2 commit in the handoff table |
+| `9e208c6` | feat(ui): Phase 2 — shared chrome onto tokens, chrome a11y cleared |
+| `7924888` | docs: record Phase 1.5 and harness-fix commits in the handoff table |
+| `3a60f64` | fix(test): make the visual harness deterministic |
+| `845fcee` | feat(ui): Phase 1.5 — retune tokens for contrast and hierarchy |
+| `cdd1487` | docs: UI refresh session handoff |
+| `5a99cbf` | feat(ui): Phase 1 gate draft — restyle homepage onto primitives + tokens |
+| `e827fa3` | feat(ui): Phase 1 — design tokens + primitive component layer |
+| `f7ddbaf` | test(e2e): add visual-regression harness + Phase 0 baselines |
+| `53597ad` | chore(ui-refresh): capture Phase 0 baselines for the UI refresh |
+| `604ee17` | test(e2e): repair 13 stale specs so the suite is green before the UI refresh |
 
 ## Gate decisions (settled — do not reopen)
 
