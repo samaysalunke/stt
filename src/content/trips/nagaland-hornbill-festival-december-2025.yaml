@@ -1,0 +1,114 @@
+title: Nagaland — Hornbill Festival Special, December 2025
+slug: nagaland-hornbill-festival-december-2025
+publicationStatus: draft
+priority: medium
+location: Nagaland
+duration: 7 Days, 6 Nights
+seoTitle: Nagaland Hornbill Festival Special — December 2025
+seoDescription: A completed Seek the Thrill journey through Nagaland for the Hornbill Festival, Dzukou Valley, Khonoma and Dzuleke.
+imageAlt: Travellers experiencing Nagaland during the Hornbill Festival
+shortDescription: Hornbill Festival, Dzukou Valley, Khonoma and Dzuleke — a culture-and-adventure journey through Nagaland.
+description: >-
+  A culture-and-adventure journey through Nagaland for the Hornbill Festival,
+  combining tribal music, dance and food with an overnight Dzukou Valley trek,
+  Khonoma village and time beside the Dzuleke river.
+whoShouldJoin: >-
+  Travellers interested in local culture, festival experiences, trekking and
+  offbeat group travel. The itinerary includes an overnight basecamp stay with
+  no electricity or mobile network.
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: Single trip price; accommodation preferences will be reconciled from the historical registration CSV.
+batches:
+  - id: nagaland-hornbill-festival-2025-12-05
+    startDate: 2025-12-05
+    endDate: 2025-12-11
+    status: completed
+    offers:
+      - tierId: standard
+        price: 20500
+        cap: null
+        booked: 0
+highlights:
+  - Attend the Hornbill Festival, featuring music, dance, food and culture from Naga tribes
+  - Trek through Dzukou Valley with an overnight basecamp experience
+  - Explore Khonoma, known as Asia's first green village, with an Angami meal
+  - Spend time beside the Dzuleke river
+  - Camp near the Hornbill Festival venue
+  - Optional festival evenings, walks and sightseeing
+paymentAmount: 8000
+balanceDueRule: 10 days before trip
+meetingPoint: >-
+  Guwahati at approximately 11 PM on 5 December 2025, after travellers arrive
+  in the city by approximately 6 PM.
+importantNotes: |
+  - The trip required a minimum group of 8 people to proceed.
+  - The ₹8,000 advance was non-refundable unless Seek the Thrill cancelled the trip.
+  - Hornbill Festival entry tickets were excluded and cost approximately ₹50–₹100 per day.
+  - The campsite was approximately 800 metres from the festival venue, accessed via the Children's Park entry/exit.
+  - Travel between Guwahati and Dimapur was planned by sleeper train or Tempo Traveller depending on group size and availability.
+  - Activities could be adapted or rescheduled because of weather or natural conditions.
+notIncluded:
+  - Hornbill Festival entry tickets (approximately ₹50–₹100 per day)
+itinerary:
+  - day: 1
+    title: Arrival in Guwahati and overnight journey
+    description: >-
+      Arrive in Guwahati at approximately 6 PM and meet the group. Depart at
+      approximately 11 PM for Dimapur by sleeper train or travel directly to the
+      campsite by Tempo Traveller, depending on group size and availability.
+    stay: Overnight journey
+    meals: []
+    transport: Sleeper train to Dimapur or Tempo Traveller to the campsite
+  - day: 2
+    title: Dimapur, campsite and Hornbill Festival
+    description: >-
+      Reach Dimapur in the morning, transfer to the campsite and check into the
+      tents. Spend the day experiencing the Hornbill Festival's music, dance,
+      local food and tribal culture, with an optional evening at the festival or campsite.
+    stay: Campsite near the Hornbill Festival
+    meals: []
+    transport: Transfer from Dimapur to the campsite
+  - day: 3
+    title: Dzukou Valley trek
+    description: >-
+      Drive to Viswema village, continue off-road to the trek base and hike into
+      Dzukou Valley. Have a packed lunch at the viewpoint and stay overnight at
+      the basecamp without electricity or mobile network.
+    stay: Dzukou Valley basecamp
+    meals: []
+    transport: Vehicle and off-road Tata Yodha transfer to the trek base
+  - day: 4
+    title: Dzukou Valley to campsite
+    description: >-
+      Hike into the main valley early in the morning, trek back to the vehicle
+      and return to the campsite. The evening was free for an optional Hornbill
+      night show or time at the campsite.
+    stay: Campsite near the Hornbill Festival
+    meals: []
+    transport: Vehicle transfer to the campsite
+  - day: 5
+    title: Khonoma and Dzuleke
+    description: >-
+      Take a guided tour of Khonoma, have an authentic Angami lunch and spend the
+      afternoon beside the Dzuleke river. Return to the campsite by approximately
+      7 PM, with an optional Hornbill Festival evening.
+    stay: Campsite near the Hornbill Festival
+    meals: []
+    transport: Local vehicle
+  - day: 6
+    title: Hornbill Festival finale
+    description: >-
+      Spend a full day at the festival. Optional activities included a walk to
+      Pony Farm, a viewpoint stroll and shopping in Kohima.
+    stay: Campsite near the Hornbill Festival
+    meals: []
+  - day: 7
+    title: Departure via Dimapur and Guwahati
+    description: >-
+      Leave for Dimapur after breakfast, stop for lunch and board the train to
+      Guwahati, scheduled to arrive at approximately 10 PM.
+    stay: ""
+    meals: [B]
+    transport: Road transfer to Dimapur and train to Guwahati
