@@ -122,9 +122,9 @@
   --color-border: #E8DDD9;
 
   /* ── Typography ────────────────────────────────────────────── */
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Fraunces', Georgia, serif;
-  --font-accent: 'DM Sans', ui-sans-serif, sans-serif;
+  --font-accent: 'Manrope', ui-sans-serif, sans-serif;
 
   /* Display type scale (Fraunces). Use for headings via `text-display-*`;
      replaces the per-heading `text-[2.1rem] sm:text-[2.6rem] …` arbitrary values

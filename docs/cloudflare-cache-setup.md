@@ -168,7 +168,7 @@ content-hashed, so a replaced face has to be able to propagate. If you do swap a
 font file, purge `/fonts/*` — nothing purges it automatically.
 
 ```bash
-curl -sI https://www.seekthethrill.in/fonts/dm-sans-latin.woff2 | grep -iE 'cf-cache-status|cache-control'
+curl -sI https://www.seekthethrill.in/fonts/manrope-latin.woff2 | grep -iE 'cf-cache-status|cache-control'
 ```
 
 ## 6. Zone settings
