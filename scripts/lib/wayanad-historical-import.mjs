@@ -58,7 +58,8 @@ export function analyzeWayanadCsv(csv, db, config = WAYANAD_HISTORICAL_CONFIG) {
     if (!validEmail(email)) reasons.push('invalid email');
     if (!clean(cells[3])) reasons.push('missing phone');
     if (!createdAt) reasons.push('invalid timestamp');
-    if (!clean(cells[10])) reasons.push('missing consent');
+    const hasConsent = Boolean(clean(cells[10]));
+    if (!hasConsent && config.requireConsent !== false) reasons.push('missing consent');
     if (!status) reasons.push(`unknown status: ${clean(cells[11])}`);
     if (reasons.length) { rejected.push({ row: sheetRow, reasons }); continue; }
 
@@ -74,7 +75,8 @@ export function analyzeWayanadCsv(csv, db, config = WAYANAD_HISTORICAL_CONFIG) {
       paymentStatus: status === 'confirmed' ? 'fully_paid' : 'unpaid',
       amountPaid: status === 'confirmed' ? config.totalAmount : 0,
       createdAt,
-      consentAt: createdAt,
+      consentAt: hasConsent ? createdAt : null,
+      missingConsent: !hasConsent,
     });
   }
   return analyzePreparedHistoricalRows({ candidates, rejected }, db, config);
