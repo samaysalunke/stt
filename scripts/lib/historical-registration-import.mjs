@@ -119,6 +119,10 @@ export function analyzeHistoricalCsv(csv, db, config = NAGALAND_HISTORICAL_CONFI
     });
   }
 
+  return analyzePreparedHistoricalRows({ candidates, rejected, heldRows }, db, config);
+}
+
+export function analyzePreparedHistoricalRows({ candidates, rejected = [], heldRows = [] }, db, config) {
   const frequencies = new Map();
   for (const row of candidates) frequencies.set(row.email, (frequencies.get(row.email) ?? 0) + 1);
   const duplicateEmails = [...frequencies.entries()].filter(([, count]) => count > 1).map(([email]) => email);
@@ -173,8 +177,7 @@ function countSideEffects(db) {
   };
 }
 
-export function importHistoricalCsv(csv, db, config = NAGALAND_HISTORICAL_CONFIG) {
-  const analysis = analyzeHistoricalCsv(csv, db, config);
+export function importPreparedHistoricalRows(analysis, db, config) {
   if (analysis.rejected.length || analysis.duplicateEmails.length) {
     throw new Error('Import refused: CSV has rejected rows or duplicate emails');
   }
@@ -190,14 +193,14 @@ export function importHistoricalCsv(csv, db, config = NAGALAND_HISTORICAL_CONFIG
     ) VALUES (
       @tripName, @tripSlug, @tripDate, @fullName, @email, @phone,
       '', @emergencyPhone, @gender, @age, @city, @instagram, @whyJoin,
-      @batchId, @tierId, NULL, @totalAmount, @amountPaid, 0,
+      @batchId, @tierId, @sharingOption, @totalAmount, @amountPaid, 0,
       @paymentStatus, NULL, NULL, NULL,
       @status, @createdAt, 'historical-google-forms', NULL, 0,
       @consentAt, @createdAt, @createdAt, 'Historical Google Forms import', 0
     )
   `);
   const apply = db.transaction(() => {
-    for (const row of analysis.create) insert.run({ ...config, ...row });
+    for (const row of analysis.create) insert.run({ sharingOption: null, ...config, ...row });
   });
   apply();
   const after = countSideEffects(db);
@@ -205,6 +208,10 @@ export function importHistoricalCsv(csv, db, config = NAGALAND_HISTORICAL_CONFIG
     throw new Error('Outbound side-effect state changed unexpectedly');
   }
   return { ...analysis, inserted: analysis.create.length, sideEffectsBefore: before, sideEffectsAfter: after };
+}
+
+export function importHistoricalCsv(csv, db, config = NAGALAND_HISTORICAL_CONFIG) {
+  return importPreparedHistoricalRows(analyzeHistoricalCsv(csv, db, config), db, config);
 }
 
 export function readHistoricalCsv(filePath) {
