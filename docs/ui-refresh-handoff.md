@@ -806,14 +806,31 @@ analytics decision, not a defect. Nothing in the codebase will move that number.
 
 ### Still open
 
-1. **The public CTA fill fails AA and only the owner can decide it.** White text
-   on `--color-cta` (#D95F3B) is 3.71:1 and on `--color-coral` (#E8725A) is
-   3.01:1, at 16px semibold — normal-size text, so the bound is 4.5:1. This is
-   every primary button on the site. Fixing it means darkening the brand CTA
-   again (it already moved once this branch, #D95F3B ← the original). Lighthouse
-   does not currently flag it because axe treats those labels as large text at
-   the rendered size, so the score says 100 while the buttons are still under
-   bound at normal size. **A brand decision, not a code decision.**
+1. ~~**The public CTA fill fails AA.**~~ **Retracted — the claim was measured
+   against the wrong value.** It said white on `--color-cta` (#D95F3B) is 3.71:1
+   and called it a brand decision for the owner. `#D95F3B` is **`main`'s** value.
+   This branch retuned the token to `#C6472A` in Phase 1.5, and that is 4.84:1
+   against white — it clears AA at any size. The hex came from this document's
+   own prose rather than from `global.css`; line 107 had recorded the fix
+   correctly the whole time.
+
+   Measured on this branch:
+
+   | fill | with white |
+   |---|---|
+   | `--color-cta` `#C6472A` | **4.84:1** — passes |
+   | `--color-coral` `#E8725A` | 3.01:1 — fill/display only |
+   | `#D95F3B` (main's value) | 3.72:1 — what the retracted claim quoted |
+
+   `Button.astro:36-44` states the same split: `cta` is the coral that goes
+   behind white text, `coral` is a fill and display accent. **When checking a
+   token, read the token.**
+
+   One real instance did fall out of it: `AdminLayout.astro:139` put white
+   initials on `bg-coral` (3.01:1 at 14px bold) in the sidebar avatar. Now
+   `bg-cta`. Note the snapshot suite **cannot** verify that one — the sidebar is
+   translated off-canvas until opened, so it appears in no capture. Confirmed by
+   reading the computed style instead: `rgb(198,71,42)` on white.
 
 2. **The public gate still cannot see a colour-only change.** Public routes run
    `maxDiffPixelRatio: 0.01` because they read live DB copy. The homepage
