@@ -682,7 +682,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       card.appendChild(head);
 
       const discount = document.createElement('div');
-      discount.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; margin-top:0.75rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-bg-soft, #faf7f5);';
+      discount.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:flex-end; margin-top:0.75rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-surface-soft);';
       discount.innerHTML =
         '<div class="flex-1 min-w-[150px]"><span class="fhint">Departure discount ₹</span>' +
           '<input type="number" min="0" step="1" class="finput dep-discount" value="' + (dep.discountAmount != null ? dep.discountAmount : '') + '" placeholder="e.g. 2000" /></div>' +
@@ -703,7 +703,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
         const offer = dep.offers.find((o) => o.tierId === tierId);
         const offered = !!offer;
         const r = document.createElement('div');
-        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-bg-soft, #faf7f5); border-radius:0.4rem; padding:0.35rem 0.5rem;';
+        r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-surface-soft); border-radius:0.4rem; padding:0.35rem 0.5rem;';
         r.innerHTML =
           '<label class="flex items-center gap-[0.4rem] flex-[2] min-w-[160px] cursor-pointer">' +
             '<input type="checkbox" class="off-on"' + (offered ? ' checked' : '') + ' />' +

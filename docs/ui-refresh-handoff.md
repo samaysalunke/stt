@@ -824,10 +824,22 @@ analytics decision, not a defect. Nothing in the codebase will move that number.
    2026-09-02 — but the reason for declining (false failures from live data) is
    exactly what `1d76433` now knows how to remove.
 
-3. **`--color-surface-elevated` and `--color-text-muted` are still referenced by
-   eight inline styles in `photo-vault/*` and still do not exist.** Those rules
-   do nothing today: muted captions render inherited navy, one card has no
-   background. Unchanged from the earlier handoff.
+3. ~~**`--color-surface-elevated` / `--color-text-muted`**~~ — this entry was
+   stale in two handoffs running. `141bf34` fixed it on 2026-09-01; zero
+   references remained by the time it was carried forward here. Verify before
+   repeating an inherited claim.
+
+   The class it belonged to *is* now closed, though. An audit of every `var(--…)`
+   reference in `src` against every defined custom property found one survivor:
+   `--color-bg-soft`, never defined, alive only through its `#faf7f5` fallback in
+   four runtime style strings. That and a duplicate `#FCFAF9` are now
+   `--color-surface-soft`. **The audit is worth re-running after any token work:**
+
+   ```bash
+   # every var(--x) whose --x is never defined anywhere under src/
+   ```
+
+   There are no undefined custom properties referenced in `src` as of `HEAD`.
 
 ### What the owner has been told, so you do not re-litigate it
 

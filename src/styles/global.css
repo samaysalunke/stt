@@ -15,6 +15,13 @@
   --color-peach: #F5DDD7;
   --color-white: #FFFFFF;
   --color-gray-soft: #F5F5F3;
+  /* Warm off-white for panels nested inside an admin card — table heads,
+     departure rows, the discount sub-rows the trip form builds at runtime.
+     `--color-gray-soft` is the cooler page-level surface and reads grey against
+     the peach borders these panels sit inside. Was two near-identical hexes
+     (#FCFAF9 in three places, #FAF7F5 in four) plus a `--color-bg-soft` that
+     was never defined and survived only on its hex fallback. */
+  --color-surface-soft: #FCFAF9;
   /* Body/secondary text. Darkened from #6B7280, which cleared AA on white
      (4.83:1) but not on the two tinted surfaces we actually ship most body copy
      on — --color-gray-soft (4.43:1) and --color-blush (4.34:1). Lighthouse
