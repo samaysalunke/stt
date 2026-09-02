@@ -8,7 +8,11 @@ import { purgeUrls, allCacheablePaths, TRIP_LISTING_PATHS } from '../../../../li
 // Fields the settings form is allowed to update. Anything not listed here is
 // preserved from the existing site-settings.yaml (merge, not overwrite).
 const TEXT_FIELDS = [
-  'email', 'phone', 'whatsappLink', 'instagram', 'address',
+  'email', 'phone', 'whatsappLink', 'address',
+  // Every profile listed here lands in the Organization's sameAs (BaseLayout).
+  // Only instagram was writable before, which is why the entity graph resolved
+  // to a single corroborating link.
+  'instagram', 'facebook', 'youtube', 'linkedin', 'googleBusinessProfile',
   'upiId', 'bankAccountName', 'bankAccountNumber', 'bankBranch', 'bankIfsc',
   'googleAnalyticsId', 'googleSiteVerification', 'bingSiteVerification', 'copyrightText',
   'cancellationPolicy', 'termsAndConditions', 'privacyPolicy',

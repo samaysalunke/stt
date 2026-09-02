@@ -108,6 +108,11 @@ export function tripPublicationStatus(trip: Record<string, any>): PublicationSta
   return 'published';
 }
 
+/** The display name for a trip, with the same precedence everywhere. */
+export function tripName(trip: Record<string, any>): string {
+  return String(trip?.title || trip?.name || trip?.slug || '');
+}
+
 export function isTripPublic(trip: Record<string, any>): boolean {
   const status = tripPublicationStatus(trip);
   if (status === 'test' && process.env.ALLOW_TEST_CONTENT === 'true') return true;
@@ -118,6 +123,16 @@ export function isTripListable(trip: Record<string, any>): boolean {
   const status = tripPublicationStatus(trip);
   const publishable = status === 'published' || (status === 'test' && process.env.ALLOW_TEST_CONTENT === 'true');
   return publishable && tripHasUpcomingDates(trip);
+}
+
+/**
+ * Past trips that stay discoverable: public but not listable — either explicitly
+ * archived, or published with every departure behind us. Feeds /trips/past/ and
+ * the low-priority sitemap entries so these pages keep an internal link path
+ * instead of being orphaned the moment their last date passes.
+ */
+export function isTripArchived(trip: Record<string, any>): boolean {
+  return isTripPublic(trip) && !isTripListable(trip);
 }
 
 /**
@@ -237,6 +252,26 @@ export function upcomingBatches(trip: Record<string, any>): Array<Record<string,
       return true;
     })
     .sort((a: any, b: any) => String(a.startDate).localeCompare(String(b.startDate)));
+}
+
+/**
+ * The mirror of upcomingBatches: departures that have already run. Draft dates
+ * are excluded the same way — they were never public — but `completed` ones are
+ * kept, because a completed departure is exactly what the archive is listing.
+ * Newest first, which is the order /trips/past/ reads best in.
+ */
+export function pastBatches(trip: Record<string, any>): Array<Record<string, any>> {
+  const batches = Array.isArray(trip?.batches) ? trip.batches : [];
+  const today = todayStart();
+  return batches
+    .filter((b: any) => {
+      if (!b?.startDate || b.status === 'draft') return false;
+      const start = new Date(b.startDate);
+      if (isNaN(start.getTime())) return false;
+      start.setHours(0, 0, 0, 0);
+      return start < today;
+    })
+    .sort((a: any, b: any) => String(b.startDate).localeCompare(String(a.startDate)));
 }
 
 export function tripHasUpcomingDates(trip: Record<string, any>): boolean {

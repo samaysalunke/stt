@@ -56,3 +56,32 @@ export function contentLastmod(kind: 'trips' | 'albums', slug: string): string |
     return undefined;
   }
 }
+
+/**
+ * Newest mtime across the given content files and directories, as YYYY-MM-DD.
+ *
+ * Lets the sitemap give a static page a real `lastmod` derived from the content
+ * that actually renders it — the settings file behind /privacy/, the faqs
+ * directory behind /faq/ — rather than the page's source file (not shipped to
+ * the runtime) or the build time (which would claim every page changed on every
+ * deploy). Google uses `lastmod` and ignores `priority`/`changefreq`, so this is
+ * the only crawl-scheduling signal the static pages carry.
+ */
+export function contentLastmodOf(...targets: string[]): string | undefined {
+  let newest = 0;
+  for (const target of targets) {
+    try {
+      const stat = fs.statSync(target);
+      if (stat.isDirectory()) {
+        for (const entry of fs.readdirSync(target)) {
+          if (!entry.endsWith('.yaml')) continue;
+          const mtime = fs.statSync(path.join(target, entry)).mtimeMs;
+          if (mtime > newest) newest = mtime;
+        }
+      } else if (stat.mtimeMs > newest) {
+        newest = stat.mtimeMs;
+      }
+    } catch { /* a missing source simply contributes nothing */ }
+  }
+  return newest > 0 ? new Date(newest).toISOString().slice(0, 10) : undefined;
+}

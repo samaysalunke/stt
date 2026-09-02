@@ -66,7 +66,18 @@ const orgSchema = {
         '@type': 'ContactPoint', telephone: settings.phone ?? '+91-7975027491',
         contactType: 'customer service', areaServed: 'IN', availableLanguage: ['en'],
       },
-      sameAs: [settings.instagram, settings.facebook, settings.youtube, settings.linkedin].filter(Boolean),
+      // Entity disambiguation: this is how an answer engine decides "Seek the
+      // Thrill" names a real operator rather than a phrase. One corroborating
+      // link is thin evidence, so every profile that genuinely exists belongs
+      // here — a Google Business Profile especially, being the strongest
+      // corroboration for a local business.
+      sameAs: [
+        settings.instagram,
+        settings.facebook,
+        settings.youtube,
+        settings.linkedin,
+        settings.googleBusinessProfile,
+      ].filter(Boolean),
     },
     { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/'), worksFor: { '@id': orgId } },
   ],

@@ -1,0 +1,142 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { listTrips, isTripArchived, pastBatches } from '../../lib/content';
+import { buildBreadcrumb } from '../../lib/breadcrumbs';
+import { formatDepartureRange } from '../../lib/departureSummary';
+import { FALLBACK_HERO } from '../../lib/images';
+import { siteUrl } from '../../lib/siteUrl';
+
+// Trips that are public but no longer listable — archived, or published with
+// every departure behind us. Without this page they serve 200 through zero
+// internal links, which is how Google decides a page has been abandoned.
+//
+// Deliberately NOT rendered with TripCard: that card is a booking surface
+// (price, "View Details", departure badges). Here every date has already run,
+// so it shows what happened instead of what is for sale.
+const trips = listTrips()
+  .filter(isTripArchived)
+  .map((trip) => {
+    const batches = pastBatches(trip);
+    const latest = batches[0] ?? null;
+    return {
+      slug: String(trip.slug),
+      name: String(trip.title || trip.name || trip.slug),
+      location: trip.location ?? null,
+      duration: trip.duration ?? null,
+      image: trip.coverImage || trip.featuredImage || FALLBACK_HERO,
+      imageAlt: String(trip.imageAlt || `${trip.title || trip.name || trip.slug} — a past Seek the Thrill departure`),
+      // formatDepartureRange already spells out both years when a departure
+      // crosses a new year, so only append one when it left the year implicit.
+      ran: latest
+        ? (() => {
+            const range = formatDepartureRange(latest.startDate, latest.endDate);
+            const year = String(latest.startDate).slice(0, 4);
+            return /\d{4}/.test(range) ? range : `${range}, ${year}`;
+          })()
+        : null,
+      ranYear: latest ? String(latest.startDate).slice(0, 4) : null,
+      departureCount: batches.length,
+    };
+  })
+  .sort((a, b) => (b.ranYear ?? '').localeCompare(a.ranYear ?? '') || a.name.localeCompare(b.name));
+
+const canonical = siteUrl('/trips/past/');
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    buildBreadcrumb([
+      { name: 'Trips', path: '/trips/' },
+      { name: 'Past trips', path: '/trips/past/' },
+    ]),
+    {
+      '@type': 'ItemList',
+      '@id': `${canonical}#past-trip-list`,
+      name: 'Past Seek the Thrill trips',
+      itemListElement: trips.map((trip, index) => ({
+        '@type': 'ListItem', position: index + 1,
+        name: trip.name,
+        url: siteUrl(`/trips/${trip.slug}/`),
+      })),
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title="Past Trips — Seek the Thrill"
+  description="Departures that have already run. Routes, dates, and where each small group went."
+  nav="header"
+>
+  <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(listingSchema)} /></Fragment>
+
+  <!-- Page header -->
+  <section class="py-10 lg:py-12 bg-blush">
+    <div class="container-app text-center">
+      <h1 class="text-4xl lg:text-5xl font-bold mb-3 font-display text-navy">
+        Past trips
+      </h1>
+      <p class="text-base max-w-md mx-auto leading-relaxed text-gray-text">
+        Departures that have already run. <a href="/trips/" class="underline hover:text-coral-ink">See what's coming up</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- Archive grid -->
+  <section class="py-14 lg:py-18 bg-gray-soft">
+    <h2 class="sr-only">All past trips</h2>
+    <div class="container-app">
+      {trips.length === 0 ? (
+        <div class="text-center py-20">
+          <p class="text-base text-gray-text">Nothing in the archive yet.</p>
+        </div>
+      ) : (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {trips.map((trip) => (
+            <article
+              data-testid="past-trip-card"
+              class="group flex h-full w-full flex-col overflow-hidden rounded-[var(--radius-card)] bg-white shadow-media transition-all hover:-translate-y-0.5"
+            >
+              <div class="relative aspect-[4/3] overflow-hidden">
+                <a href={`/trips/${trip.slug}/`} class="block h-full">
+                  <img
+                    src={trip.image}
+                    alt={trip.imageAlt}
+                    width="800"
+                    height="600"
+                    class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </a>
+                {trip.ran && (
+                  <span class="pointer-events-none absolute left-3 top-3 rounded-[var(--radius-pill)] bg-black/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-[4px]">
+                    Ran {trip.ran}
+                  </span>
+                )}
+              </div>
+
+              <div class="flex flex-1 flex-col gap-4 p-6">
+                <div class="min-w-0">
+                  <a href={`/trips/${trip.slug}/`}>
+                    <h3 class="font-display text-display-sm leading-tight text-navy transition-colors group-hover:text-coral-ink">{trip.name}</h3>
+                  </a>
+                  <p class="mt-2 text-sm text-gray-text">
+                    {[trip.location, trip.duration].filter(Boolean).join(' · ')}
+                    {trip.departureCount > 1 ? ` · ${trip.departureCount} departures` : ''}
+                  </p>
+                </div>
+
+                <a
+                  href={`/trips/${trip.slug}/`}
+                  class="mt-auto inline-flex items-center justify-center rounded-[var(--radius-pill)] border border-navy/15 px-6 py-3 font-display text-base font-medium text-navy transition-colors hover:border-coral-ink hover:text-coral-ink"
+                >
+                  See the route
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+
+</BaseLayout>

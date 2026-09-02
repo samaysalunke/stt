@@ -82,6 +82,12 @@ const HTML_S_MAXAGE = 300;
 /** Feeds change less often and are cheap to regenerate. */
 const FEED_S_MAXAGE = 3600;
 
+// NOTE: nothing here can set headers on the self-hosted webfonts in
+// `public/fonts/`. Static files are served by the node adapter's own handler,
+// which runs BEFORE this middleware — the origin emits `public, max-age=0` and
+// no hook here changes it. Their edge TTL comes from a Cloudflare Cache Rule
+// instead; see docs/cloudflare-cache-setup.md §5b.
+
 /**
  * Public pages the edge is allowed to cache. Exact paths, plus the two prefixes
  * whose detail pages are equally public. Anything not listed here defaults to

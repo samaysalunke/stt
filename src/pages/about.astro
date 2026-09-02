@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { ABOUT_DEFAULTS } from '../lib/aboutDefaults';
+import { buildBreadcrumb } from '../lib/breadcrumbs';
 import { readSiteSettings } from '../lib/content';
 import { siteUrl } from '../lib/siteUrl';
 
@@ -25,11 +26,16 @@ const signName = pick(s.aboutSignName, ABOUT_DEFAULTS.signName);
 const ctaLabel = pick(s.aboutCtaLabel, ABOUT_DEFAULTS.ctaLabel);
 const aboutSchema = {
   '@context': 'https://schema.org',
-  '@type': 'ProfilePage',
-  '@id': `${siteUrl('/about/')}#profile-page`,
-  url: siteUrl('/about/'),
-  mainEntity: { '@id': `${siteUrl('/about/')}#zahra-shakir` },
-  about: { '@id': `${siteUrl('/')}#organization` },
+  '@graph': [
+    buildBreadcrumb([{ name: 'Our Story', path: '/about/' }]),
+    {
+      '@type': 'ProfilePage',
+      '@id': `${siteUrl('/about/')}#profile-page`,
+      url: siteUrl('/about/'),
+      mainEntity: { '@id': `${siteUrl('/about/')}#zahra-shakir` },
+      about: { '@id': `${siteUrl('/')}#organization` },
+    },
+  ],
 };
 ---
 

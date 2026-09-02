@@ -1,6 +1,7 @@
 ---
 import type { ResolvedDeparture } from '../lib/trips';
 import { formatDepartureRange, getDepartureSummary } from '../lib/departureSummary';
+import { FALLBACK_HERO } from '../lib/images';
 import DiscountCountdown from './DiscountCountdown';
 
 interface Props {
@@ -46,7 +47,7 @@ const {
 } = Astro.props;
 
 const tripName = title || name || slug;
-const img = coverImage || featuredImage || 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&auto=format&fit=crop&q=80';
+const img = coverImage || featuredImage || FALLBACK_HERO;
 const cardImageAlt = `${tripName} group trip${location && !tripName.toLowerCase().includes(location.toLowerCase()) ? ` in ${location}` : ''}`;
 
 const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : null;

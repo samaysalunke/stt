@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { buildBreadcrumb } from '../lib/breadcrumbs';
 import { siteUrl } from '../lib/siteUrl';
 
 const heroImg = 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1920&auto=format&fit=crop&q=80';
@@ -23,8 +24,7 @@ const steps = [
 ];
 
 // TravelAgency + Service JSON-LD with the ₹1,000 consultation offer.
-const jsonLd = {
-  '@context': 'https://schema.org',
+const serviceSchema = {
   '@type': 'Service',
   '@id': `${siteUrl('/custom-itineraries/')}#service`,
   name: 'Seek the Thrill — Custom Itineraries',
@@ -49,6 +49,14 @@ const jsonLd = {
       areaServed: 'IN',
     },
   },
+};
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    buildBreadcrumb([{ name: 'Custom Itineraries', path: '/custom-itineraries/' }]),
+    serviceSchema,
+  ],
 };
 ---
 

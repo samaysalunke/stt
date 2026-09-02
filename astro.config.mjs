@@ -6,7 +6,10 @@ import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
-  site: process.env.SITE_URL ?? 'https://seekthethrill.in',
+  // Must match src/lib/siteUrl.ts's fallback — production serves www, and two
+  // different defaults meant an unset SITE_URL put Astro on the apex while
+  // every canonical, feed, and JSON-LD URL used www.
+  site: process.env.SITE_URL ?? 'https://www.seekthethrill.in',
   output: 'server',
   // CSRF origin checks run in src/middleware.ts so forwarded host/proto headers
   // from Railway are respected. Astro's built-in check sees the internal proxy
