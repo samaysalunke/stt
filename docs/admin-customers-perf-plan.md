@@ -1,5 +1,38 @@
 # Plan: fix `/admin/customers/` prod crash
 
+## Correction — what actually broke prod
+
+**Measured on the prod volume after deploying, and it contradicts the root cause
+this document was written around.** Read this before the Context section below.
+
+Prod is *smaller* than the dev DB, not larger, in exactly the dimension the
+index diagnosis depended on:
+
+| | dev | prod |
+|---|---|---|
+| registrations | 812 | 662 |
+| customers | 812 | 600 |
+| **users** | **2515** | **35** |
+| audit_log | 3656 | 238 |
+
+With 35 users the unindexed `users` scan is ~23k row comparisons, not millions.
+Timed on the prod DB: the **old query returned 600 rows in 51 ms**. It was never
+close to a timeout. The 495 ms figure below came from the dev DB's 2515 users,
+and "prod data is larger" was an assumption nobody checked.
+
+**The actual cause is cause 2 — the response size.** The page rendered every
+customer with a full detail drawer, and that costs **~18 KB of HTML per row**
+(measured: 50 rows = 908 KB). At prod's 600 customers that is a **~10.4 MB HTML
+document**, built synchronously in the frontmatter and then parsed into a DOM of
+600 drawers — with a client filter walking all of them on every keystroke.
+`tests/e2e/visual.spec.ts:157-160` had already recorded the symptom
+independently: a 95,000px-tall page whose PNG is 7.4 MB and never settles.
+
+So the fix that mattered is the **pagination**, not the indexes. The indexes are
+still a real improvement (51 ms → 4 ms on prod, 495 ms → 10 ms on dev) and worth
+keeping, but they are an optimisation, not the repair. The commit message on
+`165c929` leads with the index story and is wrong about it in the same way.
+
 ## Context
 
 `https://www.seekthethrill.in/admin/customers/` 500s / times out on prod, and its
@@ -293,6 +326,18 @@ Measured after the change, on the local DB (812 customers):
 | `npm run test:unit` | 326/326 |
 | `npm run test:api` | 154/154 |
 | Visual baselines | `admin-customers` desktop + mobile regenerated |
+
+Verified on the prod volume after deploy (`railway ssh`):
+
+| Check | Result |
+|---|---|
+| `users_email_lower`, `audit_log_target` in `sqlite_master` | both present |
+| Old query, prod data | 600 rows in **51 ms** — never the timeout |
+| New query, prod data | 50 rows in **4 ms**, `SEARCH u USING INDEX users_email_lower` |
+| HTML per customer row | **~18 KB** → ~10.4 MB for prod's 600 customers, ~908 KB at 50 |
+
+The response size is the thing that was breaking the page, and pagination is
+what fixes it. See the Correction section at the top.
 
 Net diff across the four source files: **+132 / −199**, including the new
 `src/lib/customersView.ts`.
