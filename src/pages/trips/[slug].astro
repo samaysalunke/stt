@@ -198,10 +198,44 @@ const eventSchemas = departures.map((departure) => {
     ...(cheapestOffer && !departure.comingSoon ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),
   };
 });
+// The departures are modelled as Events, but the product being sold is the
+// itinerary itself, and TouristTrip is the type that carries it. Built from the
+// same normalized `itinerary` array DayAccordion renders below, so every day
+// described here is visible on the page — no schema for hidden content.
+const touristTripSchema = {
+  '@type': 'TouristTrip',
+  '@id': `${canonicalUrl}#trip`,
+  name: tripName,
+  url: canonicalUrl,
+  ...(searchDescription ? { description: searchDescription } : {}),
+  image: [heroImgAbs],
+  provider: { '@id': `${SITE_ORIGIN}/#organization` },
+  ...(trip.location ? { touristType: 'Small-group traveller', arrivalLocation: { '@type': 'Place', name: String(trip.location) } } : {}),
+  ...(itinerary.length > 0 ? {
+    itinerary: {
+      '@type': 'ItemList',
+      numberOfItems: itinerary.length,
+      itemListElement: itinerary.map((day: any, index: number) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'TouristDestination',
+          name: String(day.title || `Day ${day.day}`),
+          ...(day.description ? { description: markdownToPlainText(day.description) } : {}),
+        },
+      })),
+    },
+  } : {}),
+  // Reference the departures by @id rather than restating their dates and
+  // prices; the Event nodes below are the single source for those.
+  ...(eventSchemas.length > 0 ? { subjectOf: eventSchemas.map((event) => ({ '@id': event['@id'] })) } : {}),
+};
+
 const tripSchema: Record<string, any> = {
   '@context': 'https://schema.org',
   '@graph': [
     breadcrumbSchema,
+    touristTripSchema,
     ...eventSchemas,
     ...(tripFaqs.length > 0 ? [{
       '@type': 'FAQPage',

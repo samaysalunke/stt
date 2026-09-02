@@ -3,6 +3,7 @@ import LegalPageLayout from '../components/LegalPageLayout.astro';
 import MarkdownContent from '../components/MarkdownContent.astro';
 import { readSiteSettings } from '../lib/content';
 import { formatPolicyDate } from '../lib/policyDates';
+import { REFUND_WINDOWS } from '../lib/policyFacts';
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -12,12 +13,8 @@ const lastUpdated = formatPolicyDate(settings.cancellationUpdatedAt, 'August 202
 // Admin copy can replace the policy while retaining the polished page shell.
 const override = (settings.cancellationPolicy ?? '').trim();
 
-const refundWindows = [
-  { period: '30+ days', label: 'Before departure', refund: 'Full refund', detail: 'Minus a ₹500 processing fee', tone: 'positive' },
-  { period: '15–29 days', label: 'Before departure', refund: '50% refund', detail: 'Of the eligible amount paid', tone: 'positive' },
-  { period: '7–14 days', label: 'Before departure', refund: '25% refund', detail: 'Of the eligible amount paid', tone: 'partial' },
-  { period: 'Under 7 days', label: 'Before departure', refund: 'No refund', detail: 'The booking is non-refundable', tone: 'none' },
-];
+// Shared with /llms.txt so the two statements of the policy cannot drift apart.
+const refundWindows = REFUND_WINDOWS;
 ---
 
 <LegalPageLayout

@@ -88,7 +88,9 @@ describe('SEO publication controls', () => {
     const header = fs.readFileSync('src/components/Header.astro', 'utf8');
     const footer = fs.readFileSync('src/components/Footer.astro', 'utf8');
     const sitemap = fs.readFileSync('src/pages/sitemap.xml.ts', 'utf8');
-    const llms = fs.readFileSync('public/llms.txt', 'utf8');
+    // llms.txt is a generated route now, so the guard is that its source never
+    // reaches for album or vault content — not that a static file omits it.
+    const llms = fs.readFileSync('src/pages/llms.txt.ts', 'utf8');
     const vaultIndex = fs.readFileSync('src/pages/photo-vault/index.astro', 'utf8');
     const vaultAlbum = fs.readFileSync('src/pages/photo-vault/[slug].astro', 'utf8');
 
@@ -97,8 +99,21 @@ describe('SEO publication controls', () => {
     expect(sitemap).not.toContain("url('/photo-vault/");
     expect(sitemap).not.toContain('`/photo-vault/${');
     expect(llms).not.toContain('/photo-vault/');
+    expect(llms).not.toContain('listAlbums');
     expect(vaultIndex).toContain('robots="noindex, follow"');
     expect(vaultAlbum).toContain('robots="noindex, follow"');
+  });
+
+  it('generates llms.txt from live content on the canonical origin', () => {
+    const llms = fs.readFileSync('src/pages/llms.txt.ts', 'utf8');
+    // Same gating helpers as the sitemap, so the two cannot disagree about
+    // what is public; drafts and QA fixtures are excluded by construction.
+    expect(llms).toContain('isTripListable');
+    expect(llms).toContain('isTripArchived');
+    // The static file it replaced linked the apex, costing a 308 on every link.
+    expect(llms).toContain('SITE_ORIGIN');
+    expect(llms).not.toContain('https://seekthethrill.in');
+    expect(fs.existsSync('public/llms.txt')).toBe(false);
   });
 
   it('canonicalizes host, protocol, case, and trailing slash in one hop', () => {
@@ -118,6 +133,17 @@ describe('SEO publication controls', () => {
     expect(tripPage).toContain('image: [heroImgAbs]');
     // The dead soldOut ? EventScheduled : EventScheduled ternary must be gone.
     expect(tripPage).not.toContain("departure.soldOut ? 'https://schema.org/EventScheduled'");
+  });
+
+  it('describes the itinerary as a TouristTrip built from rendered days', () => {
+    const tripPage = fs.readFileSync('src/pages/trips/[slug].astro', 'utf8');
+    expect(tripPage).toContain("'@type': 'TouristTrip'");
+    // The ItemList must come from the same normalized array DayAccordion
+    // renders — schema for content that is not on the page is a violation.
+    expect(tripPage).toContain('itemListElement: itinerary.map(');
+    expect(tripPage).toContain('<DayAccordion itinerary={itinerary}');
+    // Departures are referenced by @id, never restated with their own dates.
+    expect(tripPage).toContain('subjectOf: eventSchemas.map(');
   });
 
   it('builds absolute, de-duplicated IndexNow URL lists', () => {
