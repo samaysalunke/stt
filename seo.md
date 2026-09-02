@@ -85,8 +85,14 @@ put in place, the open fixes it left behind, and the conventions to keep followi
 
 ### Visibility
 - Never gate visibility on ad-hoc fields in pages. Always route through
-  `isTripPublic` / `isTripListable` / `isAlbumPublic`. Detail pages may show archived;
-  listings/sitemap/feed show only listable.
+  `isTripPublic` / `isTripListable` / `isTripArchived` / `isAlbumPublic`.
+  - `/trips/`, the homepage, and the feed show only **listable** trips.
+  - `/trips/past/` shows **archived** ones. `isTripArchived` = public but not listable, which
+    covers both an explicit `archived` status and a `published` trip whose every departure has
+    passed. A past trip keeps an internal link and stays in the sitemap at priority `0.5` —
+    dropping it from every discovery surface the day its last date passed is what orphaned
+    four live URLs before.
+  - Detail pages show anything public. Drafts and QA fixtures appear on no surface at all.
 - Test/QA content stays out of all public surfaces. `qa-test-*` slugs auto-classify as `test`;
   surface them only with `ALLOW_TEST_CONTENT=true` in non-prod.
 - Removed/unpublished content returns **404** (or 410 if permanently gone) — never a soft
