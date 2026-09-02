@@ -120,7 +120,7 @@ const statusLabels: Record<string, string> = {
             <div class="min-w-0">
               <h3 class="font-display text-base font-semibold truncate text-navy">{trip.name || trip.slug}</h3>
               <p class="text-[11px] truncate text-gray-text">{trip.slug}</p>
-              <p class="mt-1 text-[11px] text-gray-text">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
+              <p data-trip-updated class="mt-1 text-[11px] text-gray-text">Updated {fmtUpdatedAt(trip._updatedAt)}</p>
             </div>
             <span class="flex-none text-[9px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
                   style={statusStyles[trip._derivedStatus]}>

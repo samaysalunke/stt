@@ -1,6 +1,7 @@
 import { YAML, fs, path, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
 import { listDeletedSlugs } from './tripDeletions';
 import { cachedRead, bumpContentVersion, getContentVersion } from './contentCache';
+import { now as clockNow, todayStart } from './clock';
 
 /** Raw, unfiltered slugs of every trip file on disk (includes soft-deleted). */
 export function listTripSlugs(): string[] {
@@ -220,8 +221,11 @@ export function isFillingFast(status: unknown): boolean {
 
 export function upcomingBatches(trip: Record<string, any>): Array<Record<string, any>> {
   const batches = Array.isArray(trip?.batches) ? trip.batches : [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Pinnable via TEST_NOW — see src/lib/clock.ts. This one comparison decides
+  // whether a trip has upcoming dates, which decides its card treatment and its
+  // rank in every listing, so it is the whole calendar dependency of the public
+  // pages in one line.
+  const today = todayStart();
   return batches
     .filter((b: any) => {
       if (!b?.startDate) return false;
@@ -365,7 +369,7 @@ function resolveOffers(
 }
 
 /** Returns the fixed rupee discount that is active for this departure right now. */
-export function activeDepartureDiscount(batch: Record<string, any>, now = Date.now()): number {
+export function activeDepartureDiscount(batch: Record<string, any>, now = clockNow()): number {
   const amount = Math.max(0, Math.round(Number(batch?.discountAmount) || 0));
   if (amount <= 0) return 0;
   const rawEndsAt = String(batch?.discountEndsAt ?? '').trim();

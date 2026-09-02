@@ -8,8 +8,9 @@ Full plan: `~/.claude/plans/cd-projects-stt-iridescent-thompson.md`.
 - **Branch:** `ui-refresh` (off `main`). `main` untouched. Do **not** work on `main`.
 - **Working tree:** clean except two pre-existing untracked items unrelated to this
   work — `design.md.save`, `public/mockups/`. Leave them alone.
-- **Suite state at handoff:** `build` clean · `test:unit` 308/308 · `test:api` 154/154 ·
-  `--project=chromium` 121/121 functional · `--project=visual` 88/88.
+- **Suite state at handoff:** `build` clean · `test:unit` 315/315 · `test:api` 154/154 ·
+  `--project=chromium` 121/121 functional · `--project=visual` 88/88, **both route
+  groups at `threshold: 0`**.
   Green, and green *after* a full `test:api` + functional run, which is a stronger
   claim than this doc could make before `1d76433` — see "The visual suite owns its
   own database". Counts moved for reasons, not drift: functional 120 → 119 when
@@ -286,6 +287,8 @@ bash scripts/slop-metrics.sh        # track the cleanup
 npm run perf:lhci                   # Lighthouse (not yet baselined)
 ```
 
+Both route groups now run the same gate — `threshold: 0`, `maxDiffPixels: 60`.
+
 `npm run test:e2e` (bare `playwright test`) still runs everything: the functional
 project, the visual seed, then the visual project. The split matters when you are
 iterating — `--project=visual` boots the second dev server and reseeds, and
@@ -464,6 +467,57 @@ gate is now **`threshold: 0`** with **`maxDiffPixels: 60`**.
 colour-only change: the homepage `text-coral → text-coral-ink` fix passed the
 gate and had to be re-baselined by hand. Same fix available — seed the public
 data too — see "Still open".
+
+### Pinning the calendar (`TEST_NOW`)
+
+Public routes derive what they render from the date: a departure whose start has
+passed drops out of `upcomingBatches`, the trip moves to "no upcoming dates", its
+card restyles and the listing reorders. So a baseline containing a trip listing
+**expires on the next departure date** — three of them fell inside the eighteen
+days after 2026-09-02. That is not something a pixel budget absorbs; the diff is
+a whole card. It is the real reason the public routes carried a tolerance, and
+tightening the gate without fixing it would only have converted a scheduled
+breakage into an immediate one.
+
+`src/lib/clock.ts` exposes `now()` / `todayStart()`, honouring a `TEST_NOW` ISO
+instant. The visual dev server sets it in `playwright.config.ts`. The whole
+calendar dependency of the public pages is one comparison —
+`upcomingBatches` in `src/lib/trips.ts` — and the public pages themselves contain
+no direct clock reads at all, so the seam is that one function plus the default
+argument of `activeDepartureDiscount`, which already took an injectable `now`.
+
+- **The override is ignored when `NODE_ENV` is production**, so a stray value in
+  a deployed environment cannot freeze the real site's calendar. Same shape as
+  the `ALLOW_TEST_CONTENT` guard.
+- `tests/unit/clock.test.ts` covers the fallthrough, the production guard, an
+  unparseable value, and — the point of the exercise — a departure dropping out
+  of `upcomingBatches` once `TEST_NOW` passes it.
+- **It does not reach the browser.** `DiscountCountdown` is a React island
+  counting down against the *browser's* clock, so `[data-testid="discount-expiry"]`
+  stays masked. Freezing browser time with Playwright's `page.clock` would let
+  that mask come off; not attempted, because it also touches hydration and
+  carousel timers.
+
+### The one leak the seeded database cannot cover
+
+`/admin/trips` renders each trip YAML's **mtime** ("Updated 1 Sept 2026"), and
+content files live in `src/content/`, outside `DATA_DIR` — so both dev servers
+share them. A `test:api` run rewrites `qa-test-bookable.yaml` and that one field
+moves to today: 305 pixels, nothing else on the page. Masked via
+`[data-trip-updated]` rather than stubbed, so the rest of the card keeps
+coverage.
+
+### `--update-snapshots` does not update a passing snapshot
+
+Worth knowing before trusting a re-baseline. Playwright rewrites a baseline only
+when the comparison **fails**. Under the old 1% public tolerance, running
+`--update-snapshots` after the homepage `text-coral → text-coral-ink` fix
+reported success and left the stale file in place — the comparison had passed.
+The change only surfaced when the gate went exact, which also means the earlier
+handoff's claim that home had been "re-baselined by hand" was wrong.
+
+If a gate is tolerant, `--update-snapshots` is not a way to force a refresh.
+Delete the file, or tighten the gate.
 
 ### prepareShot: the dev server can reload underneath a test
 
@@ -832,14 +886,9 @@ analytics decision, not a defect. Nothing in the codebase will move that number.
    translated off-canvas until opened, so it appears in no capture. Confirmed by
    reading the computed style instead: `rgb(198,71,42)` on white.
 
-2. **The public gate still cannot see a colour-only change.** Public routes run
-   `maxDiffPixelRatio: 0.01` because they read live DB copy. The homepage
-   `text-coral → text-coral-ink` fix in `8a63406` passed the gate unchanged and
-   had to be re-baselined by hand. The fix is the same one the admin routes got:
-   give the public routes a seeded database and drop the tolerance. That is a
-   session of work and the owner declined the earlier, cheaper version of it on
-   2026-09-02 — but the reason for declining (false failures from live data) is
-   exactly what `1d76433` now knows how to remove.
+2. ~~**The public gate cannot see a colour-only change.**~~ **Done.** Public
+   routes now run the same gate as admin — `threshold: 0`, `maxDiffPixels: 60`.
+   See "Pinning the calendar" below for what had to happen first.
 
 3. ~~**`--color-surface-elevated` / `--color-text-muted`**~~ — this entry was
    stale in two handoffs running. `141bf34` fixed it on 2026-09-01; zero

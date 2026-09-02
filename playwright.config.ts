@@ -71,7 +71,16 @@ export default defineConfig({
       // is behind the snapshots.
       reuseExistingServer: false,
       timeout: 60_000,
-      env: { ...sharedEnv, DATA_DIR: VISUAL_DATA_DIR },
+      env: {
+        ...sharedEnv,
+        DATA_DIR: VISUAL_DATA_DIR,
+        // Pins the calendar. Public routes derive card treatment and listing
+        // order from whether a departure is still upcoming, so without this the
+        // baselines expire on the next departure date — three of them fall in
+        // the eighteen days after capture. The instant is the day the public
+        // baselines were captured. See src/lib/clock.ts.
+        TEST_NOW: '2026-09-02T12:00:00+05:30',
+      },
     },
   ],
   workers: 1,

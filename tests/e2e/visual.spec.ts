@@ -314,12 +314,18 @@ test.describe('visual regression — public routes', () => {
           fullPage: true,
           animations: 'disabled',
           mask: [page.locator('[data-testid="discount-expiry"]')],
-          // Public routes render live DB copy — seat counts, prices, album
-          // contents — that `pinListingOrder` normalises the ORDER of but not the
-          // VALUES of. Measured churn after a test:api run is 2.4k-10.7k pixels
-          // on trip-book, photo-vault and 404, all under this bound. It is a
-          // tolerance for data, not for rendering: a restyle moves far more.
-          maxDiffPixelRatio: 0.01,
+          // Same gate as the admin routes below, and for the same reason: a
+          // tolerance wide enough to absorb data churn is wide enough to pass a
+          // restyle. 1% of a tall public page is ~10 000 pixels.
+          //
+          // The tolerance was only ever needed because the render was not
+          // reproducible. Both causes are now fixed: the data comes from the
+          // seeded `.visual-data` database (playwright.config.ts), and the
+          // calendar comes from `TEST_NOW` (src/lib/clock.ts) — without which
+          // these baselines expire the next time a departure date passes, which
+          // is not something a pixel budget can absorb anyway.
+          threshold: 0,
+          maxDiffPixels: 60,
         });
       });
     }
@@ -436,6 +442,14 @@ test.describe('visual regression — admin routes', () => {
         await expect(page).toHaveScreenshot(`${route.name}-${vp.tag}.png`, {
           fullPage: true,
           animations: 'disabled',
+          // The one piece of admin state the seeded database cannot pin: the
+          // trip list renders each YAML file's mtime, and content files live in
+          // src/content/, outside DATA_DIR, so both dev servers share them. A
+          // `test:api` run rewrites qa-test-bookable.yaml and the card's
+          // "Updated <date>" moves to today — 305 pixels, and nothing else on
+          // the page changes. Masked rather than stubbed so the rest of the
+          // card keeps full coverage.
+          mask: [page.locator('[data-trip-updated]')],
           // Two knobs, and the second one matters more than it looks.
           //
           // maxDiffPixelRatio is how many pixels may differ. Zero here, unlike the
