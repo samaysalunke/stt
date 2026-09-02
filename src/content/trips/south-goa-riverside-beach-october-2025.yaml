@@ -1,0 +1,120 @@
+title: South Goa — Riverside & Beach Escape, October 2025
+slug: south-goa-riverside-beach-october-2025
+publicationStatus: draft
+priority: medium
+location: South Goa
+duration: 4 Days, 3 Nights
+coverImage: ""
+seoTitle: South Goa Riverside & Beach Escape — October 2025
+seoDescription: A completed four-day South Goa escape featuring riverside camping, waterfall hikes, kayaking, beaches and local Goan experiences.
+imageAlt: Travellers exploring the rivers, waterfalls and beaches of South Goa
+shortDescription: Riverside camping, cliff jumping, sunset kayaking, waterfall hikes and relaxed beach time in South Goa.
+description: >-
+  A four-day adventure-and-chill escape through South Goa, combining a
+  riverside campsite with cliff jumping, kayaking, waterfall and hilltop hikes,
+  beach evenings and time to explore the countryside at an unhurried pace.
+whoShouldJoin: >-
+  Travellers looking for a mix of outdoor adventure, local Goan culture and
+  relaxed beach time. The itinerary included several hikes, cliff jumping and
+  kayaking alongside slower, flexible experiences.
+occupancyCatalog:
+  - id: bangalore-package
+    label: From Bangalore
+    helperText: Includes the overnight Tempo Traveller journey from Bangalore and return.
+  - id: goa-direct
+    label: Meet in Goa
+    helperText: Join the group directly in Goa; Bangalore transfers are not included.
+batches:
+  - id: south-goa-2025-10-02
+    startDate: 2025-10-02
+    endDate: 2025-10-05
+    status: completed
+    offers:
+      - tierId: bangalore-package
+        price: 15999
+        cap: null
+        booked: 0
+      - tierId: goa-direct
+        price: 12999
+        cap: null
+        booked: 0
+highlights:
+  - Riverside picnic with cliff jumping and local feni cocktails or mocktails
+  - Sunset kayaking through Goa's tranquil backwaters
+  - Waterfall hikes surrounded by lush greenery
+  - Barbecue, bonfire and an outdoor movie night under the stars
+  - Village circuit hilltop hike with panoramic views
+  - Beach evenings, shack dinners and local Goan experiences
+  - A flexible final day for scooters, cycles, shopping or quiet beach time
+itinerary:
+  - day: 0
+    title: Overnight departure from Bangalore
+    description: >-
+      Meet in Bangalore and depart at approximately 8 PM by Tempo Traveller for
+      the overnight journey to South Goa.
+    stay: Overnight journey
+    meals: []
+    transport: Tempo Traveller from Bangalore
+  - day: 1
+    title: Riverside picnic, cliff jumping and sunset kayaking
+    description: >-
+      Arrive at the riverside campsite at approximately 10 AM and settle in.
+      Spend the day at a riverside picnic with cliff jumping, lunch and local
+      feni cocktails or mocktails. Go sunset kayaking before dinner at a nearby
+      beach shack.
+    stay: Riverside campsite, South Goa
+    meals: [L]
+    transport: Local transfers
+  - day: 2
+    title: Waterfall hikes and movie night
+    description: >-
+      Spend the day hiking to waterfalls through lush surroundings. Return to
+      the campsite for a relaxed evening with a barbecue, bonfire and outdoor
+      movie under the stars.
+    stay: Riverside campsite, South Goa
+    meals: [B, L, D]
+    transport: Local transfers
+  - day: 3
+    title: Village circuit hike and beach evening
+    description: >-
+      Start early for a four-to-five-hour village circuit hilltop hike with
+      panoramic views and offbeat trails. Return to camp, then head to the beach
+      for the evening and have dinner at a beach shack.
+    stay: Riverside campsite, South Goa
+    meals: [B]
+    transport: Local transfers
+  - day: 4
+    title: Explore at your own pace and return
+    description: >-
+      Keep the final day flexible: rent a scooter or cycle, explore the
+      countryside, relax at the beach, shop or follow the group's energy. Have a
+      farewell lunch and depart Goa at approximately 6 PM, reaching Bangalore
+      around 6 AM the following morning.
+    stay: Overnight journey
+    meals: [B]
+    transport: Tempo Traveller to Bangalore for the Bangalore package
+included:
+  - Three nights at a riverside campsite in comfortable double-sharing tents with mattresses and washrooms
+  - Bangalore return transport by Tempo Traveller for the Bangalore package
+  - Internal transport mentioned in the itinerary
+  - Daily breakfast
+  - Riverside picnic lunch on Day 1 and waterfall-hike lunch on Day 2
+  - Barbecue dinner
+  - Sunset kayaking and riverside cliff jumping
+  - Bonfire and outdoor movie night
+  - Guided village circuit hilltop hike
+excluded:
+  - Meals not mentioned in the inclusions
+  - Scooter or cycle rentals
+  - Personal expenses
+  - Anything not explicitly listed in the inclusions
+paymentAmount: 5000
+balanceDueRule: 10 days before trip
+meetingPoint: >-
+  Bangalore at approximately 8 PM on 1 October 2025 for the Bangalore package;
+  direct-to-Goa travellers joined at the South Goa campsite.
+importantNotes: |
+  - The trip required a minimum group of 8 people to proceed.
+  - The ₹5,000 advance was non-refundable unless Seek the Thrill cancelled the trip.
+  - Activities could be adapted or rescheduled because of weather or natural conditions.
+  - The itinerary intentionally left the final day flexible for spontaneous group plans.
