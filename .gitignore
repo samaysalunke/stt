@@ -20,6 +20,9 @@ pnpm-debug.log*
 # SQLite database (user data — do not commit)
 data/
 
+# Customer exports used by one-time historical import scripts
+*Form Responses*.csv
+
 # uploaded files
 public/uploads/
 
