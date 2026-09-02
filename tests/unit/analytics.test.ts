@@ -4,7 +4,14 @@ import { analyzeCustomQuery } from '../../src/lib/analytics/customQuery';
 import { createLLMAdapter, LLMConfigError } from '../../src/lib/analytics/llm';
 import { cleanupExpiredAnalyticsSessions } from '../../src/lib/analytics/sessions';
 import { chooseGranularity, analyticsTools } from '../../src/lib/analytics/tools';
-import { buildBookingGrowthWeek, getBookingGrowthWeek } from '../../src/lib/adminDashboard';
+import {
+  buildBookingGrowthWeek,
+  departureDateKey,
+  financialYearStartForDate,
+  getBookingGrowthWeek,
+  indianFinancialYear,
+  isDateInIndianFinancialYear,
+} from '../../src/lib/adminDashboard';
 import { getDb } from '../../src/lib/db';
 
 async function collectText(adapter: ReturnType<typeof createLLMAdapter>) {
@@ -24,6 +31,26 @@ afterEach(() => {
 });
 
 describe('analytics safety and helpers', () => {
+  it('uses April through March for the Indian financial year', () => {
+    expect(indianFinancialYear(new Date('2026-03-31T18:29:59.000Z'))).toMatchObject({
+      startYear: 2025, startDate: '2025-04-01', endDate: '2026-03-31', label: 'FY 2025\u201326',
+    });
+    expect(indianFinancialYear(new Date('2026-03-31T18:30:00.000Z'))).toMatchObject({
+      startYear: 2026, startDate: '2026-04-01', endDate: '2027-03-31', label: 'FY 2026\u201327',
+    });
+  });
+
+  it('assigns ISO and legacy display departure dates to an FY', () => {
+    expect(departureDateKey('2 Oct 2026 \u2013 8 Oct 2026')).toBe('2026-10-02');
+    expect(financialYearStartForDate('2026-03-31')).toBe(2025);
+    expect(financialYearStartForDate('1 Apr 2026 \u2013 4 Apr 2026')).toBe(2026);
+    expect(financialYearStartForDate('dates pending')).toBeNull();
+    expect(isDateInIndianFinancialYear('2026-03-31', 2026)).toBe(false);
+    expect(isDateInIndianFinancialYear('2026-04-01', 2026)).toBe(true);
+    expect(isDateInIndianFinancialYear('2027-03-31', 2026)).toBe(true);
+    expect(isDateInIndianFinancialYear('2027-04-01', 2026)).toBe(false);
+  });
+
   it('builds dashboard booking growth in India business time', () => {
     const week = buildBookingGrowthWeek(
       [

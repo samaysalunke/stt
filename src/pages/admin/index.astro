@@ -1,37 +1,87 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { listTrips, tripHasUpcomingDates, tripCardSummary, resolveBooking } from '../../lib/content';
+import { listTrips, resolveBooking } from '../../lib/content';
 import { getDb } from '../../lib/db';
-import { getBookingGrowthWeek } from '../../lib/adminDashboard';
+import { editableBooking } from '../../lib/tripEditor';
+import {
+  buildBookingGrowthWeek,
+  departureDateKey,
+  financialYearStartForDate,
+  indianFinancialYear,
+  indianFinancialYearFromStart,
+  isDateInIndianFinancialYear,
+} from '../../lib/adminDashboard';
 import { regStatusStyle } from '../../lib/registrationStatus';
 export const prerender = false;
 
 const db = getDb();
 
-const regsAll = db.prepare('SELECT status, amount_paid, created_at, trip_name FROM registrations').all() as Array<Record<string, any>>;
-const confirmedRegs = regsAll.filter(r => r.status === 'confirmed');
+const regsAll = db.prepare(`
+  SELECT id, status, amount_paid, created_at, status_changed_at, trip_name, trip_slug,
+         trip_date, batch_id, full_name,
+         date(COALESCE(status_changed_at, created_at), '+5 hours', '+30 minutes') AS booking_day
+  FROM registrations
+`).all() as Array<Record<string, any>>;
+const trips = listTrips();
+const departureDates = new Map<string, string>();
+for (const trip of trips) {
+  const { editorDepartures } = editableBooking(trip);
+  for (const departure of editorDepartures) {
+    if (!departure.id || !departure.startDate) continue;
+    departureDates.set(String(departure.id), String(departure.startDate));
+    departureDates.set(`${trip.slug}:${departure.id}`, String(departure.startDate));
+  }
+}
+
+const registrationDepartureDate = (registration: Record<string, any>) =>
+  departureDates.get(`${registration.trip_slug}:${registration.batch_id}`)
+  ?? departureDates.get(String(registration.batch_id || ''))
+  ?? departureDateKey(registration.trip_date);
+
+const currentFy = indianFinancialYear();
+const availableFyStarts = new Set<number>([currentFy.startYear]);
+for (const date of departureDates.values()) {
+  const year = financialYearStartForDate(date);
+  if (year !== null) availableFyStarts.add(year);
+}
+for (const registration of regsAll) {
+  const year = financialYearStartForDate(registrationDepartureDate(registration));
+  if (year !== null) availableFyStarts.add(year);
+}
+const fyOptions = [...availableFyStarts].sort((a, b) => b - a).map(indianFinancialYearFromStart);
+const requestedFy = Number(Astro.url.searchParams.get('fy') ?? Astro.cookies.get('admin-dashboard-fy')?.value);
+const selectedFy = fyOptions.find((fy) => fy.startYear === requestedFy) ?? currentFy;
+const inSelectedFy = (date: unknown) => isDateInIndianFinancialYear(date, selectedFy.startYear);
+
+const regs = regsAll.filter((registration) => inSelectedFy(registrationDepartureDate(registration)));
+const confirmedRegs = regs.filter(r => r.status === 'confirmed');
 const totalBookings = confirmedRegs.length;
-const pendingCount = regsAll.filter(r => r.status === 'pending').length;
+const pendingCount = regs.filter(r => r.status === 'pending').length;
 // Match the registrations page definition: payments collected = all non-rejected,
 // non-cancelled (cancelled is excluded from revenue from the moment of cancellation).
-const paidRegs = regsAll.filter(r => r.status !== 'rejected' && r.status !== 'cancelled');
-const revenue = paidRegs.reduce((sum, r) => sum + (r.amount_paid ?? 0), 0);
+const paidRegs = regs.filter(r => r.status !== 'rejected' && r.status !== 'cancelled');
+const revenue = paidRegs.reduce((sum, r) => sum + Number(r.amount_paid ?? 0), 0);
 const revenueTripCount = new Set(paidRegs.map(r => r.trip_name).filter(Boolean)).size;
 
-const recent = db
-  .prepare('SELECT full_name, trip_name, amount_paid, status, created_at FROM registrations ORDER BY id DESC LIMIT 5')
-  .all() as Array<Record<string, any>>;
+const recent = [...regs].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 5);
 
-const week = getBookingGrowthWeek(db);
+const weekCounts = new Map<string, number>();
+for (const registration of confirmedRegs) {
+  const key = String(registration.booking_day || '');
+  if (key) weekCounts.set(key, (weekCounts.get(key) ?? 0) + 1);
+}
+const week = buildBookingGrowthWeek([...weekCounts].map(([d, c]) => ({ d, c })));
 const maxCount = Math.max(1, ...week.map(d => d.count));
 
-const trips = listTrips();
 // Trip-level status removed — derive these from departures. "Active" counts every
 // individual departure date that's upcoming and not sold out, not parent trips —
 // one trip with 3 open departures counts as 3.
-const allDepartures = trips.flatMap(t => resolveBooking(t).departures);
+const allDepartures = trips.flatMap(t => resolveBooking(t).departures).filter(d => inSelectedFy(d.startDate));
 const activeTrips = allDepartures.filter(d => !d.soldOut).length;
-const soldOut = trips.filter(t => tripHasUpcomingDates(t) && tripCardSummary(t).soldOut);
+const soldOut = trips.filter(t => {
+  const departures = resolveBooking(t).departures.filter(d => inSelectedFy(d.startDate));
+  return departures.length > 0 && departures.every(d => d.soldOut);
+});
 
 function inr(n: number) {
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
@@ -59,6 +109,20 @@ const quickActions = [
 ---
 
 <AdminLayout title="Dashboard" page="dashboard">
+  <div class="flex items-center justify-between gap-4 mb-5">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Dashboard period</p>
+      <p class="text-sm text-gray-text mt-0.5">Trips departing Apr {selectedFy.startYear} \u2013 Mar {selectedFy.startYear + 1}</p>
+    </div>
+    <form method="get" class="flex-none">
+      <label for="dashboard-fy" class="sr-only">Financial year</label>
+      <select id="dashboard-fy" name="fy" data-dashboard-fy
+        class="rounded-xl border border-peach bg-white px-4 py-2.5 text-sm font-semibold text-navy shadow-sm">
+        {fyOptions.map(fy => <option value={fy.startYear} selected={fy.startYear === selectedFy.startYear}>{fy.label}</option>)}
+      </select>
+    </form>
+  </div>
+
   <!-- KPI cards -->
   <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
     {kpis.map(k => (
@@ -147,7 +211,7 @@ const quickActions = [
       <a href="/admin/registrations/" class="text-sm font-medium text-coral-ink">View all</a>
     </div>
     {recent.length === 0 ? (
-      <p class="text-sm text-gray-text">No registrations yet.</p>
+      <p class="text-sm text-gray-text">No registrations in {selectedFy.label}.</p>
     ) : (
       <div class="flex flex-col gap-2.5">
         {recent.map(r => (
@@ -171,3 +235,11 @@ const quickActions = [
     )}
   </div>
 </AdminLayout>
+
+<script>
+  const selector = document.querySelector<HTMLSelectElement>('[data-dashboard-fy]');
+  selector?.addEventListener('change', () => {
+    document.cookie = `admin-dashboard-fy=${encodeURIComponent(selector.value)}; Path=/admin; Max-Age=34560000; SameSite=Lax`;
+    selector.form?.requestSubmit();
+  });
+</script>

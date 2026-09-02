@@ -6,6 +6,13 @@ export interface BookingGrowthDay {
   count: number;
 }
 
+export interface IndianFinancialYear {
+  startYear: number;
+  startDate: string;
+  endDate: string;
+  label: string;
+}
+
 const BUSINESS_TZ_OFFSET_SQL = "'+5 hours', '+30 minutes'";
 
 function dateKeyInTimeZone(date: Date, timeZone: string): string {
@@ -17,6 +24,51 @@ function dateKeyInTimeZone(date: Date, timeZone: string): string {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function indianFinancialYear(now = new Date()): IndianFinancialYear {
+  const today = dateKeyInTimeZone(now, 'Asia/Kolkata');
+  const [year, month] = today.split('-').map(Number);
+  return indianFinancialYearFromStart(month >= 4 ? year : year - 1);
+}
+
+export function indianFinancialYearFromStart(startYear: number): IndianFinancialYear {
+  return {
+    startYear,
+    startDate: `${startYear}-04-01`,
+    endDate: `${startYear + 1}-03-31`,
+    label: `FY ${startYear}\u2013${String(startYear + 1).slice(-2)}`,
+  };
+}
+
+/** Extract the departure's first day from current ISO values and legacy display labels. */
+export function departureDateKey(value: unknown): string | null {
+  const text = String(value ?? '').trim();
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const display = text.match(/\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/i);
+  if (!display) return null;
+  const months: Record<string, string> = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+  const month = months[display[2].slice(0, 3).toLowerCase()];
+  return month ? `${display[3]}-${month}-${display[1].padStart(2, '0')}` : null;
+}
+
+export function financialYearStartForDate(value: unknown): number | null {
+  const key = departureDateKey(value);
+  if (!key) return null;
+  const [year, month] = key.split('-').map(Number);
+  return month >= 4 ? year : year - 1;
+}
+
+export function isDateInIndianFinancialYear(value: unknown, startYear: number): boolean {
+  const key = departureDateKey(value);
+  if (!key) return false;
+  const financialYear = indianFinancialYearFromStart(startYear);
+  return key >= financialYear.startDate && key <= financialYear.endDate;
 }
 
 function addDays(key: string, delta: number): string {
