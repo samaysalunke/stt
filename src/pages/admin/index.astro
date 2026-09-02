@@ -49,9 +49,12 @@ for (const registration of regsAll) {
   if (year !== null) availableFyStarts.add(year);
 }
 const fyOptions = [...availableFyStarts].sort((a, b) => b - a).map(indianFinancialYearFromStart);
-const requestedFy = Number(Astro.url.searchParams.get('fy') ?? Astro.cookies.get('admin-dashboard-fy')?.value);
+const requestedPeriod = Astro.url.searchParams.get('fy') ?? Astro.cookies.get('admin-dashboard-fy')?.value ?? '';
+const selectedAll = requestedPeriod === 'all';
+const requestedFy = Number(requestedPeriod);
 const selectedFy = fyOptions.find((fy) => fy.startYear === requestedFy) ?? currentFy;
-const inSelectedFy = (date: unknown) => isDateInIndianFinancialYear(date, selectedFy.startYear);
+const selectedPeriodLabel = selectedAll ? 'All time' : selectedFy.label;
+const inSelectedFy = (date: unknown) => selectedAll || isDateInIndianFinancialYear(date, selectedFy.startYear);
 
 const regs = regsAll.filter((registration) => inSelectedFy(registrationDepartureDate(registration)));
 const confirmedRegs = regs.filter(r => r.status === 'confirmed');
@@ -112,13 +115,16 @@ const quickActions = [
   <div class="flex items-center justify-between gap-4 mb-5">
     <div>
       <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Dashboard period</p>
-      <p class="text-sm text-gray-text mt-0.5">Trips departing Apr {selectedFy.startYear} \u2013 Mar {selectedFy.startYear + 1}</p>
+      <p class="text-sm text-gray-text mt-0.5">
+        {selectedAll ? 'All-time trip and registration data' : `Trips departing Apr ${selectedFy.startYear} \u2013 Mar ${selectedFy.startYear + 1}`}
+      </p>
     </div>
     <form method="get" class="flex-none">
       <label for="dashboard-fy" class="sr-only">Financial year</label>
       <select id="dashboard-fy" name="fy" data-dashboard-fy
         class="rounded-xl border border-peach bg-white px-4 py-2.5 text-sm font-semibold text-navy shadow-sm">
-        {fyOptions.map(fy => <option value={fy.startYear} selected={fy.startYear === selectedFy.startYear}>{fy.label}</option>)}
+        <option value="all" selected={selectedAll}>All time</option>
+        {fyOptions.map(fy => <option value={fy.startYear} selected={!selectedAll && fy.startYear === selectedFy.startYear}>{fy.label}</option>)}
       </select>
     </form>
   </div>
@@ -211,7 +217,7 @@ const quickActions = [
       <a href="/admin/registrations/" class="text-sm font-medium text-coral-ink">View all</a>
     </div>
     {recent.length === 0 ? (
-      <p class="text-sm text-gray-text">No registrations in {selectedFy.label}.</p>
+      <p class="text-sm text-gray-text">No registrations in {selectedPeriodLabel}.</p>
     ) : (
       <div class="flex flex-col gap-2.5">
         {recent.map(r => (
