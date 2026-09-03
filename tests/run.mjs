@@ -4,10 +4,71 @@
 // Usage:
 //   node tests/run.mjs            # full suite (excludes rate-limits)
 //   node tests/run.mjs --all      # includes rate-limits (requires fresh server)
+//
+// Seeded rows are purged from the dev database after the run. Set
+// KEEP_TEST_DATA=1 to keep them for inspection after a failure.
 
 import { spawn, execSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const require = createRequire(import.meta.url);
+const DB_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../data/seekthethrill.db');
+
+/**
+ * Delete everything the suite seeded, once, after the whole run.
+ *
+ * `/api/test/cleanup` only reaches rows carrying a batch_id + tier_id, so the
+ * fixtures seeded straight into the DB — public-profile's "Test Trip" and
+ * PUBLIC_TRIP_* rows, the analytics trips — survived every run and accumulated.
+ * A dev database that had drifted to ~1000 rows is not just untidy: it made the
+ * admin pages unreadable and, once, sent a real investigation chasing states
+ * that existed only in test residue.
+ *
+ * Scoped to the `@example.invalid` reserved TLD (RFC 2606), which can never be
+ * a real address, so a developer's own manual rows are never touched. Runs
+ * after the suite rather than per-file so no file's teardown can delete a
+ * fixture another file is still using — the runner is serial, but the ordering
+ * guarantee is worth keeping explicit.
+ */
+function purgeTestArtifacts() {
+  let db;
+  try {
+    db = require('better-sqlite3')(DB_PATH);
+  } catch {
+    return null; // No database yet (fresh checkout) — nothing to purge.
+  }
+  try {
+    const before = db.prepare('SELECT COUNT(*) n FROM registrations').get().n;
+    db.transaction(() => {
+      db.prepare("DELETE FROM payment_events WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
+      db.prepare("DELETE FROM invoice_documents WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
+      db.prepare("DELETE FROM telegram_notification_events WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
+      db.prepare("DELETE FROM registrations WHERE email LIKE '%@example.invalid'").run();
+      db.prepare("DELETE FROM user_sessions WHERE userId IN (SELECT id FROM users WHERE email LIKE '%@example.invalid')").run();
+      db.prepare("DELETE FROM leaderboard_cache WHERE email LIKE '%@example.invalid'").run();
+      db.prepare("DELETE FROM users WHERE email LIKE '%@example.invalid'").run();
+      db.prepare("DELETE FROM email_delivery_log WHERE recipient LIKE '%@example.invalid'").run();
+      // `/api/test/cleanup` deletes registrations without their dependent rows,
+      // so orphans have been accruing for as long as it has existed. Sweep any
+      // row pointing at a registration that is gone, whoever deleted it.
+      db.prepare('DELETE FROM payment_events WHERE registration_id NOT IN (SELECT id FROM registrations)').run();
+      db.prepare('DELETE FROM invoice_documents WHERE registration_id NOT IN (SELECT id FROM registrations)').run();
+      db.prepare('DELETE FROM telegram_notification_events WHERE registration_id NOT IN (SELECT id FROM registrations)').run();
+      db.prepare('DELETE FROM user_sessions WHERE userId NOT IN (SELECT id FROM users)').run();
+    })();
+    const after = db.prepare('SELECT COUNT(*) n FROM registrations').get().n;
+    return { removed: before - after, remaining: after };
+  } catch (err) {
+    console.error('[cleanup] purge failed:', err.message);
+    return null;
+  } finally {
+    db.close();
+  }
+}
 
 const PORT = 4399; // dedicated test port to avoid colliding with dev server
 const BASE = `http://localhost:${PORT}`;
@@ -83,6 +144,18 @@ try {
   );
 
   exitCode = await new Promise(resolve => runner.on('close', resolve));
+
+  // Purge regardless of pass or fail — a failed run leaves the most residue.
+  // A failure is also when you might want the rows to inspect, so KEEP_TEST_DATA=1
+  // holds them; the next clean run sweeps them anyway.
+  if (process.env.KEEP_TEST_DATA === '1') {
+    console.log('\n[cleanup] skipped (KEEP_TEST_DATA=1) — seeded rows left in place.');
+  } else {
+    const purged = purgeTestArtifacts();
+    if (purged) {
+      console.log(`\n[cleanup] removed ${purged.removed} test registration(s); ${purged.remaining} row(s) remain.`);
+    }
+  }
 
   // Write a minimal API report to test-reports/api-report.md
   try {
