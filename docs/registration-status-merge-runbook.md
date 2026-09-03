@@ -53,6 +53,32 @@ Captured read-only from the production volume on 2026-09-03, before deploy.
 The two genuinely refunded bookings — `#520` (₹43,000) and `#540` (₹10,000) —
 are already at `full_refund` and are **not** touched.
 
+## What actually happened on deploy — 2026-09-03
+
+The migration ran on production at approximately 09:15 UTC, on the first boot
+after `cc4ebad`. Verified afterwards against the live volume:
+
+| check | result |
+|---|---|
+| `status = 'rejected'` | **0** (was 4) |
+| `payment_status = 'no_refund'` | **1** (was 0) — id 485, `amount_paid` 10000 preserved |
+| ids 1–4 | `cancelled` / `unpaid`, ₹0 — as predicted |
+| id 520 | `full_refund`, ₹43,000 refunded — **untouched** |
+| id 540 | `full_refund`, ₹10,000 refunded — **untouched** |
+| total registrations | 735, unchanged |
+| `SUM(amount_paid)` | ₹56,04,402 |
+| `SUM(amount_refunded)` | ₹53,000 |
+
+Every row landed where the table above predicted. No row count changed and no
+money column moved.
+
+**The backup on the volume is post-migration, not pre-.** The deploy booted
+between the pre-flight read and the snapshot, so
+`backup-POST-status-merge-2026-09-03T09-16-45.db` captures the state *after*
+the merge. It is a valid restore point for anything from here on, but it cannot
+be used to undo the merge — use the literal rollback below, which is keyed to
+the prior values recorded in the table further up and does not need a backup.
+
 ## Rollback
 
 Because the affected set is small and its prior state is recorded above, the
