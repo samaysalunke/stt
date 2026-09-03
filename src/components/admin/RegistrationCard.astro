@@ -206,9 +206,18 @@ const attributionFields = [
             <label class="sp-field" id={`sp-confirm-wrap-${r.id}`} hidden={r.status !== 'confirmed'}>
               <span>Payment</span>
               <select id={`sp-confirm-kind-${r.id}`}>
-                <option value="advance_paid" selected={payStatus !== 'fully_paid'}>Advance paid</option>
+                {/* "Unpaid" reverses the recorded payments on an already-confirmed
+                    row; confirming a row still requires advance or full, so the
+                    client disables it during a → confirmed transition. */}
+                <option value="unpaid" selected={payStatus === 'unpaid'}>Unpaid</option>
+                <option value="advance_paid" selected={payStatus !== 'unpaid' && payStatus !== 'fully_paid'}>Advance paid</option>
                 <option value="fully_paid" selected={payStatus === 'fully_paid'}>Fully paid</option>
               </select>
+            </label>
+
+            <label class="sp-field" id={`sp-amount-wrap-${r.id}`} hidden>
+              <span>Amount received (₹)</span>
+              <input id={`sp-amount-${r.id}`} type="number" min="1" step="1" placeholder="Trip default" />
             </label>
 
             <label class="sp-field" id={`sp-cancel-wrap-${r.id}`} hidden={r.status !== 'cancelled'}>

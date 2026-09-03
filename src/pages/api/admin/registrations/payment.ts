@@ -59,7 +59,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           continue;
         }
 
-        if (action !== 'unpaid' && (!Number.isFinite(total) || total <= 0)) throw new Error('Valid total amount is required');
+        // "Full" means "the remaining balance", which is undefined without a
+        // trip price. An explicit amount needs no total — that is the only way
+        // to record money on the legacy rows imported without one.
+        if (action !== 'unpaid' && requestedAmount === null && (!Number.isFinite(total) || total <= 0)) {
+          throw new Error('Set the trip price on this registration, or record an explicit amount.');
+        }
+        if (action === 'full' && (!Number.isFinite(total) || total <= 0)) {
+          throw new Error('Set the trip price on this registration before recording it as fully paid.');
+        }
         const advance = Math.min(tripAdvanceAmountBySlug(String(reg.trip_slug || '')), total || Infinity);
         const idempotencyKey = `admin-payment:${requestId}:${id}`;
         const existingEvent = db.prepare('SELECT id FROM payment_events WHERE idempotency_key=?').get(idempotencyKey);
@@ -72,7 +80,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         else if (requestedAmount !== null) amount = requestedAmount;
         else if (action === 'advance') amount = Math.max(0, advance - previousAmount);
         else amount = Math.max(0, total - previousAmount);
-        if (!amount) throw new Error(action === 'unpaid' ? 'No recorded payment to reverse' : 'No remaining amount to record');
+        if (!amount) {
+          if (action === 'unpaid') throw new Error('No recorded payment to reverse');
+          if (action === 'advance' && advance <= 0) throw new Error('This trip has no advance amount configured — set paymentAmount, or record a custom amount.');
+          throw new Error('No remaining amount to record');
+        }
 
         const nextAmount = previousAmount + amount;
         const isAdvance = amount > 0 && previousAmount === 0 && nextAmount === advance;

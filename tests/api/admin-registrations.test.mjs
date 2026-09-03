@@ -287,3 +287,48 @@ test('TC-215a a confirmed advance-paid booking can record its remaining balance'
   assert.equal(duplicate.data.results[0].duplicate, true);
   assert.equal((await getRegByEmail(email)).amount_paid, after.total_amount);
 });
+
+// Backs the bulk "Payment action" bar and the per-row Payment select, which move
+// payment_status without touching status — the only route for a row that is
+// already confirmed (or one confirmed with no payment recorded).
+test('TC-215b advance and unpaid payment actions move payment_status without touching status', async () => {
+  const email = `qa-payment-advance-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'pending', full_name: 'Payment Advance User', email, phone: '9876543210',
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const id = made.data.id;
+  const before = await getRegByEmail(email);
+  assert.equal(before.payment_status, 'unpaid');
+  assert.equal(before.amount_paid, 0);
+
+  const advance = await adminPost('/api/admin/registrations/payment', {
+    ids: [id], action: 'advance', requestId: `qa-advance-${id}`, method: 'bank_transfer',
+  });
+  assert.equal(advance.status, 200, JSON.stringify(advance.data));
+  assert.equal(advance.data.failed, 0, JSON.stringify(advance.data));
+  assert.equal(advance.data.results[0].payment_status, 'advance_paid');
+  let reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'pending', 'a payment action must not change status');
+  assert.ok(reg.amount_paid > 0 && reg.amount_paid < reg.total_amount);
+
+  // Topping up with an explicit amount short of the balance stays advance_paid.
+  const topUp = await adminPost('/api/admin/registrations/payment', {
+    ids: [id], action: 'advance', amount: 1, requestId: `qa-advance-top-${id}`, method: 'bank_transfer',
+  });
+  assert.equal(topUp.status, 200, JSON.stringify(topUp.data));
+  assert.equal(topUp.data.results[0].payment_status, 'advance_paid');
+  const advancePaid = (await getRegByEmail(email)).amount_paid;
+
+  const reversed = await adminPost('/api/admin/registrations/payment', {
+    ids: [id], action: 'unpaid', requestId: `qa-unpaid-${id}`,
+  });
+  assert.equal(reversed.status, 200, JSON.stringify(reversed.data));
+  assert.equal(reversed.data.failed, 0, JSON.stringify(reversed.data));
+  assert.equal(reversed.data.results[0].payment_status, 'unpaid');
+  reg = await getRegByEmail(email);
+  assert.equal(reg.status, 'pending');
+  assert.equal(reg.amount_paid, 0, `reversal must clear the ${advancePaid} recorded`);
+  assert.equal(reg.payment_status, 'unpaid');
+});

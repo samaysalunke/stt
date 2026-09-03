@@ -131,6 +131,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <select id="bulk-confirm-kind" class="hidden"><option value="advance_paid">Advance paid</option><option value="fully_paid">Fully paid</option></select>
         <select id="bulk-cancel-kind" class="hidden"><option value="none">No refund</option><option value="refunded">Full refund — all paid</option></select>
         <button id="apply-bulk-status" disabled>Update status</button>
+        <select id="bulk-payment"><option value="">Payment action…</option><option value="advance">Advance paid</option><option value="full">Fully paid</option><option value="unpaid">Mark unpaid</option></select>
+        <button id="apply-bulk-payment" disabled>Update payment</button>
         <button id="clear-selection">Clear</button>
       </div>
     )}
@@ -236,7 +238,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   .toolbar #search-input{flex:1;min-width:200px}
   .toolbar input,.toolbar select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy);font-size:.875rem}
   .toolbar button{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-weight:700;cursor:pointer}
-  .toolbar #apply-bulk-status{background:var(--color-navy);color:#fff;border-color:var(--color-navy)}
+  .toolbar #apply-bulk-status,.toolbar #apply-bulk-payment{background:var(--color-navy);color:#fff;border-color:var(--color-navy)}
   .toolbar button:disabled{opacity:.4;cursor:default}
   .toolbar label{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.8rem}
   #bulk-actions[hidden]{display:none}#selected-count{color:var(--color-gray-text);font-size:.8rem}
@@ -305,6 +307,10 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     if (paidField) paidField.innerHTML = `<span>Amount paid:</span> ${formatMoney(amountPaid)}`;
     const balanceField = row.querySelector('[data-payment-field="Balance due"]');
     if (balanceField) balanceField.innerHTML = `<span>Balance due:</span> ${formatMoney(Math.max(0, total - amountPaid))}`;
+    const amountInput = document.getElementById('sp-amount-' + id);
+    if (amountInput) amountInput.value = '';
+    const confirmSel = document.getElementById('sp-confirm-kind-' + id);
+    if (confirmSel && [...confirmSel.options].some((o) => o.value === paymentStatus)) confirmSel.value = paymentStatus;
     spSync(wrap);
   }
 
@@ -368,15 +374,30 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       const confirmKind = document.getElementById('sp-confirm-kind-' + id)?.value || 'advance_paid';
       const cancelKind = document.getElementById('sp-cancel-kind-' + id)?.value || 'none';
       const rid = crypto.randomUUID();
+      const rawAmount = document.getElementById('sp-amount-' + id)?.value;
+      const customAmount = rawAmount === undefined || rawAmount === '' ? null : Math.round(Number(rawAmount));
+      if (customAmount !== null && (!Number.isInteger(customAmount) || customAmount < 1)) {
+        alert('Amount received must be a positive whole rupee value.');
+        return;
+      }
       let url, body, ask;
       if (status === 'confirmed' && cur !== 'confirmed') {
         url = '/api/admin/update-registration';
         body = { id: Number(id), status: 'confirmed', payment_status: confirmKind, requestId: rid };
+        if (confirmKind === 'advance_paid' && customAmount !== null) body.amount = customAmount;
         ask = `Confirm #${id} as ${confirmKind === 'fully_paid' ? 'fully paid' : 'advance paid'}?`;
-      } else if (status === 'confirmed' && confirmKind === 'fully_paid' && curPay !== 'fully_paid') {
+      } else if (status === 'confirmed' && cur === 'confirmed' && confirmKind !== curPay) {
+        // Payment-only change on a row that is already confirmed: record or
+        // reverse money, leaving `status` alone.
+        const action = confirmKind === 'fully_paid' ? 'full' : confirmKind === 'advance_paid' ? 'advance' : 'unpaid';
         url = '/api/admin/registrations/payment';
-        body = { ids: [Number(id)], action: 'full', method: 'bank_transfer', requestId: rid };
-        ask = `Record the full balance as received for #${id}?`;
+        body = { ids: [Number(id)], action, method: 'bank_transfer', requestId: rid };
+        if (action === 'advance' && customAmount !== null) body.amount = customAmount;
+        ask = action === 'unpaid'
+          ? `Reverse all recorded payments on #${id} and mark it Unpaid?`
+          : action === 'full'
+            ? `Record the full balance as received for #${id}?`
+            : `Record ${customAmount !== null ? `₹${customAmount.toLocaleString('en-IN')}` : 'the advance'} as received for #${id}?`;
       } else if (status === 'cancelled' && cancelKind === 'refunded') {
         const amt = Math.round(Number(document.getElementById('sp-refund-amount-' + id)?.value));
         if (!Number.isInteger(amt) || amt < 1 || amt > paid) {
@@ -484,16 +505,31 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const cur = wrap.dataset.currentStatus;
     const curPay = wrap.dataset.currentPayment;
     const status = document.getElementById('sp-status-' + id)?.value || cur;
-    const confirmKind = document.getElementById('sp-confirm-kind-' + id)?.value || 'advance_paid';
+    const confirmSel = document.getElementById('sp-confirm-kind-' + id);
     const cancelKind = document.getElementById('sp-cancel-kind-' + id)?.value || 'none';
     const confirmWrap = document.getElementById('sp-confirm-wrap-' + id);
     const cancelWrap = document.getElementById('sp-cancel-wrap-' + id);
     const refundWrap = document.getElementById('sp-refund-wrap-' + id);
+    const amountWrap = document.getElementById('sp-amount-wrap-' + id);
+    // Confirming a booking must record money — "Unpaid" is only a target for a
+    // row that is already confirmed (it reverses what was recorded).
+    const unpaidOpt = confirmSel?.querySelector('option[value="unpaid"]');
+    if (unpaidOpt) {
+      unpaidOpt.disabled = status === 'confirmed' && cur !== 'confirmed';
+      if (unpaidOpt.disabled && confirmSel.value === 'unpaid') confirmSel.value = 'advance_paid';
+    }
+    const confirmKind = confirmSel?.value || 'advance_paid';
     if (confirmWrap) confirmWrap.hidden = status !== 'confirmed';
     if (cancelWrap) cancelWrap.hidden = status !== 'cancelled';
     if (refundWrap) refundWrap.hidden = !(status === 'cancelled' && cancelKind === 'refunded');
+    // A custom amount only applies to an advance — a full payment is always the
+    // remaining balance, and a reversal is always everything recorded.
+    if (amountWrap) amountWrap.hidden = !(status === 'confirmed' && confirmKind === 'advance_paid');
     let dirty = status !== cur;
-    if (!dirty && status === 'confirmed' && confirmKind === 'fully_paid' && curPay !== 'fully_paid') dirty = true;
+    // Only the three states this select can express count as a payment change —
+    // a refunded row lands on the "Advance paid" fallback, which is not an edit.
+    if (!dirty && status === 'confirmed' && confirmKind !== curPay
+        && ['unpaid', 'advance_paid', 'fully_paid'].includes(curPay)) dirty = true;
     if (!dirty && status === 'cancelled' && cancelKind === 'refunded' && curPay !== 'full_refund') dirty = true;
     const btn = document.querySelector(`button.sp-save[data-id="${id}"]`);
     if (btn) btn.disabled = !dirty;
@@ -522,6 +558,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const all = document.getElementById('select-all-visible');
     const apply = document.getElementById('apply-bulk-status');
     const bulk = document.getElementById('bulk-status');
+    const payApply = document.getElementById('apply-bulk-payment');
+    const payBulk = document.getElementById('bulk-payment');
     const count = document.getElementById('selected-count');
     const confirmKind = document.getElementById('bulk-confirm-kind');
     const cancelKind = document.getElementById('bulk-cancel-kind');
@@ -531,6 +569,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     if (confirmKind) confirmKind.style.display = bulk?.value === 'confirmed' ? '' : 'none';
     if (cancelKind) cancelKind.style.display = bulk?.value === 'cancelled' ? '' : 'none';
     if (apply) apply.disabled = !selected.length || !bulk?.value;
+    if (payApply) payApply.disabled = !selected.length || !payBulk?.value;
     if (all) { const n = matching.filter((b) => b.checked).length; all.checked = matching.length > 0 && n === matching.length; all.indeterminate = n > 0 && n < matching.length; }
     document.querySelectorAll('.departure-select-checkbox').forEach((g) => {
       const dep = g.closest('.departure');
@@ -641,6 +680,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   document.getElementById('select-all-visible')?.addEventListener('change', (e) => { visibleBoxes().forEach((b) => (b.checked = e.target.checked)); selectionUI(); });
   document.getElementById('clear-selection')?.addEventListener('click', () => { boxes().forEach((b) => (b.checked = false)); selectionUI(); });
   document.getElementById('bulk-status')?.addEventListener('change', selectionUI);
+  document.getElementById('bulk-payment')?.addEventListener('change', selectionUI);
 
   document.getElementById('apply-bulk-status')?.addEventListener('click', async () => {
     const selected = visibleBoxes().filter((b) => b.checked);
@@ -692,6 +732,38 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       }
     }
     if (failures.length) alert(failures.join('\n')); else reloadWithFilters();
+  });
+
+  // Payment-only bulk action: records/reverses money on the selected rows without
+  // touching `status`. The status flow only sets payment on a → confirmed
+  // transition, so an already-confirmed row needs this to move unpaid →
+  // advance → fully paid (or back).
+  document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {
+    const selected = visibleBoxes().filter((b) => b.checked);
+    const action = document.getElementById('bulk-payment')?.value;
+    if (!selected.length || !action) return;
+    const label = { advance: 'Advance paid', full: 'Fully paid', unpaid: 'Unpaid' }[action] || action;
+    const ask = action === 'unpaid'
+      ? `Reverse all recorded payments on ${selected.length} registration(s) and mark them Unpaid?`
+      : `Mark ${selected.length} registration(s) as "${label}"? The outstanding amount is recorded as received and the traveller is emailed a confirmation.`;
+    if (!confirm(ask)) return;
+    const res = await fetch('/api/admin/registrations/payment', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ids: selected.map((b) => Number(b.dataset.registrationId)),
+        action,
+        method: 'bank_transfer',
+        requestId: crypto.randomUUID(),
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success) { alert(data?.error || 'Payment update failed.'); return; }
+    if (data.failed) {
+      alert(data.results.filter((r) => !r.success).map((r) => `#${r.id}: ${r.error}`).join('\n'));
+      // Partial success still changed rows — reload so the page isn't stale.
+      if (!data.succeeded) return;
+    }
+    reloadWithFilters();
   });
 
   document.getElementById('search-input')?.addEventListener('input', applyFilters);
