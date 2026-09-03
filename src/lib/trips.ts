@@ -126,13 +126,33 @@ export function isTripListable(trip: Record<string, any>): boolean {
 }
 
 /**
- * Past trips that stay discoverable: public but not listable — either explicitly
- * archived, or published with every departure behind us. Feeds /trips/past/ and
- * the low-priority sitemap entries so these pages keep an internal link path
- * instead of being orphaned the moment their last date passes.
+ * Whether the detail page will actually render this trip.
+ *
+ * `isTripPublic` is only half the gate. The page also requires at least one
+ * non-draft departure: a trip whose every batch is still a draft is
+ * work-in-progress — the shape the admin "duplicate" action produces — and 404s.
+ * Legacy trips with no `batches` array at all are always viewable.
+ *
+ * This exists because it did not: the archive shipped built on `isTripPublic`
+ * alone and put two duplicate-in-progress trips into the sitemap whose pages
+ * return 404. Any surface deciding whether a trip URL exists must call THIS,
+ * never re-derive it, or the two drift apart again.
+ */
+export function isTripViewable(trip: Record<string, any>): boolean {
+  if (!isTripPublic(trip)) return false;
+  const batches = Array.isArray(trip?.batches) ? trip.batches : [];
+  return batches.length === 0 || batches.some((b: any) => b?.status !== 'draft');
+}
+
+/**
+ * Past trips that stay discoverable: viewable but not listable — either
+ * explicitly archived, or published with every departure behind us. Feeds
+ * /trips/past/ and the low-priority sitemap entries so these pages keep an
+ * internal link path instead of being orphaned the moment their last date
+ * passes.
  */
 export function isTripArchived(trip: Record<string, any>): boolean {
-  return isTripPublic(trip) && !isTripListable(trip);
+  return isTripViewable(trip) && !isTripListable(trip);
 }
 
 /**

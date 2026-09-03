@@ -5,7 +5,7 @@ import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
 import MarkdownContent from '../../components/MarkdownContent.astro';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripPublic, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripViewable, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
 import { buildBreadcrumb } from '../../lib/breadcrumbs';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { FALLBACK_HERO } from '../../lib/images';
@@ -24,17 +24,14 @@ if (!trip && !isTripDeleted(slug!)) {
   if (target && readTrip(target)) return Astro.redirect(`/trips/${target}/`, 301);
 }
 
-if (!trip || isTripDeleted(slug!) || !isTripPublic({ slug, ...trip })) return new Response('Not Found', { status: 404 });
-
-// Visibility derives from departures (trip-level status removed): a trip is
-// "published" if it has at least one non-draft departure (past or upcoming).
-// Trips with only draft departures (or none) are work-in-progress → redirect.
-// Legacy single-date trips (no batches array) are always viewable. Published
-// trips whose dates have all passed still render a friendly "new dates soon"
-// state below — dropped from listings but not a privacy leak.
-const _batches = Array.isArray(trip.batches) ? trip.batches : [];
-const _isPublished = _batches.length === 0 || _batches.some((b: any) => b.status !== 'draft');
-if (!_isPublished) return new Response('Not Found', { status: 404 });
+// Visibility derives from departures (trip-level status removed): a trip needs
+// at least one non-draft departure, past or upcoming. Trips with only draft
+// departures are work-in-progress; legacy single-date trips (no batches array)
+// are always viewable. Published trips whose dates have all passed still render
+// a friendly "new dates soon" state below — dropped from listings but not a
+// privacy leak. isTripViewable() is the shared gate: the sitemap and
+// /trips/past/ ask the same question, and must get the same answer.
+if (!trip || isTripDeleted(slug!) || !isTripViewable({ slug, ...trip })) return new Response('Not Found', { status: 404 });
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}

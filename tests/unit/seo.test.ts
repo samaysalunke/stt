@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
-import { isTripArchived, isTripListable, isTripPublic, listTrips, pastBatches, tripPublicationStatus } from '../../src/lib/trips';
+import { isTripArchived, isTripListable, isTripPublic, isTripViewable, listTrips, pastBatches, tripPublicationStatus } from '../../src/lib/trips';
 import { isAlbumPublic } from '../../src/lib/albums';
 import { indexNowUrls } from '../../src/lib/indexnow';
 
@@ -39,6 +39,30 @@ describe('SEO publication controls', () => {
     expect(isTripListable({ publicationStatus: 'published', batches: [{ startDate: '2099-01-01', status: 'booking-open' }] })).toBe(true);
     expect(isTripListable({ publicationStatus: 'archived', batches: [{ startDate: '2099-01-01', status: 'booking-open' }] })).toBe(false);
     expect(isTripListable({ publicationStatus: 'published', batches: [{ startDate: '2000-01-01', status: 'completed' }] })).toBe(false);
+  });
+
+  it('never advertises a URL whose detail page would 404', () => {
+    // Regression: the archive shipped built on isTripPublic alone, which put two
+    // duplicate-in-progress trips into the sitemap and /trips/past/ whose pages
+    // returned 404. The admin duplicate action marks every departure `draft`
+    // (src/pages/api/admin/trips/duplicate.ts) precisely so the copy stays
+    // hidden until reviewed — so a draft-only trip is viewable nowhere.
+    const draftOnly = { publicationStatus: 'published', batches: [{ startDate: '2099-01-01', status: 'draft' }] };
+    expect(isTripViewable(draftOnly)).toBe(false);
+    expect(isTripArchived(draftOnly)).toBe(false);
+    expect(isTripListable(draftOnly)).toBe(false);
+
+    // One non-draft departure is enough, past or upcoming.
+    expect(isTripViewable({ publicationStatus: 'published', batches: [{ startDate: '2000-01-01', status: 'completed' }, { startDate: '2099-01-01', status: 'draft' }] })).toBe(true);
+    // Legacy trips predating the batches array stay viewable.
+    expect(isTripViewable({ publicationStatus: 'published' })).toBe(true);
+    // Still gated on publication status.
+    expect(isTripViewable({ publicationStatus: 'draft', batches: [{ startDate: '2000-01-01', status: 'completed' }] })).toBe(false);
+
+    // The detail page must ask the shared helper, not re-derive the rule.
+    const tripPage = fs.readFileSync('src/pages/trips/[slug].astro', 'utf8');
+    expect(tripPage).toContain('isTripViewable({ slug, ...trip })');
+    expect(tripPage).not.toContain('_isPublished');
   });
 
   it('treats public-but-unlistable trips as the archive, and nothing else', () => {
