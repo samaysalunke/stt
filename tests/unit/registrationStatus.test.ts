@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ADMIN_SETTABLE_STATUSES,
   assertTransition,
   derivePaymentStatus,
+  isNoRefund,
+  paymentOptionsFor,
   paymentStatusLabel,
+  PAYMENT_OPTIONS,
   PAYMENT_STATUSES,
   paymentStatusStyle,
   REG_STATUSES,
@@ -29,8 +33,12 @@ describe('assertTransition', () => {
     expect(() => assertTransition('pending', 'confirmed', ctx({ requestedPaymentStatus: 'fully_paid', totalAmount: null }))).toThrow(/trip price/i);
   });
 
-  it('blocks confirmed → rejected', () => {
-    expect(() => assertTransition('confirmed', 'rejected', ctx({ amountPaid: 1000 }))).toThrow(/Use Cancel/i);
+  // `rejected` was merged into `cancelled`; nothing can be set to it any more.
+  it('blocks every → rejected, from any status', () => {
+    for (const from of ['lead', 'pending', 'confirmed', 'cancelled']) {
+      expect(() => assertTransition(from, 'rejected', ctx({ amountPaid: 1000 })), from)
+        .toThrow(/not a status you can set/i);
+    }
   });
 
   it('blocks confirmed → lead', () => {
@@ -53,8 +61,14 @@ describe('assertTransition', () => {
     expect(() => assertTransition('rejected', 'confirmed', ctx({ requestedPaymentStatus: 'fully_paid' }))).not.toThrow();
   });
 
-  it('blocks lead → cancelled', () => {
-    expect(() => assertTransition('lead', 'cancelled', ctx())).toThrow(/Use Reject/i);
+  // Was "Use Reject for a lead that won't proceed" — with `rejected` retired,
+  // cancelling is the only way to close a lead out.
+  it('allows lead → cancelled', () => {
+    expect(() => assertTransition('lead', 'cancelled', ctx())).not.toThrow();
+  });
+
+  it('still lets a legacy rejected row move out', () => {
+    expect(() => assertTransition('rejected', 'cancelled', ctx({ amountPaid: 1000 }))).not.toThrow();
   });
 
   it('treats same status as a no-op', () => {
@@ -96,5 +110,80 @@ describe('labels and styles', () => {
   });
   it('falls back to the pending pill for an unknown status', () => {
     expect(regStatusStyle('not-a-status')).toBe(regStatusStyle('pending'));
+  });
+});
+
+// The bulk bar and the per-row Payment select both render from PAYMENT_OPTIONS.
+// They drifted apart once — offering different words, and silently doing
+// nothing for the ones only one of them understood.
+describe('PAYMENT_OPTIONS', () => {
+  it('covers every status an admin can set', () => {
+    for (const status of ADMIN_SETTABLE_STATUSES) {
+      expect(PAYMENT_OPTIONS[status], status).toBeDefined();
+      expect(paymentOptionsFor(status).length, status).toBeGreaterThan(0);
+    }
+  });
+
+  it('only ever offers real payment statuses', () => {
+    for (const [status, options] of Object.entries(PAYMENT_OPTIONS)) {
+      for (const option of options) {
+        expect(PAYMENT_STATUSES, `${status} → ${option}`).toContain(option);
+      }
+    }
+  });
+
+  it('gives a wishlist entry no payment control, even holding a payment status', () => {
+    expect(paymentOptionsFor('wishlist')).toEqual([]);
+    expect(paymentOptionsFor('wishlist', 'advance_paid')).toEqual([]);
+    expect(paymentOptionsFor('not-a-status')).toEqual([]);
+  });
+
+  // Production carries a `lead` with a recorded advance. Dropping that value
+  // would show the row as Unpaid and count as an edit on page load, leaving a
+  // live payment one click from being reversed.
+  it('keeps a row its own payment status when the matrix does not offer it', () => {
+    expect(paymentOptionsFor('lead')).toEqual(['unpaid']);
+    expect(paymentOptionsFor('lead', 'advance_paid')).toEqual(['advance_paid', 'unpaid']);
+    expect(paymentOptionsFor('lead', 'advance_paid')[0]).toBe('advance_paid');
+  });
+
+  it('does not duplicate or invent a value it already offers', () => {
+    expect(paymentOptionsFor('pending', 'advance_paid')).toEqual(['unpaid', 'advance_paid']);
+    expect(paymentOptionsFor('lead', 'not-a-payment-status')).toEqual(['unpaid']);
+  });
+
+  it('keeps refund states to cancelled bookings, and money states off them', () => {
+    for (const refundState of ['no_refund', 'partial_refund', 'full_refund']) {
+      expect(paymentOptionsFor('cancelled')).toContain(refundState);
+      expect(paymentOptionsFor('confirmed')).not.toContain(refundState);
+      expect(paymentOptionsFor('pending')).not.toContain(refundState);
+    }
+    expect(paymentOptionsFor('cancelled')).not.toContain('advance_paid');
+    expect(paymentOptionsFor('cancelled')).not.toContain('fully_paid');
+  });
+
+  it('lets a confirmed row be reversed to unpaid — confirmed → pending is not legal', () => {
+    expect(paymentOptionsFor('confirmed')).toContain('unpaid');
+    expect(() => assertTransition('confirmed', 'pending', ctx())).toThrow();
+  });
+
+  it('labels every payment status, no raw identifiers', () => {
+    for (const status of PAYMENT_STATUSES) {
+      expect(paymentStatusLabel(status), status).not.toBe(status);
+    }
+    expect(paymentStatusLabel('no_refund')).toBe('No refund');
+  });
+});
+
+describe('isNoRefund', () => {
+  it('is a cancelled booking that kept the money', () => {
+    expect(isNoRefund({ status: 'cancelled', amount_paid: 5000, amount_refunded: 0 })).toBe(true);
+    expect(isNoRefund({ status: 'rejected', amount_paid: 5000, amount_refunded: 0 })).toBe(true);
+  });
+
+  it('is not a refunded, unpaid, or still-live booking', () => {
+    expect(isNoRefund({ status: 'cancelled', amount_paid: 5000, amount_refunded: 5000 })).toBe(false);
+    expect(isNoRefund({ status: 'cancelled', amount_paid: 0, amount_refunded: 0 })).toBe(false);
+    expect(isNoRefund({ status: 'confirmed', amount_paid: 5000, amount_refunded: 0 })).toBe(false);
   });
 });

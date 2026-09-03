@@ -5,7 +5,9 @@ import {
   paymentStatusLabel,
   paymentStatusStyle,
   derivePaymentStatus,
+  paymentOptionsFor,
   assertTransition,
+  ADMIN_SETTABLE_STATUSES,
 } from '../../lib/registrationStatus';
 import { zohoOpenUrl } from '../../lib/zohoBooks';
 interface Props {
@@ -18,10 +20,18 @@ const { registration: r, readOnly = false, tierOptions = [] } = Astro.props;
 const payStatus: string = r.payment_status || derivePaymentStatus(r);
 const payStyle = paymentStatusStyle(payStatus);
 const amountRefunded = Number(r.amount_refunded) || 0;
+// Payment states offered for the row as it stands. The client swaps this list
+// when the Status select changes, reading the same map.
+const paymentChoices = paymentOptionsFor(String(r.status), payStatus);
 // Status targets this row can move to. For 'confirmed' we only need the option
 // enabled — the payment <select> supplies payment_status — so probe with a
-// placeholder that clears the payment guard.
-const statusButtons = ['lead', 'pending', 'confirmed', 'rejected', 'cancelled'];
+// placeholder that clears the payment guard. A row still sitting on a retired
+// status (wishlist, legacy rejected) keeps it listed so the select shows where
+// the row actually is.
+const statusButtons = [
+  ...(ADMIN_SETTABLE_STATUSES as readonly string[]).includes(String(r.status)) ? [] : [String(r.status)],
+  ...ADMIN_SETTABLE_STATUSES,
+];
 const canTransition = (to: string) => {
   try {
     assertTransition(String(r.status), to, {
@@ -203,34 +213,21 @@ const attributionFields = [
               </select>
             </label>
 
-            <label class="sp-field" id={`sp-confirm-wrap-${r.id}`} hidden={r.status !== 'confirmed'}>
+            {/* Options come from PAYMENT_OPTIONS keyed on the row's status; the
+                client rebuilds them from the same map when Status changes, so
+                this select and the bulk bar can never offer different words. */}
+            <label class="sp-field" id={`sp-payment-wrap-${r.id}`} hidden={paymentChoices.length === 0}>
               <span>Payment</span>
-              <select id={`sp-confirm-kind-${r.id}`}>
-                {/* "Unpaid" reverses the recorded payments on an already-confirmed
-                    row; confirming a row still requires advance or full, so the
-                    client disables it during a → confirmed transition. */}
-                <option value="unpaid" selected={payStatus === 'unpaid'}>Unpaid</option>
-                <option value="advance_paid" selected={payStatus !== 'unpaid' && payStatus !== 'fully_paid'}>Advance paid</option>
-                <option value="fully_paid" selected={payStatus === 'fully_paid'}>Fully paid</option>
+              <select id={`sp-payment-${r.id}`}>
+                {paymentChoices.map((p) => (
+                  <option value={p} selected={p === payStatus}>{paymentStatusLabel(p)}</option>
+                ))}
               </select>
             </label>
 
             <label class="sp-field" id={`sp-amount-wrap-${r.id}`} hidden>
-              <span>Amount received (₹)</span>
+              <span id={`sp-amount-label-${r.id}`}>Amount (₹)</span>
               <input id={`sp-amount-${r.id}`} type="number" min="1" step="1" placeholder="Trip default" />
-            </label>
-
-            <label class="sp-field" id={`sp-cancel-wrap-${r.id}`} hidden={r.status !== 'cancelled'}>
-              <span>Payment</span>
-              <select id={`sp-cancel-kind-${r.id}`}>
-                <option value="none" selected>No refund</option>
-                <option value="refunded">Refund</option>
-              </select>
-            </label>
-
-            <label class="sp-field" id={`sp-refund-wrap-${r.id}`} hidden>
-              <span>Refund amount (₹)</span>
-              <input id={`sp-refund-amount-${r.id}`} type="number" min="1" step="1" max={Number(r.amount_paid) || 0} value={Number(r.amount_paid) || 0} />
             </label>
           </div>
 

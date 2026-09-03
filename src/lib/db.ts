@@ -191,6 +191,26 @@ function initializeSchema(db: Database.Database) {
     `);
   } catch {}
 
+  // `rejected` merged into `cancelled` (2026-09-03). Two terminal statuses that
+  // differed only in the email we sent, while the money outcome — the thing an
+  // admin actually needs to see — went unrecorded in both. One status now, with
+  // `no_refund` carrying what happened to the payment.
+  //
+  // Run order matters: stamp `no_refund` before the merge so a row that was
+  // already `cancelled` and one arriving from `rejected` are treated alike, then
+  // move the statuses. Both are idempotent — a second boot matches nothing.
+  try {
+    db.exec(`
+      UPDATE registrations
+         SET payment_status = 'no_refund'
+       WHERE status IN ('cancelled', 'rejected')
+         AND amount_paid > 0
+         AND COALESCE(amount_refunded, 0) <= 0
+         AND payment_status NOT IN ('partial_refund', 'full_refund', 'no_refund')
+    `);
+    db.exec("UPDATE registrations SET status = 'cancelled' WHERE status = 'rejected'");
+  } catch {}
+
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN first_touch_json TEXT'); } catch {}
   try { db.exec('ALTER TABLE newsletter_subscribers ADD COLUMN latest_touch_json TEXT'); } catch {}
 

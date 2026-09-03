@@ -1,7 +1,24 @@
 // TC-200+ — Admin-side registrations (single create + bulk CSV import)
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { apiPost, adminLogin, BASE } from './helpers.mjs';
+
+const require = createRequire(import.meta.url);
+const DB_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../data/seekthethrill.db');
+
+// Emails are logged with their template name even when delivery is skipped for
+// want of an API key, so the log tells us which mail a flow chose to send.
+function emailTemplatesFor(email) {
+  const db = require('better-sqlite3')(DB_PATH, { readonly: true });
+  try {
+    return db.prepare('SELECT template FROM email_delivery_log WHERE recipient = ? ORDER BY created_at').all(email).map((r) => r.template);
+  } finally {
+    db.close();
+  }
+}
 
 const BOOKABLE = { tripSlug: 'qa-test-bookable', batchId: 'qa-bookable-2099', tierId: 'standard', tripTitle: 'QA Test — Bookable Trip' };
 const CAP = { tripSlug: 'qa-test-capacity', batchId: 'qa-cap-2099', tierId: 'solo', tripTitle: 'QA Test — Capacity Check' };
@@ -286,6 +303,89 @@ test('TC-215a a confirmed advance-paid booking can record its remaining balance'
   assert.equal(duplicate.status, 200, JSON.stringify(duplicate.data));
   assert.equal(duplicate.data.results[0].duplicate, true);
   assert.equal((await getRegByEmail(email)).amount_paid, after.total_amount);
+});
+
+// "No refund" used to reach only the traveller's email, leaving the row reading
+// advance_paid as though a balance were still owed — 80 cancelled rows looked
+// unpaid-for. It is a recorded payment status now.
+test('TC-215c cancelling without a refund records no_refund, and rejected is gone', async () => {
+  const email = `qa-no-refund-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'confirmed', full_name: 'No Refund User', email, phone: '9876543210', sendEmail: false,
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const before = await getRegByEmail(email);
+  assert.equal(before.payment_status, 'advance_paid');
+  assert.ok(before.amount_paid > 0);
+
+  const cancelled = await adminPost('/api/admin/update-registration', {
+    id: before.id, status: 'cancelled', requestId: `qa-no-refund-${before.id}`,
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.data));
+  const after = await getRegByEmail(email);
+  assert.equal(after.status, 'cancelled');
+  assert.equal(after.payment_status, 'no_refund');
+  assert.equal(after.amount_paid, before.amount_paid, 'keeping the money must not erase the ledger');
+  assert.equal(after.amount_refunded, 0);
+
+  // `rejected` was merged into `cancelled` and is no longer settable.
+  const rejected = await adminPost('/api/admin/update-registration', { id: before.id, status: 'rejected' });
+  assert.equal(rejected.status, 400, JSON.stringify(rejected.data));
+});
+
+test('TC-215d cancelling an unpaid booking leaves it unpaid, not no_refund', async () => {
+  const email = `qa-cancel-unpaid-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'pending', full_name: 'Cancel Unpaid User', email, phone: '9876543210',
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const cancelled = await adminPost('/api/admin/update-registration', {
+    id: made.data.id, status: 'cancelled', requestId: `qa-cancel-unpaid-${made.data.id}`,
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.data));
+  const after = await getRegByEmail(email);
+  assert.equal(after.status, 'cancelled');
+  assert.equal(after.payment_status, 'unpaid', 'no money was held, so there is nothing to not refund');
+});
+
+// Merging `rejected` into `cancelled` must not change what the traveller reads.
+// Declining an unpaid lead is not a cancellation — the cancellation mail would
+// blame them for our decision and cite a refund policy that does not apply.
+test('TC-215e declining an unpaid lead sends the "unable to confirm" mail, not the cancellation one', async () => {
+  const email = `qa-decline-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'lead', full_name: 'Declined Lead', email, phone: '9876543210',
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const cancelled = await adminPost('/api/admin/update-registration', {
+    id: made.data.id, status: 'cancelled', requestId: `qa-decline-${made.data.id}`,
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.data));
+  await new Promise((r) => setTimeout(r, 250));
+  const templates = emailTemplatesFor(email);
+  assert.ok(templates.includes('registration-rejected'), `expected the decline mail, got ${JSON.stringify(templates)}`);
+  assert.ok(!templates.includes('registration-cancelled'), `must not send the cancellation mail: ${JSON.stringify(templates)}`);
+});
+
+test('TC-215f cancelling a paid booking sends the cancellation mail, with its refund line', async () => {
+  const email = `qa-cancel-paid-${Date.now()}@example.invalid`;
+  const made = await adminPost('/api/admin/registrations/create', {
+    tripSlug: BOOKABLE.tripSlug, batchId: BOOKABLE.batchId, tierId: BOOKABLE.tierId,
+    status: 'confirmed', full_name: 'Cancelled Payer', email, phone: '9876543210', sendEmail: false,
+  });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const cancelled = await adminPost('/api/admin/update-registration', {
+    id: made.data.id, status: 'cancelled', requestId: `qa-cancel-paid-${made.data.id}`,
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.data));
+  await new Promise((r) => setTimeout(r, 250));
+  const templates = emailTemplatesFor(email);
+  assert.ok(templates.includes('registration-cancelled'), `expected the cancellation mail, got ${JSON.stringify(templates)}`);
+  assert.ok(!templates.includes('registration-rejected'), `must not send the decline mail: ${JSON.stringify(templates)}`);
+  assert.equal((await getRegByEmail(email)).payment_status, 'no_refund');
 });
 
 // Backs the bulk "Payment action" bar and the per-row Payment select, which move

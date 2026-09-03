@@ -1,5 +1,5 @@
 import { isTripPublic, readTrip } from './content';
-import { derivePaymentStatus, paymentStatusLabel } from './registrationStatus';
+import { derivePaymentStatus, paymentStatusLabel, PAYMENT_STATUSES } from './registrationStatus';
 
 export const PROFILE_STATUSES = ['wishlist', 'lead', 'pending', 'confirmed', 'cancelled', 'rejected'] as const;
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
@@ -152,7 +152,10 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
   const rawStatus = PROFILE_STATUSES.includes(row.status as ProfileStatus)
     ? row.status as ProfileStatus : 'lead';
   const storedPayment = String(row.payment_status ?? '');
-  const paymentStatus = ['unpaid', 'advance_paid', 'fully_paid', 'partial_refund', 'full_refund'].includes(storedPayment)
+  // Read the shared list rather than a copy of it: a hardcoded one silently
+  // dropped `no_refund` through to derivePaymentStatus, which showed a cancelled
+  // booking whose money we kept as "Advance paid" on the traveller's own page.
+  const paymentStatus = (PAYMENT_STATUSES as readonly string[]).includes(storedPayment)
     ? storedPayment
     : derivePaymentStatus(row);
   const total = Number.isFinite(Number(row.total_amount)) && Number(row.total_amount) > 0 ? Number(row.total_amount) : null;

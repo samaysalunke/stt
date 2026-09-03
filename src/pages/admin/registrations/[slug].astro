@@ -4,7 +4,13 @@ import RegistrationCard from '../../../components/admin/RegistrationCard.astro';
 import { buildRegistrationsView, regStats, type RegTrip, type RegDeparture } from '../../../lib/registrationsView';
 import { buildDepartureOccupancy } from '../../../lib/occupancyMatrix';
 import { formatINR } from '../../../lib/utils';
-import { PAYMENT_STATUS_COLORS, REG_STATUS_COLORS } from '../../../lib/registrationStatus';
+import {
+  ADMIN_SETTABLE_STATUSES,
+  PAYMENT_OPTIONS,
+  PAYMENT_STATUS_COLORS,
+  PAYMENT_STATUS_LABELS,
+  REG_STATUS_COLORS,
+} from '../../../lib/registrationStatus';
 export const prerender = false;
 
 const adminUser = Astro.locals.adminUser;
@@ -89,7 +95,6 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   <p class="stats-caption">
     <span class="stat-mini" data-stat-label="Wishlist">{s.wishlist}</span> wishlist ·
     <span class="stat-mini" data-stat-label="Pending">{s.pending}</span> pending ·
-    <span class="stat-mini" data-stat-label="Rejected">{s.rejected}</span> rejected ·
     <span class="stat-mini" data-stat-label="Cancelled">{s.cancelled}</span> cancelled
   </p>
 
@@ -113,7 +118,6 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <option value="lead">Lead</option>
         <option value="pending">Pending</option>
         <option value="confirmed">Confirmed</option>
-        <option value="rejected">Rejected</option>
         <option value="cancelled">Cancelled</option>
       </select>
       {historyCount > 0 && (
@@ -127,12 +131,14 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       <div class="toolbar-row" id="bulk-actions" hidden>
         <label><input id="select-all-visible" type="checkbox" /> Select all matching</label>
         <strong id="selected-count"></strong>
-        <select id="bulk-status"><option value="">Choose new status…</option><option>lead</option><option>pending</option><option>confirmed</option><option>rejected</option><option>cancelled</option></select>
-        <select id="bulk-confirm-kind" class="hidden"><option value="advance_paid">Advance paid</option><option value="fully_paid">Fully paid</option></select>
-        <select id="bulk-cancel-kind" class="hidden"><option value="none">No refund</option><option value="refunded">Full refund — all paid</option></select>
-        <button id="apply-bulk-status" disabled>Update status</button>
-        <select id="bulk-payment"><option value="">Payment action…</option><option value="advance">Advance paid</option><option value="full">Fully paid</option><option value="unpaid">Mark unpaid</option></select>
-        <button id="apply-bulk-payment" disabled>Update payment</button>
+        {/* Status leaves blank to mean "don't move it"; Payment is rebuilt from
+            PAYMENT_OPTIONS, the same map the per-row select reads. */}
+        <select id="bulk-status">
+          <option value="">Keep status…</option>
+          {ADMIN_SETTABLE_STATUSES.map((s) => <option value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+        </select>
+        <select id="bulk-payment"><option value="">Keep payment…</option></select>
+        <button id="apply-bulk" disabled>Update</button>
         <button id="clear-selection">Clear</button>
       </div>
     )}
@@ -238,7 +244,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   .toolbar #search-input{flex:1;min-width:200px}
   .toolbar input,.toolbar select{padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;color:var(--color-navy);font-size:.875rem}
   .toolbar button{padding:.45rem .7rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-weight:700;cursor:pointer}
-  .toolbar #apply-bulk-status,.toolbar #apply-bulk-payment{background:var(--color-navy);color:#fff;border-color:var(--color-navy)}
+  .toolbar #apply-bulk{background:var(--color-navy);color:#fff;border-color:var(--color-navy)}
   .toolbar button:disabled{opacity:.4;cursor:default}
   .toolbar label{display:flex;align-items:center;gap:.35rem;font-weight:700;font-size:.8rem}
   #bulk-actions[hidden]{display:none}#selected-count{color:var(--color-gray-text);font-size:.8rem}
@@ -258,7 +264,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>
 
-<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_STATUS_COLORS, REG_STATUS_COLORS }}>
+<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS }}>
   // Reload after a bulk action while preserving the active filters in the URL,
   // so search/status/departure/history selections survive the round-trip.
   function reloadWithFilters() {
@@ -274,10 +280,9 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   }
 
   const badgeStyle = (s) => REG_STATUS_COLORS[s] || REG_STATUS_COLORS.pending;
-  const paymentLabel = (s) => ({
-    unpaid: 'Unpaid', advance_paid: 'Advance paid', fully_paid: 'Fully paid',
-    partial_refund: 'Partial refund', full_refund: 'Refunded',
-  })[s] || s;
+  // Labels come from the shared map — a local copy here silently missed
+  // `no_refund` and rendered the raw identifier into the badge.
+  const payLabel = (s) => PAYMENT_STATUS_LABELS[s] || s;
   const formatMoney = (amount) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
 
   function applyPaymentResult(id, result) {
@@ -296,21 +301,21 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     }
     const badge = row.querySelector('.payment-badge');
     if (badge) {
-      badge.textContent = paymentLabel(paymentStatus);
+      badge.textContent = payLabel(paymentStatus);
       badge.style.cssText = PAYMENT_STATUS_COLORS[paymentStatus] || PAYMENT_STATUS_COLORS.unpaid;
     }
     const summaryAmount = row.querySelector('.payment-amount');
     if (summaryAmount) summaryAmount.textContent = formatMoney(amountPaid);
     const hero = row.querySelector('[data-payment-hero]');
-    if (hero) hero.textContent = `${paymentLabel(paymentStatus)} · ${formatMoney(amountPaid)}${total > 0 ? ` of ${formatMoney(total)}` : ''}`;
+    if (hero) hero.textContent = `${payLabel(paymentStatus)} · ${formatMoney(amountPaid)}${total > 0 ? ` of ${formatMoney(total)}` : ''}`;
     const paidField = row.querySelector('[data-payment-field="Amount paid"]');
     if (paidField) paidField.innerHTML = `<span>Amount paid:</span> ${formatMoney(amountPaid)}`;
     const balanceField = row.querySelector('[data-payment-field="Balance due"]');
     if (balanceField) balanceField.innerHTML = `<span>Balance due:</span> ${formatMoney(Math.max(0, total - amountPaid))}`;
     const amountInput = document.getElementById('sp-amount-' + id);
-    if (amountInput) amountInput.value = '';
-    const confirmSel = document.getElementById('sp-confirm-kind-' + id);
-    if (confirmSel && [...confirmSel.options].some((o) => o.value === paymentStatus)) confirmSel.value = paymentStatus;
+    if (amountInput) { amountInput.value = ''; delete amountInput.dataset.kind; }
+    const paySel = document.getElementById('sp-payment-' + id);
+    if (paySel && [...paySel.options].some((o) => o.value === paymentStatus)) paySel.value = paymentStatus;
     spSync(wrap);
   }
 
@@ -340,6 +345,91 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     return { ok: false, error: data?.error || 'Status update failed.' };
   }
 
+  const money = (v) => `₹${Math.round(Number(v) || 0).toLocaleString('en-IN')}`;
+
+  function readAmount(id) {
+    const raw = document.getElementById('sp-amount-' + id)?.value;
+    if (raw === undefined || raw === '') return null;
+    const n = Math.round(Number(raw));
+    return Number.isInteger(n) ? n : NaN;
+  }
+
+  /**
+   * One planner for the per-row form and the bulk bar. Maps a row's current
+   * (status, payment) plus the chosen target onto the endpoint that can express
+   * it. The two UIs each had their own copy of this logic, which is how they
+   * came to offer different options and silently no-op — there is one path now.
+   * Returns {url, body, ask} or {error}.
+   */
+  function planUpdate({ id, cur, curPay, paid, status, payment, amount, rid }) {
+    const n = Number(id);
+    const statusChanged = status !== cur;
+    if (Number.isNaN(amount)) return { error: 'Amount must be a positive whole rupee value.' };
+    if (amount !== null && amount < 1) return { error: 'Amount must be a positive whole rupee value.' };
+
+    // → confirmed. Confirming records money, so the payment target has to be one
+    // the server's transition guard accepts.
+    if (status === 'confirmed' && statusChanged) {
+      if (payment !== 'advance_paid' && payment !== 'fully_paid') {
+        return { error: 'Confirming a booking needs Advance paid or Fully paid.' };
+      }
+      const body = { id: n, status: 'confirmed', payment_status: payment, requestId: rid };
+      if (payment === 'advance_paid' && amount !== null) body.amount = amount;
+      return { url: '/api/admin/update-registration', body,
+        ask: `Confirm #${id} as ${payment === 'fully_paid' ? 'fully paid' : 'advance paid'}?` };
+    }
+
+    // A refund, either bundled into the cancellation or recorded against a row
+    // already cancelled.
+    if (payment === 'partial_refund' || payment === 'full_refund') {
+      if (status !== 'cancelled') return { error: `"${payLabel(payment)}" needs the booking to be cancelled.` };
+      if (paid <= 0) return { error: `#${id} has no recorded payment to refund.` };
+      if (amount === null || amount > paid) return { error: `Refund must be between ₹1 and ${money(paid)}.` };
+      const kind = amount >= paid ? 'full' : 'partial';
+      if (statusChanged) {
+        return { url: '/api/admin/update-registration',
+          body: { id: n, status: 'cancelled', requestId: rid, refund: { kind, amount, method: 'bank_transfer' } },
+          ask: `Cancel #${id} and refund ${money(amount)}?` };
+      }
+      return { url: '/api/admin/registrations/payment',
+        body: { ids: [n], action: 'refund', refundKind: kind, amount, method: 'bank_transfer', requestId: rid },
+        ask: `Record a ${kind} refund of ${money(amount)} for #${id}?` };
+    }
+
+    // → cancelled keeping the money. The server stamps `no_refund`.
+    if (status === 'cancelled' && statusChanged) {
+      return { url: '/api/admin/update-registration', body: { id: n, status: 'cancelled', requestId: rid },
+        ask: paid > 0
+          ? `Cancel #${id} and keep the ${money(paid)} paid? It will show as "No refund".`
+          : `Cancel #${id}?` };
+    }
+
+    // Payment-only move, status staying put.
+    if (!statusChanged && payment && payment !== curPay) {
+      // Guard the matrix here, not just in the selects. A bulk selection spans
+      // rows of different statuses while the bulk Payment select shows one list,
+      // so "Fully paid" over a mixed set would otherwise record money against a
+      // cancelled booking — the payment endpoint does not check status itself.
+      if (!(PAYMENT_OPTIONS[cur] || []).includes(payment)) {
+        return { error: `#${id} is ${cur} — "${payLabel(payment)}" does not apply to it.` };
+      }
+      const action = { fully_paid: 'full', advance_paid: 'advance', unpaid: 'unpaid' }[payment];
+      if (!action) return { error: `"${payLabel(payment)}" is set by cancelling the booking, not on its own.` };
+      const body = { ids: [n], action, method: 'bank_transfer', requestId: rid };
+      if (action === 'advance' && amount !== null) body.amount = amount;
+      return { url: '/api/admin/registrations/payment', body,
+        ask: action === 'unpaid' ? `Reverse all recorded payments on #${id} and mark it Unpaid?`
+          : action === 'full' ? `Record the full balance as received for #${id}?`
+          : `Record ${amount !== null ? money(amount) : 'the advance'} as received for #${id}?` };
+    }
+
+    if (statusChanged) {
+      return { url: '/api/admin/update-registration', body: { id: n, status, requestId: rid },
+        ask: `Change #${id} to "${status}"?` };
+    }
+    return { error: 'Nothing to update.' };
+  }
+
   async function requestDocument(id, type, action) {
     const res = await fetch('/api/admin/registrations/document', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -367,75 +457,27 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     if (btn.dataset.action === 'save-status-payment') {
       const wrap = btn.closest('[data-sp]');
       if (!wrap) return;
-      const cur = wrap.dataset.currentStatus;
-      const curPay = wrap.dataset.currentPayment;
-      const paid = Number(wrap.dataset.paid) || 0;
-      const status = document.getElementById('sp-status-' + id)?.value || cur;
-      const confirmKind = document.getElementById('sp-confirm-kind-' + id)?.value || 'advance_paid';
-      const cancelKind = document.getElementById('sp-cancel-kind-' + id)?.value || 'none';
-      const rid = crypto.randomUUID();
-      const rawAmount = document.getElementById('sp-amount-' + id)?.value;
-      const customAmount = rawAmount === undefined || rawAmount === '' ? null : Math.round(Number(rawAmount));
-      if (customAmount !== null && (!Number.isInteger(customAmount) || customAmount < 1)) {
-        alert('Amount received must be a positive whole rupee value.');
-        return;
-      }
-      let url, body, ask;
-      if (status === 'confirmed' && cur !== 'confirmed') {
-        url = '/api/admin/update-registration';
-        body = { id: Number(id), status: 'confirmed', payment_status: confirmKind, requestId: rid };
-        if (confirmKind === 'advance_paid' && customAmount !== null) body.amount = customAmount;
-        ask = `Confirm #${id} as ${confirmKind === 'fully_paid' ? 'fully paid' : 'advance paid'}?`;
-      } else if (status === 'confirmed' && cur === 'confirmed' && confirmKind !== curPay) {
-        // Payment-only change on a row that is already confirmed: record or
-        // reverse money, leaving `status` alone.
-        const action = confirmKind === 'fully_paid' ? 'full' : confirmKind === 'advance_paid' ? 'advance' : 'unpaid';
-        url = '/api/admin/registrations/payment';
-        body = { ids: [Number(id)], action, method: 'bank_transfer', requestId: rid };
-        if (action === 'advance' && customAmount !== null) body.amount = customAmount;
-        ask = action === 'unpaid'
-          ? `Reverse all recorded payments on #${id} and mark it Unpaid?`
-          : action === 'full'
-            ? `Record the full balance as received for #${id}?`
-            : `Record ${customAmount !== null ? `₹${customAmount.toLocaleString('en-IN')}` : 'the advance'} as received for #${id}?`;
-      } else if (status === 'cancelled' && cancelKind === 'refunded') {
-        const amt = Math.round(Number(document.getElementById('sp-refund-amount-' + id)?.value));
-        if (!Number.isInteger(amt) || amt < 1 || amt > paid) {
-          alert(`Refund must be between ₹1 and ₹${paid.toLocaleString('en-IN')}.`);
-          return;
-        }
-        const kind = amt >= paid ? 'full' : 'partial';
-        if (cur === 'cancelled') {
-          url = '/api/admin/registrations/payment';
-          body = { ids: [Number(id)], action: 'refund', refundKind: kind, amount: amt, method: 'bank_transfer', requestId: rid };
-          ask = `Record a ${kind} refund of ₹${amt.toLocaleString('en-IN')} for #${id}?`;
-        } else {
-          url = '/api/admin/update-registration';
-          body = { id: Number(id), status: 'cancelled', requestId: rid, refund: { kind, amount: amt, method: 'bank_transfer' } };
-          ask = `Cancel #${id} and refund ₹${amt.toLocaleString('en-IN')}?`;
-        }
-      } else if (status === 'cancelled' && cur !== 'cancelled') {
-        url = '/api/admin/update-registration';
-        body = { id: Number(id), status: 'cancelled', requestId: rid };
-        ask = paid > 0 ? `Cancel #${id}? No refund will be recorded.` : `Cancel #${id}?`;
-      } else if ((status === 'lead' || status === 'pending' || status === 'rejected') && status !== cur) {
-        url = '/api/admin/update-registration';
-        body = { id: Number(id), status, requestId: rid };
-        ask = `Change #${id} to "${status}"?`;
-      } else {
-        alert('Nothing to update.');
-        return;
-      }
-      if (!confirm(ask)) return;
+      const plan = planUpdate({
+        id,
+        cur: wrap.dataset.currentStatus,
+        curPay: wrap.dataset.currentPayment,
+        paid: Number(wrap.dataset.paid) || 0,
+        status: document.getElementById('sp-status-' + id)?.value || wrap.dataset.currentStatus,
+        payment: document.getElementById('sp-payment-' + id)?.value || '',
+        amount: readAmount(id),
+        rid: crypto.randomUUID(),
+      });
+      if (plan.error) { alert(plan.error); return; }
+      if (!confirm(plan.ask)) return;
       btn.disabled = true;
-      const res = await fetch(url, {
+      const res = await fetch(plan.url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(plan.body),
       });
       const data = await res.json().catch(() => null);
       btn.disabled = false;
       if (!res.ok || !data?.success || data.failed) alert(data?.error || data?.results?.find((x) => !x.success)?.error || 'Update failed.');
-      else if (url === '/api/admin/registrations/payment') applyPaymentResult(id, data.results[0]);
+      else if (plan.url === '/api/admin/registrations/payment') applyPaymentResult(id, data.results[0]);
       else reloadWithFilters();
       return;
     }
@@ -500,37 +542,76 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   });
 
   // ── Status & payment tab: contextual payment field + dirty state ──
+  /**
+   * Rebuild a row's Payment select from PAYMENT_OPTIONS whenever Status changes,
+   * so the words on offer always match the status the row is heading for — and
+   * match the bulk bar, which reads the same map.
+   */
+  function paymentChoicesFor(status, entering, current) {
+    const base = (PAYMENT_OPTIONS[status] || []).filter((v) =>
+      // Confirming records money; "Unpaid" is only the correction path on a row
+      // that is already confirmed.
+      !(entering && status === 'confirmed' && v === 'unpaid'));
+    // Mirror of paymentOptionsFor(): a row parked on a combination the matrix
+    // does not offer keeps its own value listed, so staying put never reads as
+    // an edit. Only while the status is unchanged — moving status is a real
+    // change and the target's own options apply.
+    if (!base.length || entering || !current || base.includes(current)) return base;
+    return [current, ...base];
+  }
+
+  function fillPaymentSelect(sel, choices, preferred) {
+    if (!sel) return '';
+    const current = [...sel.options].map((o) => o.value).join();
+    if (current !== choices.join()) {
+      const keep = sel.value;
+      sel.innerHTML = choices.map((v) => `<option value="${v}">${payLabel(v)}</option>`).join('');
+      sel.value = choices.includes(keep) ? keep : (choices.includes(preferred) ? preferred : choices[0] || '');
+    }
+    return sel.value;
+  }
+
   function spSync(wrap) {
     const id = wrap.dataset.id;
     const cur = wrap.dataset.currentStatus;
     const curPay = wrap.dataset.currentPayment;
+    const paid = Number(wrap.dataset.paid) || 0;
     const status = document.getElementById('sp-status-' + id)?.value || cur;
-    const confirmSel = document.getElementById('sp-confirm-kind-' + id);
-    const cancelKind = document.getElementById('sp-cancel-kind-' + id)?.value || 'none';
-    const confirmWrap = document.getElementById('sp-confirm-wrap-' + id);
-    const cancelWrap = document.getElementById('sp-cancel-wrap-' + id);
-    const refundWrap = document.getElementById('sp-refund-wrap-' + id);
+    const paySel = document.getElementById('sp-payment-' + id);
+    const payWrap = document.getElementById('sp-payment-wrap-' + id);
     const amountWrap = document.getElementById('sp-amount-wrap-' + id);
-    // Confirming a booking must record money — "Unpaid" is only a target for a
-    // row that is already confirmed (it reverses what was recorded).
-    const unpaidOpt = confirmSel?.querySelector('option[value="unpaid"]');
-    if (unpaidOpt) {
-      unpaidOpt.disabled = status === 'confirmed' && cur !== 'confirmed';
-      if (unpaidOpt.disabled && confirmSel.value === 'unpaid') confirmSel.value = 'advance_paid';
+    const amountLabel = document.getElementById('sp-amount-label-' + id);
+    const amountInput = document.getElementById('sp-amount-' + id);
+
+    const choices = paymentChoicesFor(status, status !== cur, curPay);
+    const payment = fillPaymentSelect(paySel, choices, curPay);
+    if (payWrap) payWrap.hidden = choices.length === 0;
+
+    // The amount box is required for a refund and optional for an advance; a
+    // full payment is always the remaining balance and a reversal is always
+    // everything recorded, so neither takes one.
+    const isRefund = payment === 'partial_refund' || payment === 'full_refund';
+    const wantsAmount = isRefund || payment === 'advance_paid';
+    if (amountWrap) amountWrap.hidden = !wantsAmount;
+    if (wantsAmount && amountInput) {
+      const kind = isRefund ? 'refund' : 'advance';
+      // Switching between an advance and a refund must not carry the old figure
+      // across — they mean different things and have different bounds.
+      const switched = amountInput.dataset.kind !== kind;
+      amountInput.dataset.kind = kind;
+      if (isRefund) {
+        amountInput.max = String(paid);
+        if (amountLabel) amountLabel.textContent = 'Refund amount (₹)';
+        if (switched || !amountInput.value) amountInput.value = String(paid);
+      } else {
+        amountInput.removeAttribute('max');
+        if (amountLabel) amountLabel.textContent = 'Amount received (₹)';
+        amountInput.placeholder = 'Trip default';
+        if (switched) amountInput.value = '';
+      }
     }
-    const confirmKind = confirmSel?.value || 'advance_paid';
-    if (confirmWrap) confirmWrap.hidden = status !== 'confirmed';
-    if (cancelWrap) cancelWrap.hidden = status !== 'cancelled';
-    if (refundWrap) refundWrap.hidden = !(status === 'cancelled' && cancelKind === 'refunded');
-    // A custom amount only applies to an advance — a full payment is always the
-    // remaining balance, and a reversal is always everything recorded.
-    if (amountWrap) amountWrap.hidden = !(status === 'confirmed' && confirmKind === 'advance_paid');
-    let dirty = status !== cur;
-    // Only the three states this select can express count as a payment change —
-    // a refunded row lands on the "Advance paid" fallback, which is not an edit.
-    if (!dirty && status === 'confirmed' && confirmKind !== curPay
-        && ['unpaid', 'advance_paid', 'fully_paid'].includes(curPay)) dirty = true;
-    if (!dirty && status === 'cancelled' && cancelKind === 'refunded' && curPay !== 'full_refund') dirty = true;
+
+    const dirty = status !== cur || (!!payment && payment !== curPay);
     const btn = document.querySelector(`button.sp-save[data-id="${id}"]`);
     if (btn) btn.disabled = !dirty;
   }
@@ -538,7 +619,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   document.getElementById('departures-container')?.addEventListener('change', (e) => {
     const sel = e.target;
     if (!sel || !sel.id) return;
-    if (/^sp-(status|confirm-kind|cancel-kind)-/.test(sel.id)) {
+    if (/^sp-(status|payment)-/.test(sel.id)) {
       const wrap = sel.closest('[data-sp]');
       if (wrap) spSync(wrap);
     }
@@ -556,20 +637,26 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const selected = visibleBoxes().filter((b) => b.checked);
     const matching = visibleBoxes();
     const all = document.getElementById('select-all-visible');
-    const apply = document.getElementById('apply-bulk-status');
+    const apply = document.getElementById('apply-bulk');
     const bulk = document.getElementById('bulk-status');
-    const payApply = document.getElementById('apply-bulk-payment');
     const payBulk = document.getElementById('bulk-payment');
     const count = document.getElementById('selected-count');
-    const confirmKind = document.getElementById('bulk-confirm-kind');
-    const cancelKind = document.getElementById('bulk-cancel-kind');
     const actions = document.getElementById('bulk-actions');
     if (count) count.textContent = selected.length ? `${selected.length} selected` : '';
     if (actions) actions.hidden = selected.length === 0;
-    if (confirmKind) confirmKind.style.display = bulk?.value === 'confirmed' ? '' : 'none';
-    if (cancelKind) cancelKind.style.display = bulk?.value === 'cancelled' ? '' : 'none';
-    if (apply) apply.disabled = !selected.length || !bulk?.value;
-    if (payApply) payApply.disabled = !selected.length || !payBulk?.value;
+    // Payment options track the chosen status. With no status chosen the rows
+    // keep whatever they are, so only the money states that are legal at any
+    // status are on offer — a refund needs the booking cancelled.
+    if (payBulk) {
+      const choices = bulk?.value
+        ? paymentChoicesFor(bulk.value, true)
+        : ['unpaid', 'advance_paid', 'fully_paid'];
+      const keep = payBulk.value;
+      payBulk.innerHTML = '<option value="">Keep payment…</option>'
+        + choices.map((v) => `<option value="${v}">${payLabel(v)}</option>`).join('');
+      payBulk.value = choices.includes(keep) ? keep : '';
+    }
+    if (apply) apply.disabled = !selected.length || (!bulk?.value && !payBulk?.value);
     if (all) { const n = matching.filter((b) => b.checked).length; all.checked = matching.length > 0 && n === matching.length; all.indeterminate = n > 0 && n < matching.length; }
     document.querySelectorAll('.departure-select-checkbox').forEach((g) => {
       const dep = g.closest('.departure');
@@ -682,88 +769,59 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   document.getElementById('bulk-status')?.addEventListener('change', selectionUI);
   document.getElementById('bulk-payment')?.addEventListener('change', selectionUI);
 
-  document.getElementById('apply-bulk-status')?.addEventListener('click', async () => {
+  // One bulk action, planned per row through planUpdate — the same function the
+  // per-row form uses. Rows already in the requested state are skipped rather
+  // than reported as failures.
+  document.getElementById('apply-bulk')?.addEventListener('click', async () => {
     const selected = visibleBoxes().filter((b) => b.checked);
-    const status = document.getElementById('bulk-status').value;
-    if (!selected.length || !status) return;
-    const confirmKind = document.getElementById('bulk-confirm-kind')?.value || 'advance_paid';
-    const refundAll = status === 'cancelled' && document.getElementById('bulk-cancel-kind')?.value === 'refunded';
-    const paidCount = refundAll ? selected.filter((b) => (Number(b.dataset.paid) || 0) > 0).length : 0;
-    const msg = refundAll
-      ? `Cancel ${selected.length} registration(s)? ${paidCount} with payments will be fully refunded.`
-      : `Change ${selected.length} registration(s) to ${status}?`;
-    if (!confirm(msg)) return;
+    const status = document.getElementById('bulk-status')?.value || '';
+    const payment = document.getElementById('bulk-payment')?.value || '';
+    if (!selected.length || (!status && !payment)) return;
+
+    const parts = [];
+    if (status) parts.push(`status to "${status}"`);
+    if (payment) parts.push(`payment to "${payLabel(payment)}"`);
+    const isRefund = payment === 'partial_refund' || payment === 'full_refund';
+    let ask = `Change ${selected.length} registration(s): ${parts.join(' and ')}?`;
+    if (isRefund) {
+      const paidCount = selected.filter((b) => (Number(b.dataset.paid) || 0) > 0).length;
+      // A refund amount is per-person, so bulk can only refund each row in full.
+      ask = `Refund ${paidCount} of ${selected.length} registration(s) in full — each gets back everything it paid. Rows with no payment are skipped. Continue?`;
+    }
+    if (!confirm(ask)) return;
+
     const failures = [];
+    let changed = 0;
     for (const b of selected) {
       const id = Number(b.dataset.registrationId);
-      if (status === 'confirmed') {
-        const alreadyConfirmed = b.dataset.status === 'confirmed';
-        const needsFullBalance = alreadyConfirmed
-          && confirmKind === 'fully_paid'
-          && b.dataset.paymentStatus !== 'fully_paid';
-        if (alreadyConfirmed && !needsFullBalance) continue;
-        const url = needsFullBalance
-          ? '/api/admin/registrations/payment'
-          : '/api/admin/update-registration';
-        const body = needsFullBalance
-          ? { ids: [id], action: 'full', method: 'bank_transfer', requestId: crypto.randomUUID() }
-          : { id, status: 'confirmed', payment_status: confirmKind, requestId: crypto.randomUUID() };
-        const res = await fetch(url, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json().catch(() => null);
-        const paymentFailure = needsFullBalance && data?.results?.find((result) => !result.success);
-        if (!res.ok || !data?.success || paymentFailure) {
-          failures.push(`#${id}: ${data?.error || paymentFailure?.error || 'failed'}`);
-        }
-      } else if (refundAll) {
-        const paid = Number(b.dataset.paid) || 0;
-        const refund = paid > 0 ? { kind: 'full', amount: paid, method: 'bank_transfer' } : undefined;
-        const res = await fetch('/api/admin/update-registration', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, status: 'cancelled', requestId: crypto.randomUUID(), refund }),
-        });
-        const data = await res.json().catch(() => null);
-        if (!res.ok || !data?.success) failures.push(`#${id}: ${data?.error || 'failed'}`);
-      } else {
-        const r = await requestStatusUpdate(id, status);
-        if (!r.ok) failures.push(`#${id}: ${r.error}`);
-      }
+      const cur = b.dataset.status || '';
+      const curPay = b.dataset.paymentStatus || '';
+      const paid = Number(b.dataset.paid) || 0;
+      const target = status || cur;
+      // Nothing asked of this row, or it is already there.
+      if (target === cur && (!payment || payment === curPay)) continue;
+      if (isRefund && paid <= 0) continue;
+      const plan = planUpdate({
+        id, cur, curPay, paid,
+        status: target,
+        payment,
+        // Bulk refunds the whole paid amount; every other action takes the
+        // trip's own figures.
+        amount: isRefund ? paid : null,
+        rid: crypto.randomUUID(),
+      });
+      if (plan.error) { failures.push(`#${id}: ${plan.error}`); continue; }
+      const res = await fetch(plan.url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(plan.body),
+      });
+      const data = await res.json().catch(() => null);
+      const rowFailure = data?.results?.find((r) => !r.success);
+      if (!res.ok || !data?.success || rowFailure) failures.push(`#${id}: ${data?.error || rowFailure?.error || 'failed'}`);
+      else changed++;
     }
-    if (failures.length) alert(failures.join('\n')); else reloadWithFilters();
-  });
-
-  // Payment-only bulk action: records/reverses money on the selected rows without
-  // touching `status`. The status flow only sets payment on a → confirmed
-  // transition, so an already-confirmed row needs this to move unpaid →
-  // advance → fully paid (or back).
-  document.getElementById('apply-bulk-payment')?.addEventListener('click', async () => {
-    const selected = visibleBoxes().filter((b) => b.checked);
-    const action = document.getElementById('bulk-payment')?.value;
-    if (!selected.length || !action) return;
-    const label = { advance: 'Advance paid', full: 'Fully paid', unpaid: 'Unpaid' }[action] || action;
-    const ask = action === 'unpaid'
-      ? `Reverse all recorded payments on ${selected.length} registration(s) and mark them Unpaid?`
-      : `Mark ${selected.length} registration(s) as "${label}"? The outstanding amount is recorded as received and the traveller is emailed a confirmation.`;
-    if (!confirm(ask)) return;
-    const res = await fetch('/api/admin/registrations/payment', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ids: selected.map((b) => Number(b.dataset.registrationId)),
-        action,
-        method: 'bank_transfer',
-        requestId: crypto.randomUUID(),
-      }),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.success) { alert(data?.error || 'Payment update failed.'); return; }
-    if (data.failed) {
-      alert(data.results.filter((r) => !r.success).map((r) => `#${r.id}: ${r.error}`).join('\n'));
-      // Partial success still changed rows — reload so the page isn't stale.
-      if (!data.succeeded) return;
-    }
-    reloadWithFilters();
+    if (failures.length) alert(failures.join('\n'));
+    if (changed || !failures.length) reloadWithFilters();
   });
 
   document.getElementById('search-input')?.addEventListener('input', applyFilters);

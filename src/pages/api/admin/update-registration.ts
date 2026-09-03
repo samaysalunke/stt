@@ -232,10 +232,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         refundResult = { amountRefunded: r.amountRefunded, paymentStatus: r.paymentStatus };
         effectivePaymentStatus = r.paymentStatus;
+      } else if (currentPaid > 0) {
+        // Cancelled while keeping the money. "No refund" used to reach only the
+        // traveller's email, leaving the row reading `advance_paid` as though a
+        // balance were still owed.
+        getDb().prepare('UPDATE registrations SET payment_status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+          .run('no_refund', id);
+        effectivePaymentStatus = 'no_refund';
       }
     } else {
-      // lead ↔ pending, rejected → lead/pending, lead/pending → rejected,
-      // cancelled → lead/pending/rejected.
+      // lead ↔ pending, cancelled → lead/pending, and the legacy rejected → *.
       // assertTransition guaranteed amount_paid === 0 here.
       getDb().prepare('UPDATE registrations SET payment_status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run('unpaid', id);
       effectivePaymentStatus = 'unpaid';
@@ -257,21 +263,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
           balanceDue: Math.max(0, total - freshPaid),
         }).catch((err) => console.error('[Email confirmed]', err));
       }
-    } else if (newStatus === 'rejected') {
-      sendRegistrationStatusRejected({
-        full_name: reg.full_name,
-        email: reg.email,
-        trip_name: tripName,
-      }).catch((err) => console.error('[Email rejected]', err));
     } else if (newStatus === 'cancelled') {
-      sendRegistrationCancelled({
-        full_name: reg.full_name,
-        email: reg.email,
-        trip_name: tripName,
-        trip_date: reg.trip_date ?? '',
-        refundKind: refundBody?.kind ?? 'none',
-        refundAmount: Number(refundBody?.amount) || 0,
-      }).catch((err) => console.error('[Email cancelled]', err));
+      // `rejected` is retired as a *status*, but the two situations still read
+      // very differently to the traveller. Declining someone who never had a
+      // confirmed booking and paid nothing is not a cancellation: telling them
+      // "this confirms your booking has been cancelled — no refund is due per
+      // the cancellation policy" blames them for our decision and cites a policy
+      // that does not apply. The old rejection guard was `amountPaid === 0`, so
+      // this reproduces exactly who used to receive which mail.
+      const wasRealBooking = currentPaid > 0 || prevStatus === 'confirmed';
+      if (wasRealBooking) {
+        sendRegistrationCancelled({
+          full_name: reg.full_name,
+          email: reg.email,
+          trip_name: tripName,
+          trip_date: reg.trip_date ?? '',
+          refundKind: refundBody?.kind ?? 'none',
+          refundAmount: Number(refundBody?.amount) || 0,
+        }).catch((err) => console.error('[Email cancelled]', err));
+      } else {
+        sendRegistrationStatusRejected({
+          full_name: reg.full_name,
+          email: reg.email,
+          trip_name: tripName,
+        }).catch((err) => console.error('[Email declined]', err));
+      }
     }
 
     // Leaderboard recalc when a booking is confirmed or un-confirmed (non-blocking)

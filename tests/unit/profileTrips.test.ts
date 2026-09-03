@@ -42,6 +42,17 @@ describe('profile trip view model', () => {
     expect(grouped.history.map((r) => r.id)).toContain(2);
   });
 
+  // A hardcoded copy of the payment-status list dropped `no_refund` through to
+  // derivePaymentStatus, which showed a cancelled booking whose money we kept as
+  // "Advance paid" on the traveller's own profile.
+  it('shows a cancelled booking that kept the money as No refund, not Advance paid', () => {
+    const [record] = canonicalizeProfileTrips([
+      row({ status: 'cancelled', payment_status: 'no_refund', amount_paid: 1000, total_amount: 5000 }),
+    ], '2026-01-01');
+    expect(record.paymentStatus).toBe('no_refund');
+    expect(record.paymentLabel).toBe('No refund');
+  });
+
   it('uses stored payment status and public shaping excludes private details', () => {
     const [record] = canonicalizeProfileTrips([row({ status:'confirmed', payment_status:'partial_refund', full_name:'Private Name', phone:'999', emergency_name:'Secret' })], '2026-01-01');
     expect(record.paymentStatus).toBe('partial_refund');

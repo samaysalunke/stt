@@ -139,15 +139,17 @@ test('admin transitions queue each lifecycle event once across status re-entry',
   assert.deepEqual(eventRows(email).map((row) => row.event_type), ['pending', 'lead']);
 });
 
-test('pending, rejected, and cancelled bookings queue confirmation on first entry', async () => {
-  for (const origin of ['pending', 'rejected', 'cancelled']) {
+// `rejected` dropped from the origins here: it was merged into `cancelled` and
+// the API no longer accepts it as a target.
+test('pending and cancelled bookings queue confirmation on first entry', async () => {
+  for (const origin of ['pending', 'cancelled']) {
     const email = `qa-telegram-confirm-${origin}-${Date.now()}@example.invalid`;
     const made = await adminPost('/api/admin/registrations/create', {
       ...LIVE, status: 'pending', full_name: `Confirm ${origin}`, email, phone: '9876543210', sendEmail: false,
     });
     assert.equal(made.status, 200, JSON.stringify(made.data));
     const id = made.data.id;
-    if (origin === 'rejected' || origin === 'cancelled') {
+    if (origin === 'cancelled') {
       const moved = await adminPost('/api/admin/update-registration', { id, status: origin });
       assert.equal(moved.status, 200, JSON.stringify(moved.data));
     }

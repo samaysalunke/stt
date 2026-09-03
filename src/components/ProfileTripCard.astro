@@ -34,7 +34,12 @@ const travellerFields = [
       <div><span>Amount paid</span><strong>{money(record.details.amountPaid)}</strong></div>
       <div><span>Remaining balance</span><strong>{money(record.details.balance)}</strong></div>
       <div><span>Payment status</span><strong>{record.paymentLabel}</strong></div>
-      {(record.details.amountRefunded > 0 || record.paymentStatus.includes('refund')) &&
+      {/* Substring-matching "refund" also caught `no_refund`, showing a
+          traveller a "Refund ₹0 · No refund" row for money we kept. Match the
+          states that mean a refund actually happened. */}
+      {(record.details.amountRefunded > 0
+        || record.paymentStatus === 'partial_refund'
+        || record.paymentStatus === 'full_refund') &&
         <div><span>Refund</span><strong>{money(record.details.amountRefunded)} · {record.paymentLabel}</strong></div>}
     </div>
     {travellerFields.length > 0 && <>

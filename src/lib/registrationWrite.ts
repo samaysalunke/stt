@@ -7,7 +7,9 @@ import { processZohoDocument } from './zohoBooks';
 import { derivePaymentStatus } from './registrationStatus';
 import { enqueueTelegramEvent } from './telegram';
 
-export type RegStatus = 'wishlist' | 'lead' | 'pending' | 'confirmed' | 'rejected';
+// `rejected` retired 2026-09-03 (merged into `cancelled`); create and import
+// only ever accepted lead/pending/confirmed, so nothing here loses a path.
+export type RegStatus = 'wishlist' | 'lead' | 'pending' | 'confirmed';
 
 /** The advance (paymentAmount) configured on the trip — the amount collected on confirm. */
 export function tripAdvanceAmountBySlug(tripSlug: string): number {
