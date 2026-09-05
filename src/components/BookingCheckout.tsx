@@ -1194,11 +1194,6 @@ export default function BookingCheckout({
           onChange={(e) => { if (e.target.files?.[0]) { setUploadError(''); handleUpload(e.target.files[0]); } }} />
       </div>
 
-      {/* Trust line */}
-      <p className="text-xs leading-relaxed rounded-lg px-4 py-3 mb-5" style={{ background: 'rgba(27,43,58,0.03)', border: `1px solid ${C.peach}`, color: 'rgba(27,43,58,0.6)' }}>
-        Run by Zahra and a small team who've actually done these routes. Real humans, one WhatsApp away.
-      </p>
-
       {/* Legal */}
       <div className="space-y-3 mb-5">
         <label className="flex items-start gap-3 cursor-pointer">
