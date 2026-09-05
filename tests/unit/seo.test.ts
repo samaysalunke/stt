@@ -81,11 +81,11 @@ describe('SEO publication controls', () => {
 
   it('gives past trips an internal link path and a low-priority sitemap entry', () => {
     const sitemap = fs.readFileSync('src/pages/sitemap.xml.ts', 'utf8');
-    const tripsIndex = fs.readFileSync('src/pages/trips/index.astro', 'utf8');
     const footer = fs.readFileSync('src/components/Footer.astro', 'utf8');
     expect(sitemap).toContain('isTripArchived');
     expect(sitemap).toContain("url('/trips/past/'");
-    expect(tripsIndex).toContain('href="/trips/past/"');
+    // The footer (present on every page) is the internal link path — the
+    // trips index page no longer carries its own "browse past trips" link.
     expect(footer).toContain('href="/trips/past/"');
   });
 
