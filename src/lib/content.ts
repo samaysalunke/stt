@@ -5,4 +5,5 @@ export * from './albums';
 export * from './settings';
 export * from './testimonials';
 export * from './faqs';
+export * from './hosts';
 export { saveImageFile, saveImageFileWithMeta, deleteImageByUrl, collectImageUrls } from './_contentBase';

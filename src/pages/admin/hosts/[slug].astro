@@ -1,0 +1,40 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { readHost } from '../../../lib/content';
+import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
+export const prerender = false;
+
+const { slug } = Astro.params;
+const h = slug ? readHost(slug) : null;
+if (!h) return Astro.redirect('/admin/hosts');
+---
+
+<AdminLayout title={`Edit: ${h.name ?? slug}`} page="hosts">
+  <form method="POST" action="/api/admin/hosts/update" enctype="multipart/form-data" class="bg-white rounded-[2rem] p-6 max-w-2xl border border-peach/60">
+    <input type="hidden" name="slug" value={slug} />
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class={labelCls}>Name</label>
+        <input type="text" name="name" required value={h.name ?? ''} class={inputCls} />
+      </div>
+      <div>
+        <label class={labelCls}>Subtitle</label>
+        <input type="text" name="subtitle" value={h.subtitle ?? ''} placeholder="e.g. Founder, Seek the Thrill" class={inputCls} />
+      </div>
+      <div class="sm:col-span-2">
+        <label class={labelCls}>Photo</label>
+        {h.photo && <img src={h.photo} alt="" width="44" height="44" class="rounded-full object-cover mb-2" style="width:44px;height:44px;" />}
+        <input type="file" name="photo" accept="image/*" class={inputCls} />
+        <p class="mt-1.5 text-xs text-gray-text">Leave blank to keep the current photo.</p>
+      </div>
+      <div class="sm:col-span-2">
+        <label class={labelCls}>Bio</label>
+        <textarea name="bio" rows="4" class={inputCls}>{h.bio ?? ''}</textarea>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 mt-6">
+      <button type="submit" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta">Save changes</button>
+      <a href="/admin/hosts/" class="text-sm font-medium text-gray-text">Cancel</a>
+    </div>
+  </form>
+</AdminLayout>

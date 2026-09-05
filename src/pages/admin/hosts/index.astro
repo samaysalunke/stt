@@ -1,0 +1,68 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { listHosts, tripsUsingHost } from '../../../lib/content';
+export const prerender = false;
+
+const hosts = listHosts();
+const blockedSlug = Astro.url.searchParams.get('blocked');
+const blockedTrips = blockedSlug ? tripsUsingHost(blockedSlug) : [];
+const blockedHost = blockedSlug ? hosts.find(h => h.slug === blockedSlug) : null;
+---
+
+<AdminLayout title="Hosts" page="hosts">
+  {blockedSlug && (
+    <div class="mb-6 rounded-2xl p-4 border border-danger/50 bg-danger/5 text-sm text-navy">
+      <p class="font-semibold mb-1">Can't delete {blockedHost?.name ?? blockedSlug}</p>
+      <p class="text-gray-text">Still assigned to: {blockedTrips.map((slug, i) => (
+        <>
+          {i > 0 && ', '}
+          <a href={`/admin/trips/${slug}/`} class="text-coral-ink font-medium">{slug}</a>
+        </>
+      ))}</p>
+    </div>
+  )}
+
+  <div class="flex items-center justify-between mb-6">
+    <p class="text-sm text-gray-text">
+      {hosts.length} host{hosts.length === 1 ? '' : 's'} · assigned to departures in the trip editor
+    </p>
+    <a href="/admin/hosts/new/"
+       class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy"
+      >+ New</a>
+  </div>
+
+  {hosts.length === 0 ? (
+    <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
+      <p class="text-sm text-gray-text">No hosts yet. Add the first one.</p>
+    </div>
+  ) : (
+    <div class="grid gap-4 sm:grid-cols-2">
+      {hosts.map(h => (
+        <div class="bg-white rounded-[2rem] p-5 flex flex-col border border-peach/60">
+          <div class="flex items-center gap-3 mb-3">
+            {h.photo ? (
+              <img src={h.photo} alt="" width="44" height="44" class="rounded-full object-cover flex-none" style="width:44px;height:44px;" />
+            ) : (
+              <div class="rounded-full bg-coral/12 text-coral-ink flex items-center justify-center text-sm font-semibold flex-none" style="width:44px;height:44px;">
+                {h.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <p class="text-sm font-semibold text-navy">{h.name}</p>
+              {h.subtitle && <p class="text-[11px] text-gray-text">{h.subtitle}</p>}
+            </div>
+          </div>
+          {h.bio && <p class="text-sm leading-relaxed mb-4 flex-1 text-navy">{h.bio}</p>}
+          <div class="flex items-center gap-2 mt-auto">
+            <a href={`/admin/hosts/${h.slug}/`} class="text-sm font-medium text-coral-ink">Edit</a>
+            <form method="POST" action="/api/admin/hosts/delete"
+                  onsubmit="return confirm('Delete this host?');">
+              <input type="hidden" name="slug" value={h.slug} />
+              <button type="submit" class="text-sm font-medium text-danger">Delete</button>
+            </form>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</AdminLayout>

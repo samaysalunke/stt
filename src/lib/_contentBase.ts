@@ -12,6 +12,7 @@ export const TRIPS_DIR = path.join(CONTENT_BASE, 'trips');
 export const ALBUMS_DIR = path.join(CONTENT_BASE, 'albums');
 export const TESTIMONIALS_DIR = path.join(CONTENT_BASE, 'testimonials');
 export const FAQS_DIR = path.join(CONTENT_BASE, 'faqs');
+export const HOSTS_DIR = path.join(CONTENT_BASE, 'hosts');
 export const SITE_SETTINGS_FILE = path.join(CONTENT_BASE, 'site-settings.yaml');
 export const IMAGES_BASE = path.join(CONTENT_BASE, 'images');
 

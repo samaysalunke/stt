@@ -4,7 +4,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import TripFaqEditor from '../../../components/admin/TripFaqEditor.astro';
 import RichTextEditor from '../../../components/admin/RichTextEditor.astro';
 import TripGalleryEditor from '../../../components/admin/TripGalleryEditor.astro';
-import { DEPARTURE_STATUSES, listAlbums, listFaqs } from '../../../lib/content';
+import { DEPARTURE_STATUSES, listAlbums, listFaqs, listHosts } from '../../../lib/content';
 import '../../../styles/admin-trip-form.css';
 
 const publishedAlbums = listAlbums().filter(a => a.published);
@@ -21,6 +21,7 @@ const tripSlug = '';
 const itinerary: any[] = [];
 const editorCatalog: any[] = [];
 const editorDepartures: any[] = [];
+const hosts = listHosts();
 const departureStatusOptions = DEPARTURE_STATUSES.map((value) => ({
   value,
   label: value.replace(/[-_]/g, ' ').replace(/^./, (letter) => letter.toUpperCase()),
@@ -559,7 +560,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
 </script>
 
 <!-- ── Occupancy catalog + per-departure offers editor ────────────────────── -->
-<script define:vars={{ editorCatalog, editorDepartures, departureStatusOptions }}>
+<script define:vars={{ editorCatalog, editorDepartures, departureStatusOptions, hosts }}>
 (function () {
   const STATUSES = departureStatusOptions;
   let catalog = JSON.parse(JSON.stringify(editorCatalog || []));
@@ -693,6 +694,32 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       discount.querySelector('.dep-discount-end').addEventListener('input', (e) => { dep.discountEndsAt = e.target.value ? new Date(e.target.value).toISOString() : ''; });
       card.appendChild(discount);
 
+      if (!Array.isArray(dep.hostIds)) dep.hostIds = [];
+      const hostsBox = document.createElement('div');
+      hostsBox.style.cssText = 'margin-top:0.6rem;';
+      if (hosts.length === 0) {
+        hostsBox.innerHTML = '<span class="fhint">No hosts yet — add them under Hosts.</span>';
+      } else {
+        hostsBox.innerHTML = '<span class="fhint">Hosted by</span>' +
+          '<div class="flex flex-wrap gap-x-4 gap-y-1 mt-1" data-host-row></div>';
+        const row = hostsBox.querySelector('[data-host-row]');
+        hosts.forEach((h) => {
+          const label = document.createElement('label');
+          label.className = 'flex items-center gap-[0.4rem] cursor-pointer';
+          label.innerHTML = '<input type="checkbox" class="dep-host"' +
+            (dep.hostIds.includes(h.slug) ? ' checked' : '') + ' /><span>' + esc(h.name) + '</span>';
+          label.querySelector('.dep-host').addEventListener('change', (e) => {
+            if (e.target.checked) {
+              if (!dep.hostIds.includes(h.slug)) dep.hostIds.push(h.slug);
+            } else {
+              dep.hostIds = dep.hostIds.filter((s) => s !== h.slug);
+            }
+          });
+          row.appendChild(label);
+        });
+      }
+      card.appendChild(hostsBox);
+
       const grid = document.createElement('div');
       grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
       if (catalog.length === 0) {
@@ -744,7 +771,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
   document.getElementById('add-departure-btn').addEventListener('click', () => {
-    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', offers: [] });
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', hostIds: [], offers: [] });
     renderDepartures();
   });
 

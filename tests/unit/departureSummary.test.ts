@@ -7,6 +7,7 @@ const departure = (id: string, startDate: string, soldOut = false, status = 'boo
   offers: [], totalCap: null, spotsLeft: null, soldOut,
   comingSoon: status === 'coming-soon',
   fillingFast: status === 'filling_fast' || status === 'filling-fast',
+  hostIds: [],
 });
 
 describe('formatDepartureRange', () => {

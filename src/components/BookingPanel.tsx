@@ -31,7 +31,11 @@ interface Departure {
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
+  hostIds?: string[];
 }
+
+interface PanelHost { name: string; subtitle: string; photo: string | null }
+
 interface Props {
   departures: Departure[];
   advanceAmount: number;
@@ -43,6 +47,7 @@ interface Props {
   slug: string;
   /** Present when a signed-in traveller is viewing — prefills the wishlist form. */
   wishlistUser?: { name: string; email: string; phone: string } | null;
+  hostsById?: Record<string, PanelHost>;
 }
 
 const C = {
@@ -68,6 +73,7 @@ export default function BookingPanel({
   whatsappLink,
   slug,
   wishlistUser = null,
+  hostsById = {},
 }: Props) {
   const bookable = departures.filter((d) => !d.comingSoon);
   const anyComingSoon = departures.some((d) => d.comingSoon);
@@ -87,6 +93,9 @@ export default function BookingPanel({
   const selectedComingSoon = !!selectedDeparture?.comingSoon;
   const selectedOffer = selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ?? null;
   const selectedDiscountActive = useDiscountActive(selectedDeparture?.discountEndsAt, !!selectedDeparture?.discountActive);
+  const selectedHosts = (selectedDeparture?.hostIds ?? [])
+    .map((id) => (hostsById[id] ? { slug: id, ...hostsById[id] } : null))
+    .filter((h): h is { slug: string } & PanelHost => h !== null);
 
   const perPerson = selectedOffer
     ? (selectedDiscountActive ? selectedOffer.price : (selectedOffer.originalPrice ?? selectedOffer.price))
@@ -251,6 +260,34 @@ export default function BookingPanel({
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {selectedHosts.length > 0 && (
+        <div className="mb-5" data-testid="hosted-by">
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: C.gray }}>
+            Hosted by
+          </p>
+          <div className="flex flex-col gap-3">
+            {selectedHosts.map((h) => (
+              <div key={h.slug} className="flex items-start gap-3" data-testid={`host-${h.slug}`}>
+                {h.photo ? (
+                  <img src={h.photo} alt="" width={44} height={44} loading="lazy"
+                       className="flex-none rounded-full object-cover"
+                       style={{ width: 44, height: 44 }} />
+                ) : (
+                  <div className="flex-none rounded-full flex items-center justify-center text-sm font-semibold"
+                       style={{ width: 44, height: 44, background: C.blush, color: C.coral }}>
+                    {h.name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold" style={{ color: C.navy }}>{h.name}</div>
+                  {h.subtitle && <div className="text-xs" style={{ color: C.gray }}>{h.subtitle}</div>}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

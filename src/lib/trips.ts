@@ -325,6 +325,7 @@ export interface ResolvedDeparture {
   comingSoon: boolean;
   /** Bookable departure carrying an admin-controlled urgency label. */
   fillingFast: boolean;
+  hostIds: string[];
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
@@ -502,6 +503,7 @@ function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
       soldOut,
       comingSoon,
       fillingFast,
+      hostIds: Array.isArray(b.hostIds) ? b.hostIds.map(String) : [],
       discountAmount,
       discountEndsAt: discountAmount > 0 && b.discountEndsAt ? String(b.discountEndsAt) : null,
       discountActive: discountAmount > 0,

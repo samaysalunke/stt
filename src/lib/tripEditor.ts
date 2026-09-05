@@ -16,6 +16,7 @@ export interface EditorDeparture {
   offers: EditorOffer[];
   discountAmount: number | null;
   discountEndsAt: string;
+  hostIds: string[];
 }
 
 export type EditorBookingErrorCode =
@@ -120,6 +121,7 @@ export function editableBooking(trip: Record<string, any>): {
       offers,
       discountAmount: numOrNull(b?.discountAmount),
       discountEndsAt: String(b?.discountEndsAt ?? ''),
+      hostIds: Array.isArray(b?.hostIds) ? b.hostIds.map(String) : [],
     };
   });
 
@@ -160,7 +162,7 @@ function numOrNull(v: unknown): number | null {
 // the create + update API routes so authoring and persistence stay in lockstep.
 export function parseEditorBooking(catalogJson: string, departuresJson: string): {
   occupancyCatalog: EditorTier[];
-  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; hostIds: string[]; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
   errors: EditorBookingError[];
 } {
   let cat: any[] = [];
@@ -231,6 +233,9 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
         discountEndsAt: Number(d?.discountAmount) > 0 && discountEndsAt && Number.isFinite(new Date(discountEndsAt).getTime())
           ? new Date(discountEndsAt).toISOString()
           : null,
+        hostIds: (Array.isArray(d?.hostIds) ? d.hostIds : [])
+          .map((h: any) => String(h ?? '').trim())
+          .filter((h: string) => /^[a-z0-9-]+$/.test(h)),
         offers,
       };
     })

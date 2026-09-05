@@ -5,7 +5,7 @@ import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
 import MarkdownContent from '../../components/MarkdownContent.astro';
-import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripViewable, isTripDeleted, isAlbumPublic, resolveTripSlugAlias } from '../../lib/content';
+import { readTrip, readSiteSettings, listAlbums, listTestimonials, resolveBooking, tripCardSummary, resolveTripFaqs, isTripViewable, isTripDeleted, isAlbumPublic, resolveTripSlugAlias, listHosts } from '../../lib/content';
 import { buildBreadcrumb } from '../../lib/breadcrumbs';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { FALLBACK_HERO } from '../../lib/images';
@@ -134,6 +134,7 @@ const departuresForPanel = departures.map((d) =>
     ? {
         id: d.id, startDate: d.startDate, endDate: d.endDate, status: d.status,
         comingSoon: true, fillingFast: false, priceConcealed: true,
+        hostIds: d.hostIds,
         offers: [], totalCap: null, spotsLeft: null, soldOut: false,
       }
     : d,
@@ -141,6 +142,13 @@ const departuresForPanel = departures.map((d) =>
 const wishlistUser = Astro.locals.user
   ? { name: Astro.locals.user.displayName ?? '', email: Astro.locals.user.email, phone: Astro.locals.user.phone ?? '' }
   : null;
+
+// Only hosts referenced by this trip's departures cross to the island.
+const hostsById = Object.fromEntries(
+  listHosts()
+    .filter((h) => departures.some((d) => d.hostIds.includes(h.slug)))
+    .map((h) => [h.slug, { name: h.name, subtitle: h.subtitle, photo: h.photo }]),
+);
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({
@@ -640,6 +648,7 @@ const tripSchema: Record<string, any> = {
                 whatsappLink={whatsappLink}
                 slug={slug!}
                 wishlistUser={wishlistUser}
+                hostsById={hostsById}
                 client:load
               />
             ) : (
