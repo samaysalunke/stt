@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { readHost } from '../../lib/content';
+import { buildBreadcrumb } from '../../lib/breadcrumbs';
+import { siteUrl } from '../../lib/siteUrl';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const host = slug ? readHost(slug) : null;
+
+if (!host || !host.name) return new Response('Not Found', { status: 404 });
+
+const canonicalUrl = siteUrl(`/hosts/${slug}/`);
+const description = host.bio || `${host.name}, ${host.subtitle || 'trip host'} at Seek the Thrill.`;
+
+const hostSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    buildBreadcrumb([{ name: host.name, path: `/hosts/${slug}/` }]),
+    {
+      '@type': 'Person',
+      name: host.name,
+      description,
+      ...(host.photo ? { image: siteUrl(host.photo) } : {}),
+      url: canonicalUrl,
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title={`${host.name} | Seek the Thrill`}
+  description={description}
+  image={host.photo || undefined}
+  imageAlt={host.name}
+  type="article"
+  nav="back"
+  backFallback="/"
+>
+  <Fragment slot="head"><script type="application/ld+json" is:inline set:html={JSON.stringify(hostSchema)} /></Fragment>
+  <div class="mx-auto max-w-xl px-5 py-16 text-center">
+    {host.photo ? (
+      <img src={host.photo} alt="" width="112" height="112" class="mx-auto rounded-full object-cover" style="width:112px;height:112px;" />
+    ) : (
+      <div class="mx-auto rounded-full flex items-center justify-center text-3xl font-semibold bg-blush text-coral-ink" style="width:112px;height:112px;">
+        {host.name.slice(0, 1).toUpperCase()}
+      </div>
+    )}
+    <h1 class="font-display text-display-lg text-navy mt-5">{host.name}</h1>
+    {host.subtitle && <p class="mt-1 text-coral-ink font-display italic">{host.subtitle}</p>}
+    {host.bio && <p class="mt-6 text-navy leading-relaxed text-left sm:text-center whitespace-pre-line">{host.bio}</p>}
+  </div>
+</BaseLayout>

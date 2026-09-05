@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactElement } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 
@@ -61,6 +61,16 @@ const C = {
 
 function dateRange(d: Departure) {
   return `${formatDateIN(d.startDate)} – ${formatDateIN(d.endDate)}`;
+}
+
+/** "Ankit" / "Zahra and Ankit" / "Zahra, Ankit and Priya" */
+function joinHostNames<T extends { slug: string }>(hosts: T[], render: (h: T, i: number) => ReactElement) {
+  return hosts.map((h, i) => (
+    <span key={h.slug}>
+      {i > 0 && (i === hosts.length - 1 ? ' and ' : ', ')}
+      {render(h, i)}
+    </span>
+  ));
 }
 
 export default function BookingPanel({
@@ -264,34 +274,6 @@ export default function BookingPanel({
         </div>
       )}
 
-      {selectedHosts.length > 0 && (
-        <div className="mb-5" data-testid="hosted-by">
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: C.gray }}>
-            Hosted by
-          </p>
-          <div className="flex flex-col gap-3">
-            {selectedHosts.map((h) => (
-              <div key={h.slug} className="flex items-start gap-3" data-testid={`host-${h.slug}`}>
-                {h.photo ? (
-                  <img src={h.photo} alt="" width={44} height={44} loading="lazy"
-                       className="flex-none rounded-full object-cover"
-                       style={{ width: 44, height: 44 }} />
-                ) : (
-                  <div className="flex-none rounded-full flex items-center justify-center text-sm font-semibold"
-                       style={{ width: 44, height: 44, background: C.blush, color: C.coral }}>
-                    {h.name.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold" style={{ color: C.navy }}>{h.name}</div>
-                  {h.subtitle && <div className="text-xs" style={{ color: C.gray }}>{h.subtitle}</div>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ── Occupancy (reactive to the selected date; hidden for coming-soon) ─ */}
       {selectedDeparture && !selectedComingSoon && (
         <div className="mb-5">
@@ -442,6 +424,19 @@ export default function BookingPanel({
           Save my spot →
         </a>
       )}
+
+      <div className="mt-5 pt-4 text-sm" style={{ borderTop: `1px solid ${C.peach}` }}>
+        {selectedHosts.length > 0 && (
+          <div data-testid="hosted-by">
+            <span style={{ color: C.gray }}>Hosted by </span>
+            {joinHostNames(selectedHosts, (h) => (
+              <a href={`/hosts/${h.slug}/`} className="underline font-medium" style={{ color: C.navy }} data-testid={`host-${h.slug}`}>
+                {h.name}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

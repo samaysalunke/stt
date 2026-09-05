@@ -668,8 +668,10 @@ const tripSchema: Record<string, any> = {
               </>
             )}
 
-            <!-- Duration + group size -->
-            <div class="mt-5 pt-4 border-t grid grid-cols-2 gap-3 text-sm border-peach">
+            <!-- Duration + group size. BookingPanel supplies its own divider (with
+                 Hosted-by) above this when it renders; the static closed/sold-out
+                 branch above has no divider of its own, so this one covers it. -->
+            <div class:list={['mt-5 grid grid-cols-2 gap-3 text-sm', !showBookingPanel && 'pt-4 border-t border-peach']}>
               {trip.duration && (
                 <div>
                   <div class="text-xs text-gray-text">Duration</div>
