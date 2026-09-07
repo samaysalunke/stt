@@ -15,6 +15,7 @@ type RegistrationSnapshot = {
   gender: string | null;
   trip_name: string;
   trip_date: string | null;
+  sharing_option: string | null;
   payment_screenshot_url: string | null;
   amount_paid: number | null;
 };
@@ -70,6 +71,7 @@ export function formatTelegramMessage(
     `Gender: ${field(registration.gender, 40) || 'Not specified'}`,
     `Trip: ${field(registration.trip_name, 180)}`,
     `Trip date: ${field(registration.trip_date, 120) || 'Not specified'}`,
+    `Occupancy: ${field(registration.sharing_option, 120) || 'Not specified'}`,
   ];
   const paid = Number(registration.amount_paid) || 0;
   if (eventType === 'confirmed' && paid > 0) lines.push(`Amount paid: ₹${paid.toLocaleString('en-IN')}`);
@@ -203,7 +205,7 @@ export function claimTelegramEvents(db: Database.Database, limit = 10): ClaimedT
 
 export async function deliverClaimedTelegramEvent(db: Database.Database, event: ClaimedTelegramEvent): Promise<TelegramDeliveryState> {
   const registration = db.prepare(`
-    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, payment_screenshot_url, amount_paid
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url, amount_paid
     FROM registrations WHERE id=?
   `).get(event.registration_id) as RegistrationSnapshot | undefined;
   if (!registration) {
