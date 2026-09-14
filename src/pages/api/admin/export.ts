@@ -4,7 +4,31 @@ import { likeTerm } from '../../../lib/utils';
 import {
   buildCustomerQuery, CUSTOMER_ORDER_BY, CUSTOMER_TYPES, EXPORT_COLUMNS,
 } from '../../../lib/customersView';
+import { UNATTRIBUTED } from '../../../lib/registrationsView';
 import type { AdminUser } from '../../../lib/admin-session';
+
+/**
+ * Attribution reaches the CSV as raw first_touch_json / latest_touch_json,
+ * which is unusable in a spreadsheet. Add flat first-touch columns alongside
+ * it. Every row gets every key, including rows with no attribution: toCSV()
+ * derives its header row from the first row's keys, so a row-dependent shape
+ * would silently drop columns from the whole download.
+ */
+const ATTRIBUTION_COLUMNS = {
+  utm_source: 'utmSource', utm_medium: 'utmMedium', utm_campaign: 'utmCampaign',
+  utm_term: 'utmTerm', utm_content: 'utmContent',
+  landing_page: 'landingPage', referrer: 'referrer',
+} as const;
+
+function flattenAttribution(row: Record<string, any>): Record<string, any> {
+  let touch: Record<string, any> | null = null;
+  try {
+    touch = typeof row.first_touch_json === 'string' ? JSON.parse(row.first_touch_json) : null;
+  } catch { /* malformed stored touch — export the row with blank columns */ }
+  const flat: Record<string, any> = {};
+  for (const [column, key] of Object.entries(ATTRIBUTION_COLUMNS)) flat[column] = touch?.[key] ?? '';
+  return { ...row, ...flat };
+}
 
 function toCSV(rows: Record<string, any>[]): string {
   if (rows.length === 0) return '';
@@ -69,8 +93,30 @@ export const GET: APIRoute = async ({ url, locals }) => {
       params.push(term, term, term);
     }
 
+    // Attribution filters, mirroring the source/campaign selects on the trip
+    // page so an export taken with a filter active matches what was on screen.
+    // Both normalise to lowercase because that is how the row data attributes
+    // the selects are built from are normalised (see regSource/regCampaign).
+    const source = (url.searchParams.get('source') ?? '').trim().toLowerCase().slice(0, 200);
+    const campaign = (url.searchParams.get('campaign') ?? '').trim().toLowerCase().slice(0, 200);
+    if (source === UNATTRIBUTED) {
+      where.push("COALESCE(source, '') = ''");
+    } else if (source) {
+      where.push('lower(source) = ?');
+      params.push(source);
+    }
+    // Campaign has no column of its own — it is read out of the stored first
+    // touch. json_extract returns NULL for a NULL/!JSON column, so the
+    // unattributed branch catches legacy and imported rows too.
+    if (campaign === UNATTRIBUTED) {
+      where.push("COALESCE(lower(json_extract(first_touch_json, '$.utmCampaign')), '') = ''");
+    } else if (campaign) {
+      where.push("lower(json_extract(first_touch_json, '$.utmCampaign')) = ?");
+      params.push(campaign);
+    }
+
     const sql = `SELECT * FROM registrations ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id DESC`;
-    rows = getDb().prepare(sql).all(...params) as Record<string, any>[];
+    rows = (getDb().prepare(sql).all(...params) as Record<string, any>[]).map(flattenAttribution);
     filename = tripName
       ? `registrations-${tripName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${date}.csv`
       : `registrations-${date}.csv`;

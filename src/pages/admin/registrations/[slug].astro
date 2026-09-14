@@ -1,7 +1,17 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import RegistrationCard from '../../../components/admin/RegistrationCard.astro';
-import { buildRegistrationsView, regStats, type RegTrip, type RegDeparture } from '../../../lib/registrationsView';
+import {
+  buildRegistrationsView,
+  regStats,
+  regSource,
+  regCampaign,
+  distinctValues,
+  UNATTRIBUTED,
+  NON_REVENUE_STATUSES,
+  type RegTrip,
+  type RegDeparture,
+} from '../../../lib/registrationsView';
 import { buildDepartureOccupancy } from '../../../lib/occupancyMatrix';
 import { formatINR } from '../../../lib/utils';
 import {
@@ -59,6 +69,16 @@ const depStatsMap = Object.fromEntries(
     return [dep.id || '__none__', { count: dep.regs.length, wishlist: ds.wishlist, lead: ds.lead, pending: ds.pending, confirmed: ds.confirmed, rejected: ds.rejected, cancelled: ds.cancelled, revenue: rev }];
   })
 );
+// Attribution filter options — only the values this trip actually has, so the
+// dropdowns never offer a campaign that matches nothing here.
+const allTripRegs = trip.departures.flatMap((d) => d.regs);
+const sourceOptions = distinctValues(allTripRegs, regSource);
+const campaignOptions = distinctValues(allTripRegs, regCampaign);
+// Rows predating attribution (and CSV imports) carry none. Offer an explicit
+// bucket so they stay reachable instead of vanishing behind every filter.
+const hasUnsourced = allTripRegs.some((r) => !regSource(r));
+const hasUncampaigned = allTripRegs.some((r) => !regCampaign(r));
+
 const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, pending: s.pending, confirmed: s.confirmed, rejected: s.rejected, cancelled: s.cancelled, revenue: tripRevenue };
 ---
 <AdminLayout title={trip.name} page="registrations">
@@ -120,6 +140,20 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <option value="confirmed">Confirmed</option>
         <option value="cancelled">Cancelled</option>
       </select>
+      {(sourceOptions.length > 1 || (sourceOptions.length === 1 && hasUnsourced)) && (
+        <select id="filter-source">
+          <option value="">All sources</option>
+          {sourceOptions.map((v) => <option value={v}>{v}</option>)}
+          {hasUnsourced && <option value={UNATTRIBUTED}>(not attributed)</option>}
+        </select>
+      )}
+      {(campaignOptions.length > 1 || (campaignOptions.length === 1 && hasUncampaigned)) && (
+        <select id="filter-campaign">
+          <option value="">All campaigns</option>
+          {campaignOptions.map((v) => <option value={v}>{v}</option>)}
+          {hasUncampaigned && <option value={UNATTRIBUTED}>(no campaign)</option>}
+        </select>
+      )}
       {historyCount > 0 && (
         <label class="history-toggle">
           <input id="show-history" type="checkbox" />
@@ -264,7 +298,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>
 
-<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS }}>
+<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS, NON_REVENUE_STATUSES, UNATTRIBUTED }}>
   // Reload after a bulk action while preserving the active filters in the URL,
   // so search/status/departure/history selections survive the round-trip.
   function reloadWithFilters() {
@@ -272,9 +306,13 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const q = document.getElementById('search-input')?.value;
     const sf = document.getElementById('filter-status')?.value;
     const dep = document.getElementById('departure-select')?.value;
+    const srcf = document.getElementById('filter-source')?.value;
+    const campf = document.getElementById('filter-campaign')?.value;
     if (q) p.set('q', q);
     if (sf) p.set('status', sf);
     if (dep) p.set('dep', dep);
+    if (srcf) p.set('source', srcf);
+    if (campf) p.set('campaign', campf);
     if (document.getElementById('show-history')?.checked) p.set('hist', '1');
     location.href = location.pathname + (p.size ? '?' + p : '');
   }
@@ -697,10 +735,37 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     updateStats(statsForId);
   }
 
+  // An attribute filter is either "any value" (''), a specific value, or the
+  // UNATTRIBUTED bucket meaning the row carries no value at all.
+  function matchAttr(value, filter) {
+    if (!filter) return true;
+    return filter === UNATTRIBUTED ? !value : value === filter;
+  }
+
+  const TALLY_STATUSES = ['wishlist', 'lead', 'pending', 'confirmed', 'rejected', 'cancelled'];
+
+  /**
+   * Stats over whichever rows a filter left visible, in the shape updateStats()
+   * consumes. Mirrors tallyRegs() in registrationsView.ts — the revenue rule
+   * comes from the same NON_REVENUE_STATUSES constant so the two cannot drift.
+   */
+  function tallyVisible(rows) {
+    const t = { count: rows.length, wishlist: 0, lead: 0, pending: 0, confirmed: 0, rejected: 0, cancelled: 0, revenue: 0 };
+    rows.forEach((row) => {
+      const st = row.dataset.status || '';
+      if (TALLY_STATUSES.includes(st)) t[st]++;
+      if (!NON_REVENUE_STATUSES.includes(st)) t.revenue += Number(row.dataset.paid) || 0;
+    });
+    return t;
+  }
+
   function applyRowFilters() {
     const q = (document.getElementById('search-input')?.value ?? '').toLowerCase().trim();
     const sf = document.getElementById('filter-status')?.value ?? '';
+    const srcf = document.getElementById('filter-source')?.value ?? '';
+    const campf = document.getElementById('filter-campaign')?.value ?? '';
     let totalVisible = 0;
+    const visibleRows = [];
 
     document.querySelectorAll('.departure').forEach((dep) => {
       if (dep.style.display === 'none') {
@@ -713,13 +778,22 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       rows.forEach((row) => {
         const matchText = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
         const matchStatus = !sf || row.dataset.status === sf;
-        const show = matchText && matchStatus;
+        const show = matchText && matchStatus
+          && matchAttr(row.dataset.source, srcf)
+          && matchAttr(row.dataset.campaign, campf);
         row.style.display = show ? '' : 'none';
         if (!show) { const cb = row.querySelector('.registration-checkbox'); if (cb) cb.checked = false; }
-        if (show) rowsVisible++;
+        if (show) { rowsVisible++; visibleRows.push(row); }
       });
       if (rowsVisible === 0) { dep.style.display = 'none'; } else { totalVisible++; }
     });
+
+    // With a row filter active the departure-scoped stat cards would answer a
+    // question nobody asked — "how many bookings does this departure have"
+    // while the screen shows one campaign's. Recompute from the visible rows so
+    // the cards report the filtered set. Untouched when no row filter is on, so
+    // the departure/history behaviour is unchanged.
+    if (q || sf || srcf || campf) updateStats(tallyVisible(visibleRows));
 
     const nr = document.getElementById('noResults');
     if (nr) nr.style.display = totalVisible > 0 ? 'none' : 'block';
@@ -739,10 +813,16 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const exportUrl = new URL(base, location.origin);
     const q = document.getElementById('search-input')?.value?.trim() ?? '';
     const status = document.getElementById('filter-status')?.value ?? '';
+    const source = document.getElementById('filter-source')?.value ?? '';
+    const campaign = document.getElementById('filter-campaign')?.value ?? '';
     const selectedId = depSelect?.value ?? '';
     const showHistory = !!histCheckbox?.checked;
     if (q) exportUrl.searchParams.set('q', q); else exportUrl.searchParams.delete('q');
     if (status) exportUrl.searchParams.set('status', status); else exportUrl.searchParams.delete('status');
+    // Without these the download would quietly contain a different set of rows
+    // than the screen is showing.
+    if (source) exportUrl.searchParams.set('source', source); else exportUrl.searchParams.delete('source');
+    if (campaign) exportUrl.searchParams.set('campaign', campaign); else exportUrl.searchParams.delete('campaign');
     exportUrl.searchParams.delete('batch_id');
     exportUrl.searchParams.delete('batch_filter');
     if (selectedId || !showHistory) {
@@ -826,6 +906,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
 
   document.getElementById('search-input')?.addEventListener('input', applyFilters);
   document.getElementById('filter-status')?.addEventListener('change', applyFilters);
+  document.getElementById('filter-source')?.addEventListener('change', applyFilters);
+  document.getElementById('filter-campaign')?.addEventListener('change', applyFilters);
   depSelect?.addEventListener('change', applyFilters);
   histCheckbox?.addEventListener('change', applyFilters);
 
@@ -864,8 +946,12 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   const sp = new URLSearchParams(location.search);
   const searchEl = document.getElementById('search-input');
   const statusEl = document.getElementById('filter-status');
+  const sourceEl = document.getElementById('filter-source');
+  const campaignEl = document.getElementById('filter-campaign');
   if (searchEl && sp.get('q')) searchEl.value = sp.get('q');
   if (statusEl && sp.get('status')) statusEl.value = sp.get('status');
+  if (sourceEl && sp.get('source')) sourceEl.value = sp.get('source');
+  if (campaignEl && sp.get('campaign')) campaignEl.value = sp.get('campaign');
   if (depSelect && sp.get('dep')) depSelect.value = sp.get('dep');
   if (histCheckbox && sp.get('hist')) histCheckbox.checked = true;
   applyFilters();

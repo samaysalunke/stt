@@ -10,6 +10,7 @@ import {
   ADMIN_SETTABLE_STATUSES,
 } from '../../lib/registrationStatus';
 import { zohoOpenUrl } from '../../lib/zohoBooks';
+import { regCampaign, regSource } from '../../lib/registrationsView';
 interface Props {
   registration: Record<string, any>;
   readOnly?: boolean;
@@ -103,12 +104,17 @@ const docStateLabel = (d: any) => {
 const attributionFields = [
   field('First touch', touchLabel(firstTouch)),
   field('Latest touch', touchLabel(latestTouch)),
+  // Medium/term/content are captured by attribution.ts and stored, but touchLabel
+  // only renders source + campaign. Surface the rest of the first touch here.
+  field('Medium', firstTouch?.utmMedium),
+  field('Term', firstTouch?.utmTerm),
+  field('Content', firstTouch?.utmContent),
   field('First landing page', firstTouch?.landingPage),
   field('Latest landing page', latestTouch?.landingPage),
   field('Departure ref', r.batch_id),
 ].filter(Boolean) as Field[];
 ---
-<div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-phone={String(r.phone ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status}>
+<div class="reg-row" data-name={String(r.full_name ?? '').toLowerCase()} data-email={String(r.email ?? '').toLowerCase()} data-phone={String(r.phone ?? '').toLowerCase()} data-trip={String(r.trip_name ?? '').toLowerCase()} data-trip-slug={String(r.trip_slug ?? '').toLowerCase()} data-status={r.status} data-source={regSource(r)} data-campaign={regCampaign(r)} data-paid={Number(r.amount_paid) || 0}>
   <div class="reg-summary">
     {!readOnly && <label class="row-select" title={`Select ${r.full_name}`}><input type="checkbox" class="registration-checkbox" data-registration-id={r.id} data-status={r.status} data-payment-status={payStatus} data-paid={Number(r.amount_paid) || 0} /></label>}
     <div class="reg-primary">

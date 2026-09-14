@@ -66,6 +66,64 @@ export function regStats(rs: Reg[]): RegStats {
   };
 }
 
+/** Statuses that never count toward collected revenue. Mirrors the rule in
+ *  buildRegistrationsView() and the per-departure stats on the trip page. */
+export const NON_REVENUE_STATUSES = ['rejected', 'wishlist', 'cancelled'];
+
+export interface RegTally extends RegStats {
+  count: number;
+  revenue: number;
+}
+
+/** Sentinel select value for "row carries no attribution". */
+export const UNATTRIBUTED = '__none__';
+
+/**
+ * Attribution accessors, shared so the row `data-*` attributes written by
+ * RegistrationCard and the filter options built on the trip page normalise
+ * values identically — a mismatch here silently yields a filter that matches
+ * nothing.
+ *
+ * `source` is already the first-touch-derived value written by
+ * attributionSource() at registration time (utm_source, else the referrer
+ * hostname, else 'direct'), so reporting is first-touch by construction.
+ * Campaign has no such column and is read out of the stored first touch.
+ */
+export function regSource(r: Reg): string {
+  return String(r.source ?? '').trim().toLowerCase();
+}
+
+export function regCampaign(r: Reg): string {
+  try {
+    const touch = typeof r.first_touch_json === 'string' ? JSON.parse(r.first_touch_json) : null;
+    return String(touch?.utmCampaign ?? '').trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/** Sorted distinct non-empty values, for building a filter's <option> list. */
+export function distinctValues(regs: Reg[], pick: (r: Reg) => string): string[] {
+  return [...new Set(regs.map(pick).filter(Boolean))].sort();
+}
+
+/**
+ * Stats over an arbitrary subset of rows, in the shape the trip page's
+ * updateStats() consumes. Used to recompute the stat cards from whichever rows
+ * a filter leaves visible, so "campaign = diwali-ig" reports that campaign's
+ * own registrations, leads, confirmed count and revenue.
+ */
+export function tallyRegs(rows: Array<{ status: string; amount_paid?: unknown }>): RegTally {
+  const stats = regStats(rows as Reg[]);
+  return {
+    ...stats,
+    count: rows.length,
+    revenue: rows
+      .filter((r) => !NON_REVENUE_STATUSES.includes(r.status))
+      .reduce((n, r) => n + (Number(r.amount_paid) || 0), 0),
+  };
+}
+
 /**
  * History is chronological, not an availability state. A future departure can
  * be sold out while its registrations still need day-to-day administration.
