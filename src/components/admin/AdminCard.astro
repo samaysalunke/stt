@@ -1,0 +1,50 @@
+---
+/**
+ * The admin panel shell.
+ *
+ * Admin wrote this same concept ~20 times with three different border colours
+ * (`peach/60`, `peach/80`, `border`), three radii (`rounded-xl`, `rounded-2xl`,
+ * `rounded-[2rem]`) and an inconsistent shadow. The radius is now
+ * `--radius-card`, the token the public TripCard uses, so the two surfaces
+ * agree on what a card is.
+ *
+ * `tone="soft"` is the nested variant — a panel inside a panel (a table block,
+ * a departure row), on the warm off-white rather than white.
+ */
+interface Props {
+  tone?: 'white' | 'soft';
+  /** Inner padding. `none` when the child is a flush table or media. */
+  pad?: 'none' | 'sm' | 'md' | 'lg';
+  as?: string;
+  class?: string;
+}
+
+const { tone = 'white', pad = 'md', as = 'div', class: className, ...rest } = Astro.props;
+
+const tones: Record<string, string> = {
+  white: 'bg-white border border-peach/60',
+  soft: 'bg-surface-soft border border-border',
+};
+
+const pads: Record<string, string> = {
+  none: '',
+  sm: 'p-4',
+  md: 'p-6',
+  lg: 'p-10',
+};
+
+const Tag = as as any;
+---
+
+<Tag
+  class:list={[
+    'rounded-[var(--radius-card)]',
+    tones[tone],
+    pads[pad],
+    pad === 'none' && 'overflow-hidden',
+    className,
+  ]}
+  {...rest}
+>
+  <slot />
+</Tag>

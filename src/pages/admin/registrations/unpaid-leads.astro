@@ -1,5 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminTable from '../../../components/admin/AdminTable.astro';
+import AdminCard from '../../../components/admin/AdminCard.astro';
 import { getDb } from '../../../lib/db';
 import { buildUnpaidLeadNudgeMessage, unpaidLeadCutoffDate, UNPAID_LEAD_NUDGE_THRESHOLD_HOURS } from '../../../lib/unpaidLeads';
 
@@ -60,7 +62,8 @@ function waLink(r: Record<string, any>) {
   {rows.length === 0 ? (
     <div class="empty">No unpaid leads need a nudge right now.</div>
   ) : (
-    <div class="table-wrap">
+    <AdminCard pad="none">
+      <AdminTable class="unpaid-table">
       <table>
         <thead>
           <tr>
@@ -90,19 +93,42 @@ function waLink(r: Record<string, any>) {
           ))}
         </tbody>
       </table>
-    </div>
+      </AdminTable>
+      </AdminCard>
   )}
 </AdminLayout>
 
 <style>
-  .back-link{display:inline-block;margin-bottom:.75rem;color:var(--color-gray-text);font-weight:700;font-size:.82rem;text-decoration:none}.back-link:hover{color:var(--color-coral)}
-  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:1rem}
-  .page-head h1{margin:0;font:800 1.45rem var(--font-display);color:var(--color-navy)}.page-head p{margin:.25rem 0 0;color:var(--color-gray-text);font-size:.86rem}.page-head span{padding:.25rem .65rem;border-radius:999px;background:var(--color-blush);color:var(--color-coral);font-weight:800;font-size:.8rem;white-space:nowrap}
-  .empty{background:#fff;border:1px solid var(--color-border);border-radius:1rem;padding:2rem;text-align:center;color:var(--color-gray-text)}
-  .table-wrap{overflow:auto;background:#fff;border:1px solid var(--color-border);border-radius:1rem}
-  table{width:100%;border-collapse:collapse;min-width:920px}th,td{padding:.85rem 1rem;border-bottom:1px solid var(--color-border);vertical-align:top;text-align:left;font-size:.84rem}th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--color-gray-text);background:var(--color-surface-soft)}td{color:var(--color-navy)}td strong{display:block}td small{display:block;margin-top:.2rem;color:var(--color-gray-text);font-size:.72rem}.why{max-width:280px;color:var(--color-gray-text);line-height:1.35}.chat{display:inline-block;padding:.45rem .75rem;border-radius:.5rem;background:#25D366;color:#fff;font-weight:800;text-decoration:none}td a:not(.chat){color:var(--color-coral);font-weight:700}
-  tr:last-child td{border-bottom:0}
-  @media(max-width:700px){.page-head{flex-direction:column}.table-wrap{margin-inline:-.5rem;border-radius:.75rem}}
+  /* coral-ink, not coral, on every one of these: --color-coral is 3.0:1 on white
+     and 2.75:1 on blush, so as text at these sizes all three failed AA. See the
+     coral-as-text rule in tokens.css. */
+  .back-link{display:inline-block;margin-bottom:.75rem;color:var(--color-gray-text);font-weight:700;font-size:.82rem;text-decoration:none}
+  .back-link:hover{color:var(--color-coral-ink)}
+
+  .page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-card);padding:1rem}
+  .page-head h1{margin:0;font:800 1.45rem var(--font-display);color:var(--color-navy)}
+  .page-head p{margin:.25rem 0 0;color:var(--color-gray-text);font-size:.86rem}
+  .page-head span{padding:.25rem .65rem;border-radius:var(--radius-pill);background:var(--color-blush);color:var(--color-coral-ink);font-weight:800;font-size:.8rem;white-space:nowrap}
+
+  .empty{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-card);padding:2rem;text-align:center;color:var(--color-gray-text)}
+
+  /* Shared table treatment now comes from `.admin-table` (src/styles/admin.css).
+     What stays here is genuinely page-specific: this table has seven columns and
+     free-text in one of them, so it needs a scroll floor and top-aligned cells. */
+  /* `:global()` is load-bearing here. `.unpaid-table` lands on the <div> that
+     AdminTable renders, and Astro's scope hash does not cross a component
+     boundary — so a plain `.unpaid-table table` selector compiles to
+     `.unpaid-table[data-astro-cid-X] table[data-astro-cid-X]`, and that <div>
+     never carries the page's cid. The rules were silently dead. */
+  :global(.unpaid-table table){min-width:920px}
+  :global(.unpaid-table td){vertical-align:top}
+  td strong{display:block}
+  td small{display:block;margin-top:.2rem;color:var(--color-gray-text);font-size:.72rem}
+  .why{max-width:280px;color:var(--color-gray-text);line-height:1.35}
+  .chat{display:inline-block;padding:.45rem .75rem;border-radius:.5rem;background:var(--color-whatsapp);color:var(--color-navy);font-weight:800;text-decoration:none}
+  td a:not(.chat){color:var(--color-coral-ink);font-weight:700}
+
+  @media(max-width:700px){.page-head{flex-direction:column}}
 </style>
 
 <script>

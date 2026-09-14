@@ -9,3 +9,65 @@
    The public site loads `global.css`, which excludes this tree. */
 
 @import "./tokens.css";
+
+/* ── Admin data table ───────────────────────────────────────────
+   The five admin tables had five different header treatments — the same
+   `<th>` written as `px-4 py-3 text-xs uppercase tracking-widest` on
+   /admin/email-logs, the same plus `font-semibold text-navy` on /admin/audit,
+   `px-6` on /admin/settings/roles, `text-gray-text font-semibold` and NOT
+   uppercase on /admin/broadcast, and bare `<th>` styled by page CSS on
+   /admin/registrations/unpaid-leads. Row separators disagreed too
+   (`border-t border-peach` vs `border-b border-border`).
+
+   Element selectors rather than per-cell utilities, so a page writes plain
+   semantic `<table><thead><tr><th>` markup and gets the house treatment.
+
+   In `@layer components` on purpose: Tailwind's utilities layer is emitted
+   after components, so ANY utility on a cell still wins without a specificity
+   fight — `<th class="text-right">` overrides the default alignment, which a
+   descendant selector of equal weight would not.
+
+   Admin-only, so it lives in this entry rather than tokens.css — see the note
+   at the top of that file. */
+@layer components {
+  .admin-table {
+    overflow-x: auto;
+  }
+
+  .admin-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  /* --color-surface-soft is tokenised for exactly this: a warm off-white for
+     panels nested inside an admin card, table heads named in its comment. */
+  .admin-table thead tr {
+    background: var(--color-surface-soft);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-navy);
+    white-space: nowrap;
+  }
+
+  .admin-table td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+  }
+
+  .admin-table tbody tr + tr {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .admin-table tbody tr:hover {
+    background: var(--color-surface-soft);
+  }
+}

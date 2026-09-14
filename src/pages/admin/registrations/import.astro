@@ -17,9 +17,9 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
   </div>
 
   {tripsData.length === 0 ? (
-    <p class="text-center p-12 text-gray-text bg-white rounded-xl border border-border">No trips with departures to import into.</p>
+    <p class="text-center p-12 text-gray-text bg-white rounded-[var(--radius-card)] border border-peach/60">No trips with departures to import into.</p>
   ) : (
-    <div class="max-w-[820px] bg-white border border-border rounded-2xl p-6 flex flex-col gap-4.5">
+    <div class="max-w-[820px] bg-white p-6 flex flex-col gap-4.5 rounded-[var(--radius-card)] border border-peach/60">
 
       <label class="flex items-center gap-2 text-sm text-navy cursor-pointer">
         <input type="checkbox" id="backfill" /> Show past departures (historical back-fill)

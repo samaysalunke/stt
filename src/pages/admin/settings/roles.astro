@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AdminTable from '../../../components/admin/AdminTable.astro';
 import Button from '../../../components/ui/Button.astro';
 import { listAdminUsers, getUserRoles } from '../../../lib/admin-session';
 import { listTrips } from '../../../lib/content';
@@ -52,14 +53,14 @@ const error   = Astro.url.searchParams.get('error');
         No roles assigned yet.
       </div>
     ) : (
-      <div class="overflow-x-auto">
-      <table class="w-full text-sm">
+      <AdminTable>
+      <table>
         <thead>
-          <tr class="bg-peach/20">
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest text-navy">User</th>
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Role</th>
-            <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-widest hidden sm:table-cell text-navy">Trips</th>
-            <th class="px-6 py-3"></th>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th class="hidden sm:table-cell">Trips</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -70,11 +71,11 @@ const error   = Astro.url.searchParams.get('error');
             const canRemove = !isSelf && !isLastOwner;
             return (
               <tr class="border-t border-peach">
-                <td class="px-6 py-4">
+                <td>
                   <div class="font-medium text-navy">{u.displayName ?? u.email}</div>
                   <div class="text-xs text-gray-text">{u.email}</div>
                 </td>
-                <td class="px-6 py-4">
+                <td>
                   <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
                     style={u.role === 'owner' ? 'background: var(--color-blush); color: var(--color-coral-ink);' :
                            u.role === 'ops'   ? 'background: var(--color-info-surface); color: var(--color-info-ink);' :
@@ -82,10 +83,10 @@ const error   = Astro.url.searchParams.get('error');
                     {u.role}
                   </span>
                 </td>
-                <td class="px-6 py-4 hidden sm:table-cell text-xs text-gray-text">
+                <td class="hidden sm:table-cell text-xs text-gray-text">
                   {tripList.length > 0 ? tripList.join(', ') : '—'}
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="text-right">
                   {canRemove ? (
                     <form method="POST" action="/api/admin/roles" class="inline">
                       <input type="hidden" name="action" value="remove-form" />
@@ -103,7 +104,7 @@ const error   = Astro.url.searchParams.get('error');
           })}
         </tbody>
       </table>
-      </div>
+      </AdminTable>
     )}
   </div>
 

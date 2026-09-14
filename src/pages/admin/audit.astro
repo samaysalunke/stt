@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminTable from '../../components/admin/AdminTable.astro';
 import { getDb } from '../../lib/db';
 export const prerender = false;
 
@@ -79,20 +80,20 @@ function formatTs(unix: number) {
         No audit entries yet.
       </div>
     ) : (
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+      <AdminTable>
+        <table>
           <thead>
-            <tr class="bg-peach/20">
-              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Time</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Actor</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Action</th>
-              <th class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Target</th>
-              <th class="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-navy">Diff</th>
+            <tr>
+              <th>Time</th>
+              <th>Actor</th>
+              <th>Action</th>
+              <th>Target</th>
+              <th>Diff</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr class="border-t border-peach">
+              <tr>
                 <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-text">
                   {formatTs(row.createdAt)}
                 </td>
@@ -129,7 +130,7 @@ function formatTs(unix: number) {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     )}
   </div>
 

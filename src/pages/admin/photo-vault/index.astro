@@ -23,7 +23,7 @@ const albums = listAlbums();
       {albums.map(album => {
         const photos = Array.isArray(album.photos) ? album.photos : [];
         return (
-          <div class="bg-white border border-border rounded-xl overflow-hidden">
+          <div class="bg-white overflow-hidden rounded-[var(--radius-card)] border border-peach/60">
             <div class="h-[160px] overflow-hidden bg-gray-soft relative">
               {album.coverImage ? (
                 <img src={album.coverImage} alt={album.name} class="w-full h-full object-cover" />

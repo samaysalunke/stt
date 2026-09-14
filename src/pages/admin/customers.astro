@@ -214,7 +214,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
 
   <!-- Customer table -->
   {customers.length === 0 ? (
-    <div class="bg-white border border-border rounded-[var(--radius-card)] p-12 text-center text-gray-text">
+    <div class="bg-white p-12 text-center text-gray-text rounded-[var(--radius-card)] border border-peach/60">
       {q || customerType ? 'No customers match your search.' : 'No customers found.'}
     </div>
   ) : (

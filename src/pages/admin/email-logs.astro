@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminTable from '../../components/admin/AdminTable.astro';
 import Button from '../../components/ui/Button.astro';
 import { getDb } from '../../lib/db';
 
@@ -146,18 +147,18 @@ function pageHref(nextPage: number) {
 
   <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
     {statuses.map((item) => (
-      <a href={`?status=${item}`} class="bg-white rounded-2xl p-4 border border-peach/80">
+      <a href={`?status=${item}`} class="bg-white p-4 rounded-[var(--radius-card)] border border-peach/60">
         <div class="text-xs uppercase tracking-widest font-semibold text-gray-text">{item}</div>
         <div class="text-2xl font-bold mt-1 text-navy">{counts[item] ?? 0}</div>
       </a>
     ))}
-    <div class="bg-white rounded-2xl p-4 border border-peach/80">
+    <div class="bg-white p-4 rounded-[var(--radius-card)] border border-peach/60">
       <div class="text-xs uppercase tracking-widest font-semibold text-gray-text">Last 24h</div>
       <div class="text-2xl font-bold mt-1 text-navy">{last24Hours}</div>
     </div>
   </div>
 
-  <form method="GET" class="bg-white rounded-2xl p-4 mb-5 grid grid-cols-1 md:grid-cols-[1fr_220px_180px_auto] gap-3 items-end border border-peach/80"
+  <form method="GET" class="bg-white p-4 mb-5 grid grid-cols-1 md:grid-cols-[1fr_220px_180px_auto] gap-3 items-end rounded-[var(--radius-card)] border border-peach/60"
        >
     <label class="text-xs font-semibold text-navy">
       Recipient or subject
@@ -189,23 +190,23 @@ function pageHref(nextPage: number) {
     {total} matching email attempt{total === 1 ? '' : 's'}
   </div>
 
-  <div class="bg-white rounded-[var(--radius-card)] overflow-hidden border border-peach/80">
+  <div class="bg-white overflow-hidden rounded-[var(--radius-card)] border border-peach/60">
     {rows.length === 0 ? (
       <div class="px-6 py-14 text-center">
         <p class="font-semibold text-navy">No email attempts found.</p>
         <p class="text-sm mt-1 text-gray-text">New sends will appear here automatically.</p>
       </div>
     ) : (
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+      <AdminTable>
+        <table>
           <thead>
-            <tr class="bg-peach/20">
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Time</th>
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Type</th>
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Recipient</th>
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Subject</th>
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Status</th>
-              <th class="text-left px-4 py-3 text-xs uppercase tracking-widest">Details</th>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Recipient</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -236,7 +237,7 @@ function pageHref(nextPage: number) {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     )}
   </div>
 

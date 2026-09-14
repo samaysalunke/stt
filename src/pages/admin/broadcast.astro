@@ -1,5 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminTable from '../../components/admin/AdminTable.astro';
+import AdminCard from '../../components/admin/AdminCard.astro';
 import Button from '../../components/ui/Button.astro';
 import { getDb } from '../../lib/db';
 export const prerender = false;
@@ -23,7 +25,7 @@ function fmt(d: string) {
       Email all active newsletter subscribers.
     </p>
 
-    <form id="broadcast-form" class="bg-white rounded-xl p-6 shadow-card mb-8">
+    <form id="broadcast-form" class="bg-white p-6 mb-8 rounded-[var(--radius-card)] border border-peach/60">
       <div class="mb-5">
         <label class="block text-sm font-semibold mb-1.5 text-navy">Subject</label>
         <input
@@ -70,24 +72,24 @@ function fmt(d: string) {
     {logs.length > 0 && (
       <div>
         <h2 class="text-base font-bold text-navy mt-0 mx-0 mb-4">Recent broadcasts</h2>
-        <div class="bg-white rounded-xl overflow-hidden shadow-card">
-          <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-sm">
+        <AdminCard pad="none">
+          <AdminTable>
+          <table>
             <thead>
-              <tr class="bg-surface-soft border-b border-border">
-                <th class="py-3 px-4 text-left text-gray-text font-semibold">Subject</th>
-                <th class="py-3 px-4 text-left text-gray-text font-semibold">Sent</th>
-                <th class="py-3 px-4 text-right text-gray-text font-semibold">Recipients</th>
-                <th class="py-3 px-4 text-right text-gray-text font-semibold">Status</th>
+              <tr>
+                <th>Subject</th>
+                <th>Sent</th>
+                <th class="text-right">Recipients</th>
+                <th class="text-right">Status</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr class="border-b border-border">
-                  <td class="py-3 px-4 text-navy">{log.subject}</td>
-                  <td class="py-3 px-4 text-gray-text">{fmt(log.sent_at)}</td>
-                  <td class="py-3 px-4 text-right text-navy">{log.recipient_count}</td>
-                  <td class="py-3 px-4 text-right">
+                <tr>
+                  <td class="text-navy">{log.subject}</td>
+                  <td class="text-gray-text">{fmt(log.sent_at)}</td>
+                  <td class="text-right text-navy">{log.recipient_count}</td>
+                  <td class="text-right">
                     <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? 'var(--color-success-surface)' : 'var(--color-danger-surface)'}; color: ${log.status === 'sent' ? 'var(--color-success-surface-ink)' : 'var(--color-danger-ink)'};`}>
                       {log.status}
                     </span>
@@ -96,8 +98,8 @@ function fmt(d: string) {
               ))}
             </tbody>
           </table>
-          </div>
-        </div>
+          </AdminTable>
+        </AdminCard>
       </div>
     )}
   </div>

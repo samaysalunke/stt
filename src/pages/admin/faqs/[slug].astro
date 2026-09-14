@@ -36,7 +36,7 @@ const categories = Array.from(new Set(listFaqs().map(x => x.category).filter(Boo
           <input type="number" name="order" value={f.order ?? ''} class={inputCls} />
         </div>
       </div>
-      <label class="flex items-start gap-3 rounded-2xl px-4 py-3 border border-peach/80 bg-white">
+      <label class="flex items-start gap-3 rounded-2xl px-4 py-3 border border-peach/60 bg-white">
         <input type="checkbox" name="defaultOnTripPages" class="mt-1" checked={f.defaultOnTripPages === true} />
         <span>
           <span class="block text-sm font-semibold text-navy">Default on trip pages</span>

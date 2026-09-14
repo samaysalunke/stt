@@ -1,0 +1,18 @@
+---
+/**
+ * Scroll container for an admin data table.
+ *
+ * Styling lives in `src/styles/admin.css` under `.admin-table` rather than in a
+ * scoped block here, so it sits in Tailwind's `components` layer and any utility
+ * a page puts on a cell still wins. Pass plain `<table>` markup as children.
+ */
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<div class:list={['admin-table', className]}>
+  <slot />
+</div>
