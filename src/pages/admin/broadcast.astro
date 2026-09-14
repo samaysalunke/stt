@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Button from '../../components/ui/Button.astro';
 import { getDb } from '../../lib/db';
 export const prerender = false;
 
@@ -15,81 +16,78 @@ function fmt(d: string) {
 
 <AdminLayout title="Broadcast" page="broadcast">
   <div class="max-w-[720px]">
-    <h1 class="font-display text-[1.5rem] font-extrabold text-[#111D27] mt-[0] mx-[0] mb-[0.25rem]">
+    <h1 class="font-display text-2xl font-extrabold text-navy-deep mt-0 mx-0 mb-1">
       Send Broadcast
     </h1>
-    <p class="text-gray-text text-[0.875rem] mt-[0] mx-[0] mb-[2rem]">
+    <p class="text-gray-text text-sm mt-0 mx-0 mb-8">
       Email all active newsletter subscribers.
     </p>
 
-    <form id="broadcast-form" class="bg-white rounded-[12px] p-[1.5rem] shadow-[0_1px_4px_rgba(0,0,0,0.08)] mb-[2rem]">
-      <div class="mb-[1.25rem]">
-        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">Subject</label>
+    <form id="broadcast-form" class="bg-white rounded-xl p-6 shadow-card mb-8">
+      <div class="mb-5">
+        <label class="block text-sm font-semibold mb-1.5 text-navy">Subject</label>
         <input
           type="text"
           name="subject"
           required
           placeholder="e.g. New Batch: Spiti Valley — June 2025"
-          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border outline-none"
+          class="w-full py-2.5 px-3.5 border border-border rounded-lg text-sm box-border outline-none"
         />
       </div>
 
-      <div class="mb-[1.25rem]">
-        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">
+      <div class="mb-5">
+        <label class="block text-sm font-semibold mb-1.5 text-navy">
           Body
-          <span class="font-normal text-gray-text ml-[4px]">(HTML supported)</span>
+          <span class="font-normal text-gray-text ml-1">(HTML supported)</span>
         </label>
         <textarea
           name="body_html"
           required
           rows="8"
           placeholder="<p>We just opened a new batch for ...</p>"
-          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border resize-y outline-none font-mono"
+          class="w-full py-2.5 px-3.5 border border-border rounded-lg text-sm box-border resize-y outline-none font-mono"
         ></textarea>
       </div>
 
-      <div class="mb-[1.5rem]">
-        <label class="block text-[0.875rem] font-semibold mb-[0.4rem] text-navy">Post URL <span class="font-normal text-gray-text">(optional)</span></label>
+      <div class="mb-6">
+        <label class="block text-sm font-semibold mb-1.5 text-navy">Post URL <span class="font-normal text-gray-text">(optional)</span></label>
         <input
           type="url"
           name="post_url"
           placeholder="https://www.seekthethrill.in/trips/spiti-valley"
-          class="w-full py-[0.65rem] px-[0.9rem] border-[1.5px] border-[#E5E7EB] rounded-[8px] text-[0.875rem] box-border outline-none"
+          class="w-full py-2.5 px-3.5 border border-border rounded-lg text-sm box-border outline-none"
         />
       </div>
 
-      <div id="broadcast-status" class="hidden mb-[1rem] py-[0.75rem] px-[1rem] rounded-[8px] text-[0.875rem]"></div>
+      <div id="broadcast-status" class="hidden mb-4 py-3 px-4 rounded-lg text-sm"></div>
 
-      <button
-        type="submit"
-        id="broadcast-btn"
-        class="py-[0.65rem] px-[1.5rem] bg-navy text-white border-none rounded-[8px] text-[0.875rem] font-semibold cursor-pointer"
-      >
+      <Button type="submit"
+        id="broadcast-btn" variant="primary" size="md">
         Send to all active subscribers
-      </button>
+      </Button>
     </form>
 
     {logs.length > 0 && (
       <div>
-        <h2 class="text-[1rem] font-bold text-navy mt-[0] mx-[0] mb-[1rem]">Recent broadcasts</h2>
-        <div class="bg-white rounded-[12px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.08)]">
+        <h2 class="text-base font-bold text-navy mt-0 mx-0 mb-4">Recent broadcasts</h2>
+        <div class="bg-white rounded-xl overflow-hidden shadow-card">
           <div class="overflow-x-auto">
-          <table class="w-full border-collapse text-[0.875rem]">
+          <table class="w-full border-collapse text-sm">
             <thead>
-              <tr class="bg-[#F9FAFB] border-b border-[#F0F0F0]">
-                <th class="py-[0.75rem] px-[1rem] text-left text-gray-text font-semibold">Subject</th>
-                <th class="py-[0.75rem] px-[1rem] text-left text-gray-text font-semibold">Sent</th>
-                <th class="py-[0.75rem] px-[1rem] text-right text-gray-text font-semibold">Recipients</th>
-                <th class="py-[0.75rem] px-[1rem] text-right text-gray-text font-semibold">Status</th>
+              <tr class="bg-surface-soft border-b border-border">
+                <th class="py-3 px-4 text-left text-gray-text font-semibold">Subject</th>
+                <th class="py-3 px-4 text-left text-gray-text font-semibold">Sent</th>
+                <th class="py-3 px-4 text-right text-gray-text font-semibold">Recipients</th>
+                <th class="py-3 px-4 text-right text-gray-text font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
-                <tr class="border-b border-[#F9FAFB]">
-                  <td class="py-[0.75rem] px-[1rem] text-navy">{log.subject}</td>
-                  <td class="py-[0.75rem] px-[1rem] text-gray-text">{fmt(log.sent_at)}</td>
-                  <td class="py-[0.75rem] px-[1rem] text-right text-navy">{log.recipient_count}</td>
-                  <td class="py-[0.75rem] px-[1rem] text-right">
+                <tr class="border-b border-border">
+                  <td class="py-3 px-4 text-navy">{log.subject}</td>
+                  <td class="py-3 px-4 text-gray-text">{fmt(log.sent_at)}</td>
+                  <td class="py-3 px-4 text-right text-navy">{log.recipient_count}</td>
+                  <td class="py-3 px-4 text-right">
                     <span style={`display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: ${log.status === 'sent' ? 'var(--color-success-surface)' : 'var(--color-danger-surface)'}; color: ${log.status === 'sent' ? 'var(--color-success-surface-ink)' : 'var(--color-danger-ink)'};`}>
                       {log.status}
                     </span>

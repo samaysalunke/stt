@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
 import { ADMIN_REG_INPUT_CLASS as inputCls, ADMIN_REG_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 export const prerender = false;
@@ -10,22 +11,22 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 ---
 
 <AdminLayout title="Import Registrations" page="registrations">
-  <div class="flex items-center justify-between mb-[1.25rem]">
-    <p class="text-[0.875rem] text-gray-text m-0">Bulk-add registrations to one trip + departure from a CSV. Preview before importing.</p>
-    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral-ink no-underline">← Back to registrations</a>
+  <div class="flex items-center justify-between mb-5">
+    <p class="text-sm text-gray-text m-0">Bulk-add registrations to one trip + departure from a CSV. Preview before importing.</p>
+    <a href="/admin/registrations" class="text-sm font-semibold text-coral-ink no-underline">← Back to registrations</a>
   </div>
 
   {tripsData.length === 0 ? (
-    <p class="text-center p-[3rem] text-gray-text bg-white rounded-[0.75rem] border border-border">No trips with departures to import into.</p>
+    <p class="text-center p-12 text-gray-text bg-white rounded-xl border border-border">No trips with departures to import into.</p>
   ) : (
-    <div class="max-w-[820px] bg-white border border-border rounded-[0.9rem] p-[1.5rem] flex flex-col gap-[1.1rem]">
+    <div class="max-w-[820px] bg-white border border-border rounded-2xl p-6 flex flex-col gap-4.5">
 
-      <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
+      <label class="flex items-center gap-2 text-sm text-navy cursor-pointer">
         <input type="checkbox" id="backfill" /> Show past departures (historical back-fill)
       </label>
 
       <!-- Destination -->
-      <div class="import-form-grid grid grid-cols-2 gap-[1rem]">
+      <div class="import-form-grid grid grid-cols-2 gap-4">
         <div class="col-span-full">
           <label class={labelCls}>Trip *</label>
           <select id="trip" class={inputCls}><option value="">Select a trip…</option></select>
@@ -38,10 +39,10 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
         </div>
       </div>
 
-      <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
+      <label class="flex items-center gap-2 text-sm text-navy cursor-pointer">
         <input type="checkbox" id="sendEmail" /> Send notification emails (off by default for imports)
       </label>
-      <label id="capacity-override-row" class="hidden items-center gap-[0.5rem] text-[0.85rem] text-danger-ink cursor-pointer">
+      <label id="capacity-override-row" class="hidden items-center gap-2 text-sm text-danger-ink cursor-pointer">
         <input type="checkbox" id="capacityOverride" /> Import despite capacity mismatch
       </label>
 
@@ -50,33 +51,33 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       <!-- CSV -->
       <div class="flex items-center justify-between">
         <label class={labelCls}>Registrants CSV</label>
-        <div class="flex gap-[1rem]">
-          <button id="template-btn" type="button" class="text-[0.82rem] font-semibold text-coral-ink bg-transparent border-none cursor-pointer">↓ Download template</button>
-          <label class="text-[0.82rem] font-semibold text-coral-ink cursor-pointer">Upload .csv
+        <div class="flex gap-4">
+          <button id="template-btn" type="button" class="text-sm font-semibold text-coral-ink bg-transparent border-none cursor-pointer">↓ Download template</button>
+          <label class="text-sm font-semibold text-coral-ink cursor-pointer">Upload .csv
             <input id="csv-file" type="file" accept=".csv,text/csv" class="hidden" />
           </label>
         </div>
       </div>
       <textarea id="csv-content" rows="8" placeholder="full_name,email,phone,tier_id,age,gender,city,instagram,emergency_name,emergency_phone,why_join"
-        class="w-full p-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.82rem] font-mono box-border leading-[1.5]"></textarea>
-      <p class="text-[0.75rem] text-gray-text m-0">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, instagram, emergency_name, emergency_phone, why_join. Generic CSVs should also include a tier column such as <strong>tier_id</strong> or <strong>occupancy</strong>; Google Forms CSVs can use their stay option column directly.</p>
+        class="w-full p-3 border border-border rounded-lg text-sm font-mono box-border leading-normal"></textarea>
+      <p class="text-xs text-gray-text m-0">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, instagram, emergency_name, emergency_phone, why_join. Generic CSVs should also include a tier column such as <strong>tier_id</strong> or <strong>occupancy</strong>; Google Forms CSVs can use their stay option column directly.</p>
 
-      <div class="flex gap-[0.75rem] items-center">
-        <button id="preview-btn" type="button" class="py-[0.55rem] px-[1.25rem] bg-navy text-white border-none rounded-[0.5rem] text-[0.875rem] font-bold cursor-pointer">Preview</button>
-        <span id="import-msg" class="text-[0.85rem] text-gray-text"></span>
+      <div class="flex gap-3 items-center">
+        <Button id="preview-btn" type="button" variant="primary" size="md">Preview</Button>
+        <span id="import-msg" class="text-sm text-gray-text"></span>
       </div>
 
       <!-- Preview -->
       <div id="preview-box" class="hidden">
-        <div id="preview-summary" class="flex gap-[0.5rem] mb-[0.75rem] flex-wrap"></div>
-        <div id="preview-list" class="max-h-[340px] overflow-auto border border-border rounded-[0.5rem]"></div>
-        <div id="confirm-row" class="hidden items-center gap-[0.75rem] mt-[1rem]">
-          <button id="confirm-btn" type="button" class="py-[0.6rem] px-[1.5rem] bg-cta text-white border-none rounded-[0.5rem] text-[0.875rem] font-bold cursor-pointer"></button>
-          <span class="text-[0.78rem] text-gray-text">Only rows marked “create” will be imported.</span>
+        <div id="preview-summary" class="flex gap-2 mb-3 flex-wrap"></div>
+        <div id="preview-list" class="max-h-[340px] overflow-auto border border-border rounded-lg"></div>
+        <div id="confirm-row" class="hidden items-center gap-3 mt-4">
+          <Button id="confirm-btn" type="button" variant="cta" size="md"></Button>
+          <span class="text-xs text-gray-text">Only rows marked “create” will be imported.</span>
         </div>
       </div>
 
-      <div id="result-box" class="hidden text-[0.875rem] py-[0.85rem] px-[1rem] rounded-[0.5rem] bg-success/10 text-success"></div>
+      <div id="result-box" class="hidden text-sm py-3.5 px-4 rounded-lg bg-success/10 text-success"></div>
     </div>
   )}
 
@@ -175,7 +176,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
       overrideRow.style.display = data.hasCapacityConflict ? 'flex' : 'none';
       if (!data.hasCapacityConflict) document.getElementById('capacityOverride').checked = false;
       previewList.innerHTML = data.preview.map((p) => `
-        <div class="flex items-center justify-between gap-[0.75rem] py-[0.5rem] px-[0.75rem] border-b border-border text-[0.82rem]">
+        <div class="flex items-center justify-between gap-3 py-2 px-3 border-b border-border text-sm">
           <div class="min-w-0"><span class="font-semibold text-navy">#${p.row} ${p.name}</span> <span class="text-gray-text">${p.email}</span></div>
           <span style="padding:0.15rem 0.55rem;border-radius:9999px;font-size:0.72rem;font-weight:700;white-space:nowrap;${actionStyle(p.action)}">${p.tierId} · ${p.status} · ${p.action}${p.reason ? ' · ' + p.reason : ''}</span>
         </div>`).join('');

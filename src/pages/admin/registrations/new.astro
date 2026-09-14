@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
 import { ADMIN_REG_INPUT_CLASS as inputCls, ADMIN_REG_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 export const prerender = false;
@@ -10,22 +11,22 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
 ---
 
 <AdminLayout title="Add Registration" page="registrations">
-  <div class="flex items-center justify-between mb-[1.25rem]">
-    <p class="text-[0.875rem] text-gray-text m-0">Add a single registration manually (e.g. an offline or phone booking).</p>
-    <a href="/admin/registrations" class="text-[0.875rem] font-semibold text-coral-ink no-underline">← Back to registrations</a>
+  <div class="flex items-center justify-between mb-5">
+    <p class="text-sm text-gray-text m-0">Add a single registration manually (e.g. an offline or phone booking).</p>
+    <a href="/admin/registrations" class="text-sm font-semibold text-coral-ink no-underline">← Back to registrations</a>
   </div>
 
   {tripsData.length === 0 ? (
-    <p class="text-center p-[3rem] text-gray-text bg-white rounded-[0.75rem] border border-border">No trips with departures to add registrations to.</p>
+    <p class="text-center p-12 text-gray-text bg-white rounded-xl border border-border">No trips with departures to add registrations to.</p>
   ) : (
-    <form id="reg-form" class="max-w-[720px] bg-white border border-border rounded-[0.9rem] p-[1.5rem] flex flex-col gap-[1.1rem]">
+    <form id="reg-form" class="max-w-[720px] bg-white border border-border rounded-2xl p-6 flex flex-col gap-4.5">
 
-      <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
+      <label class="flex items-center gap-2 text-sm text-navy cursor-pointer">
         <input type="checkbox" id="backfill" /> Show past departures (historical back-fill)
       </label>
 
       <!-- Trip / departure / occupancy -->
-      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
+      <div class="reg-form-grid grid grid-cols-2 gap-4">
         <div class="col-span-full">
           <label class={labelCls}>Trip *</label>
           <select id="trip" class={inputCls}><option value="">Select a trip…</option></select>
@@ -40,7 +41,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
         </div>
       </div>
 
-      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
+      <div class="reg-form-grid grid grid-cols-2 gap-4">
         <div>
           <label class={labelCls}>Status</label>
           <select id="status" class={inputCls}>
@@ -49,17 +50,17 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
             <option value="confirmed">Confirmed</option>
           </select>
         </div>
-        <div class="flex items-end pb-[0.5rem]">
-          <label class="flex items-center gap-[0.5rem] text-[0.85rem] text-navy cursor-pointer">
+        <div class="flex items-end pb-2">
+          <label class="flex items-center gap-2 text-sm text-navy cursor-pointer">
             <input type="checkbox" id="sendEmail" checked /> Send notification email (on confirm)
           </label>
         </div>
       </div>
 
-      <hr class="border-t border-border my-[0.25rem] mx-[0]" />
+      <hr class="border-t border-border my-1 mx-0" />
 
       <!-- Registrant -->
-      <div class="reg-form-grid grid grid-cols-2 gap-[1rem]">
+      <div class="reg-form-grid grid grid-cols-2 gap-4">
         <div><label class={labelCls}>Full name *</label><input id="full_name" type="text" class={inputCls} /></div>
         <div><label class={labelCls}>Email *</label><input id="email" type="email" class={inputCls} /></div>
         <div><label class={labelCls}>Phone *</label><input id="phone" type="tel" class={inputCls} /></div>
@@ -77,11 +78,11 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
         <div class="col-span-full"><label class={labelCls}>Why joining / notes</label><textarea id="why_join" rows="2" class={inputCls}></textarea></div>
       </div>
 
-      <div id="form-msg" class="hidden text-[0.85rem] py-[0.6rem] px-[0.85rem] rounded-[0.5rem]"></div>
+      <div id="form-msg" class="hidden text-sm py-2.5 px-3.5 rounded-lg"></div>
 
-      <div class="flex gap-[0.75rem] items-center">
-        <button type="submit" id="submit-btn" class="py-[0.6rem] px-[1.5rem] bg-navy text-white border-none rounded-[0.5rem] text-[0.875rem] font-bold cursor-pointer font-sans">Add registration</button>
-        <a href="/admin/registrations" class="text-[0.85rem] text-gray-text no-underline">Cancel</a>
+      <div class="flex gap-3 items-center">
+        <Button type="submit" id="submit-btn" variant="primary" size="md">Add registration</Button>
+        <a href="/admin/registrations" class="text-sm text-gray-text no-underline">Cancel</a>
       </div>
     </form>
   )}

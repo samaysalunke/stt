@@ -132,7 +132,7 @@ const quickActions = [
   <!-- KPI cards -->
   <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
     {kpis.map(k => (
-      <div class="bg-white rounded-[2rem] p-5 border border-peach/60">
+      <div class="bg-white rounded-[var(--radius-card)] p-5 border border-peach/60">
         <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">{k.label}</p>
         <p class="font-display text-3xl font-semibold mt-2 text-navy">{k.value}</p>
         <p class="text-xs mt-1 text-gray-text">{k.hint}</p>
@@ -142,7 +142,7 @@ const quickActions = [
 
   <div class="grid gap-6 md:grid-cols-3">
     <!-- Booking growth -->
-    <div class="md:col-span-2 bg-white rounded-[2rem] p-6 border border-peach/60">
+    <div class="md:col-span-2 bg-white rounded-[var(--radius-card)] p-6 border border-peach/60">
       <h2 class="font-display text-lg font-semibold mb-1 text-navy">Booking growth</h2>
       <p class="text-sm mb-5 text-gray-text">Confirmed seats over the last 7 days.</p>
       <div class="flex items-end gap-3 h-36">
@@ -163,7 +163,7 @@ const quickActions = [
     </div>
 
     <!-- Quick actions -->
-    <div class="bg-white rounded-[2rem] p-6 border border-peach/60">
+    <div class="bg-white rounded-[var(--radius-card)] p-6 border border-peach/60">
       <h2 class="font-display text-lg font-semibold mb-4 text-navy">Quick actions</h2>
       <div class="flex flex-col gap-2.5">
         {quickActions.map(a => (
@@ -184,7 +184,7 @@ const quickActions = [
   {(soldOut.length > 0 || pendingCount > 0) && (
     <div class="grid gap-3 sm:grid-cols-2 mt-6">
       {pendingCount > 0 && (
-        <a href="/admin/registrations/" class="rounded-2xl px-5 py-4 flex items-center justify-between bg-[#F59E0B]/10"
+        <a href="/admin/registrations/" class="rounded-2xl px-5 py-4 flex items-center justify-between bg-warning-surface"
           >
           <div>
             <p class="text-sm font-semibold text-warning-ink">{pendingCount} registration{pendingCount > 1 ? 's' : ''} pending</p>
@@ -211,7 +211,7 @@ const quickActions = [
   )}
 
   <!-- Recent activity -->
-  <div class="bg-white rounded-[2rem] p-6 mt-6 border border-peach/60">
+  <div class="bg-white rounded-[var(--radius-card)] p-6 mt-6 border border-peach/60">
     <div class="flex items-center justify-between mb-4">
       <h2 class="font-display text-lg font-semibold text-navy">Recent activity</h2>
       <a href="/admin/registrations/" class="text-sm font-medium text-coral-ink">View all</a>
@@ -232,7 +232,7 @@ const quickActions = [
             </div>
             <div class="text-right flex-none pl-3">
               <p class="text-sm font-semibold text-navy">₹{r.amount_paid ?? 0}</p>
-              <span class="inline-block text-[9px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full mt-0.5"
+              <span class="inline-block text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full mt-0.5"
                     style={statusStyle(r.status)}>{r.status}</span>
             </div>
           </div>

@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 export const prerender = false;
 
 const sample = `# Paste one trip, a list of trips, or { trips: [...] }
@@ -27,7 +28,7 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
     <a href="/admin/trips/" class="text-sm font-medium text-coral-ink">← Back to trips</a>
   </div>
 
-  <div class="bg-white rounded-[2rem] p-6 max-w-3xl border border-peach/60">
+  <div class="bg-white rounded-[var(--radius-card)] p-6 max-w-3xl border border-peach/60">
     <div class="flex items-center justify-between mb-3">
       <label class="block text-xs font-semibold uppercase tracking-widest text-navy">Trips (YAML or JSON)</label>
       <label class="text-sm font-medium cursor-pointer text-coral-ink">
@@ -36,11 +37,11 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
       </label>
     </div>
     <textarea id="import-content" rows="14" placeholder={sample}
-      class="w-full rounded-2xl px-4 py-3 text-sm outline-none font-mono border border-peach/80 bg-white leading-[1.5]"
+      class="w-full rounded-2xl px-4 py-3 text-sm outline-none font-mono border border-peach/80 bg-white leading-normal"
      ></textarea>
 
     <div class="flex items-center gap-3 mt-4">
-      <button id="preview-btn" class="rounded-full px-6 py-2.5 text-sm font-semibold text-white bg-navy">Preview</button>
+      <Button id="preview-btn" variant="primary" size="md">Preview</Button>
       <span id="import-msg" class="text-sm text-gray-text"></span>
     </div>
 
@@ -49,7 +50,7 @@ const sample = `# Paste one trip, a list of trips, or { trips: [...] }
       <div id="errors-box" class="hidden mb-4 rounded-2xl p-4 text-sm bg-danger-surface text-danger-ink"></div>
       <div id="preview-list" class="flex flex-col gap-2"></div>
       <div id="confirm-row" class="hidden items-center gap-3 mt-5">
-        <button id="confirm-btn" class="rounded-full px-7 py-3 text-sm font-semibold text-white bg-cta"></button>
+        <Button id="confirm-btn" variant="cta" size="md"></Button>
         <span class="text-xs text-gray-text">Existing slugs will be overwritten.</span>
       </div>
     </div>

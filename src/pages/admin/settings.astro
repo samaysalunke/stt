@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Button from '../../components/ui/Button.astro';
 import { ABOUT_DEFAULTS } from '../../lib/aboutDefaults';
 import { readSiteSettings } from '../../lib/content';
 import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../components/admin/formClasses';
@@ -8,7 +9,7 @@ export const prerender = false;
 const s = readSiteSettings();
 const saved = Astro.url.searchParams.get('saved') === '1';
 
-const cardCls = 'bg-white rounded-[2rem] p-6 mb-6';
+const cardCls = 'bg-white rounded-[var(--radius-card)] p-6 mb-6';
 const cardStyle = 'border: 1px solid rgba(245,221,215,0.6);';
 const aboutValue = (value: unknown, fallback: string) =>
   typeof value === 'string' && value.trim() ? value : fallback;
@@ -108,19 +109,19 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
       <p class="text-sm mb-5 text-gray-text">Leave blank to use the built-in Terms / Privacy / Cancellation pages. Overrides support Markdown for headings, bold text, lists, and links.</p>
       <div class="grid gap-4">
         <div>
-          <label class={labelCls}>Cancellation policy <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Cancellation policy <span class="text-gray-text normal-case tracking-normal">(override)</span></label>
           <textarea name="cancellationPolicy" rows="5" placeholder="Blank = use default /cancellation page" class={inputCls}>{s.cancellationPolicy ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="cancellationUpdatedAt" value={s.cancellationUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls}>Terms &amp; conditions <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Terms &amp; conditions <span class="text-gray-text normal-case tracking-normal">(override)</span></label>
           <textarea name="termsAndConditions" rows="5" placeholder="Blank = use default /terms page" class={inputCls}>{s.termsAndConditions ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="termsUpdatedAt" value={s.termsUpdatedAt ?? '2026-08-01'} class={inputCls} />
         </div>
         <div>
-          <label class={labelCls}>Privacy policy <span class="text-gray-text normal-case tracking-[0]">(override)</span></label>
+          <label class={labelCls}>Privacy policy <span class="text-gray-text normal-case tracking-normal">(override)</span></label>
           <textarea name="privacyPolicy" rows="4" placeholder="Blank = use default /privacy page" class={inputCls}>{s.privacyPolicy ?? ''}</textarea>
           <label class={`${labelCls} mt-2`}>Last updated</label>
           <input type="date" name="privacyUpdatedAt" value={s.privacyUpdatedAt ?? '2026-08-01'} class={inputCls} />
@@ -201,7 +202,7 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
           <textarea name="aboutQuote" rows="3" class={inputCls}>{aboutValue(s.aboutQuote, ABOUT_DEFAULTS.quote)}</textarea>
         </div>
         <div class="sm:col-span-2">
-          <label class={labelCls}>Body <span class="text-gray-text normal-case tracking-[0]">(one paragraph per blank line)</span></label>
+          <label class={labelCls}>Body <span class="text-gray-text normal-case tracking-normal">(one paragraph per blank line)</span></label>
           <textarea name="aboutBody" rows="6" class={inputCls}>{aboutValue(s.aboutBody, ABOUT_DEFAULTS.body)}</textarea>
         </div>
         <div class="sm:col-span-2">
@@ -240,11 +241,9 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     </section>
 
     <div class="flex justify-end mb-10">
-      <button type="submit"
-              class="rounded-full px-7 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-cta"
-             >
+      <Button type="submit" variant="cta" size="md">
         Save changes
-      </button>
+      </Button>
     </div>
   </form>
 

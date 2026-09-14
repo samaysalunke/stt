@@ -16,11 +16,11 @@
 
 /** Registration forms: bordered control on the page surface. */
 export const ADMIN_REG_INPUT_CLASS =
-  'w-full py-[0.55rem] px-[0.75rem] border-[1.5px] border-border rounded-[0.5rem] text-[0.875rem] font-sans box-border';
+  'w-full py-2 px-3 border border-border rounded-lg text-sm font-sans box-border';
 
 /** Registration forms: small caps field label. */
 export const ADMIN_REG_LABEL_CLASS =
-  'block text-[0.78rem] font-bold text-gray-text mt-0 mx-0 mb-[0.3rem] uppercase tracking-[0.03em]';
+  'block text-xs font-bold text-gray-text mt-0 mx-0 mb-1 uppercase tracking-wide';
 
 /** Content editors (settings, FAQs, testimonials): pill control on white. */
 export const ADMIN_CONTENT_INPUT_CLASS =

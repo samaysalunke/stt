@@ -47,20 +47,20 @@ const uploadId = `${editorId}-upload`;
   <label class="flabel">{label}</label>
   <span class="fhint" set:html={helpText} />
 
-  <select class="finput mt-[0.5rem]" data-gallery-album-select>
+  <select class="finput mt-2" data-gallery-album-select>
     <option value="">— Choose an album to pick photos —</option>
     {albums.map((album) => <option value={album.slug}>{album.name}</option>)}
   </select>
 
   <div class="gallery-grid hidden" data-gallery-album-grid></div>
 
-  <div class="mt-[0.85rem] flex items-center gap-[0.75rem] flex-wrap">
+  <div class="mt-3.5 flex items-center gap-3 flex-wrap">
     <input type="file" id={uploadId} accept="image/*" multiple class="hidden" data-gallery-upload-input />
     <label for={uploadId} class="gallery-upload-btn">📷 Upload trip-only photos</label>
     <span class="fhint" data-gallery-upload-status aria-live="polite"></span>
   </div>
 
-  <p class="flabel mt-[1rem] mx-[0] mb-[0.5rem]">
+  <p class="flabel mt-4 mx-0 mb-2">
     <span>Selected (<span data-gallery-count>0</span>)</span>
     <span class="fhint" data-gallery-limit-count></span>
   </p>

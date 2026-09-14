@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Button from '../../components/ui/Button.astro';
 import { getDb } from '../../lib/db';
 
 export const prerender = false;
@@ -179,7 +180,7 @@ function pageHref(nextPage: number) {
       </select>
     </label>
     <div class="flex gap-2">
-      <button type="submit" class="rounded-full px-5 py-2.5 text-sm font-semibold text-white bg-coral">Filter</button>
+      <Button type="submit" variant="primary" size="md">Filter</Button>
       <a href="/admin/email-logs/" class="rounded-full px-4 py-2.5 text-sm font-medium border border-peach text-navy">Clear</a>
     </div>
   </form>
@@ -188,7 +189,7 @@ function pageHref(nextPage: number) {
     {total} matching email attempt{total === 1 ? '' : 's'}
   </div>
 
-  <div class="bg-white rounded-[2rem] overflow-hidden border border-peach/80">
+  <div class="bg-white rounded-[var(--radius-card)] overflow-hidden border border-peach/80">
     {rows.length === 0 ? (
       <div class="px-6 py-14 text-center">
         <p class="font-semibold text-navy">No email attempts found.</p>

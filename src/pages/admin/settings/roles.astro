@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { listAdminUsers, getUserRoles } from '../../../lib/admin-session';
 import { listTrips } from '../../../lib/content';
 export const prerender = false;
@@ -42,7 +43,7 @@ const error   = Astro.url.searchParams.get('error');
   )}
 
   <!-- Current roles table -->
-  <div class="bg-white rounded-[2rem] overflow-hidden mb-8 border border-peach/60">
+  <div class="bg-white rounded-[var(--radius-card)] overflow-hidden mb-8 border border-peach/60">
     <div class="px-6 py-4 border-b border-peach">
       <h2 class="text-base font-semibold text-navy">Current admin users</h2>
     </div>
@@ -107,7 +108,7 @@ const error   = Astro.url.searchParams.get('error');
   </div>
 
   <!-- Add role form -->
-  <div class="bg-white rounded-[2rem] px-6 py-6 border border-peach/60">
+  <div class="bg-white rounded-[var(--radius-card)] px-6 py-6 border border-peach/60">
     <h2 class="text-base font-semibold mb-5 text-navy">Assign a role</h2>
     <form method="POST" action="/api/admin/roles" class="space-y-4" id="assign-form">
       <input type="hidden" name="action" value="assign-form" />
@@ -149,11 +150,9 @@ const error   = Astro.url.searchParams.get('error');
         <p class="text-xs mt-1 text-gray-text">Hold Cmd/Ctrl to select multiple trips.</p>
       </div>
 
-      <button type="submit"
-              class="rounded-full px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-cta"
-             >
+      <Button type="submit" variant="cta" size="md">
         Assign role
-      </button>
+      </Button>
     </form>
   </div>
 </AdminLayout>

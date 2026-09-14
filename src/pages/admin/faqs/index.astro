@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { listFaqs } from '../../../lib/content';
 export const prerender = false;
 
@@ -16,11 +17,11 @@ for (const f of faqs) {
 <AdminLayout title="FAQ" page="faqs">
   <div class="flex items-center justify-between mb-6">
     <p class="text-sm text-gray-text">{faqs.length} question{faqs.length === 1 ? '' : 's'} · shown on the public FAQ page</p>
-    <a href="/admin/faqs/new/" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy">+ New</a>
+    <Button href="/admin/faqs/new/" variant="primary" size="sm">+ New</Button>
   </div>
 
   {faqs.length === 0 ? (
-    <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
+    <div class="bg-white rounded-[var(--radius-card)] p-10 text-center border border-peach/60">
       <p class="text-sm text-gray-text">No FAQs yet. Add the first one.</p>
     </div>
   ) : (

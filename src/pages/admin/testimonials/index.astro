@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { listTestimonials } from '../../../lib/content';
 export const prerender = false;
 
@@ -11,19 +12,17 @@ const testimonials = listTestimonials();
     <p class="text-sm text-gray-text">
       {testimonials.length} testimonial{testimonials.length === 1 ? '' : 's'} · shown on the homepage and trip pages
     </p>
-    <a href="/admin/testimonials/new/"
-       class="rounded-xl px-4 py-2.5 text-sm font-semibold text-white bg-navy"
-      >+ New</a>
+    <Button href="/admin/testimonials/new/" variant="primary" size="sm">+ New</Button>
   </div>
 
   {testimonials.length === 0 ? (
-    <div class="bg-white rounded-[2rem] p-10 text-center border border-peach/60">
+    <div class="bg-white rounded-[var(--radius-card)] p-10 text-center border border-peach/60">
       <p class="text-sm text-gray-text">No testimonials yet. Add the first one.</p>
     </div>
   ) : (
     <div class="grid gap-4 sm:grid-cols-2">
       {testimonials.map(t => (
-        <div class="bg-white rounded-[2rem] p-5 flex flex-col border border-peach/60">
+        <div class="bg-white rounded-[var(--radius-card)] p-5 flex flex-col border border-peach/60">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-1 text-coral">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -32,7 +31,7 @@ const testimonials = listTestimonials();
                 </svg>
               ))}
               {t.featured && (
-                <span class="ml-2 text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral/12 text-coral-ink"
+                <span class="ml-2 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral/12 text-coral-ink"
                      >Featured</span>
               )}
             </div>

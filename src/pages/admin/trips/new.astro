@@ -72,7 +72,7 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Occupancy Tiers</label>
-          <p class="fhint mb-[0.5rem]">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
+          <p class="fhint mb-2">Define each room type once (e.g. Dorm Bed, Double Sharing). Below, each departure picks which tiers it sells and at what price/stock.</p>
           <div id="catalog-editor"></div>
           <button type="button" id="add-tier-btn" class="add-btn">+ Add Occupancy Tier</button>
           <input type="hidden" name="occupancyCatalog_json" id="occupancyCatalog_json" />
@@ -80,12 +80,12 @@ const globalFaqs = listFaqs();
 
         <div class="field full">
           <label class="flabel">Departures &amp; Offers</label>
-          <p class="fhint mb-[0.5rem]">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
+          <p class="fhint mb-2">One block per departure date. Tick which tiers it offers; set the price, stock (cap) and booked count per tier. A date is sold out when every offered tier is full. Leave a tier unticked to not sell it on that date.</p>
           <div
             id="departure-validation-error"
             role="alert"
             hidden={!bookingError}
-            class="mb-[0.75rem] border border-danger rounded-[0.5rem] p-[0.75rem] text-danger bg-[rgba(220,38,38,0.06)] text-[0.875rem]"
+            class="mb-3 border border-danger rounded-lg p-3 text-danger bg-danger/5 text-sm"
           >
             The trip was not saved because a departure is incomplete. Check its date, selected occupancy tier, and price.
           </div>
@@ -172,7 +172,7 @@ const globalFaqs = listFaqs();
     <div class="tab-panel hidden" id="tab-itinerary">
       <div class="itin-toolbar">
         <span class="itin-count" id="itin-count">0 days</span>
-        <div class="flex gap-[0.5rem]">
+        <div class="flex gap-2">
           <button type="button" class="itin-tool-btn" id="expand-all-btn">Expand all</button>
           <button type="button" class="itin-tool-btn" id="collapse-all-btn">Collapse all</button>
         </div>
@@ -644,7 +644,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
           '<input type="text" class="finput tier-label" value="' + esc(tier.label) + '" placeholder="e.g. Double Sharing" /></div>' +
         '<div class="flex-[3]"><span class="fhint">Helper text (what this sharing means)</span>' +
           '<input type="text" class="finput tier-helper" value="' + esc(tier.helperText) + '" placeholder="e.g. Room shared with one other traveller." /></div>' +
-        '<button type="button" class="rm-btn mt-[1.2rem]">✕</button>';
+        '<button type="button" class="rm-btn mt-5">✕</button>';
       row.querySelector('.tier-label').addEventListener('input', (e) => { tier.label = e.target.value; });
       row.querySelector('.tier-helper').addEventListener('input', (e) => { tier.helperText = e.target.value; });
       row.querySelector('.rm-btn').addEventListener('click', () => {
@@ -674,7 +674,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
           '<select class="finput dep-status">' +
             STATUSES.map(({ value, label }) => '<option value="' + value + '"' + (value === dep.status || (value === 'filling_fast' && dep.status === 'filling-fast') ? ' selected' : '') + '>' + label + '</option>').join('') +
           '</select></div>' +
-        '<button type="button" class="rm-btn dep-remove mb-[0.1rem]">✕ Date</button>';
+        '<button type="button" class="rm-btn dep-remove mb-0.5">✕ Date</button>';
       head.querySelector('.dep-start').addEventListener('input', (e) => { dep.startDate = e.target.value; });
       head.querySelector('.dep-end').addEventListener('input', (e) => { dep.endDate = e.target.value; });
       head.querySelector('.dep-status').addEventListener('change', (e) => { dep.status = e.target.value; });
@@ -705,7 +705,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
         const r = document.createElement('div');
         r.style.cssText = 'display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; background:var(--color-surface-soft); border-radius:0.4rem; padding:0.35rem 0.5rem;';
         r.innerHTML =
-          '<label class="flex items-center gap-[0.4rem] flex-[2] min-w-[160px] cursor-pointer">' +
+          '<label class="flex items-center gap-1.5 flex-[2] min-w-[160px] cursor-pointer">' +
             '<input type="checkbox" class="off-on"' + (offered ? ' checked' : '') + ' />' +
             '<span>' + esc(tier.label || tierId) + '</span></label>' +
           '<div class="flex-1 min-w-[90px]"><span class="fhint">Price ₹</span>' +

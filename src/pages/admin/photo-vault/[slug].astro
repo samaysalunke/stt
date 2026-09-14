@@ -1,6 +1,7 @@
 ---
 export const prerender = false;
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Button from '../../../components/ui/Button.astro';
 import { readAlbum } from '../../../lib/content';
 
 const { slug } = Astro.params;
@@ -18,13 +19,13 @@ const legacyDate = isoDate ? '' : rawDate;
 ---
 
 <AdminLayout title={`Edit: ${album.name ?? slug}`} page="photo-vault">
-  <div class="flex items-center gap-[1rem] mb-[1.5rem]">
-    <a href="/admin/photo-vault" class="text-gray-text no-underline text-[0.875rem]">← Back to Photo Vault</a>
-    <h1 class="font-display text-[1.5rem] font-bold text-navy m-0">Edit: {album.name ?? slug}</h1>
+  <div class="flex items-center gap-4 mb-6">
+    <a href="/admin/photo-vault" class="text-gray-text no-underline text-sm">← Back to Photo Vault</a>
+    <h1 class="font-display text-2xl font-bold text-navy m-0">Edit: {album.name ?? slug}</h1>
   </div>
 
   <!-- Metadata form -->
-  <div class="form-section mb-[1.5rem]">
+  <div class="form-section mb-6">
     <h2 class="section-title">Album Details</h2>
     <form method="POST" action="/api/admin/albums/update" enctype="multipart/form-data">
       <input type="hidden" name="slug" value={slug} />
@@ -52,20 +53,20 @@ const legacyDate = isoDate ? '' : rawDate;
         <div class="form-group">
           <label class="form-label">Cover Image</label>
           {album.coverImage && (
-            <div class="mb-[0.5rem]">
-              <img src={album.coverImage} alt="Cover" class="max-h-[120px] rounded-[0.5rem] object-cover" />
-              <div class="text-[0.75rem] text-gray-text mt-[0.25rem]">Current cover</div>
+            <div class="mb-2">
+              <img src={album.coverImage} alt="Cover" class="max-h-[120px] rounded-lg object-cover" />
+              <div class="text-xs text-gray-text mt-1">Current cover</div>
             </div>
           )}
           <input type="file" name="coverImage" accept="image/*" class="form-input" onchange="previewImage(this,'cover-preview')" />
-          <img id="cover-preview" src="" alt="" class="hidden mt-[0.5rem] max-h-[150px] rounded-[0.5rem] object-cover" />
+          <img id="cover-preview" src="" alt="" class="hidden mt-2 max-h-[150px] rounded-lg object-cover" />
           <p class="img-hint"><strong>Recommended:</strong> 800 × 600 px · 4:3 ratio · JPG or PNG · Max 10 MB. Shown as the album cover card on the Photo Vault listing page.</p>
           <input type="hidden" name="existingCoverImage" value={album.coverImage ?? ''} />
         </div>
         <div class="form-group"><label class="form-label">Publication</label><select name="publicationStatus" class="form-input">{['draft', 'published', 'archived', 'test'].map((status) => <option value={status} selected={(album.publicationStatus ?? (album.published ? 'published' : 'draft')) === status}>{status}</option>)}</select></div>
       </div>
-      <div class="mt-[1rem]">
-        <button type="submit" class="bg-navy text-white py-[0.55rem] px-[1.5rem] rounded-[0.5rem] border-none cursor-pointer font-semibold text-[0.875rem]">Save Album Details</button>
+      <div class="mt-4">
+        <Button type="submit" variant="primary" size="md">Save Album Details</Button>
       </div>
     </form>
   </div>
@@ -77,7 +78,7 @@ const legacyDate = isoDate ? '' : rawDate;
     {photos.length > 0 && (
       <form id="captions-form">
         <input type="hidden" name="slug" value={slug} />
-        <div id="photo-grid" class="mb-[1rem]">
+        <div id="photo-grid" class="mb-4">
           {photos.map((photo, i) => (
             <div class="photo-card" data-index={i}>
               <div
@@ -99,30 +100,30 @@ const legacyDate = isoDate ? '' : rawDate;
                 value={photo.caption ?? ''}
                 placeholder="Caption..."
                 data-photo={photo.image}
-                class="form-input caption-input mt-[0.4rem] text-[0.8rem]"
+                class="form-input caption-input mt-1.5 text-xs"
                
               />
             </div>
           ))}
         </div>
-        <button type="button" id="save-captions-btn" class="bg-gray-soft border border-border text-gray-text py-[0.5rem] px-[1.25rem] rounded-[0.5rem] cursor-pointer text-[0.875rem] font-medium">Save Captions</button>
-        <span id="captions-status" class="text-[0.8rem] text-gray-text ml-[0.75rem]"></span>
+        <button type="button" id="save-captions-btn" class="bg-gray-soft border border-border text-gray-text py-2 px-5 rounded-lg cursor-pointer text-sm font-medium">Save Captions</button>
+        <span id="captions-status" class="text-xs text-gray-text ml-3"></span>
       </form>
     )}
 
     {photos.length === 0 && (
-      <p class="text-gray-text text-[0.875rem] mb-[1rem]">No photos yet. Add some below.</p>
+      <p class="text-gray-text text-sm mb-4">No photos yet. Add some below.</p>
     )}
 
     <!-- Add photos -->
-    <div class="mt-[1.5rem] pt-[1.5rem] border-t border-border">
-      <h3 class="text-[0.95rem] font-semibold text-gray-text mt-[0] mx-[0] mb-[0.75rem]">Add Photos</h3>
+    <div class="mt-6 pt-6 border-t border-border">
+      <h3 class="text-base font-semibold text-gray-text mt-0 mx-0 mb-3">Add Photos</h3>
       <input type="file" id="photo-upload-input" accept="image/*" multiple class="hidden" />
-      <label for="photo-upload-input" class="inline-block bg-gray-soft border border-border border-dashed text-gray-text py-[0.75rem] px-[1.5rem] rounded-[0.5rem] cursor-pointer text-[0.875rem]">
+      <label for="photo-upload-input" class="inline-block bg-gray-soft border border-border border-dashed text-gray-text py-3 px-6 rounded-lg cursor-pointer text-sm">
         📷 Choose Photos (multi-select)
       </label>
       <p class="img-hint"><strong>Recommended:</strong> Min 1200 px wide · Any aspect ratio · JPG or PNG · Max 10 MB each. Use multi-select to upload several photos at once.</p>
-      <div id="upload-status" class="mt-[0.75rem] text-[0.875rem] text-gray-text"></div>
+      <div id="upload-status" class="mt-3 text-sm text-gray-text"></div>
     </div>
   </div>
 </AdminLayout>
