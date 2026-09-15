@@ -229,18 +229,35 @@ keyboard, which works for photo and text messages alike.
 Keep BotFather privacy mode **on**: callback queries arrive regardless, and the
 bot never sees group chat text.
 
+## Audit: production result (796 registrations, 2026-09-15)
+
+`railway ssh node scripts/audit-payment-matrix.mjs`, against the Railway volume.
+Check A produced three REJECT buckets, none of them a problem:
+
+| rows | shipped guard |
+|---|---|
+| `cancelled` + `unpaid` × 6, ₹0 paid | payment actions blocked — as the admin UI already blocked them |
+| `wishlist` + `unpaid` × 10, ₹0 paid | blocked, "no payment to record" |
+| **`lead` + `advance_paid` × 1, ₹10,000 paid** | **still fully editable** |
+
+The third row is the one that matters. It is exactly the case
+`registrationStatus.ts:45` documents — *"production has a `lead` carrying a
+recorded advance"* — and it is real. Under the `PAYMENT_OPTIONS` membership test
+this plan first proposed, that row would have become **uneditable, with a live
+₹10,000 payment stuck on it**. Under `assertPaymentActionAllowed`, `lead` is a
+live status and payments and reversals on it still work.
+
+Check C returned nothing: `payment_status` agrees with the ledger on all 796
+rows. Check D found every live booking (462 leads, 1 pending) carries a trip
+price, so none are missing a `Confirm ▸` button.
+
+Operational note, not a code issue: that lead holding ₹10,000 is money taken
+against a booking never progressed past lead. It predates this work. In Telegram
+it correctly shows `[Confirm ▸] [Cancel ▸]` and no `→ Pending`, since
+`mustBeUnpaid` refuses that move once money is recorded.
+
 ## Still open
 
-- **Check A has only run against the 8-row visual-test fixture.** The dev DB
-  holds zero registrations. Run it against the Railway volume before relying on
-  the Phase 0 guard in production:
-
-  ```
-  railway ssh node scripts/audit-payment-matrix.mjs
-  ```
-
-  Use the `.mjs` twin, not the `.sql` file — Nixpacks Node images ship no sqlite3
-  binary. Both open the database read-only and print only aggregates.
 - The webhook's authorization matrix is proven as a unit, not end-to-end: doing
   it live would need a real bot token in the shared test server's environment,
   which would make `telegram-notifications.test.mjs` dial api.telegram.org. The
