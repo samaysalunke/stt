@@ -11,7 +11,15 @@
  *   node scripts/telegram-webhook.mjs delete
  *
  * Needs TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET in the environment.
+ *
+ * The secret must be [A-Za-z0-9_-]{1,256} — Telegram's rule, and narrower than
+ * it looks: `openssl rand -base64` emits +, / and =, all of which it rejects
+ * with the unhelpful "secret token contains illegal characters". Use
+ * `openssl rand -hex 32`.
  */
+
+/** Telegram's own charset for secret_token. */
+const SECRET_PATTERN = /^[A-Za-z0-9_-]{1,256}$/;
 const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const secret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
 const origin = (process.argv[3] || process.env.SITE_URL || 'https://www.seekthethrill.in').replace(/\/$/, '');
@@ -40,6 +48,17 @@ try {
   } else if (command === 'set') {
     if (!secret) {
       console.error('TELEGRAM_WEBHOOK_SECRET is not set — refusing to register an unauthenticated webhook.');
+      process.exit(1);
+    }
+    if (!SECRET_PATTERN.test(secret)) {
+      const illegal = [...new Set(secret.replace(/[A-Za-z0-9_-]/g, ''))].join(' ');
+      console.error(
+        'TELEGRAM_WEBHOOK_SECRET contains characters Telegram will not accept'
+        + (illegal ? `: ${illegal}` : ' (or is longer than 256 characters)') + '\n'
+        + 'Allowed: A-Z a-z 0-9 _ -   (so not base64 — openssl rand -base64 emits + / =)\n'
+        + 'Generate one with:  openssl rand -hex 32\n'
+        + 'Then update TELEGRAM_WEBHOOK_SECRET in the deployment and re-run this command.',
+      );
       process.exit(1);
     }
     const url = `${origin}/api/telegram/webhook`;

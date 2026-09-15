@@ -51,10 +51,16 @@ one-way and no buttons are attached, so the group never sees a dead control.
 
 Setup, in this order:
 
-1. Set `TELEGRAM_WEBHOOK_SECRET` to a long random value. Deliberately **not** the
-   bot token — that already authenticates the retry worker, and one compromise
-   should not be two. Telegram sends it back as `X-Telegram-Bot-Api-Secret-Token`
-   and it is compared in constant time.
+1. Set `TELEGRAM_WEBHOOK_SECRET`, generated with `openssl rand -hex 32`.
+   Deliberately **not** the bot token — that already authenticates the retry
+   worker, and one compromise should not be two. Telegram sends it back as
+   `X-Telegram-Bot-Api-Secret-Token` and it is compared in constant time.
+
+   Use **hex, not base64**. Telegram allows only `A-Z a-z 0-9 _ -` in a secret
+   token, so `openssl rand -base64 32` produces `+`, `/` and `=` and `setWebhook`
+   fails with the unhelpful `Bad Request: secret token contains illegal
+   characters`. `scripts/telegram-webhook.mjs` now refuses such a secret up front
+   and names the offending characters.
 2. Set `TELEGRAM_BOT_USERNAME` to the bot's `@username`, without the `@`.
 3. Deploy.
 4. `node scripts/telegram-webhook.mjs set` — after the deploy, never before.
