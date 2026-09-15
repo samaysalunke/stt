@@ -37,9 +37,9 @@ describe('parseCallbackData', () => {
 });
 
 describe('keyboardFor', () => {
-  it('offers a lead the moves the transition guards actually allow', () => {
-    const kb = keyboardFor({ regId: 1, status: 'lead', paymentStatus: 'unpaid', tripSlug: 'ladakh', totalAmount: 25000 });
-    expect(texts(kb)).toEqual(['→ Pending', 'Confirm ▸', 'Cancel ▸', 'Open in admin ↗']);
+  it('offers a pending booking the moves the transition guards actually allow', () => {
+    const kb = keyboardFor({ regId: 1, status: 'pending', tripSlug: 'ladakh', totalAmount: 25000 });
+    expect(texts(kb)).toEqual(['Confirm ▸', 'Cancel ▸', 'Open in admin ↗']);
   });
 
   /**
@@ -47,26 +47,31 @@ describe('keyboardFor', () => {
    * row that has none would be a button that can only ever error.
    */
   it('withholds Confirm from a booking with no trip price', () => {
-    expect(texts(keyboardFor({ regId: 1, status: 'lead', totalAmount: null })))
-      .toEqual(['→ Pending', 'Cancel ▸', 'Open in admin ↗']);
+    expect(texts(keyboardFor({ regId: 1, status: 'pending', totalAmount: null })))
+      .toEqual(['Cancel ▸', 'Open in admin ↗']);
   });
 
-  /** `mustBeUnpaid` refuses lead → pending once money is recorded. */
-  it('withholds → Pending from a lead already carrying an advance', () => {
-    expect(texts(keyboardFor({ regId: 1, status: 'lead', amountPaid: 5000, totalAmount: 25000 })))
-      .toEqual(['Confirm ▸', 'Cancel ▸', 'Open in admin ↗']);
+  /**
+   * A lead is still a conversation and a confirmed booking is already settled.
+   * Neither gets a one-tap move, however much the guards would allow: the group
+   * reads those messages, and acts on them in the admin UI.
+   */
+  it('gives a lead nothing but the way out to the admin UI', () => {
+    for (const ctx of [
+      { regId: 1, status: 'lead', tripSlug: 'ladakh', totalAmount: 25000 },
+      { regId: 1, status: 'lead', totalAmount: null },
+      { regId: 1, status: 'lead', amountPaid: 5000, totalAmount: 25000 },
+    ]) {
+      expect(texts(keyboardFor(ctx)), JSON.stringify(ctx)).toEqual(['Open in admin ↗']);
+    }
   });
 
-  it('drops → Pending once a booking is confirmed, since that move is illegal', () => {
-    const kb = keyboardFor({ regId: 1, status: 'confirmed', paymentStatus: 'fully_paid', totalAmount: 25000, amountPaid: 25000 });
-    expect(texts(kb)).toEqual(['Cancel ▸', 'Open in admin ↗']);
-  });
-
-  it('offers the balance only while an advance is outstanding', () => {
-    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', paymentStatus: 'advance_paid', totalAmount: 25000, amountPaid: 5000 })))
-      .toContain('Mark fully paid');
-    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', paymentStatus: 'fully_paid', totalAmount: 25000, amountPaid: 25000 })))
-      .not.toContain('Mark fully paid');
+  it('gives a confirmed booking nothing but the way out to the admin UI', () => {
+    // Including the outstanding balance: recording it is an admin-UI move now.
+    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', totalAmount: 25000, amountPaid: 5000 })))
+      .toEqual(['Open in admin ↗']);
+    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', totalAmount: 25000, amountPaid: 25000 })))
+      .toEqual(['Open in admin ↗']);
   });
 
   it('leaves a terminal booking nothing but the way out to the admin UI', () => {

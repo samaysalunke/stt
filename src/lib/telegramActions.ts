@@ -63,7 +63,6 @@ async function runCallback(
   const ctx = {
     regId: reg.id,
     status: String(reg.status ?? 'pending'),
-    paymentStatus: reg.payment_status,
     tripSlug: reg.trip_slug,
     amountPaid: reg.amount_paid,
     totalAmount: reg.total_amount,

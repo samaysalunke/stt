@@ -250,7 +250,6 @@ export async function deliverClaimedTelegramEvent(db: Database.Database, event: 
     ? keyboardFor({
         regId: registration.id,
         status: String(registration.status ?? 'pending'),
-        paymentStatus: registration.payment_status ?? null,
         tripSlug: registration.trip_slug ?? null,
         amountPaid: registration.amount_paid,
         totalAmount: registration.total_amount,
@@ -346,7 +345,7 @@ async function editReplyMarkup(messageId: string, replyMarkup: unknown): Promise
 /** Show a submenu in place, without touching the booking. */
 export async function showMenu(
   messageId: string,
-  ctx: { regId: number; status: string; paymentStatus?: string | null; tripSlug?: string | null },
+  ctx: { regId: number; status: string; tripSlug?: string | null },
   menu: Menu,
 ): Promise<void> {
   try {
@@ -387,7 +386,6 @@ export async function refreshRegistrationMessages(registrationId: number, footer
   const keyboard = keyboardFor({
     regId: registration.id,
     status: String(registration.status ?? 'pending'),
-    paymentStatus: registration.payment_status ?? null,
     tripSlug: registration.trip_slug ?? null,
     amountPaid: registration.amount_paid,
     totalAmount: registration.total_amount,

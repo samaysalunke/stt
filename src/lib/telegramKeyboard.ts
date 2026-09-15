@@ -18,6 +18,12 @@ import { assertTransition, PAYMENT_OPTIONS } from './registrationStatus';
 
 export type Menu = 'root' | 'confirm' | 'cancel';
 
+/**
+ * Statuses whose message carries no action at all, whatever the transition
+ * guards would allow — moves on these are made in the admin UI.
+ */
+const NO_ACTION_STATUSES = new Set(['lead', 'confirmed']);
+
 /** `b:<registration id>:<verb>:<arg>` — well inside Telegram's 64-byte cap. */
 export type Verb = 'st' | 'cf' | 'cx' | 'pay' | 'm';
 
@@ -49,7 +55,6 @@ interface Button { text: string; callback_data?: string; url?: string }
 export interface KeyboardContext {
   regId: number;
   status: string;
-  paymentStatus?: string | null;
   tripSlug?: string | null;
   /** Needed to decide a move: several transition guards turn on the money. */
   amountPaid?: number | null;
@@ -93,8 +98,8 @@ function openButton(ctx: KeyboardContext): Button {
 }
 
 /**
- * The keyboard for a booking as it stands. `null` means no keyboard at all —
- * a terminal row keeps only the link out to the admin UI.
+ * The keyboard for a booking as it stands. A row with no move left to offer
+ * keeps only the link out to the admin UI.
  */
 export function keyboardFor(ctx: KeyboardContext, menu: Menu = 'root'): { inline_keyboard: Button[][] } {
   const { regId, status } = ctx;
@@ -121,17 +126,17 @@ export function keyboardFor(ctx: KeyboardContext, menu: Menu = 'root'): { inline
     return { inline_keyboard: rows };
   }
 
+  // A lead is still a conversation and a confirmed booking is already settled;
+  // the ops group wants no one-tap move on either, so those messages keep just
+  // the link out. Every other status is offered whatever the guards allow.
+  if (NO_ACTION_STATUSES.has(status)) return { inline_keyboard: [[openButton(ctx)]] };
+
   const primary: Button[] = [];
   if (canMoveTo(ctx, 'pending')) {
     primary.push({ text: '→ Pending', callback_data: callbackData(regId, 'st', 'pending') });
   }
   if (canMoveTo(ctx, 'confirmed')) {
     primary.push({ text: 'Confirm ▸', callback_data: callbackData(regId, 'm', 'confirm') });
-  }
-  // Recording the balance is a payment move, not a transition, so it is gated on
-  // the payment state rather than on TRANSITIONS.
-  if (status === 'confirmed' && ctx.paymentStatus === 'advance_paid') {
-    primary.push({ text: 'Mark fully paid', callback_data: callbackData(regId, 'pay', 'full') });
   }
   if (primary.length) rows.push(primary);
 
