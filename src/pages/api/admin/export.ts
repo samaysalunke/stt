@@ -4,7 +4,7 @@ import { likeTerm } from '../../../lib/utils';
 import {
   buildCustomerQuery, CUSTOMER_ORDER_BY, CUSTOMER_TYPES, EXPORT_COLUMNS,
 } from '../../../lib/customersView';
-import { UNATTRIBUTED } from '../../../lib/registrationsView';
+import { ATTRIBUTION_FIELDS, UNATTRIBUTED } from '../../../lib/registrationsView';
 import type { AdminUser } from '../../../lib/admin-session';
 
 /**
@@ -13,6 +13,9 @@ import type { AdminUser } from '../../../lib/admin-session';
  * it. Every row gets every key, including rows with no attribution: toCSV()
  * derives its header row from the first row's keys, so a row-dependent shape
  * would silently drop columns from the whole download.
+ *
+ * The column order is fixed here rather than taken from ATTRIBUTION_FIELDS so
+ * the CSV shape stays stable if a filter is ever reordered or added.
  */
 const ATTRIBUTION_COLUMNS = {
   utm_source: 'utmSource', utm_medium: 'utmMedium', utm_campaign: 'utmCampaign',
@@ -93,26 +96,26 @@ export const GET: APIRoute = async ({ url, locals }) => {
       params.push(term, term, term);
     }
 
-    // Attribution filters, mirroring the source/campaign selects on the trip
-    // page so an export taken with a filter active matches what was on screen.
-    // Both normalise to lowercase because that is how the row data attributes
-    // the selects are built from are normalised (see regSource/regCampaign).
-    const source = (url.searchParams.get('source') ?? '').trim().toLowerCase().slice(0, 200);
-    const campaign = (url.searchParams.get('campaign') ?? '').trim().toLowerCase().slice(0, 200);
-    if (source === UNATTRIBUTED) {
-      where.push("COALESCE(source, '') = ''");
-    } else if (source) {
-      where.push('lower(source) = ?');
-      params.push(source);
-    }
-    // Campaign has no column of its own — it is read out of the stored first
-    // touch. json_extract returns NULL for a NULL/!JSON column, so the
-    // unattributed branch catches legacy and imported rows too.
-    if (campaign === UNATTRIBUTED) {
-      where.push("COALESCE(lower(json_extract(first_touch_json, '$.utmCampaign')), '') = ''");
-    } else if (campaign) {
-      where.push("lower(json_extract(first_touch_json, '$.utmCampaign')) = ?");
-      params.push(campaign);
+    // Attribution filters, driven by the same field list the trip page builds
+    // its controls from, so an export taken with a filter active matches what
+    // was on screen. Each field carries the SQL that reproduces its JS reader —
+    // including trim(lower(...)), because the readers trim and bare lower()
+    // does not, and a json_valid() guard, because json_extract THROWS on a
+    // malformed blob and would 500 the whole download for one bad row.
+    for (const field of ATTRIBUTION_FIELDS) {
+      const value = (url.searchParams.get(field.param) ?? '').trim().toLowerCase().slice(0, 200);
+      if (!value) continue;
+      if (field.match === 'contains') {
+        // instr() rather than LIKE, so no wildcard escaping is needed.
+        where.push(`instr(${field.sqlExpr}, ?) > 0`);
+        params.push(value);
+      } else if (value === UNATTRIBUTED) {
+        // Catches legacy and imported rows, whose touch column is NULL.
+        where.push(`${field.sqlExpr} = ''`);
+      } else {
+        where.push(`${field.sqlExpr} = ?`);
+        params.push(value);
+      }
     }
 
     const sql = `SELECT * FROM registrations ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id DESC`;

@@ -83,28 +83,172 @@ export const UNATTRIBUTED = '__none__';
  * RegistrationCard and the filter options built on the trip page normalise
  * values identically — a mismatch here silently yields a filter that matches
  * nothing.
- *
- * `source` is already the first-touch-derived value written by
- * attributionSource() at registration time (utm_source, else the referrer
- * hostname, else 'direct'), so reporting is first-touch by construction.
- * Campaign has no such column and is read out of the stored first touch.
  */
-export function regSource(r: Reg): string {
-  return String(r.source ?? '').trim().toLowerCase();
-}
 
-export function regCampaign(r: Reg): string {
+/** The stored first touch, or null when the row predates attribution or the
+ *  blob is malformed. The only place first_touch_json is parsed. */
+function firstTouch(r: Reg): Record<string, any> | null {
   try {
-    const touch = typeof r.first_touch_json === 'string' ? JSON.parse(r.first_touch_json) : null;
-    return String(touch?.utmCampaign ?? '').trim().toLowerCase();
+    return typeof r.first_touch_json === 'string' ? JSON.parse(r.first_touch_json) : null;
   } catch {
-    return '';
+    return null;
   }
 }
+
+const norm = (value: unknown) => String(value ?? '').trim().toLowerCase();
+
+/** Reader for one camelCase key of the stored first touch. */
+const touchReader = (touchKey: string) => (r: Reg) => norm(firstTouch(r)?.[touchKey]);
+
+/**
+ * `source` is the DERIVED channel written by attributionSource() at registration
+ * time — utm_source, else the referrer hostname, else 'direct' — and
+ * createRegistration() hardcodes 'admin' for admin-created and admin-imported
+ * rows. It is therefore almost never empty, and it is NOT the raw utm_source of
+ * the first touch: a row can read source='google.com' with an empty utmSource
+ * because the value came from the referrer. Both ship as separate filters for
+ * exactly that reason — collapsing them would make "which rows carry no
+ * utm_source" unaskable.
+ */
+export function regSource(r: Reg): string {
+  return norm(r.source);
+}
+
+/** First-touch campaign. Reporting is first-touch by construction: register.ts
+ *  COALESCEs first_touch_json so a later campaign never rewrites it. */
+export const regCampaign = touchReader('utmCampaign');
+
+export interface AttributionField {
+  /** Stable id — the filter control's id suffix. */
+  key: string;
+  /**
+   * The row's attribute name, without the `data-` prefix. Kebab-case because
+   * HTML lowercases attribute names: `data-attr-utmMedium` comes back as
+   * `data-attr-utmmedium`, which no camelCase lookup would ever find.
+   */
+  dataAttr: string;
+  /** Query-string parameter. `source` and `campaign` keep the names they
+   *  shipped with, so existing export links and bookmarks keep working. */
+  param: string;
+  label: string;
+  /** "All …" option, exact fields only. */
+  allLabel?: string;
+  /** The UNATTRIBUTED bucket's wording, exact fields only. */
+  noneLabel?: string;
+  /**
+   * `exact` renders a <select> built from the rows on screen and offers the
+   * UNATTRIBUTED bucket; `contains` renders a free-text input matched as a
+   * substring. Pinned per field rather than inferred from cardinality: the CSV
+   * export never sees the rendered page, so a render-time choice would let the
+   * download and the screen disagree about the same filter.
+   */
+  match: 'exact' | 'contains';
+  /** SQL yielding exactly what `read` yields, for the export's WHERE clause. */
+  sqlExpr: string;
+  read: (r: Reg) => string;
+}
+
+/** json_extract() THROWS on a malformed blob (and on an empty string), which
+ *  would 500 the whole export for one bad row — hence the json_valid() guard.
+ *  trim(lower()) mirrors norm(), so SQL and JS cannot disagree on whitespace. */
+const touchSql = (touchKey: string) =>
+  `trim(lower(COALESCE(CASE WHEN json_valid(first_touch_json) THEN json_extract(first_touch_json, '$.${touchKey}') END, '')))`;
+
+/** `utmMedium` -> `attr-utm-medium`. */
+const dataAttrFor = (key: string) => `attr-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+
+const touchField = (
+  f: Omit<AttributionField, 'sqlExpr' | 'read' | 'dataAttr'> & { touchKey: string },
+): AttributionField => ({
+  key: f.key, dataAttr: dataAttrFor(f.key), param: f.param, label: f.label,
+  allLabel: f.allLabel, noneLabel: f.noneLabel, match: f.match,
+  sqlExpr: touchSql(f.touchKey), read: touchReader(f.touchKey),
+});
+
+/** The one list the row data attributes, the filter panel, the client matcher
+ *  and the export SQL all read from. Add a dimension here and nowhere else. */
+export const ATTRIBUTION_FIELDS: readonly AttributionField[] = [
+  {
+    key: 'source', dataAttr: 'attr-source', param: 'source', label: 'Channel (derived)',
+    allLabel: 'All channels', noneLabel: '(not attributed)', match: 'exact',
+    sqlExpr: "trim(lower(COALESCE(source, '')))", read: regSource,
+  },
+  touchField({ key: 'utmSource', param: 'utm_source', label: 'UTM source', allLabel: 'All utm_source', noneLabel: '(no utm_source)', match: 'exact', touchKey: 'utmSource' }),
+  touchField({ key: 'utmMedium', param: 'utm_medium', label: 'UTM medium', allLabel: 'All utm_medium', noneLabel: '(no utm_medium)', match: 'exact', touchKey: 'utmMedium' }),
+  touchField({ key: 'campaign', param: 'campaign', label: 'Campaign', allLabel: 'All campaigns', noneLabel: '(no campaign)', match: 'exact', touchKey: 'utmCampaign' }),
+  // Free text by nature — full URLs and per-ad content values, where a dropdown
+  // would be one option per row.
+  touchField({ key: 'utmContent', param: 'utm_content', label: 'UTM content', match: 'contains', touchKey: 'utmContent' }),
+  touchField({ key: 'utmTerm', param: 'utm_term', label: 'UTM term', match: 'contains', touchKey: 'utmTerm' }),
+  touchField({ key: 'landingPage', param: 'landing_page', label: 'Landing page', match: 'contains', touchKey: 'landingPage' }),
+  touchField({ key: 'referrer', param: 'referrer', label: 'Referrer', match: 'contains', touchKey: 'referrer' }),
+];
 
 /** Sorted distinct non-empty values, for building a filter's <option> list. */
 export function distinctValues(regs: Reg[], pick: (r: Reg) => string): string[] {
   return [...new Set(regs.map(pick).filter(Boolean))].sort();
+}
+
+export interface AttributionFilterModel {
+  field: AttributionField;
+  options: string[];
+  hasNone: boolean;
+  /** Whether the control is worth rendering for these rows at all. */
+  show: boolean;
+}
+
+/**
+ * Per-field filter state for the rows on screen. An exact filter earns its
+ * dropdown only when it can actually split those rows; a contains filter earns
+ * its input when there is anything to search. Without this a direct-traffic-only
+ * trip would show eight useless controls.
+ */
+export function attributionFilterModels(regs: Reg[]): AttributionFilterModel[] {
+  return ATTRIBUTION_FIELDS.map((field) => {
+    const options = distinctValues(regs, field.read);
+    const hasNone = regs.some((r) => !field.read(r));
+    const show = field.match === 'exact'
+      ? options.length > 1 || (options.length === 1 && hasNone)
+      : options.length > 0;
+    return { field, options, hasNone, show };
+  });
+}
+
+export interface ClientAttributionField {
+  key: string;
+  dataAttr: string;
+  param: string;
+  match: 'exact' | 'contains';
+}
+
+/** JSON-safe projection for `define:vars`, which serialises with JSON.stringify
+ *  and would silently drop `read` and leave the client calling undefined. */
+export function clientAttributionFields(): ClientAttributionField[] {
+  return ATTRIBUTION_FIELDS.map(({ key, dataAttr, param, match }) => ({ key, dataAttr, param, match }));
+}
+
+/**
+ * The at-a-glance attribution shown on a collapsed booking row: "channel/medium
+ * · campaign". Admin-created and imported rows read 'admin' rather than "not
+ * attributed" — they ARE attributed, to manual entry — so only a genuinely
+ * empty row falls back.
+ */
+export function attributionChip(r: Reg): { label: string; title: string; attributed: boolean } {
+  const touch = firstTouch(r);
+  const source = regSource(r);
+  const medium = norm(touch?.utmMedium);
+  const campaign = norm(touch?.utmCampaign);
+  const channel = [source, medium].filter(Boolean).join('/');
+  const label = [channel, campaign].filter(Boolean).join(' · ');
+  const detail = ATTRIBUTION_FIELDS
+    .map((f) => { const v = f.read(r); return v ? `${f.label}: ${v}` : ''; })
+    .filter(Boolean)
+    .join('\n');
+  return {
+    label: label || 'not attributed',
+    title: detail || 'No attribution captured for this booking',
+    attributed: Boolean(label),
+  };
 }
 
 /**

@@ -4,9 +4,8 @@ import RegistrationCard from '../../../components/admin/RegistrationCard.astro';
 import {
   buildRegistrationsView,
   regStats,
-  regSource,
-  regCampaign,
-  distinctValues,
+  attributionFilterModels,
+  clientAttributionFields,
   UNATTRIBUTED,
   NON_REVENUE_STATUSES,
   type RegTrip,
@@ -69,15 +68,14 @@ const depStatsMap = Object.fromEntries(
     return [dep.id || '__none__', { count: dep.regs.length, wishlist: ds.wishlist, lead: ds.lead, pending: ds.pending, confirmed: ds.confirmed, rejected: ds.rejected, cancelled: ds.cancelled, revenue: rev }];
   })
 );
-// Attribution filter options — only the values this trip actually has, so the
-// dropdowns never offer a campaign that matches nothing here.
+// Attribution filter state — only the dimensions and values this trip actually
+// has, so a control never offers a campaign that matches nothing here. Rows
+// predating attribution keep an explicit "(not attributed)" bucket instead of
+// vanishing behind every filter.
 const allTripRegs = trip.departures.flatMap((d) => d.regs);
-const sourceOptions = distinctValues(allTripRegs, regSource);
-const campaignOptions = distinctValues(allTripRegs, regCampaign);
-// Rows predating attribution (and CSV imports) carry none. Offer an explicit
-// bucket so they stay reachable instead of vanishing behind every filter.
-const hasUnsourced = allTripRegs.some((r) => !regSource(r));
-const hasUncampaigned = allTripRegs.some((r) => !regCampaign(r));
+const attrFilters = attributionFilterModels(allTripRegs).filter((m) => m.show);
+// define:vars serialises with JSON.stringify, which would silently drop read().
+const attrClientFields = clientAttributionFields();
 
 const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, pending: s.pending, confirmed: s.confirmed, rejected: s.rejected, cancelled: s.cancelled, revenue: tripRevenue };
 ---
@@ -140,19 +138,39 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <option value="confirmed">Confirmed</option>
         <option value="cancelled">Cancelled</option>
       </select>
-      {(sourceOptions.length > 1 || (sourceOptions.length === 1 && hasUnsourced)) && (
-        <select id="filter-source">
-          <option value="">All sources</option>
-          {sourceOptions.map((v) => <option value={v}>{v}</option>)}
-          {hasUnsourced && <option value={UNATTRIBUTED}>(not attributed)</option>}
-        </select>
-      )}
-      {(campaignOptions.length > 1 || (campaignOptions.length === 1 && hasUncampaigned)) && (
-        <select id="filter-campaign">
-          <option value="">All campaigns</option>
-          {campaignOptions.map((v) => <option value={v}>{v}</option>)}
-          {hasUncampaigned && <option value={UNATTRIBUTED}>(no campaign)</option>}
-        </select>
+      {attrFilters.length > 0 && (
+        <details id="attr-panel" class="attr-filter">
+          <summary>Attribution <span id="attr-count" class="attr-count"></span></summary>
+          <div class="attr-grid">
+            {attrFilters.map(({ field, options, hasNone }) => (
+              <label class="attr-field">
+                <span>{field.label}</span>
+                {field.match === 'exact' ? (
+                  <select id={`filter-attr-${field.key}`}>
+                    <option value="">{field.allLabel}</option>
+                    {options.map((v) => <option value={v}>{v}</option>)}
+                    {hasNone && <option value={UNATTRIBUTED}>{field.noneLabel}</option>}
+                  </select>
+                ) : (
+                  <>
+                    {/* Free text, but list what is actually there so the values stay discoverable. */}
+                    <input
+                      id={`filter-attr-${field.key}`}
+                      type="search"
+                      list={`attr-list-${field.key}`}
+                      placeholder="Contains…"
+                      autocomplete="off"
+                    />
+                    <datalist id={`attr-list-${field.key}`}>
+                      {options.slice(0, 200).map((v) => <option value={v}></option>)}
+                    </datalist>
+                  </>
+                )}
+              </label>
+            ))}
+          </div>
+          <button type="button" id="attr-clear" disabled>Clear attribution</button>
+        </details>
       )}
       {historyCount > 0 && (
         <label class="history-toggle">
@@ -264,6 +282,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       );
     })}
   </div>
+  <p id="rowCount" class="row-count" hidden></p>
   <p id="noResults">No matching registrations.</p>
 </AdminLayout>
 
@@ -285,6 +304,19 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   .history-toggle{white-space:nowrap;cursor:pointer}.history-count{color:var(--color-gray-text);font-weight:400}
   .departure{border:1px solid var(--color-border);border-radius:.75rem;background:#fff;margin-bottom:.65rem;overflow:hidden}.departure-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .9rem;background:var(--color-surface-soft)}.departure-title,.departure-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}.dep-status-chip{margin-left:.5rem;padding:.1rem .45rem;border-radius:999px;background:var(--color-gray-soft);color:var(--color-gray-text);font-size:.68rem;font-weight:700;text-transform:capitalize;white-space:nowrap}.departure-select-checkbox{width:1rem;height:1rem;accent-color:var(--color-coral)}.departure-summary>span{font-size:.74rem;color:var(--color-gray-text)}.departure-summary b{padding:.15rem .5rem;border-radius:999px;font-size:.7rem}.dep-actions a{padding:.2rem .45rem;font-size:.7rem;border:1px solid var(--color-peach);border-radius:.4rem;color:var(--color-navy);text-decoration:none;font-weight:700}
   .wishlist-notify{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;background:var(--color-interest-surface);border-top:1px solid var(--color-interest-border);padding:.6rem .9rem;font-size:.8rem;color:var(--color-interest-ink)}.wishlist-notify button{padding:.4rem .8rem;border:0;border-radius:.5rem;background:var(--color-interest-fill);color:#fff;font-weight:700;font-size:.78rem;cursor:pointer}.wishlist-notify button:disabled{opacity:.6;cursor:default}.wishlist-notify.done{background:var(--color-success-surface);border-color:var(--color-success-surface);color:var(--color-success-surface-ink)}
+  .row-count{margin:.6rem 0 0;font-size:.8rem;font-weight:600;color:var(--color-gray-text);text-align:right}
+  .attr-filter[open]{flex:1 1 100%}
+  .attr-filter>summary{cursor:pointer;list-style:none;padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-size:.875rem;font-weight:700;color:var(--color-navy);white-space:nowrap}
+  .attr-filter>summary::-webkit-details-marker{display:none}
+  .attr-filter>summary::after{content:" ▾";color:var(--color-gray-text)}
+  .attr-filter[open]>summary::after{content:" ▴"}
+  .attr-filter>summary:hover{border-color:var(--color-coral)}
+  .attr-count{font-weight:800;color:var(--color-coral)}
+  .attr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.6rem;margin-top:.6rem;padding:.75rem;border:1px solid var(--color-border);border-radius:.75rem;background:var(--color-surface-soft)}
+  .attr-field{display:grid!important;gap:.25rem;align-items:start!important}
+  .attr-field>span{font-size:.65rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-gray-text)}
+  .attr-field select,.attr-field input{width:100%;box-sizing:border-box}
+  #attr-clear{margin-top:.6rem}
   .registration-list{display:flex;flex-direction:column;gap:.6rem;padding:.7rem;border-top:1px solid var(--color-border);background:var(--color-surface-soft)}.history-item{display:none}#noResults{display:none;text-align:center;padding:2rem;color:var(--color-gray-text)}
   .occ-matrix-wrap{overflow-x:auto;margin:.5rem .9rem}
   .occ-matrix{width:100%;border-collapse:collapse;font-size:.76rem}
@@ -298,21 +330,50 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>
 
-<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS, NON_REVENUE_STATUSES, UNATTRIBUTED }}>
+<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS, NON_REVENUE_STATUSES, UNATTRIBUTED, attrClientFields }}>
+  // Attribution filter plumbing. Every site that touches these fields loops the
+  // same server-built list, so adding a dimension needs no change here.
+  // Read the attribute by name rather than through dataset: HTML lowercases
+  // attribute names, so any camelCase dataset lookup silently misses.
+  const attrRowValue = (row, f) => row.getAttribute('data-' + f.dataAttr) || '';
+  const attrEl = (f) => document.getElementById('filter-attr-' + f.key);
+  // A control is only rendered when it can split the rows on screen, so a
+  // missing element is normal and means "no filter".
+  const attrValue = (f) => (attrEl(f)?.value ?? '').trim().toLowerCase();
+  const activeAttrs = () => attrClientFields
+    .map((f) => [f, attrValue(f)])
+    .filter(([, v]) => v);
+
+  /**
+   * A closed <details> keeps its children — and their values — live, so an
+   * attribution filter can go on narrowing the list with nothing on screen to
+   * say why. Announce the count on the summary, never auto-close, and state the
+   * visible row count outright.
+   */
+  function updateAttrUI(attrs, shown, total) {
+    const badge = document.getElementById('attr-count');
+    if (badge) badge.textContent = attrs.length ? `· ${attrs.length} active` : '';
+    const clear = document.getElementById('attr-clear');
+    if (clear) clear.disabled = attrs.length === 0;
+    const count = document.getElementById('rowCount');
+    if (count) {
+      const filtered = shown < total;
+      count.hidden = !filtered;
+      count.textContent = filtered ? `Showing ${shown} of ${total} bookings` : '';
+    }
+  }
+
   // Reload after a bulk action while preserving the active filters in the URL,
-  // so search/status/departure/history selections survive the round-trip.
+  // so search/status/departure/history/attribution selections survive the round-trip.
   function reloadWithFilters() {
     const p = new URLSearchParams();
     const q = document.getElementById('search-input')?.value;
     const sf = document.getElementById('filter-status')?.value;
     const dep = document.getElementById('departure-select')?.value;
-    const srcf = document.getElementById('filter-source')?.value;
-    const campf = document.getElementById('filter-campaign')?.value;
     if (q) p.set('q', q);
     if (sf) p.set('status', sf);
     if (dep) p.set('dep', dep);
-    if (srcf) p.set('source', srcf);
-    if (campf) p.set('campaign', campf);
+    for (const [f, v] of activeAttrs()) p.set(f.param, v);
     if (document.getElementById('show-history')?.checked) p.set('hist', '1');
     location.href = location.pathname + (p.size ? '?' + p : '');
   }
@@ -736,9 +797,12 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   }
 
   // An attribute filter is either "any value" (''), a specific value, or the
-  // UNATTRIBUTED bucket meaning the row carries no value at all.
-  function matchAttr(value, filter) {
+  // UNATTRIBUTED bucket meaning the row carries no value at all. A 'contains'
+  // field substring-matches instead. The rule comes from the field itself, never
+  // from how the control happened to render, so the CSV export cannot disagree.
+  function matchAttr(value, filter, match) {
     if (!filter) return true;
+    if (match === 'contains') return (value || '').includes(filter);
     return filter === UNATTRIBUTED ? !value : value === filter;
   }
 
@@ -762,9 +826,11 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   function applyRowFilters() {
     const q = (document.getElementById('search-input')?.value ?? '').toLowerCase().trim();
     const sf = document.getElementById('filter-status')?.value ?? '';
-    const srcf = document.getElementById('filter-source')?.value ?? '';
-    const campf = document.getElementById('filter-campaign')?.value ?? '';
+    // Read every attribution control once. The stats guard below derives from
+    // this same array — re-reading the DOM there is how a field gets missed.
+    const attrs = activeAttrs();
     let totalVisible = 0;
+    let totalRows = 0;
     const visibleRows = [];
 
     document.querySelectorAll('.departure').forEach((dep) => {
@@ -773,14 +839,14 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         return;
       }
       const rows = [...dep.querySelectorAll('.reg-row')];
+      totalRows += rows.length;
       if (rows.length === 0) { totalVisible++; return; }
       let rowsVisible = 0;
       rows.forEach((row) => {
         const matchText = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
         const matchStatus = !sf || row.dataset.status === sf;
         const show = matchText && matchStatus
-          && matchAttr(row.dataset.source, srcf)
-          && matchAttr(row.dataset.campaign, campf);
+          && attrs.every(([f, v]) => matchAttr(attrRowValue(row, f), v, f.match));
         row.style.display = show ? '' : 'none';
         if (!show) { const cb = row.querySelector('.registration-checkbox'); if (cb) cb.checked = false; }
         if (show) { rowsVisible++; visibleRows.push(row); }
@@ -793,10 +859,13 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     // while the screen shows one campaign's. Recompute from the visible rows so
     // the cards report the filtered set. Untouched when no row filter is on, so
     // the departure/history behaviour is unchanged.
-    if (q || sf || srcf || campf) updateStats(tallyVisible(visibleRows));
+    if (q || sf || attrs.length) updateStats(tallyVisible(visibleRows));
 
     const nr = document.getElementById('noResults');
     if (nr) nr.style.display = totalVisible > 0 ? 'none' : 'block';
+    // #noResults counts departures, not rows, so it stays silent while an empty
+    // departure is on screen. State the row count outright instead.
+    updateAttrUI(attrs, visibleRows.length, totalRows);
     selectionUI();
   }
 
@@ -813,16 +882,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const exportUrl = new URL(base, location.origin);
     const q = document.getElementById('search-input')?.value?.trim() ?? '';
     const status = document.getElementById('filter-status')?.value ?? '';
-    const source = document.getElementById('filter-source')?.value ?? '';
-    const campaign = document.getElementById('filter-campaign')?.value ?? '';
     const selectedId = depSelect?.value ?? '';
     const showHistory = !!histCheckbox?.checked;
     if (q) exportUrl.searchParams.set('q', q); else exportUrl.searchParams.delete('q');
     if (status) exportUrl.searchParams.set('status', status); else exportUrl.searchParams.delete('status');
     // Without these the download would quietly contain a different set of rows
     // than the screen is showing.
-    if (source) exportUrl.searchParams.set('source', source); else exportUrl.searchParams.delete('source');
-    if (campaign) exportUrl.searchParams.set('campaign', campaign); else exportUrl.searchParams.delete('campaign');
+    const active = new Map(activeAttrs().map(([f, v]) => [f.param, v]));
+    for (const f of attrClientFields) {
+      if (active.has(f.param)) exportUrl.searchParams.set(f.param, active.get(f.param));
+      else exportUrl.searchParams.delete(f.param);
+    }
     exportUrl.searchParams.delete('batch_id');
     exportUrl.searchParams.delete('batch_filter');
     if (selectedId || !showHistory) {
@@ -906,8 +976,13 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
 
   document.getElementById('search-input')?.addEventListener('input', applyFilters);
   document.getElementById('filter-status')?.addEventListener('change', applyFilters);
-  document.getElementById('filter-source')?.addEventListener('change', applyFilters);
-  document.getElementById('filter-campaign')?.addEventListener('change', applyFilters);
+  for (const f of attrClientFields) {
+    attrEl(f)?.addEventListener(f.match === 'contains' ? 'input' : 'change', applyFilters);
+  }
+  document.getElementById('attr-clear')?.addEventListener('click', () => {
+    for (const f of attrClientFields) { const el = attrEl(f); if (el) el.value = ''; }
+    applyFilters();
+  });
   depSelect?.addEventListener('change', applyFilters);
   histCheckbox?.addEventListener('change', applyFilters);
 
@@ -946,12 +1021,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   const sp = new URLSearchParams(location.search);
   const searchEl = document.getElementById('search-input');
   const statusEl = document.getElementById('filter-status');
-  const sourceEl = document.getElementById('filter-source');
-  const campaignEl = document.getElementById('filter-campaign');
   if (searchEl && sp.get('q')) searchEl.value = sp.get('q');
   if (statusEl && sp.get('status')) statusEl.value = sp.get('status');
-  if (sourceEl && sp.get('source')) sourceEl.value = sp.get('source');
-  if (campaignEl && sp.get('campaign')) campaignEl.value = sp.get('campaign');
+  // Restored attribution filters force the panel open: a filter nobody can see
+  // reads as a broken row count.
+  let restoredAttr = false;
+  for (const f of attrClientFields) {
+    const el = attrEl(f);
+    const v = sp.get(f.param);
+    if (el && v) { el.value = v; restoredAttr = true; }
+  }
+  if (restoredAttr) document.getElementById('attr-panel')?.setAttribute('open', '');
   if (depSelect && sp.get('dep')) depSelect.value = sp.get('dep');
   if (histCheckbox && sp.get('hist')) histCheckbox.checked = true;
   applyFilters();
