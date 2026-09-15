@@ -15,7 +15,7 @@ import { NON_REVENUE_STATUSES } from '../../src/lib/registrationsView';
 const meta = (over: Partial<DepartureMeta> = {}): DepartureMeta => ({
   tripSlug: 'nagaland', tripName: 'Nagaland', batchId: 'nagaland-2025-12-05',
   startDate: '2025-12-05', endDate: '2025-12-11', status: 'completed',
-  lowestOfferPrice: 20500, capacity: 15,
+  lowestOfferPrice: 20500, capacity: 15, balanceDueRule: '10 days before trip',
   ...over,
 });
 
@@ -25,6 +25,7 @@ const agg = (over: Partial<RegAggregate> = {}): RegAggregate => ({ ...EMPTY_AGGR
 const TEN_SEATS = agg({
   seats: 10, committedSeats: 10, confirmedSeats: 10,
   collected: 150_000, collectedCommitted: 150_000, contracted: 200_000,
+  outstanding: 50_000,
 });
 
 const finance = (a: RegAggregate, base: number | null, items: number[] = [], m = meta()) =>
@@ -116,6 +117,7 @@ describe('the three traps', () => {
     const f = finance(agg({
       seats: 2, committedSeats: 1, confirmedSeats: 1, leadSeats: 1,
       collected: 13_000, collectedCommitted: 8_000, contracted: 20_000,
+      outstanding: 12_000,
     }), 0, []);
     expect(f.leadAdvances).toBe(5_000);
     expect(f.stillToCollect).toBe(12_000); // not 7,000
@@ -135,7 +137,7 @@ describe('edge cases', () => {
     const f = finance(agg({
       seats: 3, committedSeats: 3, confirmedSeats: 3,
       collected: 60_000, collectedCommitted: 60_000,
-      contracted: 20_000, contractedUnknownSeats: 2,
+      contracted: 20_000, contractedUnknownSeats: 2, outstanding: 0,
     }), 10_000, []);
     expect(f.contractedUnknownSeats).toBe(2);
     expect(f.stillToCollect).toBe(0);
@@ -158,6 +160,25 @@ describe('edge cases', () => {
 
   it('has no break-even when the departure is not costed', () => {
     expect(finance(TEN_SEATS, null, []).breakEvenSeats).toBeNull();
+  });
+});
+
+describe('outstanding is summed per registration, not netted per departure', () => {
+  it('does not let an overpayer hide a debtor', () => {
+    // Two bookings on one departure: one overpaid by 10,000, one still owes
+    // 10,000. Netting at departure level reports nothing outstanding; the SQL
+    // sums max(0, owed) per row, so the real debt survives.
+    const f = finance(agg({
+      seats: 2, committedSeats: 2, confirmedSeats: 2,
+      contracted: 40_000, collected: 40_000, collectedCommitted: 40_000,
+      outstanding: 10_000,
+    }), 0, []);
+    expect(f.stillToCollect).toBe(10_000);
+    expect(f.overCollected).toBe(0);
+  });
+
+  it('never reports a negative balance', () => {
+    expect(finance(agg({ outstanding: 0, contracted: 10_000, collectedCommitted: 25_000 }), 0, []).stillToCollect).toBe(0);
   });
 });
 

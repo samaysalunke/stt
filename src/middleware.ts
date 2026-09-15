@@ -282,6 +282,12 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
       // is write-only (the page renders its own data), so gating it wholesale
       // leaves ops read access via /admin/finance without any write path.
       '/api/admin/finance',
+      // The P&L page renders company overheads, which include SALARIES.
+      // /admin/finance itself stays owner+ops (below) so ops keeps its margin
+      // view — do NOT move that prefix up here, it would revoke their access.
+      // Listing the deeper path here works because ownerOnly is evaluated
+      // first and both lists match by startsWith.
+      '/admin/finance/pnl',
     ];
     // trip_lead cannot access trips management or most write actions
     const ownerOrOpsOnly = [

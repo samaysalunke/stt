@@ -1,0 +1,330 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+import { buildFinanceRollup } from '../../../lib/departureFinance';
+import { buildPnl } from '../../../lib/companyFinance';
+import {
+  OVERHEAD_CATEGORIES,
+  OVERHEAD_CATEGORY_LABELS,
+  elapsedMonthsInFinancialYear,
+  monthsInFinancialYear,
+  readCompanyCosts,
+} from '../../../lib/companyCosts';
+import {
+  indianFinancialYear,
+  indianFinancialYearFromStart,
+} from '../../../lib/adminDashboard';
+import { formatINR } from '../../../lib/utils';
+export const prerender = false;
+
+// OWNER ONLY — this page renders salaries. `/admin/finance` next door is
+// readable by ops (middleware `ownerOrOpsOnly`), which is exactly why the P&L
+// is a separate route listed in `ownerOnly` rather than a section over there.
+// Middleware enforces it; this is the belt-and-braces check, mirroring
+// email-logs.astro.
+const adminUser = Astro.locals.adminUser;
+if (adminUser?.role !== 'owner') return new Response('Access denied', { status: 403 });
+
+const db = getDb();
+const rollup = buildFinanceRollup(db);
+
+const currentFy = indianFinancialYear();
+const fyStarts = new Set<number>([currentFy.startYear]);
+for (const d of rollup.departures) if (d.financialYearStart !== null) fyStarts.add(d.financialYearStart);
+const fyOptions = [...fyStarts].sort((a, b) => b - a).map(indianFinancialYearFromStart);
+
+// Shares the dashboard's cookie so switching year on one finance page carries
+// to the other.
+const requested = Astro.url.searchParams.get('fy') ?? Astro.cookies.get('admin-finance-fy')?.value ?? '';
+const selectedAll = requested === 'all';
+const selectedFy = fyOptions.find((fy) => fy.startYear === Number(requested)) ?? currentFy;
+const fyStart: number | 'all' = selectedAll ? 'all' : selectedFy.startYear;
+
+const pnl = buildPnl(fyStart, db, new Date(), rollup);
+
+// The overheads grid always shows a concrete financial year — "All time" has no
+// grid, so fall back to the current year for editing.
+const gridFyStart = selectedAll ? currentFy.startYear : selectedFy.startYear;
+const gridMonths = monthsInFinancialYear(gridFyStart);
+const elapsed = new Set(elapsedMonthsInFinancialYear(gridFyStart));
+const gridRows = readCompanyCosts(db, gridMonths);
+const cell = (month: string, category: string) => gridRows.find((r) => r.month === month && r.category === category);
+const monthLabel = (month: string) =>
+  new Intl.DateTimeFormat('en-IN', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+    .format(new Date(`${month}-01T00:00:00Z`));
+
+const pct = (value: number | null) => (value === null ? '—' : `${value.toFixed(1)}%`);
+
+const leaks = [
+  pnl.uncostedDepartures > 0 && {
+    label: `${pnl.uncostedDepartures} departure${pnl.uncostedDepartures === 1 ? '' : 's'} with no cost recorded`,
+    amount: pnl.uncostedCollected,
+    hint: 'Collected, but excluded from gross margin',
+  },
+  pnl.departuresWithoutFy > 0 && {
+    label: `${pnl.departuresWithoutFy} departure${pnl.departuresWithoutFy === 1 ? '' : 's'} with an unreadable date`,
+    amount: pnl.departuresWithoutFyCollected,
+    hint: 'Falls outside every financial year',
+  },
+  pnl.unallocatedCollected > 0 && {
+    label: 'Bookings not linked to any departure',
+    amount: pnl.unallocatedCollected,
+    hint: selectedAll ? 'Included above' : 'Shown on All time only',
+  },
+  pnl.orphanCostTotal !== 0 && {
+    label: 'Costs against departures that no longer exist',
+    amount: pnl.orphanCostTotal,
+    hint: 'Excluded from every total',
+  },
+].filter(Boolean) as Array<{ label: string; amount: number; hint: string }>;
+---
+
+<AdminLayout title="Profit & loss" page="pnl">
+  <div class="flex items-center justify-between gap-4 mb-5">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Profit &amp; loss</p>
+      <p class="text-sm text-gray-text mt-0.5">{pnl.label} · owner only</p>
+    </div>
+    <form method="get" class="flex-none">
+      <label for="pnl-fy" class="sr-only">Financial year</label>
+      <select id="pnl-fy" name="fy" data-pnl-fy
+        class="rounded-xl border border-peach bg-white px-4 py-2.5 text-sm font-semibold text-navy shadow-sm">
+        <option value="all" selected={selectedAll}>All time</option>
+        {fyOptions.map(fy => <option value={fy.startYear} selected={!selectedAll && fy.startYear === selectedFy.startYear}>{fy.label}</option>)}
+      </select>
+    </form>
+  </div>
+
+  <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
+    <div class="bg-white rounded-[var(--radius-card)] p-5 border border-peach/60">
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Cash collected</p>
+      <p class="font-display text-3xl font-semibold mt-2 text-navy" data-kpi="cash">{formatINR(pnl.cashCollected)}</p>
+      <p class="text-xs mt-1 text-gray-text">For departures in this period</p>
+    </div>
+    <div class="bg-white rounded-[var(--radius-card)] p-5 border border-peach/60">
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Gross margin</p>
+      <p class="font-display text-3xl font-semibold mt-2 text-navy" data-kpi="gross">{formatINR(pnl.grossMargin)}</p>
+      <p class="text-xs mt-1 text-gray-text">{pct(pnl.grossMarginPct)} of costed revenue</p>
+    </div>
+    <div class="bg-white rounded-[var(--radius-card)] p-5 border border-peach/60">
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Overheads</p>
+      <p class="font-display text-3xl font-semibold mt-2 text-navy" data-kpi="overheads">{formatINR(pnl.overheads)}</p>
+      <p class="text-xs mt-1 text-gray-text">
+        {pnl.monthsInPeriod > 0
+          ? `${pnl.monthsEntered} of ${pnl.monthsInPeriod} months entered`
+          : `${pnl.monthsEntered} month${pnl.monthsEntered === 1 ? '' : 's'} entered · period not yet begun`}
+      </p>
+    </div>
+    <div class={`rounded-[var(--radius-card)] p-5 border ${pnl.indicative ? 'bg-amber-50 border-amber-300' : 'bg-white border-peach/60'}`}>
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">
+        {pnl.indicative ? 'Net profit (indicative)' : 'Net profit'}
+      </p>
+      <p class="font-display text-3xl font-semibold mt-2" data-kpi="net"
+         style={`color: ${pnl.netProfit < 0 ? '#b91c1c' : '#15803d'};`}>{formatINR(pnl.netProfit)}</p>
+      <p class="text-xs mt-1 text-gray-text">
+        {pnl.indicative ? 'Percentage withheld — see below' : `${pct(pnl.netProfitPct)} of costed revenue`}
+      </p>
+    </div>
+  </div>
+
+  {pnl.indicative && (
+    <p class="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-indicative-banner>
+      <strong>This is an indicative figure.</strong>
+      {pnl.monthsEntered < pnl.monthsInPeriod && ` Overheads are entered for ${pnl.monthsEntered} of ${pnl.monthsInPeriod} months.`}
+      {pnl.costCoverage !== null && pnl.costCoverage < 0.9 && ` Only ${(pnl.costCoverage * 100).toFixed(0)}% of collected cash comes from departures with a recorded cost.`}
+      {' '}No net margin percentage is shown, because one computed on a partial base would read as fact.
+    </p>
+  )}
+
+  <!-- The statement itself -->
+  <div class="bg-white rounded-[var(--radius-card)] border border-peach/60 overflow-hidden mb-6">
+    <table class="w-full text-sm">
+      <tbody class="[&>tr>td]:px-5 [&>tr>td]:py-2.5">
+        <tr><td class="text-gray-text">Cash collected</td><td class="text-right tabular-nums font-semibold text-navy">{formatINR(pnl.cashCollected)}</td></tr>
+        <tr><td class="text-gray-text pl-9">of which from costed departures</td><td class="text-right tabular-nums text-gray-text">{formatINR(pnl.cashCollectedCosted)}</td></tr>
+        {pnl.retained > 0 && (
+          <tr><td class="text-gray-text pl-9">retained from cancellations</td><td class="text-right tabular-nums text-gray-text">{formatINR(pnl.retained)}</td></tr>
+        )}
+        <tr class="border-t border-peach/50"><td class="text-gray-text">Direct departure cost</td><td class="text-right tabular-nums font-semibold text-navy">−{formatINR(pnl.directCost)}</td></tr>
+        <tr class="border-t border-peach/50 bg-gray-soft/40"><td class="font-semibold text-navy">Gross margin</td><td class="text-right tabular-nums font-semibold text-navy">{formatINR(pnl.grossMargin)}</td></tr>
+
+        {pnl.overheadsByCategory.map((line) => (
+          <tr><td class="text-gray-text pl-9">{OVERHEAD_CATEGORY_LABELS[line.category]}</td><td class="text-right tabular-nums text-gray-text">−{formatINR(line.amount)}</td></tr>
+        ))}
+        <tr class="border-t border-peach/50"><td class="text-gray-text">Company overheads</td><td class="text-right tabular-nums font-semibold text-navy">−{formatINR(pnl.overheads)}</td></tr>
+
+        <tr class="border-t-2 border-peach bg-gray-soft/40">
+          <td class="font-semibold text-navy">{pnl.indicative ? 'Net profit (indicative, costed departures only)' : 'Net profit'}</td>
+          <td class="text-right tabular-nums font-semibold" style={`color: ${pnl.netProfit < 0 ? '#b91c1c' : '#15803d'};`}>{formatINR(pnl.netProfit)}</td>
+        </tr>
+        {pnl.netProfitAtRunRate !== null && pnl.monthsEntered < pnl.monthsInPeriod && (
+          <tr><td class="text-gray-text pl-9">at the same overhead rate for the full period</td><td class="text-right tabular-nums text-gray-text">{formatINR(pnl.netProfitAtRunRate)}</td></tr>
+        )}
+      </tbody>
+    </table>
+    <p class="border-t border-peach/50 px-5 py-3 text-xs text-gray-text">
+      Cash and direct cost are attributed to the <strong>departure's</strong> date; overheads to their own
+      calendar month. That is a matching basis, not a cash basis — it will not tie to a bank statement.
+      {pnl.cashReceivedInPeriod !== null
+        ? ` Cash that actually reached the bank in this period: ${formatINR(pnl.cashReceivedInPeriod)}.`
+        : ' A bank-tie figure is unavailable: some historical bookings predate the payment ledger.'}
+    </p>
+  </div>
+
+  {leaks.length > 0 && (
+    <div class="bg-white rounded-[var(--radius-card)] border border-peach/60 p-5 mb-6">
+      <h2 class="font-display text-base font-semibold text-navy mb-1">Not in the figures above</h2>
+      <p class="text-sm text-gray-text mb-3">Money the statement cannot place. Shown so it is never silently missing.</p>
+      <div class="flex flex-col gap-2">
+        {leaks.map((leak) => (
+          <div class="flex flex-wrap items-baseline gap-x-3 text-sm">
+            <span class="flex-1 min-w-[16rem] text-navy">{leak.label}</span>
+            <span class="tabular-nums font-semibold text-navy">{formatINR(leak.amount)}</span>
+            <span class="text-[11px] text-gray-text w-full sm:w-auto">{leak.hint}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <!-- Overheads editor -->
+  <div class="bg-white rounded-[var(--radius-card)] border border-peach/60 overflow-hidden" id="overheads"
+       data-overhead-editor="1">
+    <div class="px-5 py-4 border-b border-peach/50">
+      <h2 class="font-display text-base font-semibold text-navy">
+        Overheads · {indianFinancialYearFromStart(gridFyStart).label}
+      </h2>
+      <p class="text-sm text-gray-text mt-0.5">
+        A blank cell means <em>not entered</em>; a zero means <em>entered as zero</em>. The completeness
+        figure above counts months with nothing at all, so leave a cell blank rather than typing 0 to skip it.
+      </p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm admin-table-plain">
+        <thead>
+          <tr class="text-[11px] uppercase tracking-wide text-gray-text">
+            <th class="px-4 py-2 text-left font-semibold">Month</th>
+            {OVERHEAD_CATEGORIES.map((c) => <th class="px-2 py-2 text-right font-semibold">{OVERHEAD_CATEGORY_LABELS[c]}</th>)}
+            <th class="px-4 py-2 text-right font-semibold">Total</th>
+            <th class="px-2 py-2"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {gridMonths.map((month, index) => {
+            const rowTotal = gridRows.filter((r) => r.month === month).reduce((s, r) => s + r.amount, 0);
+            const entered = gridRows.some((r) => r.month === month);
+            return (
+              <tr class="border-t border-peach/40" data-month={month}>
+                <td class={`px-4 py-2 whitespace-nowrap ${elapsed.has(month) && !entered ? 'text-amber-700 font-semibold' : 'text-navy'}`}>
+                  {monthLabel(month)}
+                  {elapsed.has(month) && !entered && <span class="ml-1 text-[10px] uppercase">missing</span>}
+                </td>
+                {OVERHEAD_CATEGORIES.map((category) => (
+                  <td class="px-2 py-1.5">
+                    <input type="number" step="1" data-overhead data-category={category}
+                           value={cell(month, category)?.amount ?? ''} placeholder="—"
+                           class="w-24 rounded-lg border border-peach bg-white px-2 py-1.5 text-right text-sm tabular-nums text-navy" />
+                  </td>
+                ))}
+                <td class="px-4 py-2 text-right tabular-nums font-semibold text-navy" data-row-total>
+                  {entered ? formatINR(rowTotal) : '—'}
+                </td>
+                <td class="px-2 py-2 text-right">
+                  {index > 0 && (
+                    <button type="button" data-copy-from={gridMonths[index - 1]}
+                            class="rounded-lg border border-peach px-2 py-1 text-[11px] font-semibold text-navy whitespace-nowrap">
+                      Copy {monthLabel(gridMonths[index - 1])}
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+    <p class="border-t border-peach/50 px-5 py-3 text-xs text-red-700 hidden" data-error></p>
+  </div>
+</AdminLayout>
+
+<script>
+  const selector = document.querySelector<HTMLSelectElement>('[data-pnl-fy]');
+  selector?.addEventListener('change', () => {
+    document.cookie = `admin-finance-fy=${encodeURIComponent(selector.value)}; Path=/admin; Max-Age=34560000; SameSite=Lax`;
+    selector.form?.requestSubmit();
+  });
+
+  const grid = document.getElementById('overheads');
+  if (grid) {
+    const showError = (message: string) => {
+      const el = grid.querySelector<HTMLElement>('[data-error]');
+      if (!el) return;
+      el.textContent = message;
+      el.classList.toggle('hidden', !message);
+    };
+
+    async function send(method: string, body: unknown) {
+      const res = await fetch('/api/admin/finance/overhead', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) throw new Error(data?.error || 'Request failed.');
+      return data;
+    }
+
+    grid.addEventListener('change', async (event) => {
+      const input = (event.target as HTMLElement).closest<HTMLInputElement>('[data-overhead]');
+      if (!input) return;
+      const row = input.closest<HTMLElement>('[data-month]')!;
+      const month = row.dataset.month!;
+      const category = input.dataset.category!;
+
+      try {
+        showError('');
+        if (input.value.trim() === '') {
+          // Blank means "not entered", which is NOT zero — delete the row so the
+          // completeness count stays honest.
+          await fetch('/api/admin/finance/overhead', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month, category }),
+          });
+        } else {
+          const data = await send('PUT', { month, category, amount: input.value });
+          input.value = String(data.row.amount); // echo what was stored
+        }
+        window.location.reload(); // totals, completeness and the P&L all move
+      } catch (error) {
+        showError((error as Error).message);
+      }
+    });
+
+    grid.addEventListener('click', async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>('[data-copy-from]');
+      if (!button) return;
+      const row = button.closest<HTMLElement>('[data-month]')!;
+      const to = row.dataset.month!;
+      const from = button.dataset.copyFrom!;
+      try {
+        showError('');
+        await send('POST', { from, to });
+        window.location.reload();
+      } catch (error) {
+        // A non-empty target is refused unless overwrite is confirmed.
+        if (/already has overheads/.test((error as Error).message)) {
+          if (!confirm(`${to} already has overheads recorded. Replace them?`)) return;
+          try {
+            await send('POST', { from, to, overwrite: true });
+            window.location.reload();
+          } catch (retry) {
+            showError((retry as Error).message);
+          }
+          return;
+        }
+        showError((error as Error).message);
+      }
+    });
+  }
+</script>

@@ -26,6 +26,7 @@ import { resolveTripSlugAlias } from './tripSlugAliases';
 import { isTripDeleted } from './tripDeletions';
 import { NON_REVENUE_STATUSES, isHistoricalDeparture } from './registrationsView';
 import { financialYearStartForDate } from './adminDashboard';
+import { DEFAULT_BALANCE_RULE } from './balanceDue';
 
 /** Statuses that represent a seat someone has committed to and owes money on. */
 export const COMMITTED_STATUSES = ['pending', 'confirmed'] as const;
@@ -69,6 +70,8 @@ export interface RegAggregate {
   collectedCommitted: number;
   contracted: number;
   contractedUnknownSeats: number;
+  /** Balance owed, summed PER REGISTRATION. See the note on stillToCollect. */
+  outstanding: number;
   retained: number;
   refundedGross: number;
 }
@@ -83,6 +86,13 @@ export interface DepartureMeta {
   /** Lowest current offer price, for the zero-booking break-even fallback. */
   lowestOfferPrice: number | null;
   capacity: number | null;
+  /**
+   * The trip's free-text balance rule, e.g. "10 days before trip". Trip-level,
+   * not per-batch. Read straight off the YAML rather than via resolveBooking(),
+   * which filters to upcoming batches and so hides exactly the past departures
+   * whose balances matter most.
+   */
+  balanceDueRule: string;
 }
 
 export interface DepartureFinance extends DepartureMeta {
@@ -181,7 +191,7 @@ export function parseItemLabel(value: unknown): string | null {
 export const EMPTY_AGGREGATE: RegAggregate = {
   seats: 0, committedSeats: 0, confirmedSeats: 0, leadSeats: 0, cancelledSeats: 0,
   collected: 0, collectedCommitted: 0, contracted: 0, contractedUnknownSeats: 0,
-  retained: 0, refundedGross: 0,
+  outstanding: 0, retained: 0, refundedGross: 0,
 };
 
 export interface BaseCostRow {
@@ -225,11 +235,17 @@ export function computeDepartureFinance(
   cost: DepartureCostBreakdown,
   today = new Date(),
 ): DepartureFinance {
-  // (b) `collected` spans every live status, which includes `lead` — and a lead
-  // can carry a recorded advance. Netting that against `contracted` (which
-  // counts committed seats only) would let a lead's advance silently cancel out
-  // a confirmed traveller's outstanding balance. Use collectedCommitted.
-  const stillToCollect = Math.max(0, agg.contracted - agg.collectedCommitted);
+  // Balance owed, summed PER REGISTRATION in SQL rather than netted here.
+  //
+  // `max(0, contracted - collectedCommitted)` nets at the DEPARTURE level, so a
+  // traveller who overpaid by 10,000 silently cancels out another who still owes
+  // 10,000 and the departure reports nothing outstanding. Per-registration is
+  // both correct and what you actually chase money against.
+  //
+  // (b) still applies to the inputs: `contracted` and `outstanding` both count
+  // committed seats only, so a lead's advance can never offset a confirmed
+  // traveller's balance.
+  const stillToCollect = Math.max(0, agg.outstanding);
   const overCollected = Math.max(0, agg.collectedCommitted - agg.contracted);
 
   const margin = cost.costed ? agg.collected - cost.total : null;
@@ -338,6 +354,9 @@ export function buildRegAggregateSql(): { sql: string; params: string[] } {
       SUM(CASE WHEN status IN (${committed}) THEN COALESCE(total_amount, 0) ELSE 0 END) AS contracted,
       SUM(CASE WHEN status IN (${committed}) AND COALESCE(total_amount, 0) <= 0
                THEN 1 ELSE 0 END)                                                     AS contractedUnknownSeats,
+      SUM(CASE WHEN status IN (${committed})
+               THEN MAX(COALESCE(total_amount, 0) - COALESCE(amount_paid, 0), 0)
+               ELSE 0 END)                                                            AS outstanding,
       SUM(CASE WHEN status IN (${cancelled}) THEN COALESCE(amount_paid, 0) ELSE 0 END)  AS retained,
       SUM(COALESCE(amount_refunded, 0))                                               AS refundedGross
     FROM registrations
@@ -346,7 +365,7 @@ export function buildRegAggregateSql(): { sql: string; params: string[] } {
   const params = [
     ...NON_REVENUE_STATUSES, ...COMMITTED_STATUSES, ...CANCELLED_STATUSES,
     ...NON_REVENUE_STATUSES, ...COMMITTED_STATUSES, ...COMMITTED_STATUSES,
-    ...COMMITTED_STATUSES, ...CANCELLED_STATUSES,
+    ...COMMITTED_STATUSES, ...COMMITTED_STATUSES, ...CANCELLED_STATUSES,
   ] as string[];
   return { sql, params };
 }
@@ -360,6 +379,9 @@ export function listDepartureMeta(): DepartureMeta[] {
     const tripSlug = String(trip.slug);
     const tripName = String(trip.title || trip.name || tripSlug);
     const { editorDepartures } = editableBooking(trip);
+    const balanceDueRule = typeof trip?.balanceDueRule === 'string' && trip.balanceDueRule.trim()
+      ? String(trip.balanceDueRule)
+      : DEFAULT_BALANCE_RULE;
     for (const departure of editorDepartures) {
       if (!departure.id) continue;
       const offers = Array.isArray(departure.offers) ? departure.offers : [];
@@ -374,6 +396,7 @@ export function listDepartureMeta(): DepartureMeta[] {
         status: String(departure.status || 'booking-open'),
         lowestOfferPrice: prices.length ? Math.min(...prices) : null,
         capacity: metered ? offers.reduce((sum, o) => sum + Number(o.cap || 0), 0) : null,
+        balanceDueRule,
       });
     }
   }
@@ -415,20 +438,60 @@ export function readDepartureCost(
   return costBreakdown(base ?? null, items);
 }
 
-/** Full finance view. One registration aggregate, one content read, two cost reads. */
-export function buildFinanceRollup(db: Database.Database = getDb(), today = new Date()): FinanceRollup {
-  const { sql, params } = buildRegAggregateSql();
-  const rows = db.prepare(sql).all(...params) as Array<RegAggregate & { trip_slug: string | null; batch_id: string | null }>;
+/** Index of the canonical departure list, for {@link resolveDepartureKey}. */
+export interface DepartureIndex {
+  knownKeys: Set<string>;
+  keyByBatch: Map<string, string[]>;
+}
 
-  const meta = listDepartureMeta();
+export function buildDepartureIndex(meta: DepartureMeta[]): DepartureIndex {
   const knownKeys = new Set(meta.map((m) => departureKey(m.tripSlug, m.batchId)));
-  // Legacy rows carry a NULL trip_slug, so a bare-batch_id index is the fallback.
   const keyByBatch = new Map<string, string[]>();
   for (const m of meta) {
     const list = keyByBatch.get(m.batchId) ?? [];
     list.push(departureKey(m.tripSlug, m.batchId));
     keyByBatch.set(m.batchId, list);
   }
+  return { knownKeys, keyByBatch };
+}
+
+/**
+ * Which departure a registration belongs to, or null when it cannot be placed.
+ *
+ * Extracted so the finance rollup and the receivables ageing resolve rows the
+ * SAME way. A second copy of this ladder would let the two disagree about which
+ * departure a legacy row belongs to, and that divergence is invisible until
+ * someone reconciles by hand.
+ */
+export function resolveDepartureKey(
+  index: DepartureIndex,
+  tripSlug: unknown,
+  batchId: unknown,
+): string | null {
+  const batch = String(batchId ?? '').trim();
+  if (!batch) return null;
+  const rawSlug = String(tripSlug ?? '').trim();
+  // A renamed trip leaves its registrations on the old slug forever
+  // (api/admin/trips/update.ts records an alias but never rewrites them).
+  const slug = rawSlug ? (resolveTripSlugAlias(rawSlug) ?? rawSlug) : '';
+  const composite = slug ? departureKey(slug, batch) : '';
+  if (composite && index.knownKeys.has(composite)) return composite;
+  // No slug (legacy) or the slug no longer names a trip: fall back to the batch
+  // id, but only when it identifies exactly one departure — otherwise two trips
+  // sharing a generated batch id would pool each other's money.
+  const candidates = index.keyByBatch.get(batch) ?? [];
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+/** Full finance view. One registration aggregate, one content read, two cost reads. */
+export function buildFinanceRollup(db: Database.Database = getDb(), today = new Date()): FinanceRollup {
+  const { sql, params } = buildRegAggregateSql();
+  const rows = db.prepare(sql).all(...params) as Array<RegAggregate & { trip_slug: string | null; batch_id: string | null }>;
+
+  const meta = listDepartureMeta();
+  // Legacy rows carry a NULL trip_slug, so a bare-batch_id index is the fallback.
+  const index = buildDepartureIndex(meta);
+  const { knownKeys } = index;
 
   const aggByKey = new Map<string, RegAggregate>();
   const unallocated = { rows: 0, seats: 0, collected: 0 };
@@ -442,20 +505,8 @@ export function buildFinanceRollup(db: Database.Database = getDb(), today = new 
   };
 
   for (const row of rows) {
-    const batchId = String(row.batch_id ?? '').trim();
-    if (!batchId) { collectUnallocated(unallocated, row); continue; }
-    const rawSlug = String(row.trip_slug ?? '').trim();
-    // A renamed trip leaves its registrations on the old slug forever
-    // (api/admin/trips/update.ts records an alias but never rewrites them).
-    const slug = rawSlug ? (resolveTripSlugAlias(rawSlug) ?? rawSlug) : '';
-    const composite = slug ? departureKey(slug, batchId) : '';
-
-    if (composite && knownKeys.has(composite)) { addAgg(composite, row); continue; }
-    // No slug (legacy) or the slug no longer names a trip: fall back to the
-    // batch id, but only when it identifies exactly one departure — otherwise
-    // two trips sharing a generated batch id would pool each other's money.
-    const candidates = keyByBatch.get(batchId) ?? [];
-    if (candidates.length === 1) addAgg(candidates[0], row);
+    const key = resolveDepartureKey(index, row.trip_slug, row.batch_id);
+    if (key) addAgg(key, row);
     else collectUnallocated(unallocated, row);
   }
 

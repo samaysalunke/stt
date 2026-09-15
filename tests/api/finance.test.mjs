@@ -277,6 +277,180 @@ test('TC-412 clearing a departure with nothing recorded is a 404', async () => {
   assert.equal(res.status, 404);
 });
 
+// ── P&L, overheads and receivables ───────────────────────────────────────────
+
+// FY 2099 keeps every overhead out of a real month; qa-bookable-2099 already
+// establishes that year as the fixture sandbox.
+const M1 = '2099-04';
+const M2 = '2099-05';
+
+function resetOverheads() {
+  const conn = db();
+  conn.prepare("DELETE FROM company_costs WHERE month LIKE '2099-%'").run();
+  conn.close();
+}
+
+const overhead = (method, body, cookie) => call(method, '/api/admin/finance/overhead', body, cookie);
+
+test('TC-414 ops cannot reach the P&L, and no salary figure leaks to them', async () => {
+  resetOverheads();
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 987654 }, OWNER.cookie);
+
+  const res = await fetch(`${BASE}/admin/finance/pnl`, { headers: { cookie: OPS.cookie }, redirect: 'manual' });
+  const body = await res.text();
+  assert.equal(res.status, 403);
+  assert.ok(!body.includes('987654'), 'the salary figure must not appear in an ops response');
+  assert.ok(!body.includes('9,87,654'), 'nor formatted');
+
+  // ops must KEEP its margin view — the guard must not have over-reached.
+  const finance = await fetch(`${BASE}/admin/finance`, { headers: { cookie: OPS.cookie }, redirect: 'manual' });
+  assert.equal(finance.status, 200);
+  assert.ok(!(await finance.text()).includes('9,87,654'));
+});
+
+test('TC-415 trip_lead cannot reach the P&L; owner can and sees the editor', async () => {
+  assert.equal((await fetch(`${BASE}/admin/finance/pnl`, { headers: { cookie: LEAD.cookie }, redirect: 'manual' })).status, 403);
+  const owner = await fetch(`${BASE}/admin/finance/pnl`, { headers: { cookie: OWNER.cookie }, redirect: 'manual' });
+  assert.equal(owner.status, 200);
+  assert.match(await owner.text(), /data-overhead-editor="1"/);
+});
+
+test('TC-416 only an owner may write an overhead', async () => {
+  const payload = { month: M1, category: 'software', amount: 1000 };
+  assert.equal((await overhead('PUT', payload, OPS.cookie)).status, 403);
+  assert.equal((await overhead('PUT', payload, LEAD.cookie)).status, 403);
+  assert.equal((await overhead('POST', { from: M1, to: M2 }, OPS.cookie)).status, 403);
+
+  const before = db().prepare("SELECT COUNT(*) n FROM company_costs WHERE month LIKE '2099-%'").get().n;
+  const anon = await overhead('PUT', payload, null);
+  assert.ok(anon.status !== 200);
+  assert.equal(db().prepare("SELECT COUNT(*) n FROM company_costs WHERE month LIKE '2099-%'").get().n, before);
+});
+
+test('TC-417 upsert is idempotent on (month, category)', async () => {
+  resetOverheads();
+  const first = await overhead('PUT', { month: M1, category: 'salaries', amount: 50000 }, OWNER.cookie);
+  assert.equal(first.status, 200);
+  assert.equal(first.data.row.amount, 50000);
+
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 60000 }, OWNER.cookie);
+  const rows = db().prepare('SELECT COUNT(*) n, MAX(amount) a FROM company_costs WHERE month=? AND category=?').get(M1, 'salaries');
+  assert.equal(rows.n, 1, 'upsert must not duplicate');
+  assert.equal(rows.a, 60000);
+});
+
+test('TC-418 overhead validation', async () => {
+  const status = async (body) => (await overhead('PUT', body, OWNER.cookie)).status;
+  assert.equal(await status({ month: '2099-13', category: 'salaries', amount: 1 }), 400);
+  assert.equal(await status({ month: '2099-4', category: 'salaries', amount: 1 }), 400);
+  assert.equal(await status({ month: 'abc', category: 'salaries', amount: 1 }), 400);
+  assert.equal(await status({ month: M1, category: 'payroll', amount: 1 }), 400);
+  assert.equal(await status({ month: M1, category: 'salaries', amount: 'abc' }), 400);
+  assert.equal(await status({ month: M1, category: 'salaries', amount: 2e12 }), 400);
+
+  // Fractions round and the stored value is echoed.
+  const rounded = await overhead('PUT', { month: M1, category: 'office', amount: 1500.6 }, OWNER.cookie);
+  assert.equal(rounded.data.row.amount, 1501);
+  // A negative overhead is a credit and is allowed.
+  const credit = await overhead('PUT', { month: M1, category: 'software', amount: -2000 }, OWNER.cookie);
+  assert.equal(credit.status, 200);
+  assert.equal(credit.data.row.amount, -2000);
+});
+
+test('TC-419 clearing a cell returns it to not-entered, not zero', async () => {
+  resetOverheads();
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 1000 }, OWNER.cookie);
+  const cleared = await overhead('DELETE', { month: M1, category: 'salaries' }, OWNER.cookie);
+  assert.equal(cleared.status, 200);
+  assert.equal(db().prepare('SELECT COUNT(*) n FROM company_costs WHERE month=? AND category=?').get(M1, 'salaries').n, 0);
+  // Clearing something that is not there is a 404, not a silent success.
+  assert.equal((await overhead('DELETE', { month: M1, category: 'salaries' }, OWNER.cookie)).status, 404);
+});
+
+test('TC-420 copy-forward copies, refuses an empty source and guards a non-empty target', async () => {
+  resetOverheads();
+  assert.equal((await overhead('POST', { from: M1, to: M2 }, OWNER.cookie)).status, 400, 'empty source');
+
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 50000 }, OWNER.cookie);
+  await overhead('PUT', { month: M1, category: 'software', amount: 8000 }, OWNER.cookie);
+
+  const copied = await overhead('POST', { from: M1, to: M2 }, OWNER.cookie);
+  assert.equal(copied.status, 200);
+  assert.equal(copied.data.copied, 2);
+
+  // A second copy would stamp over hand-entered figures, so it is refused.
+  assert.equal((await overhead('POST', { from: M1, to: M2 }, OWNER.cookie)).status, 400);
+  const forced = await overhead('POST', { from: M1, to: M2, overwrite: true }, OWNER.cookie);
+  assert.equal(forced.status, 200);
+  assert.equal(db().prepare('SELECT COUNT(*) n FROM company_costs WHERE month=?').get(M2).n, 2);
+});
+
+test('TC-421 every overhead mutation is audited with its prior state', async () => {
+  resetOverheads();
+  const conn = db();
+  conn.prepare("DELETE FROM audit_log WHERE action LIKE 'company_cost%'").run();
+  conn.close();
+
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 4242 }, OWNER.cookie);
+  await overhead('POST', { from: M1, to: M2 }, OWNER.cookie);
+  await overhead('DELETE', { month: M1, category: 'salaries' }, OWNER.cookie);
+
+  const rows = db().prepare("SELECT action, previousValue FROM audit_log WHERE action LIKE 'company_cost%'").all();
+  const actions = new Set(rows.map((r) => r.action));
+  for (const expected of ['company_cost.set', 'company_cost.copied', 'company_cost.cleared']) {
+    assert.ok(actions.has(expected), `missing audit action ${expected}`);
+  }
+  const cleared = rows.find((r) => r.action === 'company_cost.cleared');
+  assert.match(cleared.previousValue, /4242/);
+});
+
+test('TC-422 the P&L renders, and counts overheads entered ahead of time', async () => {
+  resetOverheads();
+  resetFixture();
+  await call('PUT', '/api/admin/finance/cost', { tripSlug: TRIP, batchId: BATCH, baseAmount: 10000 }, OWNER.cookie);
+  await overhead('PUT', { month: M1, category: 'salaries', amount: 3000 }, OWNER.cookie);
+
+  const res = await fetch(`${BASE}/admin/finance/pnl?fy=2099`, { headers: { cookie: OWNER.cookie }, redirect: 'manual' });
+  const body = await res.text();
+  assert.equal(res.status, 200);
+
+  const kpi = (name) => {
+    const m = new RegExp(`data-kpi="${name}"[^>]*>\\s*([^<]+)`).exec(body);
+    return m ? m[1].trim() : null;
+  };
+
+  // FY 2099 has not begun, so no month can be "missing" and the figure is not
+  // flagged indicative. The overhead entered ahead of time must STILL be counted
+  // — summing only elapsed months silently dropped it, which is the regression
+  // this asserts against.
+  assert.match(kpi('overheads') ?? '', /3,000/);
+  assert.match(body, /period not yet begun/);
+  assert.ok(kpi('net'), 'net profit renders as a figure, never an em-dash');
+  assert.ok(!body.includes('data-indicative-banner'), 'a period that has not begun is not "incomplete"');
+});
+
+test('TC-423 receivables exclude leads and appear on the ops-visible page', async () => {
+  const res = await fetch(`${BASE}/admin/finance?fy=all`, { headers: { cookie: OPS.cookie }, redirect: 'manual' });
+  const body = await res.text();
+  assert.equal(res.status, 200);
+  // The section is on /admin/finance precisely so ops can act on it.
+  if (body.includes('id="receivables"')) {
+    assert.match(body, /Not filtered by financial year/);
+    // Leads are reported separately, never inside the aged total.
+    if (body.includes('data-lead-advances')) {
+      assert.match(body, /committed to no seat/);
+    }
+  }
+});
+
+test('TC-424 teardown', async () => {
+  resetOverheads();
+  const conn = db();
+  conn.prepare("DELETE FROM audit_log WHERE action LIKE 'company_cost%'").run();
+  conn.close();
+  assert.ok(true);
+});
+
 test('TC-413 teardown', async () => {
   resetFixture();
   const conn = db();

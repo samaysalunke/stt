@@ -597,4 +597,40 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS departure_cost_items_departure
       ON departure_cost_items(trip_slug, batch_id);
   `);
+
+  // Monthly company overheads — salaries, marketing, software, office. The
+  // fixed cost base that sits between gross margin (departure_costs, which is
+  // direct trip cost only) and an actual bottom line.
+  //
+  // `month` is 'YYYY-MM' rather than two INTEGERs for one reason that matters:
+  // an Indian FY filter is `month BETWEEN '2025-04' AND '2026-03'`, one range
+  // scan over the leftmost column of the UNIQUE index. With year/month columns
+  // it becomes `(year=2025 AND month>=4) OR (year=2026 AND month<=3)`, which is
+  // easy to get wrong once and then wrong forever. Every other date-only value
+  // in this schema is TEXT ISO compared as a string; this matches.
+  //
+  // No separate index on `month`: UNIQUE(month, category) already indexes it as
+  // the leftmost column.
+  //
+  // ROW EXISTENCE IS LOAD-BEARING, exactly as it is for departure_costs: a row
+  // holding 0 means "entered as zero", NO ROW means "not entered yet". The
+  // completeness signal on the P&L counts months with no rows, so the editor
+  // must never write a zero row for a cell the owner left blank.
+  //
+  // No CHECK on month, category or amount — SQLite cannot add or alter one
+  // later (see the payment_status note above). Validation lives in
+  // src/lib/companyCosts.ts, which is the only writer.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS company_costs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      month TEXT NOT NULL,
+      category TEXT NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_by_email TEXT,
+      UNIQUE(month, category)
+    );
+  `);
 }
