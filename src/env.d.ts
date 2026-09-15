@@ -35,6 +35,8 @@ interface ImportMetaEnv {
   readonly ZOHO_JOB_SECRET?: string;
   readonly TELEGRAM_BOT_TOKEN?: string;
   readonly TELEGRAM_ADMIN_CHAT_ID?: string;
+  readonly TELEGRAM_WEBHOOK_SECRET?: string;
+  readonly TELEGRAM_BOT_USERNAME?: string;
   readonly ANALYTICS_LLM_PROVIDER?: 'anthropic' | 'openai' | 'test';
   readonly ANALYTICS_LLM_MODEL?: string;
   readonly ANALYTICS_LLM_API_KEY?: string;

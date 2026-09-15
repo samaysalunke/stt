@@ -139,65 +139,108 @@ hoisted `hasOverride`, and shorthand property notation. No logic changed.
 
 363 unit + 164 API tests pass.
 
-### Phase 2 — identity
+### Phase 2 — identity — **DONE**
 
-```sql
-telegram_admin_links   (telegram_user_id PK, user_id, telegram_username, linked_at, revoked_at)
-telegram_link_tokens   (token_hash PK, user_id, expires_at, consumed_at)
-telegram_updates_seen  (update_id PK, received_at)
-```
+`telegram_admin_links`, `telegram_link_tokens`, `telegram_updates_seen` in
+`db.ts`; `src/lib/telegramLink.ts`; `POST/GET /api/admin/telegram-link`; a
+Telegram section in `settings.astro`.
 
-A Telegram section in `settings.astro` mints a one-time
-`https://t.me/<bot>?start=<token>`; `/start <token>` in DM consumes it. Hashed at
-rest, single-use, 10-minute TTL. Role is resolved from `user_roles` **at tap
-time**, so removing someone in `/admin/settings/roles` kills their buttons with
-no separate revocation step.
+Connecting is self-service and cannot be done on someone else's behalf — the
+token round-trip is what proves the person holding the admin session also
+controls that Telegram account. Tokens are SHA-256 hashed at rest (the plaintext
+exists only in the `t.me` URL), single-use via a compare-and-swap on
+`consumed_at`, 10-minute TTL, and minting a new one invalidates any outstanding
+URL.
 
-### Phase 3 — webhook
+The role is **not** stored on the link. It is read from `user_roles` on every
+tap, so removing someone in `/admin/settings/roles` stops their buttons working
+immediately, with no second revocation step to forget.
 
-`POST /api/telegram/webhook`, three independent checks, all required:
+### Phase 3 — webhook — **DONE**
 
-1. `X-Telegram-Bot-Api-Secret-Token`, `timingSafeEqual` — the shape
-   `jobs/telegram-notifications.ts:8` already uses. New `TELEGRAM_WEBHOOK_SECRET`,
-   deliberately not the bot token.
-2. `callback_query.message.chat.id === TELEGRAM_ADMIN_CHAT_ID`.
+`POST /api/telegram/webhook`. Three independent gates, all required, all covered
+by `tests/unit/telegramWebhook.test.ts`:
+
+1. `X-Telegram-Bot-Api-Secret-Token`, constant-time — its own secret, not the
+   bot token, which already authenticates the retry worker.
+2. `callback_query.message.chat.id` must be the configured ops group.
 3. `callback_query.from.id` → link → `user_roles`, owner/ops only.
 
-`callback_data` is input, never authority: a modified client can send arbitrary
-data for any message it can see, so it is parsed and then re-validated through
-`assertTransition` / `assertPaymentChangeAllowed` regardless.
+`callback_data` is not a fourth gate: the client echoes it, so a modified client
+can send any payload for a message it can see. It is parsed, then re-validated
+through `assertTransition` / `assertPaymentActionAllowed` like any other caller.
 
-Per tap: `answerCallbackQuery` first (before the confirm path awaits
-`processZohoDocument`), then plan → guard → CAS → apply, then edit **every**
-message for that registration (ids are in `telegram_notification_events`) so no
-stale keyboard survives. Always return 200 — a retried `update_id` must never
-re-run a state change; `telegram_updates_seen` plus
-`requestId = telegram:<chat_id>:<message_id>:<action>` make a double-tap replay
-into the existing idempotency key.
+The endpoint always answers 200 — a non-2xx makes Telegram redeliver, and
+redelivering a state change is worse than dropping one. `telegram_updates_seen`
+claims each `update_id` before anything acts on it, and
+`requestId = telegram:<chat>:<message>:<verb>:<arg>` makes a double-tap replay
+into the existing idempotency key rather than write a second payment event.
 
-Middleware is already clear: `/api/telegram/*` is outside the `/api/admin` gate,
-CSRF fires only on form content-types, and canonicalisation is `GET`/`HEAD`-only
-so a POST will not 308.
+**Acknowledgement ordering, corrected.** The plan said answer first, then work.
+That is wrong: Telegram permits exactly one answer per callback query, so
+spending it on "Working…" leaves no way to say *why* something was refused — and
+the refusal is the case that most needs reading ("This tier is now full
+(12/12 confirmed)"). The work runs first and the answer carries the outcome. The
+cost is latency on the confirm path, which awaits Zoho; if the query expires the
+answer is swallowed and the refreshed message still shows the result.
 
-### Phase 4 — keyboards
+### Phase 4 — keyboards — **DONE**
 
-Generated in `deliverClaimedTelegramEvent` from `TRANSITIONS` + `PAYMENT_OPTIONS`,
-so a button can never offer what the server will refuse.
+Attached in `deliverClaimedTelegramEvent`, and only when
+`TELEGRAM_WEBHOOK_SECRET` is set — without a webhook nothing could act on a
+button, so shipping one would be a dead control in the ops group.
+
+**Derived from the guards, not from the shape of the matrix.** The first cut
+asked whether `TRANSITIONS[from][to]` existed, which put two buttons on every
+cancelled booking that could only ever error: `cancelled → lead` and
+`cancelled → pending` are both present and both refuse unconditionally with
+"Re-instate via Confirm for a cancelled booking". `keyboardFor` now calls
+`assertTransition` with the row's real `amount_paid` / `total_amount`, so a
+booking with no trip price is not offered Confirm, and a lead already carrying an
+advance is not offered Pending. `assertTransition` treats `from === to` as a
+no-op success, so same-status moves are excluded explicitly.
 
 ```
-lead       [→ Pending] [Confirm ▸] [Cancel ▸] [Open ↗]
-pending                [Confirm ▸] [Cancel ▸] [Open ↗]
-confirmed  [Mark fully paid]       [Cancel ▸] [Open ↗]   ← only while advance_paid
+lead       [→ Pending] [Confirm ▸] [Cancel ▸] [Open in admin ↗]
+pending                [Confirm ▸] [Cancel ▸] [Open in admin ↗]
+confirmed  [Mark fully paid]       [Cancel ▸] [Open in admin ↗]   ← while advance_paid
 ```
 
-Submenus edit in place: `Confirm ▸` → `[Advance paid] [Fully paid] [← Back]`,
-`Cancel ▸` → `[No refund] [Full refund] [← Back]`. Partial refunds, custom
-advance overrides and field edits are out of scope for buttons and get the
-`Open ↗` URL button. BotFather privacy mode stays **on** — callback queries
-arrive regardless, and the bot never sees group chat text.
+`Confirm ▸` → `[Advance paid] [Fully paid] [← Back]`; `Cancel ▸` →
+`[Cancel · no refund] [Cancel · full refund] [← Back]`. Partial refunds need an
+amount no button can carry, so they keep the `Open in admin ↗` route.
+
+After a successful action every message for that booking is refreshed, not just
+the one tapped: confirming from the `pending` message posts a fresh `confirmed`
+notification, and the older messages would otherwise keep the keyboard they were
+sent with. Content edits are best-effort and fall back to swapping just the
+keyboard, which works for photo and text messages alike.
+
+## Deploying
+
+1. Set `TELEGRAM_WEBHOOK_SECRET` (long random) and `TELEGRAM_BOT_USERNAME`.
+2. Deploy. Until the webhook is registered the bot stays one-way and no buttons
+   are attached.
+3. `node scripts/telegram-webhook.mjs set` — **after** the deploy. Registering
+   against a URL that 404s leaves the group with buttons that do nothing.
+   `… info` shows the current registration.
+4. Each admin connects their own account in Admin → Settings → Telegram.
+
+Keep BotFather privacy mode **on**: callback queries arrive regardless, and the
+bot never sees group chat text.
+
+## Still open
+
+- **Check A of `scripts/audit-payment-matrix.sql` has only run against the
+  8-row visual-test fixture.** The dev DB holds zero registrations. Run it on the
+  Railway volume before relying on the Phase 0 guard in production.
+- The webhook's authorization matrix is proven as a unit, not end-to-end: doing
+  it live would need a real bot token in the shared test server's environment,
+  which would make `telegram-notifications.test.mjs` dial api.telegram.org. The
+  API suite proves routing, middleware pass-through and the 401.
 
 ## Out of scope
 
 Porting `planUpdate` server-side (blocked on finding 4, and unnecessary once the
 server guards independently); partial refunds by button; a Telegram Mini App to
-land `Open ↗` already authenticated.
+land `Open in admin ↗` already authenticated.

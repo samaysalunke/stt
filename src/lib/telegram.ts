@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
+import { keyboardFor, type Menu } from './telegramKeyboard';
 
 export type TelegramEventType = 'lead' | 'pending' | 'confirmed';
 export type TelegramDeliveryState = 'queued' | 'dispatching' | 'retry_wait' | 'sent' | 'uncertain' | 'failed';
@@ -18,6 +19,10 @@ type RegistrationSnapshot = {
   sharing_option: string | null;
   payment_screenshot_url: string | null;
   amount_paid: number | null;
+  status?: string | null;
+  payment_status?: string | null;
+  trip_slug?: string | null;
+  total_amount?: number | null;
 };
 
 export type ClaimedTelegramEvent = {
@@ -34,8 +39,29 @@ const DATA_DIR = () => process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
 const token = () => String((import.meta.env as any).TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const chatId = () => String((import.meta.env as any).TELEGRAM_ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
 
+const webhookSecretValue = () => String((import.meta.env as any).TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
+const botUsernameValue = () => String((import.meta.env as any).TELEGRAM_BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '');
+
 export function telegramConfigured(): boolean {
   return Boolean(token() && chatId());
+}
+
+/** Deliberately its own secret, not the bot token — the token already authenticates the retry worker. */
+export function telegramWebhookSecret(): string {
+  return webhookSecretValue();
+}
+
+export function telegramBotUsername(): string {
+  return botUsernameValue();
+}
+
+export function telegramAdminChatId(): string {
+  return chatId();
+}
+
+/** Two-way actions need the webhook secret on top of the one-way configuration. */
+export function telegramActionsConfigured(): boolean {
+  return Boolean(token() && chatId() && webhookSecretValue());
 }
 
 export function formatIndiaTimestamp(value: string | Date): string {
@@ -141,15 +167,18 @@ async function telegramRequest(method: string, body: URLSearchParams | FormData)
   return String(payload.result?.message_id ?? '');
 }
 
-async function sendText(text: string): Promise<string> {
-  return telegramRequest('sendMessage', new URLSearchParams({ chat_id: chatId(), text }));
+async function sendText(text: string, replyMarkup?: unknown): Promise<string> {
+  const params = new URLSearchParams({ chat_id: chatId(), text });
+  if (replyMarkup) params.set('reply_markup', JSON.stringify(replyMarkup));
+  return telegramRequest('sendMessage', params);
 }
 
-async function sendFile(method: 'sendPhoto' | 'sendDocument', field: 'photo' | 'document', file: ReturnType<typeof resolveLocalPaymentUpload> & { ok: true }, caption: string): Promise<string> {
+async function sendFile(method: 'sendPhoto' | 'sendDocument', field: 'photo' | 'document', file: ReturnType<typeof resolveLocalPaymentUpload> & { ok: true }, caption: string, replyMarkup?: unknown): Promise<string> {
   const form = new FormData();
   form.set('chat_id', chatId());
   form.set('caption', caption.slice(0, 1024));
   form.set(field, new Blob([new Uint8Array(file.data)], { type: file.mime }), file.filename);
+  if (replyMarkup) form.set('reply_markup', JSON.stringify(replyMarkup));
   return telegramRequest(method, form);
 }
 
@@ -205,7 +234,8 @@ export function claimTelegramEvents(db: Database.Database, limit = 10): ClaimedT
 
 export async function deliverClaimedTelegramEvent(db: Database.Database, event: ClaimedTelegramEvent): Promise<TelegramDeliveryState> {
   const registration = db.prepare(`
-    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url, amount_paid
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url,
+           amount_paid, status, payment_status, trip_slug, total_amount
     FROM registrations WHERE id=?
   `).get(event.registration_id) as RegistrationSnapshot | undefined;
   if (!registration) {
@@ -214,25 +244,37 @@ export async function deliverClaimedTelegramEvent(db: Database.Database, event: 
   }
 
   let warning: string | null = null;
+  // Two-way actions are opt-in: without a webhook secret nothing can act on a
+  // button, so shipping one would be a dead control in the ops group.
+  const keyboard = telegramActionsConfigured()
+    ? keyboardFor({
+        regId: registration.id,
+        status: String(registration.status ?? 'pending'),
+        paymentStatus: registration.payment_status ?? null,
+        tripSlug: registration.trip_slug ?? null,
+        amountPaid: registration.amount_paid,
+        totalAmount: registration.total_amount,
+      })
+    : undefined;
   try {
     let messageId: string;
     if (event.event_type === 'lead') {
-      messageId = await sendText(formatTelegramMessage('lead', registration));
+      messageId = await sendText(formatTelegramMessage('lead', registration), keyboard);
     } else {
       const upload = resolveLocalPaymentUpload(registration.payment_screenshot_url);
       if (!upload.ok) {
         warning = `image_unavailable: ${upload.reason}`;
-        messageId = await sendText(formatTelegramMessage(event.event_type, registration, true));
+        messageId = await sendText(formatTelegramMessage(event.event_type, registration, true), keyboard);
       } else {
         const caption = formatTelegramMessage(event.event_type, registration);
         if (upload.kind === 'document') {
-          messageId = await sendFile('sendDocument', 'document', upload, caption);
+          messageId = await sendFile('sendDocument', 'document', upload, caption, keyboard);
         } else {
           try {
-            messageId = await sendFile('sendPhoto', 'photo', upload, caption);
+            messageId = await sendFile('sendPhoto', 'photo', upload, caption, keyboard);
           } catch (error) {
             if (!unsupportedPhoto(error)) throw error;
-            messageId = await sendFile('sendDocument', 'document', upload, caption);
+            messageId = await sendFile('sendDocument', 'document', upload, caption, keyboard);
           }
         }
       }
@@ -273,4 +315,139 @@ export async function sendTestNotification(): Promise<{ configured: boolean; mes
   if (!telegramConfigured()) return { configured: false };
   const messageId = await sendText(`Seek the Thrill Telegram notifications are configured.\nTest time: ${formatIndiaTimestamp(new Date())}`);
   return { configured: true, messageId };
+}
+
+// ── Two-way actions ────────────────────────────────────────────────────────
+
+/**
+ * Acknowledge a button tap. Must go out promptly — Telegram expires the query
+ * and the tapper is left watching a spinner — so callers answer first and do the
+ * work afterwards. Never throws: a failed acknowledgement must not abort a
+ * change that has already been written.
+ */
+export async function answerCallbackQuery(callbackQueryId: string, text = '', showAlert = false): Promise<void> {
+  const params = new URLSearchParams({ callback_query_id: callbackQueryId });
+  if (text) params.set('text', text.slice(0, 200));
+  if (showAlert) params.set('show_alert', 'true');
+  try {
+    await telegramRequest('answerCallbackQuery', params);
+  } catch (error) {
+    console.error('[Telegram answerCallbackQuery]', safeError(error));
+  }
+}
+
+/** Swap the keyboard under one message, leaving its content alone. */
+async function editReplyMarkup(messageId: string, replyMarkup: unknown): Promise<void> {
+  await telegramRequest('editMessageReplyMarkup', new URLSearchParams({
+    chat_id: chatId(), message_id: String(messageId), reply_markup: JSON.stringify(replyMarkup),
+  }));
+}
+
+/** Show a submenu in place, without touching the booking. */
+export async function showMenu(
+  messageId: string,
+  ctx: { regId: number; status: string; paymentStatus?: string | null; tripSlug?: string | null },
+  menu: Menu,
+): Promise<void> {
+  try {
+    await editReplyMarkup(messageId, keyboardFor(ctx, menu));
+  } catch (error) {
+    console.error('[Telegram showMenu]', safeError(error));
+  }
+}
+
+/**
+ * Bring every message this booking has produced back in line with its current
+ * state, appending `footer` to each.
+ *
+ * Confirming from the `pending` message posts a fresh `confirmed` notification,
+ * so a booking accumulates messages — and the older ones keep whatever keyboard
+ * they were sent with. Leaving a stale `Confirm ▸` in the group is safe (the
+ * transition guard and the compare-and-swap both refuse it) but reads as though
+ * the booking were still unconfirmed, so every message is refreshed, not just
+ * the one that was tapped.
+ *
+ * Content edits are best-effort: on any rejection this falls back to swapping
+ * just the keyboard, which works for photo and text messages alike.
+ */
+export async function refreshRegistrationMessages(registrationId: number, footer?: string): Promise<void> {
+  const db = getDb();
+  const registration = db.prepare(`
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url,
+           amount_paid, status, payment_status, trip_slug, total_amount
+    FROM registrations WHERE id=?
+  `).get(registrationId) as RegistrationSnapshot | undefined;
+  if (!registration) return;
+
+  const events = db.prepare(`
+    SELECT event_type, telegram_message_id, last_error FROM telegram_notification_events
+    WHERE registration_id=? AND status='sent' AND telegram_message_id IS NOT NULL
+  `).all(registrationId) as Array<{ event_type: TelegramEventType; telegram_message_id: string; last_error: string | null }>;
+
+  const keyboard = keyboardFor({
+    regId: registration.id,
+    status: String(registration.status ?? 'pending'),
+    paymentStatus: registration.payment_status ?? null,
+    tripSlug: registration.trip_slug ?? null,
+    amountPaid: registration.amount_paid,
+    totalAmount: registration.total_amount,
+  });
+
+  for (const event of events) {
+    const imageUnavailable = Boolean(event.last_error?.startsWith('image_unavailable'));
+    // A caption exists only where a file was actually attached; everything else
+    // went out as plain text.
+    const hasCaption = event.event_type !== 'lead' && !imageUnavailable;
+    const body = formatTelegramMessage(event.event_type, registration, imageUnavailable);
+    const text = footer ? `${body}\n\n${footer}` : body;
+    try {
+      const params = new URLSearchParams({
+        chat_id: chatId(),
+        message_id: String(event.telegram_message_id),
+        reply_markup: JSON.stringify(keyboard),
+      });
+      if (hasCaption) {
+        params.set('caption', text.slice(0, 1024));
+        await telegramRequest('editMessageCaption', params);
+      } else {
+        params.set('text', text.slice(0, 4000));
+        await telegramRequest('editMessageText', params);
+      }
+    } catch (error) {
+      // "message is not modified", a wrong caption/text guess, or a message too
+      // old to edit. The keyboard is the part that must not go stale.
+      try {
+        await editReplyMarkup(event.telegram_message_id, keyboard);
+      } catch (inner) {
+        console.error('[Telegram refresh]', safeError(inner));
+      }
+    }
+  }
+}
+
+/** Register the webhook with Telegram. Used by scripts/telegram-webhook.mjs. */
+export async function setTelegramWebhook(url: string): Promise<void> {
+  await telegramRequest('setWebhook', new URLSearchParams({
+    url,
+    secret_token: webhookSecretValue(),
+    allowed_updates: JSON.stringify(['callback_query', 'message']),
+    drop_pending_updates: 'true',
+  }));
+}
+
+/**
+ * Send to an arbitrary chat — the linking flow's direct messages.
+ *
+ * Distinct from the group senders above, which are pinned to
+ * TELEGRAM_ADMIN_CHAT_ID so an operational notification can never be addressed
+ * anywhere else. Never throws: a failed reply must not fail the webhook.
+ */
+export async function sendDirectMessage(chatIdValue: string | number, text: string): Promise<void> {
+  try {
+    await telegramRequest('sendMessage', new URLSearchParams({
+      chat_id: String(chatIdValue), text: text.slice(0, 4000),
+    }));
+  } catch (error) {
+    console.error('[Telegram DM]', safeError(error));
+  }
 }

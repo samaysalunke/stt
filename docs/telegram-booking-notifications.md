@@ -40,3 +40,50 @@ Confirmation attachments are resolved only from the validated
 plain `IMAGE UNAVAILABLE` confirmation instead. The existing 5 MB application
 upload limit is within the multipart limits documented by the
 [Telegram Bot API](https://core.telegram.org/bots/api).
+
+## Two-way actions
+
+Optional. With `TELEGRAM_WEBHOOK_SECRET` and `TELEGRAM_BOT_USERNAME` set and the
+webhook registered, each notification carries inline buttons that move the
+booking — confirm with the advance or the full payment, cancel with or without a
+refund, record an outstanding balance. Without those variables the bot stays
+one-way and no buttons are attached, so the group never sees a dead control.
+
+Setup, in this order:
+
+1. Set `TELEGRAM_WEBHOOK_SECRET` to a long random value. Deliberately **not** the
+   bot token — that already authenticates the retry worker, and one compromise
+   should not be two. Telegram sends it back as `X-Telegram-Bot-Api-Secret-Token`
+   and it is compared in constant time.
+2. Set `TELEGRAM_BOT_USERNAME` to the bot's `@username`, without the `@`.
+3. Deploy.
+4. `node scripts/telegram-webhook.mjs set` — after the deploy, never before.
+   Registering the webhook against a URL that 404s leaves the ops group with
+   buttons that do nothing. `node scripts/telegram-webhook.mjs info` prints the
+   current registration; `… delete` removes it and returns the bot to one-way.
+5. Each admin opens Admin → Settings → Telegram and presses **Connect Telegram**,
+   then **Start** in the chat that opens. The link is single-use and expires in
+   ten minutes.
+
+Leave BotFather privacy mode **on**. Callback queries reach the bot regardless,
+so it never needs to read group chat messages.
+
+### Who can act
+
+A tap is authorized only if all three hold: the webhook secret matches, the tap
+came from `TELEGRAM_ADMIN_CHAT_ID`, and the tapper's Telegram account is linked
+to an admin holding `owner` or `ops`. The role is read from `user_roles` on every
+tap, so removing someone in Admin → Settings → Roles stops their buttons
+immediately — there is no separate Telegram revocation to remember. An admin can
+also disconnect their own account from the settings page.
+
+Everything a button does goes through the same functions the admin UI uses
+(`applyStatusChange`, `applyPaymentChange`), so the transition matrix, the
+capacity check, the payment ledger and the audit log all behave identically —
+and every action is attributed to the real admin, not to "the bot".
+
+### What buttons cannot do
+
+Partial refunds, custom advance amounts, and editing traveller details. Those
+need a value no button can carry, and each message links straight to the booking
+in the admin UI instead.

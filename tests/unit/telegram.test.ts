@@ -18,7 +18,8 @@ function database() {
   db.exec(`
     CREATE TABLE registrations (
       id INTEGER PRIMARY KEY, full_name TEXT, email TEXT, phone TEXT,
-      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, payment_screenshot_url TEXT, amount_paid INTEGER
+      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, payment_screenshot_url TEXT, amount_paid INTEGER,
+      status TEXT, payment_status TEXT, trip_slug TEXT, total_amount INTEGER
     );
     CREATE TABLE telegram_notification_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +41,7 @@ function database() {
 }
 
 function seed(db: Database.Database, proof: string | null = null, amount = 0) {
-  db.prepare(`INSERT INTO registrations VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', '29', 'Female', 'Ladakh', '1 Sep – 8 Sep 2026', 'Twin sharing', ?, ?)`).run(proof, amount);
+  db.prepare(`INSERT INTO registrations VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', '29', 'Female', 'Ladakh', '1 Sep – 8 Sep 2026', 'Twin sharing', ?, ?, 'pending', 'unpaid', 'ladakh', 25000)`).run(proof, amount);
 }
 
 function response(status: number, body: any) {

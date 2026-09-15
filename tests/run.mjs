@@ -86,6 +86,7 @@ const TEST_FILES = [
   'tests/api/admin-registrations.test.mjs',
   'tests/api/occupancy-change.test.mjs',
   'tests/api/telegram-notifications.test.mjs',
+  'tests/api/telegram-webhook.test.mjs',
   'tests/api/newsletter.test.mjs',
   'tests/api/auth.test.mjs',
   'tests/api/security.test.mjs',

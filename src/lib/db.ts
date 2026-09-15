@@ -507,4 +507,39 @@ function initializeSchema(db: Database.Database) {
       value TEXT
     );
   `);
+
+  // Telegram two-way actions. A tap on an inline button carries a Telegram user
+  // id, which is trustworthy (it reaches us through our own authenticated
+  // webhook) but means nothing on its own — these tables are what turn it into
+  // an admin identity. The role itself is NOT stored here: it is resolved from
+  // user_roles at tap time, so revoking someone in /admin/settings/roles kills
+  // their buttons immediately, with no second revocation step to forget.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_admin_links (
+      telegram_user_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      telegram_username TEXT,
+      linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      revoked_at DATETIME
+    );
+    CREATE INDEX IF NOT EXISTS telegram_admin_links_user ON telegram_admin_links(user_id);
+
+    -- One-time deep-link tokens. Stored as a SHA-256 hash: the plaintext lives
+    -- only in the t.me URL handed to the admin, so a leaked database row cannot
+    -- be replayed into a link.
+    CREATE TABLE IF NOT EXISTS telegram_link_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at DATETIME NOT NULL,
+      consumed_at DATETIME,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Webhook replay guard. Telegram redelivers an update it believes failed, and
+    -- a redelivered callback must not re-run a state change.
+    CREATE TABLE IF NOT EXISTS telegram_updates_seen (
+      update_id INTEGER PRIMARY KEY,
+      received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }

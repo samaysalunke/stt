@@ -3,6 +3,8 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import Button from '../../components/ui/Button.astro';
 import { ABOUT_DEFAULTS } from '../../lib/aboutDefaults';
 import { readSiteSettings } from '../../lib/content';
+import { telegramActionsConfigured, telegramBotUsername } from '../../lib/telegram';
+import { linkForUser } from '../../lib/telegramLink';
 import { ADMIN_CONTENT_INPUT_CLASS as inputCls, ADMIN_CONTENT_LABEL_CLASS as labelCls } from '../../components/admin/formClasses';
 export const prerender = false;
 
@@ -16,6 +18,13 @@ const aboutValue = (value: unknown, fallback: string) =>
 const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.length > 0
   ? s.aboutPrinciples
   : ABOUT_DEFAULTS.principles;
+
+// Two-way Telegram actions. The role gate matches the endpoints: only the people
+// who can move a booking in the admin UI may hold a link.
+const adminUser = Astro.locals.adminUser;
+const telegramCanLink = adminUser?.role === 'owner' || adminUser?.role === 'ops';
+const telegramReady = telegramActionsConfigured() && Boolean(telegramBotUsername());
+const telegramLink = telegramCanLink && adminUser ? linkForUser(adminUser.userId) : null;
 ---
 
 <AdminLayout title="Settings" page="settings">
@@ -247,6 +256,44 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     </div>
   </form>
 
+  <!-- Telegram -->
+  {telegramCanLink && (
+    <section class={cardCls} style={cardStyle}>
+      <h2 class="font-display text-lg font-semibold mb-1 text-navy">Telegram</h2>
+      <p class="text-sm mb-5 text-gray-text">
+        Connect your Telegram account to confirm, cancel and record payments straight from the
+        booking messages in the ops group. Your role is checked on every tap, so removing it here
+        removes it there.
+      </p>
+
+      {!telegramReady ? (
+        <p class="text-sm text-gray-text">
+          Two-way actions are not configured on this server. Set <code>TELEGRAM_WEBHOOK_SECRET</code>
+          and <code>TELEGRAM_BOT_USERNAME</code>, then register the webhook.
+        </p>
+      ) : (
+        <div id="telegram-panel" data-linked={telegramLink ? '1' : '0'}>
+          <p class="text-sm mb-4" id="telegram-state">
+            {telegramLink
+              ? `Connected${telegramLink.telegramUsername ? ` as @${telegramLink.telegramUsername}` : ''}.`
+              : 'Not connected.'}
+          </p>
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="telegram-connect"
+                    class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors border border-navy text-navy">
+              {telegramLink ? 'Reconnect' : 'Connect Telegram'}
+            </button>
+            <button type="button" id="telegram-revoke" hidden={!telegramLink}
+                    class="rounded-full px-6 py-2.5 text-sm font-medium transition-colors text-danger border border-danger">
+              Disconnect
+            </button>
+          </div>
+          <p class="text-sm mt-4" id="telegram-result" hidden></p>
+        </div>
+      )}
+    </section>
+  )}
+
   <!-- Account -->
   <section class={cardCls} style={cardStyle}>
     <h2 class="font-display text-lg font-semibold mb-1 text-navy">Account</h2>
@@ -277,5 +324,58 @@ const aboutPrinciples = Array.isArray(s.aboutPrinciples) && s.aboutPrinciples.le
     portraitPreviewUrl = URL.createObjectURL(file);
     portraitPreview.src = portraitPreviewUrl;
     portraitPreview.classList.remove('hidden');
+  });
+
+  // ── Telegram linking ──
+  const tgConnect = document.querySelector<HTMLButtonElement>('#telegram-connect');
+  const tgRevoke = document.querySelector<HTMLButtonElement>('#telegram-revoke');
+  const tgResult = document.querySelector<HTMLParagraphElement>('#telegram-result');
+  const tgState = document.querySelector<HTMLParagraphElement>('#telegram-state');
+
+  function tgSay(message: string, tone: 'ok' | 'error' = 'ok') {
+    if (!tgResult) return;
+    tgResult.textContent = message;
+    tgResult.className = `text-sm mt-4 ${tone === 'ok' ? 'text-success' : 'text-danger'}`;
+    tgResult.hidden = false;
+  }
+
+  tgConnect?.addEventListener('click', async () => {
+    tgConnect.disabled = true;
+    try {
+      const res = await fetch('/api/admin/telegram-link', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Could not create a link.');
+      // Single-use and short-lived, so it is opened rather than displayed —
+      // nothing worth copying out of the page and into a chat.
+      window.open(data.url, '_blank', 'noopener');
+      tgSay('Opened Telegram. Press Start there within 10 minutes, then reload this page.');
+    } catch (error: any) {
+      tgSay(String(error?.message || error), 'error');
+    } finally {
+      tgConnect.disabled = false;
+    }
+  });
+
+  tgRevoke?.addEventListener('click', async () => {
+    if (!confirm('Disconnect Telegram? Your buttons in the ops group will stop working.')) return;
+    tgRevoke.disabled = true;
+    try {
+      const res = await fetch('/api/admin/telegram-link', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke' }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'Could not disconnect.');
+      if (tgState) tgState.textContent = 'Not connected.';
+      tgRevoke.hidden = true;
+      tgSay('Disconnected.');
+    } catch (error: any) {
+      tgSay(String(error?.message || error), 'error');
+    } finally {
+      tgRevoke.disabled = false;
+    }
   });
 </script>

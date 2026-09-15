@@ -62,7 +62,7 @@ export async function applyPaymentChange(
   actor: ActorRef = {},
 ): Promise<Record<string, any>> {
   const { id, action, requestedAmount, receivedAt, method, refundKind, requestId } = input;
-  const transactionReference = input.transactionReference || input.transactionReferenceAlt;
+  const transactionReference = (input.transactionReference || input.transactionReferenceAlt) as string | null | undefined;
   const db = getDb();
 
   const reg = db.prepare('SELECT * FROM registrations WHERE id=?').get(id) as any;
