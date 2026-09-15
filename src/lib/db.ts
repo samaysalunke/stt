@@ -542,4 +542,59 @@ function initializeSchema(db: Database.Database) {
       received_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // What a departure COSTS to run — the outbound half of the books, and the only
+  // thing standing between "payments collected" and an actual profit margin.
+  //
+  // A departure is a YAML batch (src/content/trips/*.yaml -> batches[]), not a
+  // row, so there is no FK target and the key is the natural (trip_slug,
+  // batch_id) pair. Costs live here rather than in the trip YAML because
+  // parseEditorBooking() rebuilds batches[] from a field whitelist and would
+  // silently drop any new key on the next admin trip save — and because that
+  // YAML is on the public render path.
+  //
+  // UNIQUE(trip_slug, batch_id) rather than UNIQUE(batch_id): a departure with
+  // no explicit id falls back to slugify(startDate) (src/lib/tripEditor.ts), so
+  // two trips departing the same day can both claim `2026-06-27`.
+  //
+  // No CHECK on the amounts — SQLite cannot add or alter one later (see the
+  // payment_status note above). Validation lives in src/lib/departureFinance.ts.
+  //
+  // There is no version history: audit_log is the record, and a delete writes
+  // the whole prior row into previousValue, so the audit log doubles as undo.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS departure_costs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_slug TEXT NOT NULL,
+      batch_id TEXT NOT NULL,
+      base_amount INTEGER NOT NULL DEFAULT 0,
+      note TEXT,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_by_email TEXT,
+      UNIQUE(trip_slug, batch_id)
+    );
+    CREATE INDEX IF NOT EXISTS departure_costs_batch ON departure_costs(batch_id);
+
+    -- Ad-hoc miscellaneous expenditure, keyed on the same pair as
+    -- departure_costs rather than FK'd to its id. Two reasons: a line item must
+    -- be addable before any base cost exists, and "is this departure costed at
+    -- all?" must stay answerable as "a base row OR an item exists" — an implicit
+    -- parent row created by the first item would make every itemised departure
+    -- read as base zero. An ON DELETE CASCADE would also mean clearing the base
+    -- cost silently destroys every line item.
+    CREATE TABLE IF NOT EXISTS departure_cost_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_slug TEXT NOT NULL,
+      batch_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_by_email TEXT
+    );
+    CREATE INDEX IF NOT EXISTS departure_cost_items_departure
+      ON departure_cost_items(trip_slug, batch_id);
+  `);
 }

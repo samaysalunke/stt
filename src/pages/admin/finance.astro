@@ -1,0 +1,427 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getDb } from '../../lib/db';
+import { buildFinanceRollup, rollUp, type DepartureFinance } from '../../lib/departureFinance';
+import {
+  indianFinancialYear,
+  indianFinancialYearFromStart,
+  isDateInIndianFinancialYear,
+} from '../../lib/adminDashboard';
+import { formatINR } from '../../lib/utils';
+import { formatDepartureRange } from '../../lib/departureSummary';
+export const prerender = false;
+
+// Per-departure margin. Middleware already blocks trip_lead from /admin/finance
+// and gates every /api/admin/finance write to owner; this page decides only
+// whether to RENDER the editors. Ops gets plain text with no inputs and no
+// buttons — nothing in the DOM to re-enable from devtools.
+const adminUser = Astro.locals.adminUser;
+const canEdit = adminUser?.role === 'owner';
+
+const { departures, orphanCosts, unallocated } = buildFinanceRollup(getDb());
+
+// Financial year, keyed off the DEPARTURE date so this page and /admin/ bucket
+// money the same way. Same cookie + ?fy= convention as the dashboard.
+const currentFy = indianFinancialYear();
+const fyStarts = new Set<number>([currentFy.startYear]);
+for (const d of departures) if (d.financialYearStart !== null) fyStarts.add(d.financialYearStart);
+const fyOptions = [...fyStarts].sort((a, b) => b - a).map(indianFinancialYearFromStart);
+
+const requestedPeriod = Astro.url.searchParams.get('fy') ?? Astro.cookies.get('admin-finance-fy')?.value ?? '';
+const selectedAll = requestedPeriod === 'all';
+const selectedFy = fyOptions.find((fy) => fy.startYear === Number(requestedPeriod)) ?? currentFy;
+
+const visible = departures.filter((d) => selectedAll || isDateInIndianFinancialYear(d.startDate, selectedFy.startYear));
+// Unallocated money has no departure date, so it belongs to no financial year.
+// Fold it in only on "All time", or the totals would claim a year it isn't in.
+const totals = rollUp(visible, selectedAll ? unallocated : { rows: 0, seats: 0, collected: 0 });
+
+// Worst margin first — the whole point is to surface the departures losing
+// money. Uncosted rows have no margin to rank, so they sit on top as the work
+// still to do rather than being buried at either end of a numeric sort.
+const rows = [...visible].sort((a, b) => {
+  if (a.cost.costed !== b.cost.costed) return a.cost.costed ? 1 : -1;
+  if (a.marginPct === null || b.marginPct === null) {
+    if (a.marginPct !== b.marginPct) return a.marginPct === null ? -1 : 1;
+    return a.startDate.localeCompare(b.startDate);
+  }
+  return a.marginPct - b.marginPct;
+});
+
+// A departure id with no explicit value in the YAML falls back to
+// slugify(startDate), so two trips departing the same day can collide. That
+// would pool their bookings into one row, so say so rather than report it.
+const batchOwners = new Map<string, Set<string>>();
+for (const d of departures) {
+  const set = batchOwners.get(d.batchId) ?? new Set<string>();
+  set.add(d.tripSlug);
+  batchOwners.set(d.batchId, set);
+}
+const collidingBatchIds = [...batchOwners.entries()].filter(([, slugs]) => slugs.size > 1).map(([id]) => id);
+
+const kpis = [
+  {
+    label: 'Cash collected',
+    value: formatINR(totals.collected),
+    hint: `${totals.seats} seat${totals.seats === 1 ? '' : 's'}${totals.retained > 0 ? ` · ${formatINR(totals.retained)} retained` : ''}`,
+  },
+  { label: 'Operating cost', value: formatINR(totals.cost), hint: `${totals.costedDepartures} departure${totals.costedDepartures === 1 ? '' : 's'} costed` },
+  { label: 'Gross margin', value: formatINR(totals.margin), hint: 'Costed departures only' },
+  { label: 'Margin %', value: totals.marginPct === null ? '—' : `${totals.marginPct.toFixed(1)}%`, hint: `${formatINR(totals.stillToCollect)} still to collect` },
+];
+
+const marginScale = Math.max(1, ...rows.filter((r) => r.margin !== null).map((r) => Math.abs(r.margin!)));
+const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin) / marginScale) * 100);
+---
+
+<AdminLayout title="Finance" page="finance">
+  <div class="flex items-center justify-between gap-4 mb-5">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">Departure margins</p>
+      <p class="text-sm text-gray-text mt-0.5">
+        {selectedAll ? 'All-time cash, cost and margin by departure' : `Departures Apr ${selectedFy.startYear} – Mar ${selectedFy.startYear + 1}`}
+      </p>
+    </div>
+    <form method="get" class="flex-none">
+      <label for="finance-fy" class="sr-only">Financial year</label>
+      <select id="finance-fy" name="fy" data-finance-fy
+        class="rounded-xl border border-peach bg-white px-4 py-2.5 text-sm font-semibold text-navy shadow-sm">
+        <option value="all" selected={selectedAll}>All time</option>
+        {fyOptions.map(fy => <option value={fy.startYear} selected={!selectedAll && fy.startYear === selectedFy.startYear}>{fy.label}</option>)}
+      </select>
+    </form>
+  </div>
+
+  <div class="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-6">
+    {kpis.map(k => (
+      <div class="bg-white rounded-[var(--radius-card)] p-5 border border-peach/60">
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-text">{k.label}</p>
+        <p class="font-display text-3xl font-semibold mt-2 text-navy" data-kpi={k.label}>{k.value}</p>
+        <p class="text-xs mt-1 text-gray-text">{k.hint}</p>
+      </div>
+    ))}
+  </div>
+
+  {totals.uncostedDepartures > 0 && (
+    <p class="mb-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-uncosted-banner>
+      <strong>{totals.uncostedDepartures} of {visible.length}</strong> departures have no cost recorded.
+      Margin above covers only the {totals.costedDepartures} that do.
+    </p>
+  )}
+
+  {collidingBatchIds.length > 0 && (
+    <p class="mb-5 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900">
+      <strong>Duplicate departure ids:</strong> {collidingBatchIds.join(', ')}. More than one trip
+      uses each of these, so their bookings cannot be told apart. Give each departure an explicit
+      id in the trip editor.
+    </p>
+  )}
+
+  <div id="finance-container" data-cost-editor={canEdit ? '1' : null} data-cost-readonly={canEdit ? null : '1'}
+       class="flex flex-col gap-3">
+    {rows.length === 0 && (
+      <p class="rounded-2xl border border-peach/60 bg-white px-4 py-6 text-center text-sm text-gray-text">
+        No departures in this period.
+      </p>
+    )}
+
+    {rows.map((d) => (
+      <details class="bg-white rounded-[var(--radius-card)] border border-peach/60 overflow-hidden"
+               data-departure data-trip-slug={d.tripSlug} data-batch-id={d.batchId}
+               data-collected={d.collected}>
+        <summary class="cursor-pointer list-none px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div class="min-w-[14rem] flex-1">
+            <p class="text-sm font-semibold text-navy">{d.tripName}</p>
+            <p class="text-[11px] text-gray-text">
+              {formatDepartureRange(d.startDate, d.endDate)}
+              {d.historical && <span class="ml-1 opacity-70">· past</span>}
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">Seats</p>
+            <p class="text-sm font-semibold tabular-nums text-navy">
+              {d.confirmedSeats}{d.capacity !== null ? `/${d.capacity}` : ''}
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">Collected</p>
+            <p class="text-sm font-semibold tabular-nums text-navy">{formatINR(d.collected)}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">Cost</p>
+            <p class="text-sm font-semibold tabular-nums text-navy" data-field="cost">
+              {d.cost.costed ? formatINR(d.cost.total) : '—'}
+            </p>
+          </div>
+          <div class="text-right min-w-[7rem]">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">Margin</p>
+            <p class="text-sm font-semibold tabular-nums" data-field="margin"
+               style={`color: ${d.margin === null ? 'var(--color-gray-text, #6b7280)' : d.margin < 0 ? '#b91c1c' : '#15803d'};`}>
+              {d.margin === null ? 'Not costed' : formatINR(d.margin)}
+            </p>
+          </div>
+          <div class="text-right min-w-[4rem]">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">%</p>
+            <p class="text-sm font-semibold tabular-nums text-navy" data-field="marginPct">
+              {d.marginPct === null ? '—' : `${d.marginPct.toFixed(1)}%`}
+            </p>
+          </div>
+          <div class="text-right min-w-[6rem]">
+            <p class="text-[10px] uppercase tracking-wide text-gray-text">To collect</p>
+            <p class="text-sm font-semibold tabular-nums text-navy">{formatINR(d.stillToCollect)}</p>
+          </div>
+        </summary>
+
+        {d.margin !== null && (
+          <div class="px-5 -mt-1 mb-3 h-1.5 rounded-full bg-gray-soft overflow-hidden">
+            <div class="h-full rounded-full"
+                 style={`width: ${Math.max(2, pct(d))}%; background: ${d.margin < 0 ? '#dc2626' : 'rgba(232,114,90,0.85)'};`}></div>
+          </div>
+        )}
+
+        <div class="border-t border-peach/50 px-5 py-4 bg-gray-soft/40">
+          <div class="grid gap-4 sm:grid-cols-3 mb-4 text-xs text-gray-text">
+            <p>Contracted <span class="block text-sm font-semibold text-navy tabular-nums">
+              {d.contractedUnknownSeats > 0 ? `≥ ${formatINR(d.contracted)}` : formatINR(d.contracted)}
+              {d.contractedUnknownSeats > 0 && <span class="text-[11px] font-normal"> ({d.contractedUnknownSeats} unpriced)</span>}
+            </span></p>
+            <p>Retained from cancellations <span class="block text-sm font-semibold text-navy tabular-nums">{formatINR(d.retained)}</span></p>
+            <p>Break-even seats <span class="block text-sm font-semibold text-navy tabular-nums">
+              {d.breakEvenSeats === null ? '—' : `${d.breakEvenSeats}${d.breakEvenSeatsRemaining ? ` (${d.breakEvenSeatsRemaining} to go)` : ''}`}
+            </span></p>
+          </div>
+
+          <div class="flex flex-wrap items-end gap-3 mb-3">
+            <label class="text-xs text-gray-text">
+              Base operating cost
+              {canEdit ? (
+                <input type="number" step="1" min="0" data-base-cost value={d.cost.hasBaseRow ? d.cost.base : ''}
+                       placeholder="Not costed"
+                       class="mt-1 block w-40 rounded-xl border border-peach bg-white px-3 py-2 text-sm tabular-nums text-navy" />
+              ) : (
+                <span class="mt-1 block text-sm font-semibold text-navy tabular-nums">
+                  {d.cost.hasBaseRow ? formatINR(d.cost.base) : 'Not costed'}
+                </span>
+              )}
+            </label>
+            <label class="text-xs text-gray-text flex-1 min-w-[12rem]">
+              Note
+              {canEdit ? (
+                <input type="text" maxlength="500" data-cost-note value={d.cost.note ?? ''}
+                       class="mt-1 block w-full rounded-xl border border-peach bg-white px-3 py-2 text-sm text-navy" />
+              ) : (
+                <span class="mt-1 block text-sm text-navy">{d.cost.note || '—'}</span>
+              )}
+            </label>
+            {canEdit && d.cost.hasBaseRow && (
+              <button type="button" data-clear-cost
+                      class="rounded-xl border border-peach px-3 py-2 text-xs font-semibold text-navy">Clear</button>
+            )}
+          </div>
+
+          <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-text mb-1">Miscellaneous expenditure</p>
+          <div data-items class="flex flex-col gap-2">
+            {d.cost.items.map((item) => (
+              <div class="flex flex-wrap items-center gap-2" data-item data-item-id={item.id}>
+                {canEdit ? (
+                  <>
+                    <input type="text" maxlength="80" data-item-label value={item.label}
+                           class="flex-1 min-w-[12rem] rounded-xl border border-peach bg-white px-3 py-2 text-sm text-navy" />
+                    <input type="number" step="1" data-item-amount value={item.amount}
+                           class="w-32 rounded-xl border border-peach bg-white px-3 py-2 text-sm tabular-nums text-navy" />
+                    <button type="button" data-delete-item
+                            class="rounded-xl border border-peach px-3 py-2 text-xs font-semibold text-navy">Delete</button>
+                  </>
+                ) : (
+                  <>
+                    <span class="flex-1 min-w-[12rem] text-sm text-navy">{item.label}</span>
+                    <span class="w-32 text-sm font-semibold tabular-nums"
+                          style={`color: ${item.amount < 0 ? '#15803d' : 'inherit'};`}>
+                      {item.amount < 0 ? `credit ${formatINR(Math.abs(item.amount))}` : formatINR(item.amount)}
+                    </span>
+                  </>
+                )}
+              </div>
+            ))}
+            {d.cost.items.length === 0 && <p class="text-xs text-gray-text" data-no-items>No line items.</p>}
+          </div>
+
+          {canEdit && (
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <input type="text" maxlength="80" data-new-label placeholder="e.g. Extra vehicle day"
+                     class="flex-1 min-w-[12rem] rounded-xl border border-peach bg-white px-3 py-2 text-sm text-navy" />
+              <input type="number" step="1" data-new-amount placeholder="Amount"
+                     class="w-32 rounded-xl border border-peach bg-white px-3 py-2 text-sm tabular-nums text-navy" />
+              <button type="button" data-add-item
+                      class="rounded-xl bg-navy px-4 py-2 text-xs font-semibold text-white">Add line item</button>
+            </div>
+          )}
+          <p class="mt-2 text-xs text-red-700 hidden" data-error></p>
+        </div>
+      </details>
+    ))}
+  </div>
+
+  {orphanCosts.length > 0 && (
+    <div class="mt-8">
+      <h2 class="font-display text-lg font-semibold text-navy mb-1">Orphaned costs</h2>
+      <p class="text-sm text-gray-text mb-3">
+        Costs recorded against a departure that is no longer in the trip. Excluded from every
+        total above.
+      </p>
+      <div class="flex flex-col gap-2" data-orphans>
+        {orphanCosts.map((o) => (
+          <div class="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-peach/60 px-4 py-3"
+               data-orphan data-trip-slug={o.tripSlug} data-batch-id={o.batchId}>
+            <span class="flex-1 min-w-[14rem] text-sm text-navy">{o.tripSlug} <span class="text-gray-text">· {o.batchId}</span></span>
+            <span class="text-sm font-semibold tabular-nums text-navy">{formatINR(o.cost.total)}</span>
+            <span class="text-[11px] text-gray-text">
+              {o.reason === 'trip-deleted' ? 'trip deleted — kept in case it is restored' : 'departure removed'}
+            </span>
+            {canEdit && o.reason === 'batch-missing' && (
+              <button type="button" data-purge-orphan
+                      class="rounded-xl border border-peach px-3 py-2 text-xs font-semibold text-navy">Purge</button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {unallocated.rows > 0 && (
+    <p class="mt-6 rounded-2xl border border-peach/60 bg-white px-4 py-3 text-sm text-gray-text" data-unallocated>
+      <strong class="text-navy">{formatINR(unallocated.collected)}</strong> across {unallocated.seats} seat{unallocated.seats === 1 ? '' : 's'}
+      is not linked to any departure, so it carries no cost and no margin.
+      {!selectedAll && ' Shown in the totals on "All time" only.'}
+    </p>
+  )}
+</AdminLayout>
+
+<script>
+  const selector = document.querySelector<HTMLSelectElement>('[data-finance-fy]');
+  selector?.addEventListener('change', () => {
+    document.cookie = `admin-finance-fy=${encodeURIComponent(selector.value)}; Path=/admin; Max-Age=34560000; SameSite=Lax`;
+    selector.form?.requestSubmit();
+  });
+
+  const container = document.getElementById('finance-container');
+  // Ops renders no inputs or buttons at all, so there is nothing here to wire.
+  if (container && container.hasAttribute('data-cost-editor')) {
+    const inr = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
+
+    const showError = (panel: Element, message: string) => {
+      const el = panel.querySelector<HTMLElement>('[data-error]');
+      if (!el) return;
+      el.textContent = message;
+      el.classList.toggle('hidden', !message);
+    };
+
+    async function send(url: string, method: string, body: unknown) {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) throw new Error(data?.error || 'Request failed.');
+      return data;
+    }
+
+    /** Repaint one departure's cost/margin from the server's recomputed figures. */
+    function paint(row: HTMLElement, cost: any) {
+      const collected = Number(row.dataset.collected ?? 0);
+      const costCell = row.querySelector('[data-field="cost"]');
+      const marginCell = row.querySelector<HTMLElement>('[data-field="margin"]');
+      const pctCell = row.querySelector('[data-field="marginPct"]');
+      if (costCell) costCell.textContent = cost.costed ? inr(cost.total) : '—';
+      const margin = cost.costed ? collected - cost.total : null;
+      if (marginCell) {
+        marginCell.textContent = margin === null ? 'Not costed' : inr(margin);
+        marginCell.style.color = margin === null ? '' : margin < 0 ? '#b91c1c' : '#15803d';
+      }
+      if (pctCell) {
+        pctCell.textContent = margin === null || collected <= 0 ? '—' : `${((margin / collected) * 100).toFixed(1)}%`;
+      }
+    }
+
+    const ids = (el: Element) => {
+      const row = el.closest<HTMLElement>('[data-departure]')!;
+      return { row, tripSlug: row.dataset.tripSlug!, batchId: row.dataset.batchId! };
+    };
+
+    container.addEventListener('change', async (event) => {
+      const target = event.target as HTMLElement;
+      const row = target.closest<HTMLElement>('[data-departure]');
+      if (!row) return;
+
+      try {
+        showError(row, '');
+        if (target.matches('[data-base-cost], [data-cost-note]')) {
+          const base = row.querySelector<HTMLInputElement>('[data-base-cost]')!;
+          const note = row.querySelector<HTMLInputElement>('[data-cost-note]')!;
+          if (base.value.trim() === '') return; // an empty box is "leave it alone"; use Clear
+          const data = await send('/api/admin/finance/cost', 'PUT', {
+            tripSlug: row.dataset.tripSlug, batchId: row.dataset.batchId,
+            baseAmount: base.value, note: note.value,
+          });
+          base.value = String(data.cost.base); // echo what was actually stored
+          paint(row, data.cost);
+        } else if (target.matches('[data-item-label], [data-item-amount]')) {
+          const item = target.closest<HTMLElement>('[data-item]')!;
+          const data = await send('/api/admin/finance/item', 'PATCH', {
+            id: Number(item.dataset.itemId),
+            label: item.querySelector<HTMLInputElement>('[data-item-label]')!.value,
+            amount: item.querySelector<HTMLInputElement>('[data-item-amount]')!.value,
+          });
+          paint(row, data.cost);
+        }
+      } catch (error) {
+        showError(row, (error as Error).message);
+      }
+    });
+
+    container.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement;
+      const button = target.closest<HTMLElement>('[data-add-item], [data-delete-item], [data-clear-cost]');
+      if (!button) return;
+      const { row, tripSlug, batchId } = ids(button);
+
+      try {
+        showError(row, '');
+        if (button.matches('[data-add-item]')) {
+          const label = row.querySelector<HTMLInputElement>('[data-new-label]')!;
+          const amount = row.querySelector<HTMLInputElement>('[data-new-amount]')!;
+          await send('/api/admin/finance/item', 'POST', {
+            tripSlug, batchId, label: label.value, amount: amount.value,
+          });
+          window.location.reload(); // simplest correct redraw for a new row
+        } else if (button.matches('[data-delete-item]')) {
+          const item = button.closest<HTMLElement>('[data-item]')!;
+          if (!confirm('Delete this line item?')) return;
+          const data = await send('/api/admin/finance/item', 'DELETE', { id: Number(item.dataset.itemId) });
+          item.remove();
+          paint(row, data.cost);
+        } else if (button.matches('[data-clear-cost]')) {
+          if (!confirm('Clear the base operating cost? The departure will read as not costed.')) return;
+          await send('/api/admin/finance/cost', 'DELETE', { tripSlug, batchId });
+          window.location.reload();
+        }
+      } catch (error) {
+        showError(row, (error as Error).message);
+      }
+    });
+
+    document.querySelector('[data-orphans]')?.addEventListener('click', async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLElement>('[data-purge-orphan]');
+      if (!button) return;
+      const wrap = button.closest<HTMLElement>('[data-orphan]')!;
+      if (!confirm('Permanently delete these orphaned costs?')) return;
+      await fetch('/api/admin/finance/cost', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripSlug: wrap.dataset.tripSlug, batchId: wrap.dataset.batchId, purgeItems: true }),
+      });
+      window.location.reload();
+    });
+  }
+</script>

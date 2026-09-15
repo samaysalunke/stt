@@ -277,6 +277,11 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
       '/api/admin/trips/create',
       '/api/admin/trips/delete',
       '/api/admin/trips/duplicate',
+      // Departure costs and margins: vendor rates are a different sensitivity
+      // class from the booking payments ops already handles. The whole prefix
+      // is write-only (the page renders its own data), so gating it wholesale
+      // leaves ops read access via /admin/finance without any write path.
+      '/api/admin/finance',
     ];
     // trip_lead cannot access trips management or most write actions
     const ownerOrOpsOnly = [
@@ -288,6 +293,7 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
       '/admin/registrations/import',
       '/api/admin/registrations',
       '/admin/email-logs',
+      '/admin/finance',
     ];
 
     if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {

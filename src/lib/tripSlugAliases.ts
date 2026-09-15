@@ -26,6 +26,25 @@ export function recordTripSlugAlias(oldSlug: string, newSlug: string): void {
       INSERT INTO trip_slug_aliases (alias, target) VALUES (?, ?)
       ON CONFLICT(alias) DO UPDATE SET target = excluded.target, createdAt = unixepoch()
     `).run(oldSlug, newSlug);
+
+    // Carry per-departure costs across the rename. Registrations are NOT
+    // migrated (they keep the old trip_slug forever, and the finance read path
+    // resolves them through this alias table), but cost rows are keyed by slug
+    // and would otherwise be stranded — the departure would silently read as
+    // "not costed" the moment its trip was renamed.
+    //
+    // Insert-then-delete rather than `UPDATE ... SET trip_slug = ?`: a slug
+    // reused after an earlier rename would collide with UNIQUE(trip_slug,
+    // batch_id) and throw inside this transaction, failing the whole trip save.
+    // DO NOTHING keeps the destination's own row when both exist.
+    db.prepare(`
+      INSERT INTO departure_costs (trip_slug, batch_id, base_amount, note, created_at, updated_at, updated_by_email)
+        SELECT ?, batch_id, base_amount, note, created_at, updated_at, updated_by_email
+          FROM departure_costs WHERE trip_slug = ?
+      ON CONFLICT(trip_slug, batch_id) DO NOTHING
+    `).run(newSlug, oldSlug);
+    db.prepare('DELETE FROM departure_costs WHERE trip_slug = ?').run(oldSlug);
+    db.prepare('UPDATE departure_cost_items SET trip_slug = ? WHERE trip_slug = ?').run(newSlug, oldSlug);
   });
   tx();
 }
