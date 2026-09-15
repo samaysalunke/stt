@@ -147,12 +147,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // ── Status write ─────────────────────────────────────────────────────
     const telegramEvent = (newStatus === 'lead' || newStatus === 'pending' || newStatus === 'confirmed')
       ? newStatus as TelegramEventType : null;
-    const telegramQueued = getDb().transaction(() => {
-      getDb()
-        .prepare('UPDATE registrations SET status=?, admin_notes=?, status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=?')
-        .run(newStatus, adminNotes, id);
-      return telegramEvent ? enqueueTelegramEvent(getDb(), id, telegramEvent) : false;
+    // Compare-and-swap on the status this request validated against. `reg` was
+    // read outside any transaction, so two concurrent requests can both clear
+    // assertTransition on the same snapshot and then both run the confirm side
+    // effects below — double-counting the seat via adjustBookingCount(+1) and
+    // writing two payment events, which carry different requestIds and so do
+    // not collapse on the idempotency key. Losing the swap means someone else
+    // moved the row first; abort before any ledger write. Same claim pattern as
+    // claimOne() in lib/telegram.ts.
+    //
+    // COALESCE mirrors how prevStatus was derived — `status` is nullable
+    // (`status TEXT DEFAULT 'pending'`), and `status = 'pending'` never matches NULL.
+    const write = getDb().transaction(() => {
+      const swapped = getDb()
+        .prepare("UPDATE registrations SET status=?, admin_notes=?, status_changed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE id=? AND COALESCE(status,'pending')=?")
+        .run(newStatus, adminNotes, id, prevStatus).changes;
+      if (!swapped) return { swapped: false, telegramQueued: false };
+      return { swapped: true, telegramQueued: telegramEvent ? enqueueTelegramEvent(getDb(), id, telegramEvent) : false };
     })();
+    if (!write.swapped) {
+      return bad('Someone else changed this booking just now. Reload and try again.', 409);
+    }
+    const telegramQueued = write.telegramQueued;
 
     let effectivePaymentStatus = reg.payment_status as string;
     let confirmQueuedDoc = false;

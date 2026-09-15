@@ -8,7 +8,8 @@ import { jsonOk as json } from '../../../../lib/apiResponse';
 import { recordPayment, recordRefund, sanitizePaymentMethod, validReceivedAt, zohoMode } from '../../../../lib/paymentLedger';
 import { processZohoDocument } from '../../../../lib/zohoBooks';
 import { sendRegistrationPaymentConfirmed } from '../../../../lib/email';
-import type { PaymentStatus } from '../../../../lib/registrationStatus';
+import { assertPaymentActionAllowed, type PaymentStatus } from '../../../../lib/registrationStatus';
+import { requireRole } from '../../../../lib/requireRole';
 
 const resolvePaymentStatus = (action: string, nextAmount: number, total: number): PaymentStatus => {
   if (action === 'unpaid' || nextAmount <= 0) return 'unpaid';
@@ -18,7 +19,12 @@ const resolvePaymentStatus = (action: string, nextAmount: number, total: number)
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    if (!locals.adminUser || locals.adminUser.role === 'trip_lead') return json({ success: false, error: 'Access denied' }, 403);
+    // Same policy as before (owner + ops), expressed through the shared guard
+    // so this endpoint reads like every other mutating admin route.
+    const denied = requireRole(locals, ['owner', 'ops']);
+    if (denied) return denied;
+    // requireRole guarantees a session; the assertion only narrows for TypeScript.
+    const admin = locals.adminUser!;
     const body = await request.json();
     const action = String(body.action || 'record');
     const ids: number[] = Array.isArray(body.ids)
@@ -46,6 +52,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (!reg) throw new Error('Registration not found');
         const total = Number(reg.total_amount);
         const previousAmount = Number(reg.amount_paid) || 0;
+        // Refunds carry their own, better-worded status check inside
+        // recordRefund; everything else may only touch a live booking.
+        if (action !== 'refund') assertPaymentActionAllowed(String(reg.status ?? 'pending'));
 
         if (action === 'refund') {
           const amount = requestedAmount;
@@ -53,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const r = recordRefund({
             registrationId: id, amount, refundKind: refundKind as 'partial' | 'full',
             receivedAt, method, transactionReference: body.transactionReference || body.transaction_reference,
-            requestId, actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
+            requestId, actorUserId: admin.userId, actorEmail: admin.email,
           });
           results.push({ id, success: true, amountPaid: r.amountPaid, amountRefunded: r.amountRefunded, payment_status: r.paymentStatus, duplicate: r.duplicate });
           continue;
@@ -95,7 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           transactionReference: body.transactionReference || body.transaction_reference,
           eventType: amount < 0 ? 'reversal' : isAdvance ? 'advance' : previousAmount > 0 ? 'balance' : 'payment',
           idempotencyKey,
-          actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email,
+          actorUserId: admin.userId, actorEmail: admin.email,
           source: ids.length > 1 ? 'admin-bulk' : 'admin',
           // Advance payments no longer generate a Zoho document (retainer
           // invoices need a paid plan) — the customer still gets the branded
@@ -137,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
         const state = paymentState(nextAmount, total, advance);
         logAction({
-          actorUserId: locals.adminUser.userId, actorEmail: locals.adminUser.email, actorRole: locals.adminUser.role,
+          actorUserId: admin.userId, actorEmail: admin.email, actorRole: admin.role,
           action: amount < 0 ? 'booking.payment_reversed' : 'booking.payment_recorded', targetType: 'registration', targetId: String(id),
           previousValue: { amount: previousAmount, state: paymentState(previousAmount, total, advance) },
           newValue: { amount: nextAmount, delta: amount, state, receivedAt, method, transactionReference: body.transactionReference || undefined },

@@ -57,6 +57,37 @@ export function paymentOptionsFor(status: string, current?: string): readonly Pa
     : base;
 }
 
+/** Statuses against which money may be recorded or reversed. */
+export const MONEY_MOVABLE_STATUSES = ['lead', 'pending', 'confirmed'] as const;
+
+/**
+ * Server-side guard for `/api/admin/registrations/payment`, which never read
+ * `status` at all — until now the only thing stopping "Fully paid" landing on a
+ * cancelled booking was `planUpdate()` in the admin page's inline <script>, i.e.
+ * nothing at all for any other caller.
+ *
+ * Deliberately NARROWER than `PAYMENT_OPTIONS`. That map lists what the *select*
+ * offers; it is not an authorization rule, and two independent checks say so:
+ *
+ *   - scripts/audit-payment-matrix.sql — `wishlist` lists no options yet every
+ *     wishlist row is `unpaid`, and a legacy `rejected` row sits on `unpaid`.
+ *     A membership test would reject rows on their own current value.
+ *   - TC-215 — paying in full while still `pending`, then confirming, is a
+ *     supported flow, though `PAYMENT_OPTIONS.pending` omits `fully_paid`.
+ *
+ * What actually has to hold is only this: money moves on live bookings. A
+ * terminal row settles up through the refund path (guarded by `recordRefund`,
+ * which requires `cancelled`), and a wishlist entry has no money at all.
+ */
+export function assertPaymentActionAllowed(status: string): void {
+  if (status === 'cancelled' || status === 'rejected') {
+    throw new Error(`This booking is ${status} — record a refund rather than a payment.`);
+  }
+  if (!(MONEY_MOVABLE_STATUSES as readonly string[]).includes(status)) {
+    throw new Error(`A ${status} entry has no payment to record.`);
+  }
+}
+
 export interface TransitionCtx {
   amountPaid: number;
   totalAmount: number | null;

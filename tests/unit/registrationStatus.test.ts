@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   ADMIN_SETTABLE_STATUSES,
+  assertPaymentActionAllowed,
   assertTransition,
   derivePaymentStatus,
   isNoRefund,
@@ -185,5 +186,37 @@ describe('isNoRefund', () => {
     expect(isNoRefund({ status: 'cancelled', amount_paid: 5000, amount_refunded: 5000 })).toBe(false);
     expect(isNoRefund({ status: 'cancelled', amount_paid: 0, amount_refunded: 0 })).toBe(false);
     expect(isNoRefund({ status: 'confirmed', amount_paid: 5000, amount_refunded: 0 })).toBe(false);
+  });
+});
+
+describe('assertPaymentActionAllowed', () => {
+  it('allows money to move on any live booking', () => {
+    for (const status of ['lead', 'pending', 'confirmed']) {
+      expect(() => assertPaymentActionAllowed(status), status).not.toThrow();
+    }
+  });
+
+  it('sends a terminal booking to the refund path instead', () => {
+    for (const status of ['cancelled', 'rejected']) {
+      expect(() => assertPaymentActionAllowed(status), status).toThrow(/refund/i);
+    }
+  });
+
+  it('refuses a wishlist entry, which has no money attached', () => {
+    expect(() => assertPaymentActionAllowed('wishlist')).toThrow(/no payment to record/i);
+  });
+
+  /**
+   * Regression guard. The first cut of this used
+   * `PAYMENT_OPTIONS[status].includes(target)`, which two independent checks
+   * disproved: the audit script found live rows whose own current value the map
+   * omits, and TC-215 pays a `pending` booking in full before confirming it.
+   * PAYMENT_OPTIONS describes what the select offers, not what is permitted.
+   */
+  it('is deliberately wider than PAYMENT_OPTIONS', () => {
+    expect(PAYMENT_OPTIONS.pending).not.toContain('fully_paid');
+    expect(() => assertPaymentActionAllowed('pending')).not.toThrow();
+    expect(PAYMENT_OPTIONS.lead).not.toContain('advance_paid');
+    expect(() => assertPaymentActionAllowed('lead')).not.toThrow();
   });
 });
