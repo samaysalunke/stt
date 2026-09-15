@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { writeTrip, saveImageFile, clearTripSlugAlias, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
+import { readTrip, writeTrip, saveImageFile, clearTripSlugAlias, normalizeItineraryPhotos, tripPriority } from '../../../../lib/content';
 import { submitToIndexNow } from '../../../../lib/indexnow';
 import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 import { sanitizeInput, slugify } from '../../../../lib/utils';
@@ -14,6 +14,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const slug = slugify(sanitizeInput(body.get('slug') as string) || name);
 
   if (!slug) return redirect('/admin/trips/new?error=slug');
+  // writeTrip is a full overwrite, so creating onto an existing slug would wipe
+  // that trip's content silently. Send the admin back with an error instead.
+  if (readTrip(slug)) return redirect(`/admin/trips/new?error=slug-exists&slug=${encodeURIComponent(slug)}`);
 
   // Occupancy catalog + departures-with-offers come in as serialized JSON.
   const { occupancyCatalog, batches, errors: bookingErrors } = parseEditorBooking(
@@ -99,5 +102,5 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   writeTrip(slug, data);
   await submitToIndexNow([`/trips/${slug}/`]);
   await purgeUrls(tripPaths(slug));
-  return redirect(`/admin/trips/${slug}`);
+  return redirect(`/admin/trips/${slug}?created=1`);
 };

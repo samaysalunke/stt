@@ -243,6 +243,44 @@ test('TC-103d unauthenticated priority update is blocked', async () => {
   assert.match(res.headers.get('location') ?? '', /\/admin\/login/);
 });
 
+// ── Create guards ───────────────────────────────────────────────────────────
+// writeTrip is a full overwrite, so create must refuse a slug that already
+// exists rather than silently wiping that trip and reporting success.
+async function createTrip(name, slug, cookie) {
+  const fd = new FormData();
+  fd.append('name', name);
+  fd.append('slug', slug);
+  fd.append('occupancyCatalog_json', '[]');
+  fd.append('departures_json', '[]');
+  fd.append('itinerary_json', '[]');
+  return fetch(`${BASE}/api/admin/trips/create`, {
+    method: 'POST',
+    body: fd,
+    headers: { cookie },
+    redirect: 'manual',
+  });
+}
+
+test('TC-105 create onto an existing slug is refused and leaves that trip untouched', async () => {
+  const { cookie } = await adminLogin();
+  const before = readFileSync(QA_TRIP_PATH, 'utf8');
+  const res = await createTrip('Clobbering Trip', 'qa-test-v2', cookie);
+  assert.ok(res.status >= 300 && res.status < 400, `Expected redirect, got ${res.status}`);
+  assert.match(
+    res.headers.get('location') ?? '',
+    /\/admin\/trips\/new\?error=slug-exists/,
+    'A duplicate slug must come back as an error, not a success redirect',
+  );
+  assert.equal(readFileSync(QA_TRIP_PATH, 'utf8'), before, 'The existing trip must not be overwritten');
+});
+
+test('TC-106 create with a slug that normalizes to empty is refused', async () => {
+  const { cookie } = await adminLogin();
+  const res = await createTrip('हिमालय', '', cookie);
+  assert.ok(res.status >= 300 && res.status < 400, `Expected redirect, got ${res.status}`);
+  assert.match(res.headers.get('location') ?? '', /error=slug/, 'An empty slug must be reported as an error');
+});
+
 // Restore the qa-test-v2 fixture after admin tests so register-v2 tests remain stable.
 // This test runs last in the file and re-saves the original data.
 test('TC-104 restore qa-test-v2 fixture after admin tests', async () => {

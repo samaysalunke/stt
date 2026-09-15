@@ -25,11 +25,36 @@ const departureStatusOptions = DEPARTURE_STATUSES.map((value) => ({
   value,
   label: value.replace(/[-_]/g, ' ').replace(/^./, (letter) => letter.toUpperCase()),
 }));
-const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departure';
+// Every server-side rejection redirects back here with ?error=<code>. An
+// incomplete departure has its own banner beside the departures editor below;
+// every other code needs one here, or the form just reappears and the save
+// looks like it silently did nothing.
+const FORM_ERRORS: Record<string, string> = {
+  'slug': 'The URL slug came out empty. Give the trip a slug (or a name) with at least one letter or number.',
+  'slug-exists': 'A trip with that slug already exists. Pick a different slug, or open the existing trip to edit it.',
+};
+const errorCode = Astro.url.searchParams.get('error') ?? '';
+const bookingError = errorCode === 'incomplete-departure';
+const formError = errorCode && !bookingError
+  ? (FORM_ERRORS[errorCode] ?? 'Check the form and try again.')
+  : '';
+const takenSlug = errorCode === 'slug-exists' ? Astro.url.searchParams.get('slug') : null;
 const globalFaqs = listFaqs();
 ---
 
 <AdminLayout title="New Trip" page="trips">
+
+  {formError && (
+    <div role="alert" class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-start gap-2 bg-danger/10 text-danger">
+      <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" />
+      </svg>
+      <span>
+        The trip was not saved. {formError}
+        {takenSlug && <> <a href={`/admin/trips/${takenSlug}`} class="underline">Open “{takenSlug}”</a>.</>}
+      </span>
+    </div>
+  )}
 
   <!-- Header -->
   <div class="edit-header">

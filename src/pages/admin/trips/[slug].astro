@@ -52,19 +52,22 @@ if (existingGallery.length === 0 && trip.linkedAlbumSlug) {
 const tripSlug = slug;
 const initialAccommodationGallery = Array.isArray(trip.accommodationGallery) ? trip.accommodationGallery : [];
 const saved = Astro.url.searchParams.get('saved') === '1';
+// create.ts lands here after writing a brand-new trip; without this the create
+// looked identical to just opening the editor.
+const created = Astro.url.searchParams.get('created') === '1';
 const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departure';
 const globalFaqs = listFaqs();
 ---
 
 <AdminLayout title={`Edit: ${trip.title ?? trip.name ?? slug}`} page="trips">
 
-  {saved && (
+  {(saved || created) && (
     <div class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-center gap-2 bg-success/10 text-success"
         >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
       </svg>
-      Changes saved.
+      {created ? 'Trip created.' : 'Changes saved.'}
     </div>
   )}
 
