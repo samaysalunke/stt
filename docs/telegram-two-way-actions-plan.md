@@ -114,12 +114,30 @@ Verified: 363 unit + 164 API tests pass.
 
 The client `planUpdate` stays as-is, demoted from "the guard" to pre-flight UX.
 
-### Phase 1 — extractions
+### Phase 1 — extractions — **DONE**
 
-`applyStatusChange()` out of `update-registration.ts` and
-`applyPaymentChange()` out of the `for (const id of ids)` body in `payment.ts`.
-Both take an explicit `actor: { userId?, email?, role }` instead of reading
-`locals`. Both handlers become thin wrappers; no behaviour changes.
+`applyStatusChange()` in `src/lib/registrationStatusChange.ts` and
+`applyPaymentChange()` in `src/lib/registrationPaymentChange.ts`. Both take an
+explicit `actor: { userId?, email?, role? }` instead of reading `locals`, so a
+non-HTTP caller runs the same guards rather than growing a second copy of them.
+
+The two routes are now wrappers: `update-registration.ts` 364 → 41 lines,
+`registrations/payment.ts` 164 → 54. They keep exactly the request-level
+concerns they had — auth, validating shared fields once, and shaping responses.
+
+Error handling differs by endpoint contract, deliberately:
+
+- `applyStatusChange` returns `{ ok: false, status, error }`, because the route
+  answers with that HTTP status and message directly.
+- `applyPaymentChange` throws, because the route answers 200 with a mixed
+  `results` array and turns each throw into one failed entry.
+
+Verified as a *move*, not a rewrite: diffing the old handler bodies against the
+extracted modules leaves only the intended `body.` → `input.` /
+`locals.adminUser` → `actor` renames, the `Response` → result-value returns, one
+hoisted `hasOverride`, and shorthand property notation. No logic changed.
+
+363 unit + 164 API tests pass.
 
 ### Phase 2 — identity
 
