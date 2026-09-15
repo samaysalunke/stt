@@ -1,8 +1,11 @@
 -- Audit: which live rows would a server-side status↔payment_status guard reject?
 --
--- Run before enabling `assertPaymentChangeAllowed` (src/lib/registrationStatus.ts).
--- Read-only. Against production:
+-- Read-only. Locally:
 --   sqlite3 "$DATA_DIR/seekthethrill.db" < scripts/audit-payment-matrix.sql
+--
+-- On a DEPLOYED container use the Node twin instead — Nixpacks Node images ship
+-- no sqlite3 binary, so this file has nothing to run it there:
+--   railway ssh node scripts/audit-payment-matrix.mjs
 --
 -- Check A is the one that matters: any row in a REJECT bucket is a row whose
 -- *current* payment_status the matrix does not list for its status. The guard

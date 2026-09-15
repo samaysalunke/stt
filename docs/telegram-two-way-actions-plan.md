@@ -231,9 +231,16 @@ bot never sees group chat text.
 
 ## Still open
 
-- **Check A of `scripts/audit-payment-matrix.sql` has only run against the
-  8-row visual-test fixture.** The dev DB holds zero registrations. Run it on the
-  Railway volume before relying on the Phase 0 guard in production.
+- **Check A has only run against the 8-row visual-test fixture.** The dev DB
+  holds zero registrations. Run it against the Railway volume before relying on
+  the Phase 0 guard in production:
+
+  ```
+  railway ssh node scripts/audit-payment-matrix.mjs
+  ```
+
+  Use the `.mjs` twin, not the `.sql` file — Nixpacks Node images ship no sqlite3
+  binary. Both open the database read-only and print only aggregates.
 - The webhook's authorization matrix is proven as a unit, not end-to-end: doing
   it live would need a real bot token in the shared test server's environment,
   which would make `telegram-notifications.test.mjs` dial api.telegram.org. The
