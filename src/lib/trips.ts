@@ -1,4 +1,5 @@
 import { YAML, fs, path, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
+import { DEFAULT_BALANCE_RULE } from './balanceDue';
 import { listDeletedSlugs } from './tripDeletions';
 import { cachedRead, bumpContentVersion, getContentVersion } from './contentCache';
 import { now as clockNow, todayStart } from './clock';
@@ -340,7 +341,6 @@ export interface ResolvedBooking {
 }
 
 const DEFAULT_ADVANCE = 3000;
-const DEFAULT_BALANCE_RULE = '15 days before trip';
 
 function resolveCatalog(trip: Record<string, any>): ResolvedBooking['occupancyCatalog'] {
   const cat = Array.isArray(trip?.occupancyCatalog) ? trip.occupancyCatalog : [];

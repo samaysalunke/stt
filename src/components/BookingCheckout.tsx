@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { balanceDueDate } from '../lib/balanceDue';
 import { formatDateIN, formatINR } from '../lib/utils';
 import { INDIA_CITIES } from '../lib/indiaCities';
 import { INDIA_STATES } from '../lib/indiaStates';
@@ -827,17 +828,11 @@ export default function BookingCheckout({
 
   const timeStr = (d: Date) =>
     d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
-  // The balance is due N days before the start date; derive the date when the
-  // configured rule leads with a day count ("15 days before trip").
-  const balanceDueDate = (() => {
-    const m = /^(\d+)\s*days?\s*before/i.exec(String(balanceDueRule).trim());
-    if (!m || !departure.startDate) return null;
-    const d = new Date(departure.startDate + 'T00:00:00');
-    d.setDate(d.getDate() - parseInt(m[1], 10));
-    return Number.isNaN(d.getTime()) ? null : d;
-  })();
-  const balanceDueText = balanceDueDate
-    ? `Due ${formatDateIN(balanceDueDate.toISOString().slice(0, 10))} · ${balanceDueRule}`
+  // The balance is due N days before the start date (src/lib/balanceDue.ts),
+  // which the admin receivables ageing buckets against too.
+  const balanceDueOn = balanceDueDate(departure.startDate, balanceDueRule);
+  const balanceDueText = balanceDueOn
+    ? `Due ${formatDateIN(balanceDueOn)} · ${balanceDueRule}`
     : `Due ${balanceDueRule}`;
   const expectedBy = submittedAt ? new Date(submittedAt.getTime() + 24 * 60 * 60 * 1000) : null;
   const bookingRef = registrationId ?? initialRegistration?.id ?? null;
