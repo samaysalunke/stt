@@ -2,6 +2,7 @@
 import type { ResolvedDeparture } from '../lib/trips';
 import { formatDepartureRange, getDepartureSummary } from '../lib/departureSummary';
 import { FALLBACK_HERO } from '../lib/images';
+import { imageSrcset, TRIP_GRID_SIZES } from '../lib/imageVariants';
 import DiscountCountdown from './DiscountCountdown';
 
 interface Props {
@@ -23,6 +24,18 @@ interface Props {
   hasComingSoon?: boolean;
   allComingSoon?: boolean;
   departures?: ResolvedDeparture[];
+  /**
+   * The `sizes` for the cover image. There is no single correct value: this
+   * card is laid out by a 1-then-2 column grid on /trips/ and by a percentage
+   * carousel on /, so only the caller knows how wide the slot actually is.
+   * The default describes the /trips/ grid.
+   */
+  sizes?: string;
+  /**
+   * Set on the one card that is the page's LCP element. Every other card is
+   * lazy, which is right for them and wrong for that one.
+   */
+  priority?: boolean;
 }
 
 const {
@@ -44,6 +57,8 @@ const {
   hasComingSoon = false,
   allComingSoon = false,
   departures = [],
+  sizes = TRIP_GRID_SIZES,
+  priority = false,
 } = Astro.props;
 
 const tripName = title || name || slug;
@@ -71,11 +86,15 @@ const departureSummary = getDepartureSummary(departures);
       <img
         data-skeleton-image
         src={img}
+        srcset={imageSrcset(img)}
+        sizes={sizes}
         alt={cardImageAlt}
         width="800"
         height="600"
         class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
+        fetchpriority={priority ? 'high' : undefined}
+        decoding="async"
       />
     </a>
     {duration && (

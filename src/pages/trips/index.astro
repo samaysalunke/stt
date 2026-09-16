@@ -51,10 +51,13 @@ const listingSchema = {
         </div>
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
-          {trips.map((trip) => {
+          {trips.map((trip, i) => {
             const card = tripCardSummary(trip);
+            // The first card's cover is this page's LCP element, so it is the
+            // one image here that must not be lazy. The rest stay lazy.
             return (
               <TripCard
+                priority={i === 0}
                 slug={trip.slug}
                 title={trip.title}
                 name={trip.name}

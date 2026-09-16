@@ -60,8 +60,18 @@ const EDGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
  * The allowlist is load-bearing, not tidiness. An open `?w=` would let anyone
  * mint unbounded distinct cache keys and force an unbounded number of sharp
  * encodes on the origin.
+ *
+ * 720 and 1080 are retired: IMAGE_VARIANT_WIDTHS no longer emits them, because
+ * 768 and 1152 sit closer to the widths real devices ask for. They stay
+ * accepted here because HTML is edge-cached with stale-while-revalidate=86400
+ * (see src/middleware.ts), so a page rendered before the ladder changed can
+ * still be served for up to a day and will ask for the old widths. Dropping
+ * them from this Set would make those requests fall through to the full-size
+ * original — a silent regression lasting until the stale HTML expires. There
+ * is no cost to keeping them: a width nobody requests is a cache entry that is
+ * never created.
  */
-const ALLOWED_WIDTHS = new Set([480, 720, 1080, 1440]);
+const ALLOWED_WIDTHS = new Set([480, 640, 720, 768, 960, 1080, 1152, 1440]);
 const RESIZABLE_EXT = new Set(['webp', 'jpg', 'jpeg', 'png']);
 
 /** Weak validator: size + mtime is enough to detect a replaced file. */
