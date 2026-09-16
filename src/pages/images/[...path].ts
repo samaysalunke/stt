@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
+import sharp from 'sharp';
 
 const MIME: Record<string, string> = {
   jpg: 'image/jpeg',
@@ -40,9 +41,35 @@ const PUBLIC_IMAGES = path.join(process.cwd(), 'public', 'images');
 const BROWSER_CACHE_CONTROL = 'public, max-age=86400, stale-while-revalidate=604800';
 const EDGE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
+/**
+ * Responsive width variants, resized on demand.
+ *
+ * Every image in the library is stored at exactly one size — the upload
+ * pipeline caps the long edge at 1920 (see saveImageFile in _contentBase.ts) —
+ * and that single file was then served into every slot no matter how small the
+ * slot was. On a trip page that meant a 1920x1080 itinerary photo (377 KiB)
+ * painting into a 578x326 box and a 1440x1920 cover (338 KiB) into 721x1008.
+ * Measured on a throttled mobile connection those two images were most of a
+ * 5.3s LCP, and the itinerary photo alone accounted for 1.66s of it by
+ * competing with the cover for the pipe.
+ *
+ * Resizing here rather than at upload time means no backfill of existing
+ * images and no extra storage: Cloudflare keeps each width for a year
+ * (CDN-Cache-Control above), so the origin encodes any given width once.
+ *
+ * The allowlist is load-bearing, not tidiness. An open `?w=` would let anyone
+ * mint unbounded distinct cache keys and force an unbounded number of sharp
+ * encodes on the origin.
+ */
+const ALLOWED_WIDTHS = new Set([480, 720, 1080, 1440]);
+const RESIZABLE_EXT = new Set(['webp', 'jpg', 'jpeg', 'png']);
+
 /** Weak validator: size + mtime is enough to detect a replaced file. */
-function weakETag(stat: fs.Stats): string {
-  return `W/"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+function weakETag(stat: fs.Stats, width: number | null): string {
+  const base = `${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}`;
+  // The width has to be part of the validator, or a shared cache could hand a
+  // resized variant to a request that asked for the original.
+  return width ? `W/"${base}-w${width}"` : `W/"${base}"`;
 }
 
 /** One stat call answers existence, file-ness, size and mtime together. */
@@ -83,8 +110,18 @@ export const GET: APIRoute = async ({ params, request }) => {
   }
 
   const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-  const contentType = MIME[ext] ?? 'application/octet-stream';
-  const etag = weakETag(stat);
+
+  // `?w=` is honoured only for raster formats sharp can read, and only at the
+  // allowlisted widths. Anything else falls through to the original file, so
+  // every URL that worked before this route learned to resize still does.
+  const requestedWidth = Number(new URL(request.url).searchParams.get('w'));
+  const width =
+    RESIZABLE_EXT.has(ext) && ALLOWED_WIDTHS.has(requestedWidth) ? requestedWidth : null;
+
+  // Variants are always re-encoded to WebP, so the type is known up front and
+  // the 304 below carries the same one the 200 would have.
+  const contentType = width ? 'image/webp' : MIME[ext] ?? 'application/octet-stream';
+  const etag = weakETag(stat, width);
   const lastModified = new Date(stat.mtimeMs).toUTCString();
 
   const headers = {
@@ -108,6 +145,31 @@ export const GET: APIRoute = async ({ params, request }) => {
 
   if (matchesETag || notModifiedSince) {
     return new Response(null, { status: 304, headers });
+  }
+
+  if (width) {
+    try {
+      // withoutEnlargement means a source narrower than the requested width is
+      // returned at its own size rather than upscaled, so a small original
+      // never gets blown up to fill a large srcset candidate.
+      const resized = await sharp(filePath)
+        .rotate()
+        .resize({ width, withoutEnlargement: true })
+        .webp({ quality: 82, effort: 4 })
+        .toBuffer();
+      return new Response(new Uint8Array(resized), {
+        headers: { ...headers, 'Content-Length': String(resized.length) },
+      });
+    } catch {
+      // A file sharp cannot decode should still be served, just unresized.
+      return new Response(Readable.toWeb(fs.createReadStream(filePath)) as ReadableStream, {
+        headers: {
+          ...headers,
+          'Content-Type': MIME[ext] ?? 'application/octet-stream',
+          'Content-Length': String(stat.size),
+        },
+      });
+    }
   }
 
   // Stream rather than buffering the whole file into memory per request.

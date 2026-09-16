@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import 'glightbox/dist/css/glightbox.css';
+import { imageSrcset } from '../lib/imageVariants';
 
 interface DayPhoto {
   image: string;
@@ -96,6 +97,8 @@ export default function DayAccordion({ itinerary, tripName }: Props) {
                       >
                         <img
                           src={p.image}
+                          srcSet={imageSrcset(p.image)}
+                          sizes="(min-width: 1024px) 734px, 86vw"
                           loading="lazy"
                           width={p.width ?? undefined}
                           height={p.height ?? undefined}
