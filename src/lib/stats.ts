@@ -17,6 +17,14 @@ function findTripSlug(tripName: string): string | null {
   }
 }
 
+function readTripSafe(slug: string) {
+  try {
+    return readTrip(slug);
+  } catch {
+    return null;
+  }
+}
+
 function batchDays(tripSlug: string, batchId: string): number {
   try {
     const trip = readTrip(tripSlug);
@@ -35,11 +43,14 @@ async function computeStats(regs: RegRow[]) {
   const destinations = new Set<string>();
 
   for (const reg of regs) {
+    // A registration whose trip title no longer matches any YAML (the title was
+    // edited after the booking, and trip_slug predates that column) used to be
+    // skipped outright — it still counted towards tripsCount, so a traveller
+    // showed up with N trips and nothing to show for them. Fall back to the
+    // booked trip name, exactly as the backfill script does.
     const slug = reg.trip_slug ?? findTripSlug(reg.trip_name);
-    if (!slug) continue;
-
-    const trip = readTrip(slug);
-    const tripLocation = (trip?.location as string | undefined) ?? reg.trip_name;
+    const trip = slug ? readTripSafe(slug) : null;
+    const tripLocation = ((trip?.location as string | undefined) ?? reg.trip_name ?? '').trim();
 
     // Sequential geocode calls to respect Nominatim 1 req/sec limit
     const homeCoords = await geocodeCity(reg.city);
@@ -49,9 +60,9 @@ async function computeStats(regs: RegRow[]) {
       kmsFromHome += haversine(homeCoords.lat, homeCoords.lng, destCoords.lat, destCoords.lng);
     }
 
-    if (reg.batch_id) daysOutdoors += batchDays(slug, reg.batch_id);
+    if (slug && reg.batch_id) daysOutdoors += batchDays(slug, reg.batch_id);
 
-    if (tripLocation) destinations.add(tripLocation.toLowerCase().trim());
+    if (tripLocation) destinations.add(tripLocation.toLowerCase());
   }
 
   return {
@@ -62,12 +73,17 @@ async function computeStats(regs: RegRow[]) {
   };
 }
 
+// Callers pass whatever email the booking or session carried, and the two
+// tables disagree on casing often enough that both carry a lower(trim(email))
+// index. Matching on that normalised form throughout is what keeps a traveller
+// who booked as Priya@Gmail.com and signed in as priya@gmail.com from showing
+// an empty leaderboard row.
 export async function recalculateUserLeaderboard(email: string): Promise<void> {
   const db = getDb();
 
   const user = db
     .prepare(
-      'SELECT id, email, displayName, username, avatarUrl, homeCityLatLng FROM users WHERE email = ?'
+      'SELECT id, email, displayName, username, avatarUrl, homeCityLatLng FROM users WHERE lower(trim(email)) = lower(trim(?))'
     )
     .get(email) as {
       id: string;
@@ -82,9 +98,9 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
 
   const regs = db
     .prepare(
-      "SELECT city, trip_name, trip_slug, batch_id FROM registrations WHERE email = ? AND status = 'confirmed'"
+      "SELECT city, trip_name, trip_slug, batch_id FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed'"
     )
-    .all(email) as RegRow[];
+    .all(user.email) as RegRow[];
 
   const stats = await computeStats(regs);
 
@@ -108,9 +124,9 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
   // Keep homeCityLatLng updated to most recent confirmed booking city
   const lastReg = db
     .prepare(
-      "SELECT city FROM registrations WHERE email = ? AND status = 'confirmed' ORDER BY created_at DESC LIMIT 1"
+      "SELECT city FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed' ORDER BY created_at DESC LIMIT 1"
     )
-    .get(email) as { city: string } | undefined;
+    .get(user.email) as { city: string } | undefined;
 
   if (lastReg?.city) {
     const coords = await geocodeCity(lastReg.city);
