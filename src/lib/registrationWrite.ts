@@ -5,6 +5,7 @@ import { sendRegistrationPaymentConfirmed } from './email';
 import { recordPayment } from './paymentLedger';
 import { derivePaymentStatus } from './registrationStatus';
 import { enqueueTelegramEvent } from './telegram';
+import { normalizeIndiaCity } from './indiaCities';
 
 // `rejected` retired 2026-09-03 (merged into `cancelled`); create and import
 // only ever accepted lead/pending/confirmed, so nothing here loses a path.
@@ -238,7 +239,7 @@ export function createRegistration(
       `).run(
         input.trip_name, input.trip_slug, input.trip_date,
         input.full_name, input.email, input.phone, input.gender ?? null,
-        input.age ?? null, input.city ?? null, input.state ?? null, input.instagram ?? null,
+        input.age ?? null, normalizeIndiaCity(input.city), input.state ?? null, input.instagram ?? null,
         // emergency_name/phone are NOT NULL in the schema — admin rows may omit them.
         input.emergency_name ?? '', input.emergency_phone ?? '',
         input.why_join ?? null, input.sharing_option, input.total_amount,

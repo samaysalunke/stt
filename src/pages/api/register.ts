@@ -7,6 +7,7 @@ import { rateLimit } from '../../lib/rateLimit';
 import { geocodeCity } from '../../lib/geocode';
 import { attributionSource, readAttribution } from '../../lib/attribution';
 import { dispatchTelegramEvent, enqueueTelegramEvent } from '../../lib/telegram';
+import { normalizeIndiaCity } from '../../lib/indiaCities';
 
 const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
 
@@ -104,7 +105,9 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
       email:          sanitizeInput(locals.user?.email ?? body.email),
       phone:          sanitizeInput(body.phone),
       age:            sanitizeInput(body.age),
-      city:           sanitizeInput(body.city),
+      // One spelling per city, as for state: the picker's "Other" option and
+      // the admin forms both feed this column, and it is what gets geocoded.
+      city:           normalizeIndiaCity(sanitizeInput(body.city)) ?? '',
       state:          sanitizeInput(body.state),
       emergencyName:  sanitizeInput(body.emergencyName),
       emergencyPhone: sanitizeInput(body.emergencyPhone),

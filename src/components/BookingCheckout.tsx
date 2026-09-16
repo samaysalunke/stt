@@ -49,14 +49,19 @@ interface Props {
   } | null;
 }
 
+// Brand tokens from `src/styles/tokens.css`, not literals — see the matching
+// note in BookingPanel. `peach` was #F5DDD7 here and #E8DDD9 there under the
+// same name, so two panels of one booking flow drew the same hairline in two
+// colours; both now name --color-border, which is what every call site uses it
+// as. `border` was #E5E7EB, a cool grey in an otherwise warm palette.
 const C = {
-  coral: '#E8725A',
-  navy: '#1B2B3A',
-  peach: '#F5DDD7',
-  blush: '#FDF0EC',
+  coral: 'var(--color-coral)',
+  navy: 'var(--color-navy)',
+  peach: 'var(--color-border)',
+  blush: 'var(--color-blush)',
   gray: 'var(--color-gray-text)',
-  cta: '#D95F3B',
-  border: '#e5e7eb',
+  cta: 'var(--color-cta)',
+  border: 'var(--color-border)',
 };
 
 
@@ -75,7 +80,7 @@ function StepBar({ current }: { current: number }) {
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
                 style={{
-                  background: done || active ? C.coral : '#e5e7eb',
+                  background: done || active ? C.coral : C.border,
                   color: done || active ? 'white' : C.gray,
                 }}
               >
@@ -86,7 +91,7 @@ function StepBar({ current }: { current: number }) {
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className="flex-1 h-0.5 mx-2 mb-5" style={{ background: done ? C.coral : '#e5e7eb' }} />
+              <div className="flex-1 h-0.5 mx-2 mb-5" style={{ background: done ? C.coral : C.border }} />
             )}
           </div>
         );
@@ -113,7 +118,7 @@ function Field({
 
 // Controls are 16px on mobile (text-base) so iOS Safari doesn't zoom-on-focus —
 // that zoom is what let the checkout page pan sideways. Desktop keeps 14px.
-const inputCls = 'w-full px-4 py-3 border rounded-xl text-base sm:text-sm outline-none transition-all focus:border-[#E8725A] focus:shadow-[0_0_0_3px_rgba(232,114,90,0.15)] bg-white';
+const inputCls = 'w-full px-4 py-3 border rounded-xl text-base sm:text-sm outline-none transition-all focus:border-coral focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-coral)_15%,transparent)] bg-white';
 
 // Custom dropdown — a native <select> can't be styled (its arrow and open
 // animation are OS-controlled and inconsistent). This matches the inputs, uses
@@ -809,7 +814,7 @@ export default function BookingCheckout({
 
       <div className="mt-6">
         {submitError && (
-          <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b' }}>{submitError}</div>
+          <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: 'var(--color-danger-surface)', color: 'var(--color-danger-ink)' }}>{submitError}</div>
         )}
         <button
           onClick={goStep3}
@@ -855,7 +860,7 @@ export default function BookingCheckout({
             <p className="font-semibold" style={{ color: C.navy }}>{tripName}</p>
             <p className="text-xs mt-0.5" style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
           </div>
-          <span className="shrink-0 font-bold uppercase tracking-wide px-2 py-1 rounded-full" style={{ fontSize: '0.62rem', background: '#FEF3C7', color: '#92400E' }}>Under review</span>
+          <span className="shrink-0 font-bold uppercase tracking-wide px-2 py-1 rounded-full" style={{ fontSize: '0.62rem', background: 'var(--color-warning-surface)', color: 'var(--color-warning-ink)' }}>Under review</span>
         </div>
         <hr className="my-3" style={{ borderColor: C.peach }} />
         <div className="grid grid-cols-2 gap-3">
@@ -895,7 +900,7 @@ export default function BookingCheckout({
               ...(n.state === 'done'
                 ? { background: C.coral }
                 : n.state === 'now'
-                  ? { background: '#E8A05A', boxShadow: '0 0 0 4px #FEF3C7' }
+                  ? { background: '#E8A05A', boxShadow: '0 0 0 4px var(--color-warning-surface)' }
                   : { border: `2px solid ${C.peach}` }),
             }}>
               {n.state === 'done' && (
@@ -949,8 +954,8 @@ export default function BookingCheckout({
     <div>
       <StepBar current={3} />
       <div className="py-4">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: '#D1FAE5' }}>
-          <svg className="w-8 h-8" style={{ color: '#16a34a' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'var(--color-success-surface)' }}>
+          <svg className="w-8 h-8" style={{ color: 'var(--color-success-ink)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
@@ -958,10 +963,10 @@ export default function BookingCheckout({
         <p className="text-sm mb-5 text-center" style={{ color: C.gray }}>Zahra verified your advance. Your seat on {tripName} is held — welcome aboard.</p>
         <div className="rounded-xl px-5 py-4 mb-6 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
           <p className="font-semibold mb-1" style={{ color: C.navy }}>{dateStr} · {offer.label}</p>
-          <p className="mt-3 font-semibold" style={{ color: '#16a34a' }}>Paid — {formatINR(advanceDue)} advance ✓</p>
+          <p className="mt-3 font-semibold" style={{ color: 'var(--color-success-ink)' }}>Paid — {formatINR(advanceDue)} advance ✓</p>
           <p className="mt-1" style={{ color: C.gray }}>Balance {formatINR(balance)} — due {balanceDueRule}</p>
         </div>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: '#25D366' }}>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: 'var(--color-whatsapp)' }}>
           Join the trip WhatsApp group
         </a>
       </div>
@@ -991,7 +996,7 @@ export default function BookingCheckout({
         >
           Pay now & confirm →
         </button>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold py-3.5 rounded-full text-sm mb-4" style={{ color: '#128C7E', border: '1px solid #25D366' }}>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold py-3.5 rounded-full text-sm mb-4" style={{ color: '#128C7E', border: '1px solid var(--color-whatsapp)' }}>
           Question first? Chat with Zahra
         </a>
         <p className="text-xs text-center" style={{ color: C.gray }}>We'll send a gentle nudge on WhatsApp if we don't hear back — no spam, promise.</p>
@@ -1075,13 +1080,13 @@ export default function BookingCheckout({
           {(!hasBoth || payTab === 'upi') && upiId && (
             <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>UPI ID</p>
-              <div className="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style={{ background: 'rgba(217,95,59,0.06)', border: '1px solid rgba(217,95,59,0.25)' }}>
+              <div className="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style={{ background: 'color-mix(in srgb, var(--color-cta) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cta) 25%, transparent)' }}>
                 <span className="text-sm font-medium" style={{ color: C.coral, wordBreak: 'break-all' }}>{upiId}</span>
                 <button
                   type="button"
                   onClick={(e) => copyToClipboard(upiId, e.currentTarget)}
                   className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all"
-                  style={{ border: '0.5px solid rgba(217,95,59,0.45)', color: C.coral }}
+                  style={{ border: '0.5px solid color-mix(in srgb, var(--color-cta) 45%, transparent)', color: C.coral }}
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                   Copy
@@ -1155,13 +1160,13 @@ export default function BookingCheckout({
           }}
           className="border-2 border-dashed rounded-xl p-6 text-center transition-colors"
           style={{
-            borderColor: uploadStatus === 'done' ? '#22c55e' : uploadError ? C.coral : C.border,
+            borderColor: uploadStatus === 'done' ? 'var(--color-success)' : uploadError ? C.coral : C.border,
             cursor: uploadStatus === 'done' ? 'default' : 'pointer',
           }}
         >
           {uploadStatus === 'done' ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm" style={{ color: '#16a34a' }}>✓ {uploadName}</p>
+              <p className="text-sm" style={{ color: 'var(--color-success-ink)' }}>✓ {uploadName}</p>
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); removeUpload(); }}
@@ -1206,7 +1211,7 @@ export default function BookingCheckout({
       </div>
 
       {submitError && (
-        <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: '#fee2e2', color: '#991b1b' }}>{submitError}</div>
+        <div className="mb-4 p-4 rounded-xl text-sm" style={{ background: 'var(--color-danger-surface)', color: 'var(--color-danger-ink)' }}>{submitError}</div>
       )}
 
       {/* Primary action */}

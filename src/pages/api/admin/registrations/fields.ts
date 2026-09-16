@@ -5,6 +5,7 @@ import { jsonOk, jsonFail } from '../../../../lib/apiResponse';
 import { logAction } from '../../../../lib/audit';
 import { normalizeIndiaState } from '../../../../lib/indiaStates';
 import { recalculateUserLeaderboard } from '../../../../lib/stats';
+import { normalizeIndiaCity } from '../../../../lib/indiaCities';
 
 // Patch a small whitelist of demographic fields on a registration — primarily so
 // ops can add a missing `state` and re-run a stuck Zoho document.
@@ -34,6 +35,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
         continue;
       }
       const value = String(patch[key]).trim().slice(0, 120);
+      if (key === 'city') { clean.city = normalizeIndiaCity(value) ?? undefined; continue; }
       if (value) clean[key] = value;
     }
     if (!Object.keys(clean).length) return jsonFail('Nothing to update.');

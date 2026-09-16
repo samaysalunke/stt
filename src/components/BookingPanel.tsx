@@ -45,13 +45,17 @@ interface Props {
   wishlistUser?: { name: string; email: string; phone: string } | null;
 }
 
+// Brand tokens from `src/styles/tokens.css`, not literals. These were six
+// hardcoded hexes, which meant the accessibility retunes made in that file
+// never reached this component: `cta` was still #D95F3B, the value the token
+// comment records as failing AA at 3.72:1 behind a white button label.
 const C = {
-  coral: '#E8725A',
-  navy: '#1B2B3A',
-  peach: '#E8DDD9',
-  blush: '#FDF0EC',
+  coral: 'var(--color-coral)',
+  navy: 'var(--color-navy)',
+  peach: 'var(--color-border)',
+  blush: 'var(--color-blush)',
   gray: 'var(--color-gray-text)',
-  cta: '#D95F3B',
+  cta: 'var(--color-cta)',
 };
 
 function dateRange(d: Departure) {

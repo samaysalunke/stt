@@ -3,6 +3,7 @@ import { getDb } from '../../../../lib/db';
 import { logAction } from '../../../../lib/audit';
 import { sanitizeInput } from '../../../../lib/utils';
 import { normalizeIndiaState } from '../../../../lib/indiaStates';
+import { normalizeIndiaCity } from '../../../../lib/indiaCities';
 import { recalculateUserLeaderboard } from '../../../../lib/stats';
 import { jsonOk as json } from '../../../../lib/apiResponse';
 
@@ -16,7 +17,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const email = sanitizeInput(body.email);
     const fullName = sanitizeInput(body.full_name);
     const phone = sanitizeInput(body.phone);
-    const city = sanitizeInput(body.city);
+    const city = normalizeIndiaCity(sanitizeInput(body.city)) ?? '';
     // One spelling per state, as everywhere else it is written. An unrecognised
     // value is refused rather than stored as noise — the invoice address and
     // the leaderboard both read this column.

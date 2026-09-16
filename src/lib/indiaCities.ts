@@ -2,8 +2,8 @@
 // hubs) for the checkout city picker. Alphabetical. Not exhaustive — the picker
 // has an "Other" option for anything not listed here.
 export const INDIA_CITIES: string[] = [
-  'Agartala', 'Agra', 'Ahmedabad', 'Ajmer', 'Aligarh', 'Allahabad (Prayagraj)', 'Amravati',
-  'Amritsar', 'Aurangabad', 'Bareilly', 'Belgaum', 'Bengaluru', 'Bhavnagar', 'Bhilai',
+  'Agartala', 'Agra', 'Ahmedabad', 'Ajmer', 'Alappuzha', 'Aligarh', 'Allahabad (Prayagraj)',
+  'Amravati', 'Amritsar', 'Aurangabad', 'Bareilly', 'Belgaum', 'Bengaluru', 'Bhavnagar', 'Bhilai',
   'Bhopal', 'Bhubaneswar', 'Bikaner', 'Bilaspur', 'Chandigarh', 'Chennai', 'Coimbatore',
   'Cuttack', 'Dehradun', 'Delhi', 'Dhanbad', 'Dharamshala', 'Dispur', 'Durgapur', 'Erode',
   'Faridabad', 'Gandhinagar', 'Gangtok', 'Ghaziabad', 'Goa (Panaji)', 'Gorakhpur',
@@ -18,3 +18,77 @@ export const INDIA_CITIES: string[] = [
   'Tirupati', 'Tirupur', 'Udaipur', 'Ujjain', 'Vadodara', 'Varanasi', 'Vijayawada',
   'Visakhapatnam', 'Warangal',
 ];
+
+/**
+ * Canonicalise a city as picked, typed or pasted into a CSV.
+ *
+ * The same reasoning as `normalizeIndiaState`, with one deliberate difference:
+ * the state list is exhaustive, so an unrecognised state is refused, whereas
+ * this list is not and the picker has an "Other" option. An unrecognised city
+ * is therefore kept as typed rather than thrown away — "Ziro" is a real place
+ * and no list will ever hold all of them.
+ *
+ * What it does catch is one city arriving under several names. Bangalore and
+ * Bengaluru are the same city, and the column carried both; each geocodes to
+ * its own cache entry, so the two read as different home points on a map and
+ * the drawer shows one of them as "Other".
+ *
+ * Matching ignores case, surrounding space and internal punctuation, so
+ * "navi mumbai", "Navi-Mumbai" and "NAVI MUMBAI" all land on 'Navi Mumbai'.
+ */
+const CITY_ALIASES: Record<string, string> = {
+  // Renamed cities, both names still in everyday use.
+  bangalore: 'Bengaluru', bengalooru: 'Bengaluru',
+  bombay: 'Mumbai',
+  calcutta: 'Kolkata',
+  madras: 'Chennai',
+  poona: 'Pune',
+  baroda: 'Vadodara',
+  gurgaon: 'Gurugram',
+  mangalore: 'Mangaluru',
+  mysore: 'Mysuru',
+  trivandrum: 'Thiruvananthapuram',
+  pondicherry: 'Puducherry',
+  cochin: 'Kochi', ernakulam: 'Kochi',
+  calicut: 'Kozhikode (Calicut)', kozhikode: 'Kozhikode (Calicut)',
+  allahabad: 'Allahabad (Prayagraj)', prayagraj: 'Allahabad (Prayagraj)',
+  trichy: 'Tiruchirappalli', tiruchirapalli: 'Tiruchirappalli',
+  vizag: 'Visakhapatnam',
+  hubli: 'Hubli-Dharwad', dharwad: 'Hubli-Dharwad', hubballi: 'Hubli-Dharwad',
+  belagavi: 'Belgaum',
+  panjim: 'Panaji',
+  newdelhi: 'Delhi',
+  // Spellings that actually reached the column.
+  banglore: 'Bengaluru', blr: 'Bengaluru',
+  hyderbad: 'Hyderabad', hyd: 'Hyderabad',
+  mumbaii: 'Mumbai',
+  lucknos: 'Lucknow',
+  alleppey: 'Alappuzha',
+  navimumabi: 'Navi Mumbai',
+};
+
+const squashCity = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
+
+export function normalizeIndiaCity(value: unknown): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const key = squashCity(raw);
+  if (!key) return raw;
+
+  const exact = INDIA_CITIES.find((city) => squashCity(city) === key);
+  if (exact) return exact;
+
+  // Bare "Allahabad" against "Allahabad (Prayagraj)" and friends: the listed
+  // name carries a parenthetical the typed one does not.
+  const alias = CITY_ALIASES[key];
+  if (alias) return alias;
+
+  // Not on the list and not a name we know — a real place we simply do not
+  // carry. Keep it as typed.
+  return raw;
+}
+
+/** True when the value is already one of the listed spellings. */
+export function isListedIndiaCity(value: unknown): boolean {
+  return INDIA_CITIES.includes(String(value ?? '').trim());
+}

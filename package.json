@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "perf:lhci": "npx @lhci/cli autorun",
     "backfill:profile-stats": "node scripts/backfill-profile-stats.mjs",
-    "warm:geocode": "node scripts/warm-geocode-cache.mjs"
+    "warm:geocode": "node scripts/warm-geocode-cache.mjs",
+    "normalize:cities": "node scripts/normalize-registration-cities.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.4",
