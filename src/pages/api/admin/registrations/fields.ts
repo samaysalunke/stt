@@ -3,6 +3,7 @@ import { getDb } from '../../../../lib/db';
 import { requireRole } from '../../../../lib/requireRole';
 import { jsonOk, jsonFail } from '../../../../lib/apiResponse';
 import { logAction } from '../../../../lib/audit';
+import { normalizeIndiaState } from '../../../../lib/indiaStates';
 
 // Patch a small whitelist of demographic fields on a registration — primarily so
 // ops can add a missing `state` and re-run a stuck Zoho document.
@@ -21,6 +22,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     const clean: Partial<Record<Key, string>> = {};
     for (const key of WHITELIST) {
       if (patch[key] === undefined || patch[key] === null) continue;
+      // `state` is canonicalised against INDIA_STATES rather than stored as
+      // typed, so this endpoint agrees with the checkout, the admin create
+      // form and the CSV importer on one spelling per state. An unrecognised
+      // value is rejected outright rather than written as noise.
+      if (key === 'state') {
+        const state = normalizeIndiaState(patch.state);
+        if (!state) return jsonFail(`"${String(patch.state).slice(0, 40)}" is not an Indian state or union territory.`);
+        clean.state = state;
+        continue;
+      }
       const value = String(patch[key]).trim().slice(0, 120);
       if (value) clean[key] = value;
     }

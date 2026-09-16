@@ -3,6 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import Button from '../../../components/ui/Button.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
 import { ADMIN_REG_INPUT_CLASS as inputCls, ADMIN_REG_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
+import { INDIA_STATES } from '../../../lib/indiaStates';
 export const prerender = false;
 
 const tripsData = buildTripOptions();
@@ -72,6 +73,11 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
           </select>
         </div>
         <div><label class={labelCls}>City</label><input id="city" type="text" class={inputCls} /></div>
+        {/* Same list the public checkout uses, so one spelling per state reaches the invoice. */}
+        <div><label class={labelCls}>State</label><select id="state" class={inputCls}>
+          <option value="">Select a state</option>
+          {INDIA_STATES.map((s) => <option value={s}>{s}</option>)}
+        </select></div>
         <div><label class={labelCls}>Instagram</label><input id="instagram" type="text" class={inputCls} /></div>
         <div><label class={labelCls}>Emergency name</label><input id="emergency_name" type="text" class={inputCls} /></div>
         <div><label class={labelCls}>Emergency phone</label><input id="emergency_phone" type="tel" class={inputCls} /></div>
@@ -162,7 +168,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
         tripSlug: tripSel.value, batchId: depSel.value, tierId: tierSel.value,
         status: val('status'), sendEmail: document.getElementById('sendEmail').checked,
         full_name: val('full_name'), email: val('email'), phone: val('phone'),
-        age: val('age'), gender: val('gender'), city: val('city'), instagram: val('instagram'),
+        age: val('age'), gender: val('gender'), city: val('city'), state: val('state'), instagram: val('instagram'),
         emergency_name: val('emergency_name'), emergency_phone: val('emergency_phone'), why_join: val('why_join'),
       };
       try {

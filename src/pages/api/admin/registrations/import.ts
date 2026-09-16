@@ -3,6 +3,7 @@ import { sanitizeInput, isValidEmail, isValidPhone } from '../../../../lib/utils
 import { logAction } from '../../../../lib/audit';
 import { inferTierIdFromRow, parseCsvToObjects, parseGoogleFormsRegistrations } from '../../../../lib/csv';
 import { createRegistration, hasActiveRegistration, confirmedCountForTier, tierCapFor, type RegStatus } from '../../../../lib/registrationWrite';
+import { normalizeIndiaState } from '../../../../lib/indiaStates';
 import { readTrip } from '../../../../lib/content';
 import { editableBooking, matchTierFromStay } from '../../../../lib/tripEditor';
 import { resolveSelection, type ResolvedSelection } from './create';
@@ -31,13 +32,13 @@ function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:strin
   };
 
   const raw = google
-    ? google.map((r) => ({ ...r, stay_raw: r.stay_raw, tier_id: resolveTier(r.tier_id, r.stay_raw) }))
+    ? google.map((r) => ({ ...r, stay_raw: r.stay_raw, state: normalizeIndiaState((r as any).state), tier_id: resolveTier(r.tier_id, r.stay_raw) }))
     : parseCsvToObjects(csv).map((r, i) => {
         const stay_raw = inferTierIdFromRow(r);
         return {
           row:i + 1, full_name:sanitizeInput(r.full_name || r.name), email:sanitizeInput(r.email).toLowerCase(), phone:sanitizeInput(r.phone),
           emergency_name:sanitizeInput(r.emergency_name), emergency_phone:sanitizeInput(r.emergency_phone), age:sanitizeInput(r.age), gender:sanitizeInput(r.gender),
-          city:sanitizeInput(r.city), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
+          city:sanitizeInput(r.city), state:normalizeIndiaState(r.state), instagram:sanitizeInput(r.instagram), why_join:sanitizeInput(r.why_join),
           stay_raw, tier_id: resolveTier('', stay_raw), status:fallbackStatus,
         };
       });
@@ -107,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     for (const p of result.candidates) {
       const r=p.input!;
       const inserted=createRegistration({ ...p.selection!, full_name:r.full_name, email:r.email, phone:r.phone,
-        age:r.age||null, gender:r.gender||null, city:r.city||null, instagram:r.instagram||null,
+        age:r.age||null, gender:r.gender||null, city:r.city||null, state:r.state||null, instagram:r.instagram||null,
         emergency_name:r.emergency_name||null, emergency_phone:r.emergency_phone||null, why_join:r.why_join||null,
         status:r.status, admin_notes:'Imported by admin', created_at:r.created_at||null, consent_at:r.consent_at||null },
         { sendEmail, skipCapacity:p.selection!.is_past || capacityOverride, notifyTelegram:false });

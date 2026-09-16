@@ -4,6 +4,7 @@ import { editableBooking } from '../../../../lib/tripEditor';
 import { sanitizeInput, isValidEmail, isValidPhone, formatDateIN } from '../../../../lib/utils';
 import { logAction } from '../../../../lib/audit';
 import { createRegistration, type RegStatus } from '../../../../lib/registrationWrite';
+import { normalizeIndiaState } from '../../../../lib/indiaStates';
 import { jsonOk, jsonFail as fail } from '../../../../lib/apiResponse';
 import { dispatchTelegramEvent } from '../../../../lib/telegram';
 import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
@@ -87,6 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         age: sanitizeInput(body.age) || null,
         gender: sanitizeInput(body.gender) || null,
         city: sanitizeInput(body.city) || null,
+        state: normalizeIndiaState(body.state),
         instagram: sanitizeInput(body.instagram) || null,
         emergency_name: sanitizeInput(body.emergency_name) || null,
         emergency_phone: sanitizeInput(body.emergency_phone) || null,

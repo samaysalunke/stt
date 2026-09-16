@@ -605,7 +605,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     }
     if (btn.dataset.action === 'patch-state') {
       const state = document.getElementById('state-fix-' + id)?.value?.trim() || '';
-      if (!state) { alert('Enter the traveller’s state.'); return; }
+      if (!state) { alert('Select the traveller’s state.'); return; }
       btn.disabled = true;
       const res = await fetch('/api/admin/registrations/fields', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },

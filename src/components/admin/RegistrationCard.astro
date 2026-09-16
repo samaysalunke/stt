@@ -10,6 +10,7 @@ import {
   ADMIN_SETTABLE_STATUSES,
 } from '../../lib/registrationStatus';
 import { zohoOpenUrl } from '../../lib/zohoBooks';
+import { INDIA_STATES } from '../../lib/indiaStates';
 import { ATTRIBUTION_FIELDS, attributionChip } from '../../lib/registrationsView';
 interface Props {
   registration: Record<string, any>;
@@ -275,7 +276,10 @@ const attributionFields = [
                   <div class="state-fix">
                     <small class="document-error">Add the traveller's state, then Retry.</small>
                     <div class="state-fix-row">
-                      <input id={`state-fix-${r.id}`} type="text" maxlength="60" placeholder="State" value={r.state ?? ''} />
+                      <select id={`state-fix-${r.id}`}>
+                        <option value="">Select a state</option>
+                        {INDIA_STATES.map((s) => <option value={s} selected={s === r.state}>{s}</option>)}
+                      </select>
                       <button type="button" data-action="patch-state" data-id={r.id} data-value={document.document_type}>Save state</button>
                     </div>
                   </div>

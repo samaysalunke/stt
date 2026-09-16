@@ -168,6 +168,13 @@ export interface CreateRegistrationInput {
   age?: string | null;
   gender?: string | null;
   city?: string | null;
+  /**
+   * One of INDIA_STATES. Optional, because a back-filled or hastily-keyed
+   * booking may genuinely not have one — but every caller should try: it is
+   * the traveller's billing address on the Zoho invoice, and the privacy
+   * policy says we hold it. The public checkout requires it.
+   */
+  state?: string | null;
   instagram?: string | null;
   emergency_name?: string | null;
   emergency_phone?: string | null;
@@ -224,14 +231,14 @@ export function createRegistration(
       const res = db.prepare(`
         INSERT INTO registrations (
           trip_name, trip_slug, trip_date, full_name, email, phone, gender,
-          age, city, instagram, emergency_name, emergency_phone,
+          age, city, state, instagram, emergency_name, emergency_phone,
           why_join, sharing_option, total_amount, batch_id, tier_id,
           amount_paid, payment_date, status, status_changed_at, admin_notes, source, created_at, consent_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,?,?)
       `).run(
         input.trip_name, input.trip_slug, input.trip_date,
         input.full_name, input.email, input.phone, input.gender ?? null,
-        input.age ?? null, input.city ?? null, input.instagram ?? null,
+        input.age ?? null, input.city ?? null, input.state ?? null, input.instagram ?? null,
         // emergency_name/phone are NOT NULL in the schema — admin rows may omit them.
         input.emergency_name ?? '', input.emergency_phone ?? '',
         input.why_join ?? null, input.sharing_option, input.total_amount,

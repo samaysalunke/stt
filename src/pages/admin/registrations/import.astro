@@ -58,9 +58,9 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
           </label>
         </div>
       </div>
-      <textarea id="csv-content" rows="8" placeholder="full_name,email,phone,tier_id,age,gender,city,instagram,emergency_name,emergency_phone,why_join"
+      <textarea id="csv-content" rows="8" placeholder="full_name,email,phone,tier_id,age,gender,city,state,instagram,emergency_name,emergency_phone,why_join"
         class="w-full p-3 border border-border rounded-lg text-sm font-mono box-border leading-normal"></textarea>
-      <p class="text-xs text-gray-text m-0">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, instagram, emergency_name, emergency_phone, why_join. Generic CSVs should also include a tier column such as <strong>tier_id</strong> or <strong>occupancy</strong>; Google Forms CSVs can use their stay option column directly.</p>
+      <p class="text-xs text-gray-text m-0">Required columns: <strong>full_name, email, phone</strong>. Optional: age, gender, city, state, instagram, emergency_name, emergency_phone, why_join. A <strong>state</strong> is matched against the Indian states and union territories; anything unrecognised is left blank rather than stored. Generic CSVs should also include a tier column such as <strong>tier_id</strong> or <strong>occupancy</strong>; Google Forms CSVs can use their stay option column directly.</p>
 
       <div class="flex gap-3 items-center">
         <Button id="preview-btn" type="button" variant="primary" size="md">Preview</Button>
@@ -130,7 +130,7 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
     });
 
     // Template download
-    const HEADERS = 'full_name,email,phone,tier_id,age,gender,city,instagram,emergency_name,emergency_phone,why_join';
+    const HEADERS = 'full_name,email,phone,tier_id,age,gender,city,state,instagram,emergency_name,emergency_phone,why_join';
     document.getElementById('template-btn')?.addEventListener('click', () => {
       const sample = HEADERS + '\n' + 'Asha Rao,asha@example.com,+91 9000000001,double,28,female,Pune,@asharao,Mom,+91 9000000002,Excited for the trek';
       const blob = new Blob([sample], { type: 'text/csv' });
