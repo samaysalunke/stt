@@ -22,30 +22,16 @@ import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { buildCityNormalizer } from './lib/cityNormalizerFromSource.mjs';
 
 const root = process.cwd();
 const db = new Database(path.join(process.env.DATA_DIR ?? path.join(root, 'data'), 'seekthethrill.db'));
 const dryRun = process.argv.includes('--dry-run');
 
-// The library is TypeScript and this is a plain script, so the tables are read
-// out of the source rather than duplicated — the same reasoning as
-// geocodeTables.json, without a second file for a one-off migration.
-const srcText = fs.readFileSync(path.join(root, 'src', 'lib', 'indiaCities.ts'), 'utf8');
-const CITIES = [...srcText.slice(srcText.indexOf('INDIA_CITIES: string[] = ['), srcText.indexOf('];')).matchAll(/'([^']+)'/g)].map((m) => m[1]);
-const aliasBlock = srcText.slice(srcText.indexOf('CITY_ALIASES'), srcText.indexOf('const squashCity'));
-const ALIASES = Object.fromEntries([...aliasBlock.matchAll(/([a-z]+):\s*'([^']+)'/g)].map((m) => [m[1], m[2]]));
-if (CITIES.length < 50 || Object.keys(ALIASES).length < 20) {
-  console.error('[cities] could not read the tables out of indiaCities.ts — aborting rather than guessing');
-  process.exit(1);
-}
-const squash = (v) => String(v ?? '').toLowerCase().replace(/[^a-z]/g, '');
-const normalize = (value) => {
-  const raw = String(value ?? '').trim();
-  if (!raw) return null;
-  const key = squash(raw);
-  if (!key) return raw;
-  return CITIES.find((c) => squash(c) === key) ?? ALIASES[key] ?? raw;
-};
+// The matching itself lives in scripts/lib, rebuilt from the same source files
+// the library uses, with a parity test against the real function. An inline
+// copy here had already drifted once.
+const normalize = buildCityNormalizer(root);
 
 const rows = db.prepare(`SELECT id, email, full_name, city, status FROM registrations
   WHERE trim(COALESCE(city,'')) <> ''`).all();
