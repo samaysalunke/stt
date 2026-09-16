@@ -4,6 +4,7 @@ import { sanitizeInput, isValidEmail, isValidPhone } from '../../lib/utils';
 import { rateLimit } from '../../lib/rateLimit';
 import { sendEmail, wrapEmail, escapeHtml, ADMIN_EMAIL } from '../../lib/emailTransport';
 import { readAttribution } from '../../lib/attribution';
+import { GRAY_TEXT, NAVY } from '../../lib/emailPalette';
 
 // Server-rendered endpoint (writes to sqlite) — never prerender.
 export const prerender = false;
@@ -80,9 +81,9 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // failure must not fail the request.
     try {
       const row = (k: string, v: string | null) =>
-        v ? `<tr><td style="padding:4px 12px 4px 0;color:#6B7280;">${k}</td><td style="padding:4px 0;">${escapeHtml(v)}</td></tr>` : '';
+        v ? `<tr><td style="padding:4px 12px 4px 0;color:${GRAY_TEXT};">${k}</td><td style="padding:4px 0;">${escapeHtml(v)}</td></tr>` : '';
       const html = wrapEmail(`
-        <h2 style="margin:0 0 16px;font-size:18px;color:#1F2A44;">New custom-itinerary enquiry</h2>
+        <h2 style="margin:0 0 16px;font-size:18px;color:${NAVY};">New custom-itinerary enquiry</h2>
         <table style="font-size:14px;border-collapse:collapse;">
           ${row('Name', name)}
           ${row('Email', email)}
@@ -101,15 +102,15 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
     // Acknowledge the submitter. Best-effort — never fails the request.
     try {
       const ack = wrapEmail(`
-        <h2 style="margin:0 0 16px;font-size:18px;color:#1F2A44;">Thanks, ${escapeHtml(name)} — we’ve got your enquiry</h2>
-        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#1F2A44;">
+        <h2 style="margin:0 0 16px;font-size:18px;color:${NAVY};">Thanks, ${escapeHtml(name)} — we’ve got your enquiry</h2>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${NAVY};">
           We’ll be in touch soon to set up your 45-minute consultation call. Nothing has been charged — this is just
           the start of the conversation.
         </p>
-        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#1F2A44;">
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${NAVY};">
           If you’d like to add anything in the meantime, reply straight to this email.
         </p>
-        <p style="margin:0;font-size:14px;line-height:1.6;color:#1F2A44;">— Team Seek the Thrill</p>`);
+        <p style="margin:0;font-size:14px;line-height:1.6;color:${NAVY};">— Team Seek the Thrill</p>`);
       await sendEmail(email, 'We’ve got your custom-trip enquiry — Seek the Thrill', ack, {
         template: 'custom-itinerary-acknowledgement',
       });

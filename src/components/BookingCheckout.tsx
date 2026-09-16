@@ -56,6 +56,10 @@ interface Props {
 // as. `border` was #E5E7EB, a cool grey in an otherwise warm palette.
 const C = {
   coral: 'var(--color-coral)',
+  // Coral at body size is 3.0:1 and fails AA; --color-coral-ink is the same hue
+  // darkened to clear 4.5:1 on white/blush/peach, per the rule in tokens.css.
+  // `coral` stays for icons and display-size text, where AA-large (3:1) applies.
+  coralInk: 'var(--color-coral-ink)',
   navy: 'var(--color-navy)',
   peach: 'var(--color-border)',
   blush: 'var(--color-blush)',
@@ -108,10 +112,10 @@ function Field({
   return (
     <div>
       <label className="block text-sm font-medium mb-1.5" style={{ color: C.navy }}>
-        {label} {req && <span style={{ color: C.coral }}>*</span>}
+        {label} {req && <span style={{ color: C.coralInk }}>*</span>}
       </label>
       {children}
-      {error && <p className="text-xs mt-1" style={{ color: C.coral }}>{error}</p>}
+      {error && <p className="text-xs mt-1" style={{ color: C.coralInk }}>{error}</p>}
     </div>
   );
 }
@@ -231,7 +235,7 @@ function CitySelect({
           onChange={(e) => onChange(e.target.value)} onBlur={() => onBlur()}
           className={inputCls} style={{ borderColor: error ? C.coral : C.peach }}
         />
-        <button type="button" onClick={() => setOtherMode(false)} className="text-xs mt-1.5 underline" style={{ color: C.coral }}>
+        <button type="button" onClick={() => setOtherMode(false)} className="text-xs mt-1.5 underline" style={{ color: C.coralInk }}>
           Choose from list instead
         </button>
       </div>
@@ -297,7 +301,7 @@ function CitySelect({
           type="button"
           onClick={() => { if (INDIA_CITIES.includes(value)) onChange(''); setQuery(''); setOpen(false); setOtherMode(true); }}
           className="w-full text-left px-4 py-2.5 text-sm border-t cursor-pointer"
-          style={{ borderColor: C.peach, color: C.coral, fontWeight: 600 }}
+          style={{ borderColor: C.peach, color: C.coralInk, fontWeight: 600 }}
         >
           Other — type my city
         </button>
@@ -681,7 +685,7 @@ export default function BookingCheckout({
           <div className="text-xs font-semibold uppercase tracking-wider mb-0.5" style={{ color: C.gray }}>Dates</div>
           <div className="font-medium text-sm" style={{ color: C.navy }}>{dateStr}</div>
           {discountActive && (departure.discountAmount ?? 0) > 0 && (
-            <div className="text-xs font-semibold mt-1" style={{ color: C.coral }}>
+            <div className="text-xs font-semibold mt-1" style={{ color: C.coralInk }}>
               Save {formatINR(departure.discountAmount ?? 0)} on this departure
               {departure.discountEndsAt && <DiscountCountdown endsAt={departure.discountEndsAt} className="block mt-0.5" />}
             </div>
@@ -701,10 +705,10 @@ export default function BookingCheckout({
           </div>
           <div className="flex items-center justify-between px-5 py-3" style={{ background: C.blush }}>
             <div>
-              <span className="text-sm font-semibold" style={{ color: C.coral }}>Advance now</span>
+              <span className="text-sm font-semibold" style={{ color: C.coralInk }}>Advance now</span>
               <span className="text-xs block" style={{ color: C.gray }}>Pay today to confirm your spot</span>
             </div>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{formatINR(advanceDue)}</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-3">
             <div>
@@ -987,7 +991,7 @@ export default function BookingCheckout({
         <div className="rounded-xl px-5 py-4 mb-5 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
           <p className="font-semibold mb-1" style={{ color: C.navy }}>{tripName}</p>
           <p style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
-          <p className="mt-3 font-semibold" style={{ color: C.coral }}>To confirm — {formatINR(advanceDue)} advance</p>
+          <p className="mt-3 font-semibold" style={{ color: C.coralInk }}>To confirm — {formatINR(advanceDue)} advance</p>
         </div>
         <button
           onClick={() => { setSubmitted(null); setStep(3); history.pushState({ step: 3 }, ''); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -1081,12 +1085,12 @@ export default function BookingCheckout({
             <div className="rounded-xl p-4 text-sm" style={{ background: C.blush }}>
               <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(27,43,58,0.38)' }}>UPI ID</p>
               <div className="flex items-center justify-between rounded-xl px-3.5 py-2.5 mb-4" style={{ background: 'color-mix(in srgb, var(--color-cta) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--color-cta) 25%, transparent)' }}>
-                <span className="text-sm font-medium" style={{ color: C.coral, wordBreak: 'break-all' }}>{upiId}</span>
+                <span className="text-sm font-medium" style={{ color: C.coralInk, wordBreak: 'break-all' }}>{upiId}</span>
                 <button
                   type="button"
                   onClick={(e) => copyToClipboard(upiId, e.currentTarget)}
                   className="ml-3 shrink-0 flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md transition-all"
-                  style={{ border: '0.5px solid color-mix(in srgb, var(--color-cta) 45%, transparent)', color: C.coral }}
+                  style={{ border: '0.5px solid color-mix(in srgb, var(--color-cta) 45%, transparent)', color: C.coralInk }}
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                   Copy
@@ -1188,8 +1192,8 @@ export default function BookingCheckout({
             </>
           )}
         </div>
-        {uploadStatus === 'error' && <p className="text-xs mt-1" style={{ color: C.coral }}>Upload failed — try again.</p>}
-        {uploadError && <p className="text-xs mt-1" style={{ color: C.coral }}>{uploadError}</p>}
+        {uploadStatus === 'error' && <p className="text-xs mt-1" style={{ color: C.coralInk }}>Upload failed — try again.</p>}
+        {uploadError && <p className="text-xs mt-1" style={{ color: C.coralInk }}>{uploadError}</p>}
         <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden"
           onChange={(e) => { if (e.target.files?.[0]) { setUploadError(''); handleUpload(e.target.files[0]); } }} />
       </div>
@@ -1199,13 +1203,13 @@ export default function BookingCheckout({
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={agreeTerms} onChange={(e) => { setAgreeTerms(e.target.checked); setSubmitError(''); }} className="mt-0.5" />
           <span className="text-sm" style={{ color: C.navy }}>
-            I agree to the <a href="/terms/" target="_blank" className="underline" style={{ color: C.coral }}>Terms and Conditions</a> <span style={{ color: C.coral }}>*</span>
+            I agree to the <a href="/terms/" target="_blank" className="underline" style={{ color: C.coralInk }}>Terms and Conditions</a> <span style={{ color: C.coralInk }}>*</span>
           </span>
         </label>
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="checkbox" checked={agreeCancel} onChange={(e) => { setAgreeCancel(e.target.checked); setSubmitError(''); }} className="mt-0.5" />
           <span className="text-sm" style={{ color: C.navy }}>
-            I have read the <a href="/cancellation/" target="_blank" className="underline" style={{ color: C.coral }}>Cancellation Policy</a> <span style={{ color: C.coral }}>*</span>
+            I have read the <a href="/cancellation/" target="_blank" className="underline" style={{ color: C.coralInk }}>Cancellation Policy</a> <span style={{ color: C.coralInk }}>*</span>
           </span>
         </label>
       </div>
@@ -1230,7 +1234,7 @@ export default function BookingCheckout({
         onClick={() => { setSubmitted('lead'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         disabled={submitting !== null}
         className="w-full text-sm transition-all hover:opacity-80 disabled:opacity-40"
-        style={{ color: C.coral, background: 'transparent' }}
+        style={{ color: C.coralInk, background: 'transparent' }}
       >
         I'll pay later
       </button>

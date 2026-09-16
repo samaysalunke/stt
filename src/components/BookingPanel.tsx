@@ -51,6 +51,10 @@ interface Props {
 // comment records as failing AA at 3.72:1 behind a white button label.
 const C = {
   coral: 'var(--color-coral)',
+  // Coral at body size is 3.0:1 and fails AA; --color-coral-ink is the same hue
+  // darkened to clear 4.5:1 on white/blush/peach, per the rule in tokens.css.
+  // `coral` stays for icons and display-size text, where AA-large (3:1) applies.
+  coralInk: 'var(--color-coral-ink)',
   navy: 'var(--color-navy)',
   peach: 'var(--color-border)',
   blush: 'var(--color-blush)',
@@ -193,7 +197,7 @@ export default function BookingPanel({
             <span className="text-sm mr-2 line-through" style={{ color: C.gray }}>{formatINR(originalFromPrice)}</span>
           )}
           <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
-          <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
+          <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>
             {formatINR(fromPrice)}
           </span>
           <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
@@ -242,13 +246,13 @@ export default function BookingPanel({
                     )}
                   </div>
                   {dep.discountActive && !dep.comingSoon && (
-                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>
+                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coralInk }}>
                       Save {formatINR(dep.discountAmount ?? 0)} on every stay
                       {dep.discountEndsAt && <DiscountCountdown endsAt={dep.discountEndsAt} reloadOnExpire className="block mt-0.5" />}
                     </div>
                   )}
                   {dep.comingSoon ? (
-                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coral }}>Coming soon · wishlist to hear first</div>
+                    <div className="text-xs mt-1 font-semibold" style={{ color: C.coralInk }}>Coming soon · wishlist to hear first</div>
                   ) : isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
                   ) : null}
@@ -294,13 +298,13 @@ export default function BookingPanel({
                     <span>
                       <span className="block text-sm font-medium" style={{ color: C.navy }}>{offer.label}</span>
                       {disabled ? (
-                        <span className="block text-xs mt-0.5" style={{ color: C.coral }}>Sold out for these dates</span>
+                        <span className="block text-xs mt-0.5" style={{ color: C.coralInk }}>Sold out for these dates</span>
                       ) : offer.helperText ? (
                         <span className="block text-xs mt-0.5" style={{ color: C.gray }}>{offer.helperText}</span>
                       ) : null}
                     </span>
                   </span>
-                  <span className="text-right text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>
+                  <span className="text-right text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>
                     {offer.originalPrice != null && <span className="block text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(offer.originalPrice)}</span>}
                     {formatINR(selectedDiscountActive ? offer.price : (offer.originalPrice ?? offer.price))}
                   </span>
@@ -322,8 +326,8 @@ export default function BookingPanel({
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-3" style={{ background: C.blush, borderBottom: `1px solid ${C.peach}` }}>
-            <span className="font-semibold" style={{ color: C.coral }}>Advance now</span>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coral }}>{formatINR(advanceDue)}</span>
+            <span className="font-semibold" style={{ color: C.coralInk }}>Advance now</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <div className="flex items-center justify-between">
@@ -373,7 +377,7 @@ export default function BookingPanel({
               style={{ borderColor: C.peach }}
             />
             {wlState === 'error' && (
-              <p className="text-xs" style={{ color: C.coral }}>{wlError}</p>
+              <p className="text-xs" style={{ color: C.coralInk }}>{wlError}</p>
             )}
             <button
               id="booking-panel-cta"

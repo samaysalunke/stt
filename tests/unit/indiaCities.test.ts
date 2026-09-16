@@ -23,7 +23,7 @@ describe('normalizeIndiaCity', () => {
 
   it.each([
     ['Banglore', 'Bengaluru'], ['blr', 'Bengaluru'], ['Hyderbad', 'Hyderabad'],
-    ['Mumbaii', 'Mumbai'], ['Lucknos', 'Lucknow'], ['Alleppey', 'Alappuzha'],
+    ['Mumbaii', 'Mumbai'], ['Lucknos', 'Lucknow'], ['Alleppey', 'Alappuzha'], ['Benguluru', 'Bengaluru'], ['Mumbaib', 'Mumbai'],
   ])('resolves the spelling %p, which the column actually held, to %p', (input, expected) => {
     expect(normalizeIndiaCity(input)).toBe(expected);
   });
@@ -34,9 +34,66 @@ describe('normalizeIndiaCity', () => {
     }
   });
 
-  it('matches a listed name that carries a parenthetical', () => {
-    expect(normalizeIndiaCity('Allahabad')).toBe('Allahabad (Prayagraj)');
-    expect(normalizeIndiaCity('Prayagraj')).toBe('Allahabad (Prayagraj)');
+  it('always lands on the current official name', () => {
+    // The list mixed directions before: Bengaluru and Mumbai were the modern
+    // names, but Belgaum and Aurangabad were the old ones, and two entries
+    // carried a parenthetical. One rule now — canonical is what the place is
+    // called today, and every former name is an alias onto it.
+    expect(normalizeIndiaCity('Allahabad')).toBe('Prayagraj');
+    expect(normalizeIndiaCity('Prayagraj')).toBe('Prayagraj');
+    expect(normalizeIndiaCity('Calicut')).toBe('Kozhikode');
+    expect(normalizeIndiaCity('Belgaum')).toBe('Belagavi');
+    expect(normalizeIndiaCity('Belagavi')).toBe('Belagavi');
+    expect(normalizeIndiaCity('Aurangabad')).toBe('Chhatrapati Sambhajinagar');
+  });
+
+  it('carries no place under two list entries', () => {
+    // 'Goa (Panaji)' and 'Panaji' were both listed, so the picker offered the
+    // same city twice and they geocoded separately.
+    expect(INDIA_CITIES.filter((c) => /panaji/i.test(c))).toEqual(['Panaji']);
+  });
+
+  describe('a city with its state appended', () => {
+    it.each([
+      ['Jodhpur, Rajasthan', 'Jodhpur'],
+      ['Jodhpur (Rajasthan)', 'Jodhpur'],
+      ['Surat gujarat', 'Surat'],
+      ['Amravati, Maharashtra', 'Amravati'],
+      ['Amravati Maharashtra', 'Amravati'],
+      ['Patiala , punjab', 'Patiala'],
+      ['Bilaspur, chhattisgarh', 'Bilaspur'],
+      ['Thane maharashtra', 'Thane'],
+      ['Hubli, Karnataka', 'Hubli-Dharwad'],
+      ['Dharwad karnataka', 'Hubli-Dharwad'],
+    ])('resolves %p to %p', (input, expected) => {
+      expect(normalizeIndiaCity(input)).toBe(expected);
+    });
+
+    it('leaves the value whole when the remainder is not a city we know', () => {
+      // The dangerous case: this ends in a state, and stripping it blindly
+      // would store the complaint as the city.
+      expect(normalizeIndiaCity('why are these mandatory 😭, delhi'))
+        .toBe('why are these mandatory 😭, delhi');
+      expect(normalizeIndiaCity('Rampur bsr, Dist shimla')).toBe('Rampur bsr, Dist shimla');
+    });
+
+    it('leaves a trailing word that is not an Indian state', () => {
+      expect(normalizeIndiaCity('Kathmandu, Nepal')).toBe('Kathmandu, Nepal');
+      expect(normalizeIndiaCity('Rome, Italy')).toBe('Rome, Italy');
+      // Mumbai is a city, not a state, so this is not the "city, state" shape.
+      expect(normalizeIndiaCity('Thane, Mumbai')).toBe('Thane, Mumbai');
+    });
+
+    it('never picks a side of an ambiguous answer', () => {
+      expect(normalizeIndiaCity('Chennai/Banglore')).toBe('Chennai/Banglore');
+      expect(normalizeIndiaCity('Dubai/ Thrissur')).toBe('Dubai/ Thrissur');
+    });
+
+    it('leaves a bare state alone rather than guessing its capital', () => {
+      for (const v of ['Goa', 'Kerala', 'Karnataka', 'Punjab']) {
+        expect(normalizeIndiaCity(v)).toBe(v);
+      }
+    });
   });
 
   it('keeps a real place that is simply not on the list', () => {

@@ -11,6 +11,7 @@
 //   ADMIN_EMAIL     — Reply-To + destination for internal notifications.
 
 import { finishEmailLog, startEmailLog, type EmailLogMeta } from './emailLogs';
+import { BLUSH, CTA, GRAY_TEXT, PEACH } from './emailPalette';
 
 const env = (k: string) => (import.meta.env as any)[k] || process.env[k];
 
@@ -51,14 +52,14 @@ export function wrapEmail(body: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #FDF0EC;">
-  <div style="background: #E8725A; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: ${BLUSH};">
+  <div style="background: ${CTA}; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
     <h1 style="color: white; margin: 0; font-size: 22px; font-weight: 700;">Seek the Thrill</h1>
   </div>
   <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
     ${body}
-    <hr style="border: none; border-top: 1px solid #F5DDD7; margin: 24px 0 0;" />
-    <p style="margin: 16px 0 0; font-size: 12px; color: #9CA3AF;">Team Seek the Thrill · seekthethrill.in</p>
+    <hr style="border: none; border-top: 1px solid ${PEACH}; margin: 24px 0 0;" />
+    <p style="margin: 16px 0 0; font-size: 12px; color: ${GRAY_TEXT};">Team Seek the Thrill · seekthethrill.in</p>
   </div>
 </body>
 </html>`;
