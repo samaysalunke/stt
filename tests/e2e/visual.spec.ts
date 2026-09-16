@@ -73,6 +73,20 @@ async function freezePage(page: Page) {
       astro-dev-toolbar { display: none !important; }
     `,
   });
+  // DeferredImage.astro parks its src in data-defer-src until the hero image
+  // has finished and the photo nears the viewport, so a fullPage shot would
+  // otherwise capture empty placeholders for every gallery below the fold.
+  // Promote them all and wait for the bytes, the same way we stub remote
+  // images and freeze animations: the baseline should be the settled page.
+  await page.evaluate(() => {
+    document.querySelectorAll<HTMLImageElement>('img[data-defer-src]').forEach((img) => {
+      const src = img.dataset.deferSrc;
+      if (!src) return;
+      img.src = src;
+      img.removeAttribute('data-defer-src');
+    });
+  });
+  await page.waitForLoadState('networkidle').catch(() => {});
   await page.evaluate(() => (document as any).fonts?.ready).catch(() => {});
 }
 

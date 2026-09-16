@@ -231,6 +231,57 @@ const orgSchema = {
       };
       initializeCardSkeletons();
 
+      // Images held back by DeferredImage.astro.
+      //
+      // These are gallery photos a few hundred pixels below the fold, so
+      // Chrome's own lazy threshold (~1250px) fetches them during the initial
+      // load — correctly, by spec. The problem is not distance, it is that on
+      // /trips/[slug] they put ~1.6MB into the network while the LCP hero is
+      // still downloading, and the hero loses the bandwidth race badly.
+      //
+      // So the gate is the hero, not a tighter margin: nothing deferred starts
+      // until the priority image has finished, after which a generous margin
+      // keeps scrolling smooth.
+      const deferredImages = document.querySelectorAll<HTMLImageElement>('img[data-defer-src]');
+      if (deferredImages.length) {
+        const loadDeferred = (img: HTMLImageElement) => {
+          const src = img.dataset.deferSrc;
+          if (!src) return;
+          img.src = src;
+          img.removeAttribute('data-defer-src');
+        };
+        let started = false;
+        const startDeferred = () => {
+          if (started) return;
+          started = true;
+          if (!('IntersectionObserver' in window)) {
+            deferredImages.forEach(loadDeferred);
+            return;
+          }
+          const imageObserver = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                loadDeferred(entry.target as HTMLImageElement);
+                imageObserver.unobserve(entry.target);
+              });
+            },
+            { rootMargin: '600px' }
+          );
+          deferredImages.forEach((img) => imageObserver.observe(img));
+        };
+
+        const hero = document.querySelector<HTMLImageElement>('img[fetchpriority="high"]');
+        if (!hero || hero.complete) {
+          startDeferred();
+        } else {
+          hero.addEventListener('load', startDeferred, { once: true });
+          hero.addEventListener('error', startDeferred, { once: true });
+          // A hero that never settles must not strand the gallery.
+          window.setTimeout(startDeferred, 5000);
+        }
+      }
+
       const reveals = document.querySelectorAll('.reveal');
       const observer = new IntersectionObserver(
         (entries) => {
