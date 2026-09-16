@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
+import { CAROUSEL_SIZES } from '../lib/imageVariants';
 import TestimonialCard from '../components/TestimonialCard.astro';
 import Button from '../components/ui/Button.astro';
 import Section from '../components/ui/Section.astro';
@@ -128,6 +129,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
             return (
               <div class="flex w-[86%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]">
                 <TripCard
+                  sizes={CAROUSEL_SIZES}
                   slug={trip.slug}
                   title={trip.title}
                   name={trip.name}

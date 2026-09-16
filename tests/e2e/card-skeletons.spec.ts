@@ -4,7 +4,12 @@ import { test, expect } from '@playwright/test';
 // or aborted here to drive the skeleton states. Tracks FALLBACK_HERO in
 // src/lib/images.ts; it was a hotlinked Unsplash URL before that constant
 // existed, and the cards under test are exactly the ones with no coverImage.
-const fallbackImage = '**/images/fallback-hero.jpg';
+//
+// The trailing `*` matches the `?w=` variant the card's srcset actually
+// requests (see imageSrcset). Without it this pattern silently stops matching,
+// the image loads at full speed, and every skeleton assertion here passes or
+// fails for the wrong reason.
+const fallbackImage = '**/images/fallback-hero.jpg*';
 
 test('an uncached card reveals on pointer interaction and never blocks the link', async ({ page }) => {
   await page.route(fallbackImage, async (route) => {

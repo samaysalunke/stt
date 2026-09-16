@@ -6,9 +6,16 @@ import { imageSrcset, IMAGE_VARIANT_WIDTHS } from '../../src/lib/imageVariants';
 describe('imageSrcset', () => {
   it('offers every variant width for an image the resizing route serves', () => {
     expect(imageSrcset('/images/trips/a-featured.webp')).toBe(
-      '/images/trips/a-featured.webp?w=480 480w, /images/trips/a-featured.webp?w=720 720w, ' +
-        '/images/trips/a-featured.webp?w=1080 1080w, /images/trips/a-featured.webp?w=1440 1440w'
+      '/images/trips/a-featured.webp?w=480 480w, /images/trips/a-featured.webp?w=640 640w, ' +
+        '/images/trips/a-featured.webp?w=768 768w, /images/trips/a-featured.webp?w=960 960w, ' +
+        '/images/trips/a-featured.webp?w=1152 1152w, /images/trips/a-featured.webp?w=1440 1440w'
     );
+  });
+
+  it('keeps the ladder ascending, since a srcset is read in order', () => {
+    const widths = [...IMAGE_VARIANT_WIDTHS];
+    expect(widths).toEqual([...widths].sort((a, b) => a - b));
+    expect(new Set(widths).size).toBe(widths.length);
   });
 
   it('declines anything the route does not serve, so no dead candidate is advertised', () => {
@@ -21,16 +28,21 @@ describe('imageSrcset', () => {
     expect(imageSrcset(undefined)).toBeUndefined();
   });
 
-  it('keeps its widths in step with the route allowlist', () => {
-    // These two lists drifting apart degrades silently: an unlisted width is
+  it('emits no width the route would refuse to resize', () => {
+    // Drifting apart degrades silently: a width the route does not allow is
     // served at full size, so the page still renders and only gets slower.
+    // The check is one-directional on purpose. The route is allowed to accept
+    // widths this list no longer emits — retired rungs stay accepted so that
+    // edge-cached HTML referencing them keeps getting a resized image — but a
+    // width we advertise and the route rejects is always a bug.
     const route = fs.readFileSync(
       path.join(process.cwd(), 'src/pages/images/[...path].ts'),
       'utf8'
     );
     const declared = route.match(/const ALLOWED_WIDTHS = new Set\(\[([^\]]+)\]\)/);
     expect(declared, 'ALLOWED_WIDTHS not found in the image route').not.toBeNull();
-    const allowed = declared![1].split(',').map((n) => Number(n.trim()));
-    expect(allowed).toEqual([...IMAGE_VARIANT_WIDTHS]);
+    const allowed = new Set(declared![1].split(',').map((n) => Number(n.trim())));
+    const unserveable = IMAGE_VARIANT_WIDTHS.filter((w) => !allowed.has(w));
+    expect(unserveable, 'advertised widths the image route will not resize').toEqual([]);
   });
 });
