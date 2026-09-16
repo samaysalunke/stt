@@ -83,14 +83,21 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.actions{justify-content:flex-start}}
 </style>
 
+{/* PLAIN JS ONLY — `define:vars` implies `is:inline`, so Astro ships this block
+    to the browser verbatim, with no TypeScript stripping and no bundling. A type
+    annotation here is a SyntaxError that kills the whole script: that is what
+    silently broke the Show history toggle and the export link's batch filter.
+    Keep it matching the script in registrations/[slug].astro, which is plain JS
+    for the same reason. */}
 <script define:vars={{ visibleBatchIds }}>
-  const history = document.getElementById('show-history') as HTMLInputElement | null;
-  const exportLink = document.getElementById('registrations-export') as HTMLAnchorElement | null;
+  // Not named `history`: in a classic inline script that shadows window.history.
+  const historyToggle = document.getElementById('show-history');
+  const exportLink = document.getElementById('registrations-export');
 
   function updateExportLink() {
     if (!exportLink) return;
     const params = new URLSearchParams({ type: 'registrations' });
-    if (!history?.checked) {
+    if (!historyToggle?.checked) {
       params.set('batch_filter', '1');
       visibleBatchIds.forEach((id) => params.append('batch_id', id));
     }
@@ -98,15 +105,15 @@ const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en
   }
 
   function applyHistory() {
-    const showHistory = !!history?.checked;
-    document.querySelectorAll<HTMLElement>('.trip-card').forEach((card) => {
+    const showHistory = !!historyToggle?.checked;
+    document.querySelectorAll('.trip-card').forEach((card) => {
       card.style.display = card.classList.contains('history-item') && !showHistory ? 'none' : 'flex';
     });
-    const anyVisible = [...document.querySelectorAll<HTMLElement>('.trip-card')].some((c) => c.style.display !== 'none');
+    const anyVisible = [...document.querySelectorAll('.trip-card')].some((c) => c.style.display !== 'none');
     const nr = document.getElementById('noResults');
     if (nr) nr.style.display = anyVisible ? 'none' : 'block';
     updateExportLink();
   }
-  history?.addEventListener('change', applyHistory);
+  historyToggle?.addEventListener('change', applyHistory);
   applyHistory();
 </script>
