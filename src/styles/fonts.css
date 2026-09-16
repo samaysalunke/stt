@@ -57,3 +57,23 @@
   src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
+
+/* Every price on the site is ₹ (U+20B9) in the display face, and that one
+   glyph lives in the latin-ext subset — so a single character was pulling all
+   58 KiB of fraunces-latin-ext.woff2 on pages with no other latin-ext text.
+   This face is the same file subset to that one codepoint (1.5 KiB, variable
+   axes intact) and is declared after latin-ext so it wins the overlap.
+   latin-ext still loads if genuinely latin-ext text appears.
+
+   To refresh, from a checkout with fonttools installed:
+     pyftsubset public/fonts/fraunces-latin-ext.woff2 --unicodes="U+20B9" \
+       --flavor=woff2 --layout-features='*' \
+       --output-file=public/fonts/fraunces-rupee.woff2 */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('/fonts/fraunces-rupee.woff2') format('woff2');
+  unicode-range: U+20B9;
+}
