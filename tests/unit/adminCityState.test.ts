@@ -76,6 +76,22 @@ describe('the customer update endpoint', () => {
   });
 });
 
+describe('an admin city edit refreshes the leaderboard', () => {
+  // Found the hard way: a bad city was corrected in the drawer and the
+  // traveller stayed on 0 km, because nothing on these paths recalculated. The
+  // city is the home point every distance is measured from.
+  it.each([
+    ['pages/api/admin/customers/update.ts', 'the customer drawer'],
+    ['pages/api/admin/registrations/fields.ts', 'the registration field patch'],
+  ])('%s recalculates after a city change', (file) => {
+    const endpoint = src(file);
+    expect(endpoint).toContain('recalculateUserLeaderboard');
+    // Guarded on an actual change, so renaming a customer does not queue a
+    // geocoding pass for every one of their registrations.
+    expect(endpoint).toMatch(/if \([^)]*city[^)]*!==/);
+  });
+});
+
 describe('the city list itself', () => {
   it('has no duplicates and no untrimmed entries', () => {
     expect(new Set(INDIA_CITIES).size).toBe(INDIA_CITIES.length);

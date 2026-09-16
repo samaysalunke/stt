@@ -4,6 +4,7 @@ import { requireRole } from '../../../../lib/requireRole';
 import { jsonOk, jsonFail } from '../../../../lib/apiResponse';
 import { logAction } from '../../../../lib/audit';
 import { normalizeIndiaState } from '../../../../lib/indiaStates';
+import { recalculateUserLeaderboard } from '../../../../lib/stats';
 
 // Patch a small whitelist of demographic fields on a registration — primarily so
 // ops can add a missing `state` and re-run a stuck Zoho document.
@@ -38,7 +39,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     if (!Object.keys(clean).length) return jsonFail('Nothing to update.');
 
     const db = getDb();
-    const reg = db.prepare('SELECT id, state, city, pincode FROM registrations WHERE id=?').get(id) as any;
+    const reg = db.prepare('SELECT id, email, state, city, pincode FROM registrations WHERE id=?').get(id) as any;
     if (!reg) return jsonFail('Registration not found.', 404);
 
     const cols = Object.keys(clean);
@@ -56,6 +57,12 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       previousValue: Object.fromEntries(cols.map((c) => [c, reg[c] ?? null])),
       newValue: clean,
     });
+
+    // Same reason as the customer drawer: city is the home point the whole km
+    // column is measured from.
+    if (clean.city !== undefined && clean.city !== reg.city && reg.email) {
+      recalculateUserLeaderboard(String(reg.email)).catch((err) => console.error('[leaderboard recalc]', err));
+    }
 
     return jsonOk({ success: true, patch: clean });
   } catch (err) {

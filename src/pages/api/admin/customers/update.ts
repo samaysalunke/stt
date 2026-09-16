@@ -3,6 +3,7 @@ import { getDb } from '../../../../lib/db';
 import { logAction } from '../../../../lib/audit';
 import { sanitizeInput } from '../../../../lib/utils';
 import { normalizeIndiaState } from '../../../../lib/indiaStates';
+import { recalculateUserLeaderboard } from '../../../../lib/stats';
 import { jsonOk as json } from '../../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -64,6 +65,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       previousValue: { full_name: previous.full_name, phone: previous.phone, city: previous.city, state: previous.state },
       newValue: { full_name: fullName, phone, city: city || null, ...(stateSent ? { state } : {}) },
     });
+
+    // The city is the traveller's home point: it sets every km on the
+    // leaderboard and the pin on their public profile. Nothing recalculated on
+    // this path, so correcting a bad city here left the old distance standing
+    // until that traveller happened to book again.
+    if (city !== (previous.city ?? '')) {
+      recalculateUserLeaderboard(email).catch((err) => console.error('[leaderboard recalc]', err));
+    }
 
     return json({ success: true, updated: result.changes });
   } catch (err) {
