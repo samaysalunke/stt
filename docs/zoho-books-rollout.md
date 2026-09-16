@@ -8,7 +8,8 @@ The integration defaults to `ZOHO_BOOKS_MODE=disabled`. Booking and payment writ
 - Confirm that both the item and document templates show the advertised trip price unchanged, with no tax line or tax amount. The worker rejects a document if Zoho reports any applied tax.
 - Create an OAuth client with the contact, invoice, retainer-invoice, and customer-payment scopes needed by the API.
 - Set the `ZOHO_*` secrets shown in `.env.example`; never put them in site YAML.
-- Schedule an authenticated `POST /api/jobs/zoho-documents` call with `Authorization: Bearer $ZOHO_JOB_SECRET`. The worker claims at most ten jobs per call and retries failed work with backoff.
+- Set `JOBS_SCHEDULER=on`. The server then runs the document worker in-process every minute, claiming at most ten jobs a pass and honouring each document's backoff. Without it nothing retries: this was left unset through the first live rollout, and every failed invoice stayed at one attempt with its backoff long elapsed, which also meant the after-three-attempts fallback email never fired. Unsetting it is the kill switch — background processing stops with no deploy.
+- `POST /api/jobs/zoho-documents` with `Authorization: Bearer $ZOHO_JOB_SECRET` remains for triggering a pass by hand; it runs the same query as the scheduler.
 
 ## Draft verification
 

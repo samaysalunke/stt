@@ -112,7 +112,11 @@ export async function applyPaymentChange(
 
   const nextAmount = previousAmount + amount;
   const isAdvance = amount > 0 && previousAmount === 0 && nextAmount === advance;
-  const isFull = amount > 0 && nextAmount === total;
+  // `>=`, matching resolvePaymentStatus. The two used to disagree — the status
+  // said fully paid at or above the total while the invoice was only raised on
+  // an exact match — so any row that got past the ledger's overpayment guard
+  // (which only applies when a total is set) went fully paid with no invoice.
+  const isFull = amount > 0 && Number.isFinite(total) && total > 0 && nextAmount >= total;
   const nextPaymentStatus = resolvePaymentStatus(action, nextAmount, total);
   const recorded = recordPayment({
     registrationId: id, amount, receivedAt, method,

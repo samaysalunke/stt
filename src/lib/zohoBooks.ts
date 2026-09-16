@@ -1,6 +1,6 @@
 import { sendRegistrationPaymentConfirmed } from './email';
 import { getDb } from './db';
-import { billingProblems } from './paymentLedger';
+import { billingProblems, billingSnapshot } from './paymentLedger';
 
 const env = (key: string) => (import.meta.env as any)[key] || process.env[key];
 const dc = () => {
@@ -225,6 +225,50 @@ export function confirmedEmailPayload(
   };
 }
 
+/**
+ * Re-take the billing snapshot from the live registration row, for a document
+ * Zoho has not seen yet. Falls back to the stored copy if the registration has
+ * gone — the document still deserves its shot at the retry worker.
+ */
+function refreshBillingSnapshot(db: any, document: any, reg: any) {
+  if (!reg) return JSON.parse(document.billing_snapshot);
+  const snapshot = billingSnapshot(reg);
+  const serialized = JSON.stringify(snapshot);
+  if (serialized !== document.billing_snapshot) {
+    db.prepare('UPDATE invoice_documents SET billing_snapshot=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
+      .run(serialized, document.id);
+  }
+  return snapshot;
+}
+
+/**
+ * The documents a worker pass should pick up: freshly queued work, failed work
+ * whose backoff has elapsed and which has attempts left, and claims abandoned
+ * mid-flight by a process that died. Shared by the HTTP job endpoint and the
+ * in-process scheduler so there is one definition of "due", not two.
+ */
+export function claimZohoDocuments(limit = 10): { id: string }[] {
+  return getDb().prepare(`
+    SELECT id FROM invoice_documents
+    WHERE status='queued' OR (status='failed' AND attempts<6 AND (next_attempt_at IS NULL OR next_attempt_at<=CURRENT_TIMESTAMP))
+       OR (status='processing' AND updated_at<datetime('now','-5 minutes'))
+    ORDER BY created_at LIMIT ?
+  `).all(limit) as { id: string }[];
+}
+
+/**
+ * The issued PDF for a document, for an admin download. Read-only: it never
+ * changes the document's state, so pulling a copy is not a retry.
+ */
+export async function fetchDocumentPdf(documentId: string): Promise<{ pdf: Buffer; filename: string }> {
+  const document = getDb().prepare('SELECT * FROM invoice_documents WHERE id=?').get(documentId) as any;
+  if (!document) throw new Error('Document not found');
+  if (!document.zoho_document_id) throw new Error('This document has not been created in Zoho yet');
+  const pdf = await downloadPdf(document.zoho_document_id);
+  const name = document.zoho_document_number || document.external_reference || document.id;
+  return { pdf, filename: `${String(name).replace(/[^\w.-]+/g, '-')}.pdf` };
+}
+
 /** Process one job. Safe to call repeatedly: creation is recovered by reference. */
 export async function processZohoDocument(documentId: string) {
   const db = getDb();
@@ -250,7 +294,15 @@ export async function processZohoDocument(documentId: string) {
     const event = current.payment_event_id
       ? db.prepare('SELECT * FROM payment_events WHERE id=?').get(current.payment_event_id) as any
       : db.prepare('SELECT * FROM payment_events WHERE registration_id=? ORDER BY created_at DESC LIMIT 1').get(current.registration_id) as any;
-    const snapshot = JSON.parse(current.billing_snapshot);
+    // The snapshot is frozen at enqueue so an issued invoice always matches
+    // what the customer was billed. Before it reaches Zoho there is nothing to
+    // stay faithful to, though — and a stale copy is actively wrong, because it
+    // carries both the billing details ops may have just corrected and the
+    // totalAmount that becomes the invoice. So refresh while the document is
+    // still ours, and freeze from the moment Zoho holds a copy.
+    const snapshot = current.zoho_document_id
+      ? JSON.parse(current.billing_snapshot)
+      : refreshBillingSnapshot(db, current, reg);
     const problems = billingProblems(snapshot);
     if (problems.length) throw new Error(`Missing ${problems.join(', ')}`);
     if (!event) throw new Error('No payment event is linked to this document');

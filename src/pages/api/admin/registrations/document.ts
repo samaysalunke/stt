@@ -1,10 +1,54 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../../lib/db';
 import { ensureDocument, type DocumentType } from '../../../../lib/paymentLedger';
-import { processZohoDocument, refreshZohoDocumentStatus } from '../../../../lib/zohoBooks';
+import { fetchDocumentPdf, processZohoDocument, refreshZohoDocumentStatus } from '../../../../lib/zohoBooks';
 import { requireRole } from '../../../../lib/requireRole';
 import { jsonOk, jsonFail } from '../../../../lib/apiResponse';
 import { logAction } from '../../../../lib/audit';
+
+/**
+ * Download the issued PDF for one booking's invoice.
+ *
+ * A GET so the admin UI can be a plain `<a download>` — the session is a
+ * cookie and the request is same-origin, so there is no handler to write. It
+ * only ever reads: pulling a copy never re-queues or re-sends the document.
+ */
+export const GET: APIRoute = async ({ url, locals }) => {
+  const denied = requireRole(locals, ['owner', 'ops']);
+  if (denied) return denied;
+  const registrationId = Number(url.searchParams.get('registrationId'));
+  const type = String(url.searchParams.get('type') || 'final') as DocumentType;
+  if (!Number.isInteger(registrationId) || registrationId <= 0 || !['advance', 'final'].includes(type)) {
+    return jsonFail('Invalid document request.');
+  }
+  const document = getDb()
+    .prepare('SELECT id, zoho_document_id FROM invoice_documents WHERE registration_id=? AND document_type=?')
+    .get(registrationId, type) as any;
+  if (!document) return jsonFail('No document exists for this registration.', 404);
+  if (!document.zoho_document_id) return jsonFail('This invoice has not been issued in Zoho yet.', 404);
+
+  try {
+    const { pdf, filename } = await fetchDocumentPdf(document.id);
+    logAction({
+      actorUserId: locals.adminUser?.userId, actorEmail: locals.adminUser?.email, actorRole: locals.adminUser?.role,
+      action: 'accounting_document.downloaded', targetType: 'registration', targetId: String(registrationId),
+      newValue: { type, documentId: document.id },
+    });
+    return new Response(new Uint8Array(pdf), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': String(pdf.byteLength),
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error: any) {
+    // Zoho was unreachable, slow (its 25s timeout) or refused. Say so plainly
+    // rather than handing the browser a broken download.
+    console.error('[document download]', error);
+    return jsonFail(`Could not fetch the invoice from Zoho: ${String(error?.message || error)}`, 502);
+  }
+};
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const denied = requireRole(locals, ['owner', 'ops']);
