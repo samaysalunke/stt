@@ -37,6 +37,15 @@
   /* WhatsApp's own brand green — a fixed external brand value, not ours to
      retune. Tokenised only so it stops being a bare hex in the markup. */
   --color-whatsapp: #25D366;
+  /* WhatsApp's darker brand green, for their mark on a light button. */
+  --color-whatsapp-ink: #128C7E;
+
+  /* Two one-off UI colours that had no name and so stayed bare hexes: the gold
+     of a filled rating star, and the amber of the "in progress" step on the
+     checkout's step indicator. Neither maps to a semantic token — a star is not
+     `warning` — so they are named for what they are. */
+  --color-star: #D4A854;
+  --color-step-active: #E8A05A;
 
   /* Text-safe coral. `--color-coral` is a 3.0:1 contrast against white — fine as
      a large-display accent or a button *fill*, but it FAILS WCAG AA (4.5:1) as

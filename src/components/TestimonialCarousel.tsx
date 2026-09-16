@@ -18,7 +18,7 @@ function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex gap-0.5 mb-3">
       {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} className="w-4 h-4" fill={i < rating ? '#D4A854' : '#e5e7eb'} viewBox="0 0 24 24">
+        <svg key={i} className="w-4 h-4" fill={i < rating ? 'var(--color-star)' : 'var(--color-border)'} viewBox="0 0 24 24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       ))}
@@ -49,7 +49,7 @@ function TestimonialCard({ t, highlighted }: { t: Testimonial; highlighted: bool
           </div>
         )}
         <div>
-          <p className="font-semibold text-sm" style={{ fontFamily: 'var(--font-display)', color: '#1A1A1A' }}>
+          <p className="font-semibold text-sm" style={{ fontFamily: 'var(--font-display)', color: 'var(--color-navy)' }}>
             {t.name}
           </p>
           <p className="text-xs" style={{ color: 'var(--color-gray-text)' }}>

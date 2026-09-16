@@ -293,7 +293,7 @@ const jsonLd = {
           err.textContent = msg;
           err.classList.remove('hidden');
           input.setAttribute('aria-invalid', 'true');
-          input.style.borderColor = '#B91C1C';
+          input.style.borderColor = 'var(--color-danger)';
         } else {
           err.textContent = '';
           err.classList.add('hidden');

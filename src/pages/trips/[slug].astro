@@ -307,9 +307,9 @@ const tripSchema: Record<string, any> = {
                 data-filling-fast={String(departure.fillingFast)}
                 class:list={[
                   'flex flex-none flex-col justify-center rounded-lg border px-2.5 py-1 text-[11px] leading-tight text-white sm:px-3 sm:text-xs',
-                  departure.soldOut ? 'border-white/20 bg-[#1B2B3A]/45 opacity-65'
-                    : departure.comingSoon ? 'border-white/25 bg-[#1B2B3A]/55'
-                    : 'border-white/30 bg-[#1B2B3A]/75',
+                  departure.soldOut ? 'border-white/20 bg-navy/45 opacity-65'
+                    : departure.comingSoon ? 'border-white/25 bg-navy/55'
+                    : 'border-white/30 bg-navy/75',
                 ]}
               >
                 <span class:list={{ 'line-through': departure.soldOut }}>{formatDepartureRange(departure.startDate, departure.endDate)}</span>

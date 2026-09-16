@@ -15,10 +15,10 @@ interface Props {
 const { variant = 'status', value, class: className, ...rest } = Astro.props;
 
 const statusStyles: Record<string, string> = {
-  'booking-open': 'bg-[#dcfce7] text-[#166534]',
-  'coming-soon': 'bg-[#e0e7ff] text-[#3730a3]',
-  'sold-out': 'bg-[#fee2e2] text-[#991b1b]',
-  'draft': 'bg-[#fef9c3] text-[#713f12]',
+  'booking-open': 'bg-success-surface text-success-surface-ink',
+  'coming-soon': 'bg-interest-surface text-interest-ink',
+  'sold-out': 'bg-danger-surface text-danger-ink',
+  'draft': 'bg-caution-surface text-caution-ink',
 };
 
 const statusLabels: Record<string, string> = {

@@ -904,7 +904,7 @@ export default function BookingCheckout({
               ...(n.state === 'done'
                 ? { background: C.coral }
                 : n.state === 'now'
-                  ? { background: '#E8A05A', boxShadow: '0 0 0 4px var(--color-warning-surface)' }
+                  ? { background: 'var(--color-step-active)', boxShadow: '0 0 0 4px var(--color-warning-surface)' }
                   : { border: `2px solid ${C.peach}` }),
             }}>
               {n.state === 'done' && (
@@ -1000,7 +1000,7 @@ export default function BookingCheckout({
         >
           Pay now & confirm →
         </button>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold py-3.5 rounded-full text-sm mb-4" style={{ color: '#128C7E', border: '1px solid var(--color-whatsapp)' }}>
+        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold py-3.5 rounded-full text-sm mb-4" style={{ color: 'var(--color-whatsapp-ink)', border: '1px solid var(--color-whatsapp)' }}>
           Question first? Chat with Zahra
         </a>
         <p className="text-xs text-center" style={{ color: C.gray }}>We'll send a gentle nudge on WhatsApp if we don't hear back — no spam, promise.</p>

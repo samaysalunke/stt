@@ -162,7 +162,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
           <div class="text-right min-w-[7rem]">
             <p class="text-[10px] uppercase tracking-wide text-gray-text">Margin</p>
             <p class="text-sm font-semibold tabular-nums" data-field="margin"
-               style={`color: ${d.margin === null ? 'var(--color-gray-text, #6b7280)' : d.margin < 0 ? '#b91c1c' : '#15803d'};`}>
+               style={`color: ${d.margin === null ? 'var(--color-gray-text)' : d.margin < 0 ? 'var(--color-danger-ink)' : 'var(--color-success-ink)'};`}>
               {d.margin === null ? 'Not costed' : formatINR(d.margin)}
             </p>
           </div>
@@ -181,7 +181,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
         {d.margin !== null && (
           <div class="px-5 -mt-1 mb-3 h-1.5 rounded-full bg-gray-soft overflow-hidden">
             <div class="h-full rounded-full"
-                 style={`width: ${Math.max(2, pct(d))}%; background: ${d.margin < 0 ? '#dc2626' : 'rgba(232,114,90,0.85)'};`}></div>
+                 style={`width: ${Math.max(2, pct(d))}%; background: ${d.margin < 0 ? 'var(--color-danger)' : 'color-mix(in srgb, var(--color-coral) 85%, transparent)'};`}></div>
           </div>
         )}
 
@@ -242,7 +242,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
                   <>
                     <span class="flex-1 min-w-[12rem] text-sm text-navy">{item.label}</span>
                     <span class="w-32 text-sm font-semibold tabular-nums"
-                          style={`color: ${item.amount < 0 ? '#15803d' : 'inherit'};`}>
+                          style={`color: ${item.amount < 0 ? 'var(--color-success-ink)' : 'inherit'};`}>
                       {item.amount < 0 ? `credit ${formatINR(Math.abs(item.amount))}` : formatINR(item.amount)}
                     </span>
                   </>
@@ -415,7 +415,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
       const margin = cost.costed ? collected - cost.total : null;
       if (marginCell) {
         marginCell.textContent = margin === null ? 'Not costed' : inr(margin);
-        marginCell.style.color = margin === null ? '' : margin < 0 ? '#b91c1c' : '#15803d';
+        marginCell.style.color = margin === null ? '' : margin < 0 ? 'var(--color-danger-ink)' : 'var(--color-success-ink)';
       }
       if (pctCell) {
         pctCell.textContent = margin === null || collected <= 0 ? '—' : `${((margin / collected) * 100).toFixed(1)}%`;

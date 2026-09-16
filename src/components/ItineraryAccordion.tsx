@@ -22,8 +22,8 @@ function MealIcon({ included, label }: { included: boolean; label: string }) {
     <span
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
       style={{
-        backgroundColor: included ? '#dcfce7' : '#f3f4f6',
-        color: included ? '#166534' : '#9ca3af',
+        backgroundColor: included ? 'var(--color-success-surface)' : 'var(--color-muted-surface)',
+        color: included ? 'var(--color-success-surface-ink)' : 'var(--color-muted-ink)',
       }}
     >
       {label[0]}
@@ -46,7 +46,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
           >
             <button
               className="w-full flex items-center justify-between p-4 lg:p-5 text-left transition-colors"
-              style={{ backgroundColor: isOpen ? '#FFF3EC' : 'white' }}
+              style={{ backgroundColor: isOpen ? 'var(--color-blush)' : 'white' }}
               onClick={() => setOpenDay(isOpen ? 0 : day.dayNumber)}
               aria-expanded={isOpen}
             >
@@ -82,7 +82,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
             </button>
 
             {isOpen && (
-              <div className="px-4 lg:px-5 pb-5 bg-white border-t" style={{ borderColor: '#FFF3EC' }}>
+              <div className="px-4 lg:px-5 pb-5 bg-white border-t" style={{ borderColor: 'var(--color-blush)' }}>
                 {/* Activities */}
                 <p className="text-sm leading-relaxed mt-4 mb-4" style={{ color: 'var(--color-gray-text)' }}>
                   {day.activities}
@@ -134,7 +134,7 @@ export default function ItineraryAccordion({ itinerary }: Props) {
 
                 {/* Special notes */}
                 {day.specialNotes && (
-                  <div className="mt-4 p-3 rounded-lg text-sm" style={{ backgroundColor: '#FFF3EC', color: '#9a3412' }}>
+                  <div className="mt-4 p-3 rounded-lg text-sm" style={{ backgroundColor: 'var(--color-blush)', color: 'var(--color-warning-ink)' }}>
                     <span className="font-bold">Note: </span>{day.specialNotes}
                   </div>
                 )}

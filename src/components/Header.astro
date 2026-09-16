@@ -253,7 +253,7 @@ const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
   .menu-trigger svg { width: 1.5rem; height: 1.5rem; }
   .menu-overlay { position: fixed; inset: 0; z-index: 60; }
   .menu-backdrop { position: absolute; inset: 0; background: rgba(17,29,39,0.48); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); transition: opacity 300ms ease; }
-  .menu-panel { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; width: min(92vw, 25rem); height: 100%; padding: 1.25rem; overflow-y: auto; background: #fffaf8; box-shadow: -20px 0 55px rgba(17,29,39,0.2); transition: transform 300ms cubic-bezier(.22,.8,.28,1); }
+  .menu-panel { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; width: min(92vw, 25rem); height: 100%; padding: 1.25rem; overflow-y: auto; background: var(--color-surface-soft); box-shadow: -20px 0 55px rgba(17,29,39,0.2); transition: transform 300ms cubic-bezier(.22,.8,.28,1); }
   .drawer-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding-bottom: 1.15rem; border-bottom: 1px solid var(--color-peach); }
   .drawer-brand { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
   .drawer-brand img { width: 3.25rem; height: 3.25rem; border-radius: 0.9rem; object-fit: cover; box-shadow: var(--shadow-card); }

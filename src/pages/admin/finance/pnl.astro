@@ -120,7 +120,7 @@ const leaks = [
         {pnl.indicative ? 'Net profit (indicative)' : 'Net profit'}
       </p>
       <p class="font-display text-3xl font-semibold mt-2" data-kpi="net"
-         style={`color: ${pnl.netProfit < 0 ? '#b91c1c' : '#15803d'};`}>{formatINR(pnl.netProfit)}</p>
+         style={`color: ${pnl.netProfit < 0 ? 'var(--color-danger-ink)' : 'var(--color-success-ink)'};`}>{formatINR(pnl.netProfit)}</p>
       <p class="text-xs mt-1 text-gray-text">
         {pnl.indicative ? 'Percentage withheld — see below' : `${pct(pnl.netProfitPct)} of costed revenue`}
       </p>
@@ -155,7 +155,7 @@ const leaks = [
 
         <tr class="border-t-2 border-peach bg-gray-soft/40">
           <td class="font-semibold text-navy">{pnl.indicative ? 'Net profit (indicative, costed departures only)' : 'Net profit'}</td>
-          <td class="text-right tabular-nums font-semibold" style={`color: ${pnl.netProfit < 0 ? '#b91c1c' : '#15803d'};`}>{formatINR(pnl.netProfit)}</td>
+          <td class="text-right tabular-nums font-semibold" style={`color: ${pnl.netProfit < 0 ? 'var(--color-danger-ink)' : 'var(--color-success-ink)'};`}>{formatINR(pnl.netProfit)}</td>
         </tr>
         {pnl.netProfitAtRunRate !== null && pnl.monthsEntered < pnl.monthsInPeriod && (
           <tr><td class="text-gray-text pl-9">at the same overhead rate for the full period</td><td class="text-right tabular-nums text-gray-text">{formatINR(pnl.netProfitAtRunRate)}</td></tr>
