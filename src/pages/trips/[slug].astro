@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
+import DeferredImage from '../../components/DeferredImage.astro';
 import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
@@ -480,13 +481,12 @@ const tripSchema: Record<string, any> = {
             <p class="text-sm mb-4 text-gray-text">From the trail. No filters, no staging.</p>
             <div class="flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {tripPhotos.map((photo, index) => (
-                <img
+                <DeferredImage
                   src={photo.image}
                   alt={`${tripName} group trip${trip.location ? ` in ${trip.location}` : ''} — travel photo ${index + 1}`}
                   width={photo.width ?? 900}
                   height={photo.height ?? 675}
-                  loading="lazy"
-                  class="h-64 w-[78%] flex-none snap-start rounded-2xl object-cover sm:h-72 sm:w-[55%] md:w-[40%]"
+                  class="h-64 w-[78%] flex-none snap-start rounded-2xl bg-gray-soft object-cover sm:h-72 sm:w-[55%] md:w-[40%]"
                 />
               ))}
             </div>
@@ -526,13 +526,12 @@ const tripSchema: Record<string, any> = {
                     data-testid="accommodation-gallery-card"
                     class="w-[85%] flex-none snap-start sm:w-[62%] md:w-[48%]"
                   >
-                    <img
+                    <DeferredImage
                       src={photo.image}
                       alt={`Accommodation for ${tripName} — photo ${index + 1}.`}
                       width={photo.width ?? 900}
                       height={photo.height ?? 675}
-                      loading="lazy"
-                      class="h-64 w-full rounded-2xl object-cover sm:h-72"
+                      class="h-64 w-full rounded-2xl bg-gray-soft object-cover sm:h-72"
                     />
                   </div>
                 ))}

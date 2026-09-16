@@ -1,0 +1,27 @@
+---
+/**
+ * An image that does not enter the network until it is near the viewport.
+ *
+ * `loading="lazy"` is not enough on its own: Chrome's lazy-load threshold
+ * scales with the effective connection type, and on a throttled mobile
+ * connection it reaches far enough down the page to fetch content that is
+ * thousands of pixels away. On /trips/[slug] that pulled 1.6MB of carousel
+ * photos into flight alongside the hero and pushed LCP to 13s.
+ *
+ * The src is held in data-defer-src and promoted by the observer in
+ * BaseLayout.astro. The <noscript> copy keeps the photos real content for
+ * visitors without JavaScript.
+ */
+interface Props {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  class?: string;
+}
+
+const { src, alt, width, height, class: className } = Astro.props;
+---
+
+<img data-defer-src={src} alt={alt} width={width} height={height} class={className} />
+<noscript><img src={src} alt={alt} width={width} height={height} class={className} /></noscript>
