@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
 import DeferredImage from '../../components/DeferredImage.astro';
+import { imageSrcset } from '../../lib/imageVariants';
 import BookingPanel from '../../components/BookingPanel';
 import DiscountCountdown from '../../components/DiscountCountdown';
 import TestimonialCard from '../../components/TestimonialCard.astro';
@@ -271,7 +272,17 @@ const tripSchema: Record<string, any> = {
     data-testid="trip-hero"
     class="relative min-w-0 overflow-hidden h-[clamp(360px,70svh,680px)] max-h-[100svh]"
   >
-    <img src={heroImg} alt={trip.imageAlt || generatedSeo.imageAlt} width="1920" height="1080" fetchpriority="high" decoding="async" class="absolute inset-0 h-full w-full object-cover" />
+    <img
+      src={heroImg}
+      srcset={imageSrcset(heroImg)}
+      sizes="100vw"
+      alt={trip.imageAlt || generatedSeo.imageAlt}
+      width="1920"
+      height="1080"
+      fetchpriority="high"
+      decoding="async"
+      class="absolute inset-0 h-full w-full object-cover"
+    />
     <div class="u-overlay-scrim-bottom absolute inset-0"></div>
 
     <div class="absolute inset-x-0 bottom-0 py-4 sm:pb-8">
