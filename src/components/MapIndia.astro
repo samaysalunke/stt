@@ -1,9 +1,19 @@
 ---
-// Lightweight static India SVG map with destination pins.
-// No external tile provider, no API key, no Leaflet.
-// Simplified India outline path — equirectangular projection:
-//   x = (lng - 67.5) / 30 * 400
-//   y = (37.5 - lat) / 30 * 460
+// Static India SVG map with destination pins.
+// No external tile provider, no API key, no Leaflet, no GeoJSON parsed at runtime.
+//
+// The geometry and the projection both come from `src/lib/indiaMapGeometry.ts`,
+// which `scripts/generate-india-map.mjs` emits. Importing `project()` from there
+// rather than re-deriving it here is what keeps the pins registered to the
+// coastline — read that generator's header before changing any of this.
+import {
+  INDIA_VIEWBOX,
+  INDIA_MAINLAND,
+  INDIA_ISLANDS,
+  INDIA_STATE_BORDERS,
+  project,
+  withinIndia,
+} from '../lib/indiaMapGeometry';
 
 interface Pin {
   lat: number;
@@ -19,78 +29,92 @@ interface Props {
 
 const { pins = [], class: className = '' } = Astro.props;
 
-function project(lat: number, lng: number) {
-  const x = ((lng - 67.5) / 30) * 400;
-  const y = ((37.5 - lat) / 30) * 460;
-  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
-}
+// The interior hairlines are clipped to the landmass, so each instance on a page
+// needs its own clip-path id.
+const clipId = `india-land-${Math.random().toString(36).slice(2, 9)}`;
 
-// Deduplicate pins to same destination
-const seen = new Map<string, Pin>();
+// Deduplicate pins to the same destination, then drop anything the projection
+// puts off-canvas rather than letting it stack up against an edge.
+const seen = new Map<string, Pin & { x: number; y: number }>();
 for (const p of pins) {
   const key = `${Math.round(p.lat * 10)},${Math.round(p.lng * 10)}`;
-  if (!seen.has(key)) seen.set(key, p);
+  if (seen.has(key)) continue;
+  const { x, y } = project(p.lat, p.lng);
+  if (!withinIndia(x, y)) continue;
+  seen.set(key, { ...p, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 });
 }
 const uniquePins = Array.from(seen.values());
 ---
 
 <svg
-  viewBox="0 0 400 460"
+  viewBox={`0 0 ${INDIA_VIEWBOX.width} ${INDIA_VIEWBOX.height}`}
   xmlns="http://www.w3.org/2000/svg"
   class={className}
   aria-label="Map of India showing trip destinations"
   role="img"
 >
-  <!-- India outline (simplified, clockwise from NW) -->
+  <defs>
+    <clipPath id={clipId}>
+      <path d={INDIA_MAINLAND} />
+    </clipPath>
+  </defs>
+
+  <!-- Landmass: the claimed extent, filled. -->
+  <path d={INDIA_MAINLAND} fill="rgba(245,221,215,0.35)" stroke="none" />
+  {INDIA_ISLANDS.map((d) => (
+    <path
+      d={d}
+      fill="rgba(245,221,215,0.35)"
+      stroke="rgba(245,221,215,0.8)"
+      stroke-width="0.6"
+      stroke-linejoin="round"
+    />
+  ))}
+
+  <!--
+    Interior state hairlines. The state source stops short of the claimed
+    northern extent, so it is clipped to the landmass above and never filled —
+    the strip it omits simply carries no internal line.
+  -->
+  <g clip-path={`url(#${clipId})`}>
+    <path
+      d={INDIA_STATE_BORDERS}
+      fill="none"
+      stroke="rgba(245,221,215,0.55)"
+      stroke-width="0.7"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+  </g>
+
+  <!-- Coastline drawn last of the land layers, so the hairlines never cross it. -->
   <path
-    d="M93 20 L140 15 L153 39 L140 56 L160 80 L180 103 L170 120
-       L221 124 L272 133 L284 140 L299 147 L320 160 L333 167 L333 180
-       L327 187 L336 207 L331 213 L303 200 L280 200 L271 213 L260 220
-       L240 240 L231 260 L200 273 L173 293 L171 313 L169 340 L167 353
-       L164 360 L151 373 L135 387 L131 392
-       L120 380 L112 360 L105 347 L100 333 L96 320 L87 300 L80 280
-       L73 260 L67 233 L40 227 L40 213 L20 200 L13 191 L13 173
-       L13 133 L33 120 L53 100 L87 73 L93 53 L93 27 Z"
-    fill="rgba(245,221,215,0.25)"
-    stroke="rgba(245,221,215,0.8)"
-    stroke-width="1.5"
+    d={INDIA_MAINLAND}
+    fill="none"
+    stroke="rgba(245,221,215,0.9)"
+    stroke-width="1.4"
     stroke-linejoin="round"
   />
 
   <!-- Destination pins -->
-  {uniquePins.map((pin) => {
-    const pos = project(pin.lat, pin.lng);
-    const isCompleted = pin.status === 'completed';
-    return (
-      <>
-        {isCompleted ? (
-          <circle
-            cx={pos.x} cy={pos.y} r="6"
-            fill="var(--color-coral)"
-            stroke="white"
-            stroke-width="1.5"
-          >
-            {pin.label && <title>{pin.label}</title>}
-          </circle>
-        ) : (
-          <circle
-            cx={pos.x} cy={pos.y} r="5"
-            fill="white"
-            stroke="var(--color-coral)"
-            stroke-width="2"
-          >
-            {pin.label && <title>{pin.label}</title>}
-          </circle>
-        )}
-      </>
-    );
-  })}
+  {uniquePins.map((pin) => (
+    pin.status === 'completed' ? (
+      <circle cx={pin.x} cy={pin.y} r="6" fill="var(--color-coral)" stroke="white" stroke-width="1.5">
+        {pin.label && <title>{pin.label}</title>}
+      </circle>
+    ) : (
+      <circle cx={pin.x} cy={pin.y} r="5" fill="white" stroke="var(--color-coral)" stroke-width="2">
+        {pin.label && <title>{pin.label}</title>}
+      </circle>
+    )
+  ))}
 
   {uniquePins.length === 0 && (
     <text
-      x="200" y="240"
+      x={INDIA_VIEWBOX.width / 2}
+      y={INDIA_VIEWBOX.height / 2}
       text-anchor="middle"
-      font-size="12"
+      font-size="14"
       fill="rgba(27,43,58,0.3)"
     >No destinations yet</text>
   )}
