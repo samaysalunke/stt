@@ -2,8 +2,7 @@ import { getDb } from './db';
 import { listTrips, readTrip, writeTrip, findTripByName } from './content';
 import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationPaymentConfirmed } from './email';
-import { recordPayment, zohoMode } from './paymentLedger';
-import { processZohoDocument } from './zohoBooks';
+import { recordPayment } from './paymentLedger';
 import { derivePaymentStatus } from './registrationStatus';
 import { enqueueTelegramEvent } from './telegram';
 
@@ -253,24 +252,27 @@ export function createRegistration(
     })();
 
     if (input.status === 'confirmed') {
-      let queuedDoc = false;
       if (advance > 0) {
-        const recorded = recordPayment({
+        recordPayment({
           registrationId: id, amount: advance, receivedAt: input.created_at ?? new Date().toISOString(),
           method: 'other', eventType: 'advance', idempotencyKey: `registration-created-confirmed:${id}`,
           source: opts.skipCapacity ? 'historical-admin' : 'admin-create',
-          documentType: opts.skipCapacity ? undefined : 'advance',
+          // No document. Advance/retainer invoices need a paid Zoho plan and
+          // are no longer issued — processZohoDocument retires them on sight.
+          // Raising one here still set queuedDoc, which suppressed the inline
+          // email below on the promise that the worker would send it; the
+          // worker then retired the document silently and the customer got
+          // nothing at all. The final invoice is raised when the balance
+          // lands, by applyPaymentChange.
+          documentType: undefined,
         });
-        if (recorded.document?.status === 'queued') {
-          queuedDoc = true;
-          void processZohoDocument(recorded.document.id).catch((e) => console.error('[Zoho advance]', e));
-        }
       }
       adjustBookingCount(input.trip_name, input.batch_id, 1, input.tier_id);
       recalculateUserLeaderboard(input.email).catch((e) => console.error('[leaderboard recalc]', e));
-      // Worker sends the branded email (with PDF) when a document is queued;
-      // otherwise send it inline, no attachment.
-      if (opts.sendEmail && !(zohoMode() !== 'disabled' && queuedDoc)) {
+      // No document is raised on create any more, so this is the only thing
+      // that tells the customer their booking is confirmed. Send it inline,
+      // no attachment.
+      if (opts.sendEmail) {
         const totalAmount = Number(input.total_amount) || 0;
         sendRegistrationPaymentConfirmed({
           full_name: input.full_name,

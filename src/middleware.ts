@@ -4,6 +4,10 @@ import { getUserBySession } from './lib/session';
 import { getAdminBySession } from './lib/admin-session';
 import { getDb } from './lib/db';
 import { SITE_HOST, SITE_ORIGIN } from './lib/siteUrl';
+// Side-effect import: starts the background job timer once, at server boot.
+// Middleware is the only module guaranteed to load on every server start, and
+// it is where lib/rateLimit.ts's pruning timer already comes in from.
+import './lib/jobScheduler';
 
 /** Hosts that only ever appear on the internal proxy hop, never in a browser. */
 function isInternalHost(host: string): boolean {

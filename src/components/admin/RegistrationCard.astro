@@ -266,6 +266,7 @@ const attributionFields = [
                 <div><strong>{document.document_type === 'advance' ? 'Advance' : 'Final invoice'}</strong><span>{docStateLabel(document)}</span></div>
                 <div class="document-actions">
                   {zohoOpenUrl(document) && <a href={zohoOpenUrl(document)!} target="_blank" rel="noopener">Open in Zoho</a>}
+                  {document.zoho_document_id && <a href={`/api/admin/registrations/document?registrationId=${r.id}&type=${document.document_type}`} download>Download PDF</a>}
                   {document.zoho_document_id && <button type="button" data-action="refresh-document" data-id={r.id} data-value={document.document_type}>Refresh</button>}
                   {['failed', 'queued', 'draft', 'processing'].includes(document.status) && <button type="button" data-action="retry-document" data-id={r.id} data-value={document.document_type}>Retry</button>}
                 </div>

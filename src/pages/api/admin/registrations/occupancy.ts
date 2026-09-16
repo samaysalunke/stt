@@ -7,6 +7,7 @@ import { sanitizeInput, formatINR } from '../../../../lib/utils';
 import { resolveSelection } from './create';
 import { confirmedCountForTier, tierCapFor, moveBookingTier } from '../../../../lib/registrationWrite';
 import { derivePaymentStatus, REFUND_PAYMENT_STATUSES } from '../../../../lib/registrationStatus';
+import { ensureFinalDocumentIfFullyPaid } from '../../../../lib/paymentLedger';
 import { purgeUrls, tripPaths } from '../../../../lib/cachePurge';
 
 // Change a registration's occupancy tier on the same departure. Occupancy is
@@ -114,6 +115,16 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
          WHERE id=?
       `).run(sel.tier_id, sel.sharing_option, sel.total_amount, nextPaymentStatus, id);
     })();
+
+    // Dropping to a cheaper option can leave the money already recorded
+    // covering the new price, which derivePaymentStatus above turns into
+    // `fully_paid`. That used to be the end of it — the row went fully paid
+    // and no invoice was ever raised. Run after the transaction commits so a
+    // Zoho problem can never roll back the occupancy move; the helper swallows
+    // its own errors for the same reason. A booking that already has an
+    // invoice is left alone — it keeps the "amount is now stale" warning
+    // above, and a second document is impossible in any case.
+    if (nextPaymentStatus === 'fully_paid') ensureFinalDocumentIfFullyPaid(id);
 
     // Only a confirmed booking holds a seat. moveBookingTier is a single
     // synchronous read-modify-write — same atomicity invariant as

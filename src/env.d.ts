@@ -33,6 +33,8 @@ interface ImportMetaEnv {
   readonly ZOHO_RETAINER_TEMPLATE_ID?: string;
   readonly ZOHO_INVOICE_TEMPLATE_ID?: string;
   readonly ZOHO_JOB_SECRET?: string;
+  /** "on" runs the Zoho + Telegram workers in-process, once a minute. Off otherwise. */
+  readonly JOBS_SCHEDULER?: 'on' | 'off';
   readonly TELEGRAM_BOT_TOKEN?: string;
   readonly TELEGRAM_ADMIN_CHAT_ID?: string;
   readonly TELEGRAM_WEBHOOK_SECRET?: string;

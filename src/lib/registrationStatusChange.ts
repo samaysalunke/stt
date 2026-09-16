@@ -28,6 +28,7 @@ import { recalculateUserLeaderboard } from './stats';
 import { tripAdvanceAmountBySlug, adjustBookingCount } from './registrationWrite';
 import { purgeUrls, tripPaths, TRIP_LISTING_PATHS } from './cachePurge';
 import {
+  ensureFinalDocumentIfFullyPaid,
   recordPayment,
   recordRefund,
   sanitizePaymentMethod,
@@ -214,11 +215,17 @@ export async function applyStatusChange(
     }
 
     if (resolvedAmount === 0) {
-      // Legit no-op: prior payments already cover the target. No ledger event,
-      // no Zoho doc — just converge the column.
+      // Legit no-op on the money: prior payments already cover the target, so
+      // there is no ledger event to write — just converge the column.
       getDb().prepare('UPDATE registrations SET payment_status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?')
         .run(requestedPaymentStatus, id);
       effectivePaymentStatus = requestedPaymentStatus as string;
+      // The invoice is not a no-op, though. This branch confirms a booking as
+      // fully paid, and used to skip the document along with the ledger event
+      // — leaving a fully-paid booking with no invoice and nothing queued to
+      // notice. Never throws; a document that can't be raised is the retry
+      // worker's problem, not this request's.
+      if (requestedPaymentStatus === 'fully_paid') ensureFinalDocumentIfFullyPaid(id);
     } else {
       const receivedAt = input.receivedAt && validReceivedAt(String(input.receivedAt))
         ? String(input.receivedAt) : new Date().toISOString();

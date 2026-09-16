@@ -58,10 +58,24 @@ export function billingSnapshot(reg: Record<string, any>) {
   };
 }
 
+/**
+ * What genuinely blocks a Zoho document, and nothing more.
+ *
+ * Only the customer name qualifies: Zoho's `contact_name` is mandatory and
+ * unique, so a blank one cannot create or match a contact.
+ *
+ * `state` used to be required here and was the single reason invoicing stalled
+ * — every document raised for a booking without one failed pre-flight, which
+ * was most of them, because only the public checkout collects a state. The
+ * requirement was never real for this org: Zoho Books reports
+ * `is_gst_india_version: false` and `is_registered_for_gst: false`, and
+ * place-of-supply is mandatory only on the India GST version. The address
+ * fields still ride along in the snapshot and fill the Zoho billing address
+ * whenever the row happens to carry them.
+ */
 export function billingProblems(snapshot: ReturnType<typeof billingSnapshot>): string[] {
   const errors: string[] = [];
   if (!snapshot.customerName) errors.push('billing name');
-  if (!snapshot.state) errors.push('state');
   return errors;
 }
 
@@ -267,4 +281,52 @@ export function ensureDocument(registrationId: number, type: DocumentType) {
     event = { id: eventId };
   }
   return enqueueDocument(db, registrationId, type, event.id, snapshot);
+}
+
+/**
+ * Raise the final invoice for a booking that is fully paid and has none.
+ *
+ * `payment_status` and the invoice are decided in different places — the
+ * payment endpoint, the confirm transition, and the occupancy move each work
+ * out "fully paid" for themselves, and each used to be free to reach it
+ * without raising a document. This is the one call that closes that gap, so
+ * the rule lives in a single place rather than three.
+ *
+ * It never throws. `ensureDocument` rejects a handful of perfectly ordinary
+ * situations — Zoho disabled, no payment on the row yet, an incomplete billing
+ * name — and none of them should fail the booking operation that got us here.
+ * The caller has already committed real work; a document that cannot be raised
+ * is for the retry worker and the health check to surface, not for the request
+ * to die on.
+ */
+export function ensureFinalDocumentIfFullyPaid(
+  registrationId: number,
+): { enqueued: boolean; reason?: string } {
+  try {
+    const db = getDb();
+    const reg = db
+      .prepare('SELECT amount_paid, total_amount FROM registrations WHERE id=?')
+      .get(registrationId) as { amount_paid: number | null; total_amount: number | null } | undefined;
+    if (!reg) return { enqueued: false, reason: 'registration not found' };
+
+    const total = Number(reg.total_amount);
+    const paid = Number(reg.amount_paid) || 0;
+    // Same test as derivePaymentStatus/resolvePaymentStatus: a priced booking
+    // whose recorded money covers the price.
+    if (!(Number.isFinite(total) && total > 0 && paid >= total)) {
+      return { enqueued: false, reason: 'not fully paid' };
+    }
+
+    const existing = db
+      .prepare("SELECT id FROM invoice_documents WHERE registration_id=? AND document_type='final'")
+      .get(registrationId);
+    if (existing) return { enqueued: false, reason: 'already raised' };
+
+    const document = ensureDocument(registrationId, 'final');
+    return { enqueued: Boolean(document), ...(document ? {} : { reason: 'zoho disabled' }) };
+  } catch (error) {
+    const reason = String(error instanceof Error ? error.message : error);
+    console.error('[ensureFinalDocumentIfFullyPaid]', registrationId, reason);
+    return { enqueued: false, reason };
+  }
 }

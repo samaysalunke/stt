@@ -22,8 +22,12 @@ create events. Delivery failures never change a booking API response.
 
 ## Retry worker
 
-Schedule an authenticated `POST /api/jobs/telegram-notifications` request (for
-example, once per minute) with this header:
+Set `JOBS_SCHEDULER=on` and the server runs this worker in-process every
+minute, claiming at most ten events a pass. Without it nothing retries a failed
+notification.
+
+`POST /api/jobs/telegram-notifications` remains available for triggering a pass
+by hand, with this header:
 
 ```text
 Authorization: Bearer <TELEGRAM_BOT_TOKEN>
