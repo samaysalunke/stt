@@ -9,6 +9,7 @@ import {
   enqueueTelegramEvent,
   formatIndiaTimestamp,
   formatTelegramMessage,
+  occupancyLabel,
   resolveLocalPaymentUpload,
   sendTestNotification,
 } from '../../src/lib/telegram';
@@ -18,7 +19,7 @@ function database() {
   db.exec(`
     CREATE TABLE registrations (
       id INTEGER PRIMARY KEY, full_name TEXT, email TEXT, phone TEXT,
-      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, payment_screenshot_url TEXT, amount_paid INTEGER,
+      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, tier_id TEXT, payment_screenshot_url TEXT, amount_paid INTEGER,
       status TEXT, payment_status TEXT, trip_slug TEXT, total_amount INTEGER
     );
     CREATE TABLE telegram_notification_events (
@@ -41,7 +42,12 @@ function database() {
 }
 
 function seed(db: Database.Database, proof: string | null = null, amount = 0) {
-  db.prepare(`INSERT INTO registrations VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', '29', 'Female', 'Ladakh', '1 Sep – 8 Sep 2026', 'Twin sharing', ?, ?, 'pending', 'unpaid', 'ladakh', 25000)`).run(proof, amount);
+  db.prepare(`
+    INSERT INTO registrations (id, full_name, email, phone, age, gender, trip_name, trip_date,
+      sharing_option, tier_id, payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount)
+    VALUES (1, 'Asha Rao', 'asha@example.com', '9876543210', '29', 'Female', 'Ladakh', '1 Sep – 8 Sep 2026',
+      'Twin sharing', 'twin', ?, ?, 'pending', 'unpaid', 'ladakh', 25000)
+  `).run(proof, amount);
 }
 
 function response(status: number, body: any) {
@@ -80,6 +86,36 @@ describe('Telegram formatting and upload confinement', () => {
     expect(formatTelegramMessage('pending', base)).toContain('BOOKING PAYMENT PENDING');
     expect(formatTelegramMessage('confirmed', base)).not.toContain('Amount paid');
     expect(formatTelegramMessage('confirmed', { ...base, amount_paid: 12500 })).toContain('Amount paid: ₹12,500');
+  });
+
+  it('names the occupancy tier on a single-tier trip, which stores no sharing_option', () => {
+    // A trip with one occupancy tier never writes sharing_option (register.ts),
+    // so the tier has to be recovered from tier_id + the trip's catalog or ops
+    // reads "Not specified" on every booking for that trip.
+    const base = {
+      id: 7, full_name: 'Asha', email: 'a@example.com', phone: '9', age: '29', gender: 'Female',
+      trip_name: 'Across the High Passes — Ladakh', trip_date: 'Jun', sharing_option: null,
+      payment_screenshot_url: null, amount_paid: 0,
+    };
+
+    expect(occupancyLabel({ ...base, tier_id: 'standard', trip_slug: 'ladakh-high-passes' })).toBe('Standard');
+    expect(formatTelegramMessage('lead', { ...base, tier_id: 'standard', trip_slug: 'ladakh-high-passes' }))
+      .toContain('Occupancy: Standard');
+
+    // A row that predates trip_slug still resolves, by trip name.
+    expect(occupancyLabel({ ...base, tier_id: 'standard', trip_slug: null })).toBe('Standard');
+
+    // A stored label always wins over the catalog — it is what was sold.
+    expect(occupancyLabel({ ...base, sharing_option: 'Twin sharing', tier_id: 'standard', trip_slug: 'ladakh-high-passes' }))
+      .toBe('Twin sharing');
+
+    // Tier dropped from the catalog since the booking, or an unreadable slug:
+    // show the raw tier rather than nothing.
+    expect(occupancyLabel({ ...base, tier_id: 'retired-tier', trip_slug: 'ladakh-high-passes' })).toBe('retired-tier');
+    expect(occupancyLabel({ ...base, tier_id: 'standard', trip_slug: '../../etc/passwd' })).toBe('standard');
+
+    // Nothing to go on at all still reads as before.
+    expect(formatTelegramMessage('lead', { ...base, tier_id: null, trip_slug: null })).toContain('Occupancy: Not specified');
   });
 
   it('accepts only generated local JPG/PNG/PDF references', () => {

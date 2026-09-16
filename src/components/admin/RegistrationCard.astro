@@ -53,6 +53,17 @@ const statusOptions = statusButtons.map((s) => ({
   disabled: s !== r.status && !canTransition(s),
 }));
 const showDocsTab = r.status !== 'wishlist' && (documents.length > 0 || r.status === 'confirmed');
+// `sharing_option` is only written when the trip has MORE THAN ONE occupancy
+// tier (register.ts, and resolveSelection in registrations/create.ts) — a
+// single-tier trip stores NULL, so this field read as a bare placeholder for
+// every one of its bookings even though the tier is known. Recover the label
+// from tier_id against the departure's catalog, the same fallback
+// profileTrips.ts uses for the traveller's own view.
+const occupancyLabel =
+  String(r.sharing_option ?? '').trim()
+  || tierOptions.find((t) => t.tierId === r.tier_id)?.label
+  || String(r.tier_id ?? '').trim()
+  || '—';
 // Occupancy can only be switched on a multi-tier departure the row is linked to.
 // Single-tier trips and the legacy bucket get no tab.
 const showOccupancyTab = !readOnly && tierOptions.length > 1 && !!r.batch_id;
@@ -139,7 +150,7 @@ const attributionFields = [
       {demographicSummary && <div class="reg-contact">{demographicSummary}</div>}
       <div class="reg-contact reg-dates">Applied {formatDateIN(r.created_at)} · Updated {formatDateIN(r.updated_at ?? r.created_at)}</div>
     </div>
-    <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{r.sharing_option ?? '—'}</strong></div>
+    <div class="reg-meta"><span class="reg-meta-label">Occupancy</span><strong>{occupancyLabel}</strong></div>
     {r.status === 'wishlist' ? (
       <div class="reg-meta"><span class="reg-meta-label">Wishlisted</span><strong>{formatDateIN(r.wishlisted_at ?? r.created_at)}</strong><span>{r.wishlist_notified_at ? `Notified ${formatDateIN(r.wishlist_notified_at)}` : 'Not yet notified'}</span></div>
     ) : (
@@ -303,7 +314,7 @@ const attributionFields = [
           <div class="sp-wrap">
             <div class="sp-hero">
               <span class="sp-hero-label">Current occupancy</span>
-              <span class="sp-hero-pay">{r.sharing_option ?? '—'} · {formatINR(r.total_amount)}</span>
+              <span class="sp-hero-pay">{occupancyLabel} · {formatINR(r.total_amount)}</span>
             </div>
             <label class="sp-field">
               <span>Occupancy</span>
