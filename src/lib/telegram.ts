@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
+import { findTripByName, readTrip } from './content';
 import { keyboardFor, type Menu } from './telegramKeyboard';
 
 export type TelegramEventType = 'lead' | 'pending' | 'confirmed';
@@ -17,6 +18,7 @@ type RegistrationSnapshot = {
   trip_name: string;
   trip_date: string | null;
   sharing_option: string | null;
+  tier_id?: string | null;
   payment_screenshot_url: string | null;
   amount_paid: number | null;
   status?: string | null;
@@ -77,6 +79,39 @@ export function formatIndiaTimestamp(value: string | Date): string {
 const clean = (value: unknown) => String(value ?? '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 const field = (value: unknown, max: number) => clean(value).slice(0, max);
 
+/**
+ * The occupancy to show ops, in the order the data actually survives.
+ *
+ * `sharing_option` is only WRITTEN when the trip has more than one occupancy
+ * tier (register.ts, and resolveSelection in admin registrations/create.ts), so
+ * every booking on a single-tier trip — Ladakh, Kashmir, Nagaland, Wayanad —
+ * stored NULL and the alert read "Occupancy: Not specified" even though
+ * `tier_id` was on the row the whole time. Resolve the tier's label from the
+ * trip catalog, and fall back to the raw tier id if the catalog no longer
+ * carries that tier (renamed or removed since the booking).
+ *
+ * readTrip() hits the filesystem and throws on an unsafe slug, so it is wrapped
+ * — an alert must never fail to send over a missing or malformed trip file.
+ */
+export function occupancyLabel(registration: Pick<RegistrationSnapshot, 'sharing_option' | 'tier_id' | 'trip_slug' | 'trip_name'>): string {
+  const stored = String(registration.sharing_option ?? '').trim();
+  if (stored) return stored;
+
+  const tierId = String(registration.tier_id ?? '').trim();
+  if (!tierId) return '';
+
+  try {
+    const slug = String(registration.trip_slug ?? '').trim();
+    const trip = slug ? readTrip(slug) : findTripByName(String(registration.trip_name ?? ''));
+    const catalog = Array.isArray(trip?.occupancyCatalog) ? trip.occupancyCatalog : [];
+    const label = String(catalog.find((c: any) => String(c?.id) === tierId)?.label ?? '').trim();
+    if (label) return label;
+  } catch {
+    // fall through to the tier id
+  }
+  return tierId;
+}
+
 export function formatTelegramMessage(
   eventType: TelegramEventType,
   registration: RegistrationSnapshot,
@@ -97,7 +132,7 @@ export function formatTelegramMessage(
     `Gender: ${field(registration.gender, 40) || 'Not specified'}`,
     `Trip: ${field(registration.trip_name, 180)}`,
     `Trip date: ${field(registration.trip_date, 120) || 'Not specified'}`,
-    `Occupancy: ${field(registration.sharing_option, 120) || 'Not specified'}`,
+    `Occupancy: ${field(occupancyLabel(registration), 120) || 'Not specified'}`,
   ];
   const paid = Number(registration.amount_paid) || 0;
   if (eventType === 'confirmed' && paid > 0) lines.push(`Amount paid: ₹${paid.toLocaleString('en-IN')}`);
@@ -234,8 +269,8 @@ export function claimTelegramEvents(db: Database.Database, limit = 10): ClaimedT
 
 export async function deliverClaimedTelegramEvent(db: Database.Database, event: ClaimedTelegramEvent): Promise<TelegramDeliveryState> {
   const registration = db.prepare(`
-    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url,
-           amount_paid, status, payment_status, trip_slug, total_amount
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, tier_id,
+           payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
     FROM registrations WHERE id=?
   `).get(event.registration_id) as RegistrationSnapshot | undefined;
   if (!registration) {
@@ -372,8 +407,8 @@ export async function showMenu(
 export async function refreshRegistrationMessages(registrationId: number, footer?: string): Promise<void> {
   const db = getDb();
   const registration = db.prepare(`
-    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, payment_screenshot_url,
-           amount_paid, status, payment_status, trip_slug, total_amount
+    SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, tier_id,
+           payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
     FROM registrations WHERE id=?
   `).get(registrationId) as RegistrationSnapshot | undefined;
   if (!registration) return;
