@@ -197,8 +197,10 @@ function CustomSelect({
   );
 }
 
-// Searchable city picker: dropdown of Indian cities with an in-panel search box
-// and an "Other" escape hatch that switches to free-text entry.
+// Searchable city picker: dropdown of Indian cities with an in-panel search box.
+// No free-text entry — the same rule StateSelect already follows. A city typed
+// by hand arrives in a spelling the list does not use, which is what the
+// normalisation in src/lib/indiaCities.ts exists to undo after the fact.
 function CitySelect({
   value, onChange, onBlur, error,
 }: {
@@ -209,7 +211,6 @@ function CitySelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [otherMode, setOtherMode] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -226,21 +227,6 @@ function CitySelect({
 
   const q = query.trim().toLowerCase();
   const filtered = (q ? INDIA_CITIES.filter((c) => c.toLowerCase().includes(q)) : INDIA_CITIES).slice(0, 60);
-
-  if (otherMode) {
-    return (
-      <div>
-        <input
-          type="text" autoFocus value={value} placeholder="Type your city"
-          onChange={(e) => onChange(e.target.value)} onBlur={() => onBlur()}
-          className={inputCls} style={{ borderColor: error ? C.coral : C.peach }}
-        />
-        <button type="button" onClick={() => setOtherMode(false)} className="text-xs mt-1.5 underline" style={{ color: C.coralInk }}>
-          Choose from list instead
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div ref={ref} className="relative">
@@ -294,17 +280,9 @@ function CitySelect({
             </li>
           ))}
           {filtered.length === 0 && (
-            <li className="px-4 py-2 text-sm" style={{ color: C.gray }}>No match — choose “Other” below.</li>
+            <li className="px-4 py-2 text-sm" style={{ color: C.gray }}>No match — try a nearby city or another spelling.</li>
           )}
         </ul>
-        <button
-          type="button"
-          onClick={() => { if (INDIA_CITIES.includes(value)) onChange(''); setQuery(''); setOpen(false); setOtherMode(true); }}
-          className="w-full text-left px-4 py-2.5 text-sm border-t cursor-pointer"
-          style={{ borderColor: C.peach, color: C.coralInk, fontWeight: 600 }}
-        >
-          Other — type my city
-        </button>
       </div>
     </div>
   );
