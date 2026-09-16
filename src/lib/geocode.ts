@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import tables from './geocodeTables.json';
 
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const UA = 'SeekTheThrill/1.0 (samaysalunke@gmail.com)';
@@ -26,8 +27,6 @@ const UA = 'SeekTheThrill/1.0 (samaysalunke@gmail.com)';
  * district of Manhattan. Restricting to the country the traveller gave keeps a
  * misspelling wrong by a district rather than by a continent.
  */
-import tables from './geocodeTables.json';
-
 const QUERY_OVERRIDES = tables.queryOverrides as Record<string, string>;
 const COUNTRY_CODES = tables.countryCodes as Record<string, string>;
 
