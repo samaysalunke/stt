@@ -43,6 +43,7 @@ export const EXPORT_COLUMNS = [
 /** Everything the export selects, plus what the admin drawers render. */
 export const PAGE_COLUMNS = [
   EXPORT_COLUMNS,
+  'state',
   'avatarUrl', 'leaderboardOptOut', 'showTripsPublicly',
   'account_created_at', 'lastLoginAt',
 ].join(', ');
@@ -118,6 +119,7 @@ export function buildCustomerQuery(
       (SELECT full_name FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS full_name,
       (SELECT phone     FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS phone,
       (SELECT city      FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS city,
+      (SELECT state     FROM registrations WHERE lower(trim(email)) = lower(trim(r.email)) ORDER BY created_at DESC LIMIT 1) AS state,
       COUNT(*) AS total_regs,
       SUM(CASE WHEN r.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
       SUM(CASE WHEN r.status='pending'   THEN 1 ELSE 0 END) AS pending,

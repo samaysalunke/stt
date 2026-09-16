@@ -1,5 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import CitySelect from '../../components/admin/CitySelect.astro';
+import { INDIA_STATES, normalizeIndiaState } from '../../lib/indiaStates';
 import Button from '../../components/ui/Button.astro';
 import { getDb } from '../../lib/db';
 import {
@@ -37,7 +39,7 @@ const page = Math.min(requestedPage, totalPages);
 const offset = (page - 1) * PAGE_SIZE;
 
 type Customer = {
-  email: string; full_name: string | null; phone: string | null; city: string | null;
+  email: string; full_name: string | null; phone: string | null; city: string | null; state: string | null;
   total_regs: number; confirmed: number; pending: number; lead: number; rejected: number;
   total_paid: number; last_payment_date: string | null; last_reg_at: string;
   latest_trip: string | null; user_id: string | null; displayName: string | null;
@@ -297,13 +299,18 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
                     <div><span>Name</span><span data-field="full_name">{c.full_name ?? '—'}</span></div>
                     {c.phone && <div><span>Phone</span><span data-field="phone">{c.phone} <button onclick={`copyText('${c.phone}')`} class="copy-btn" title="Copy phone">⧉</button></span></div>}
                     {c.city && <div><span>City</span><span data-field="city">{c.city}</span></div>}
+                    {c.state && <div><span>State</span><span data-field="state">{c.state}</span></div>}
                   </div>
 
                   {!isTripLead && (
                     <form id={`cust-edit-${i}`} class="cust-edit-form hidden mt-2" data-email={c.email}>
                       <label>Full name<input type="text" name="full_name" value={c.full_name ?? ''} required /></label>
                       <label>Phone<input type="text" name="phone" value={c.phone ?? ''} required /></label>
-                      <label>City<input type="text" name="city" value={c.city ?? ''} /></label>
+                      <label>City<CitySelect id={`cust-city-${i}`} name="city" value={c.city} /></label>
+                      <label>State<select name="state">
+                        <option value="">Select a state</option>
+                        {INDIA_STATES.map((st) => <option value={st} selected={st === normalizeIndiaState(c.state)}>{st}</option>)}
+                      </select></label>
                       <div class="flex gap-2 mt-2">
                         <button type="submit" class="cust-edit-save">Save</button>
                         <button type="button" onclick={`toggleCustEdit(${i})`} class="cust-edit-cancel">Cancel</button>
@@ -498,6 +505,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
         full_name: String(fd.get('full_name') ?? '').trim(),
         phone: String(fd.get('phone') ?? '').trim(),
         city: String(fd.get('city') ?? '').trim(),
+        state: String(fd.get('state') ?? '').trim(),
       };
       const btn = form.querySelector<HTMLButtonElement>('.cust-edit-save');
       if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
@@ -517,6 +525,7 @@ const payLabel = (paid: number, total: number | null) => paid <= 0 ? 'Unpaid' : 
         setField('full_name', payload.full_name);
         setField('phone', payload.phone);
         setField('city', payload.city);
+        setField('state', payload.state);
         const nameEl = row?.querySelector('.cust-primary strong');
         if (nameEl) nameEl.textContent = payload.full_name || payload.email || '';
         const i = Number(form.id.replace('cust-edit-', ''));

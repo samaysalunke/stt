@@ -1,0 +1,77 @@
+---
+/**
+ * The city picker the admin forms use, mirroring the one on the public
+ * checkout: the same INDIA_CITIES list, and the same "Other" escape hatch for
+ * a city the list does not carry.
+ *
+ * Admin had a plain text input, which is how `Tumahare dil mein`, `nowhere`
+ * and `banglore` reached the city column. That column is geocoded, and the
+ * coordinates place both the leaderboard's km and the pins on public profile
+ * maps, so a typo there is visible rather than merely untidy.
+ *
+ * The text input carries the id and name, so it stays the single value for
+ * `getElementById(id).value` and for FormData alike, and the select in front
+ * of it only writes into it. Checkout's version is React; these pages are
+ * plain Astro, so this is the same behaviour without pulling React in.
+ */
+import { INDIA_CITIES } from '../../lib/indiaCities';
+
+interface Props {
+  id: string;
+  name?: string;
+  value?: string | null;
+  class?: string;
+}
+
+const { id, name, value, class: className = '' } = Astro.props;
+const current = String(value ?? '').trim();
+const listed = INDIA_CITIES.includes(current);
+---
+
+<div class="city-select" data-city-select>
+  <select class={className} data-city-list aria-label="City">
+    <option value="">Select a city</option>
+    {INDIA_CITIES.map((c) => <option value={c} selected={listed && c === current}>{c}</option>)}
+    <option value="__other__" selected={!!current && !listed}>Other — type a city</option>
+  </select>
+  <input
+    type="text"
+    id={id}
+    name={name}
+    value={current}
+    placeholder="Type the city"
+    class={className}
+    data-city-other
+    hidden={listed || !current}
+  />
+</div>
+
+<script>
+  // Delegated and idempotent: these forms are rendered once per customer row,
+  // so there can be many pickers on a page.
+  document.querySelectorAll('[data-city-select]').forEach((root) => {
+    if ((root as HTMLElement).dataset.wired) return;
+    (root as HTMLElement).dataset.wired = 'true';
+
+    const list = root.querySelector('[data-city-list]') as HTMLSelectElement | null;
+    const other = root.querySelector('[data-city-other]') as HTMLInputElement | null;
+    if (!list || !other) return;
+
+    list.addEventListener('change', () => {
+      if (list.value === '__other__') {
+        other.hidden = false;
+        other.value = '';
+        other.focus();
+      } else {
+        // A listed city lives in the input too, so the value read is the same
+        // whichever way it was chosen.
+        other.hidden = true;
+        other.value = list.value;
+      }
+    });
+  });
+</script>
+
+<style>
+  .city-select { display: grid; gap: 6px; }
+</style>

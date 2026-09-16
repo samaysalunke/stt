@@ -4,6 +4,7 @@ import Button from '../../../components/ui/Button.astro';
 import { buildTripOptions } from '../../../lib/adminTripOptions';
 import { ADMIN_REG_INPUT_CLASS as inputCls, ADMIN_REG_LABEL_CLASS as labelCls } from '../../../components/admin/formClasses';
 import { INDIA_STATES } from '../../../lib/indiaStates';
+import CitySelect from '../../../components/admin/CitySelect.astro';
 export const prerender = false;
 
 const tripsData = buildTripOptions();
@@ -72,8 +73,9 @@ const preselectDeparture = Astro.url.searchParams.get('departure') ?? '';
             <option value="">—</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
           </select>
         </div>
-        <div><label class={labelCls}>City</label><input id="city" type="text" class={inputCls} /></div>
-        {/* Same list the public checkout uses, so one spelling per state reaches the invoice. */}
+        {/* Both pickers carry the lists the public checkout uses, so one
+            spelling per city and state reaches the invoice and the geocoder. */}
+        <div><label class={labelCls}>City</label><CitySelect id="city" class={inputCls} /></div>
         <div><label class={labelCls}>State</label><select id="state" class={inputCls}>
           <option value="">Select a state</option>
           {INDIA_STATES.map((s) => <option value={s}>{s}</option>)}
