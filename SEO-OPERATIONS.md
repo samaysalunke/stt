@@ -40,9 +40,19 @@ production environment access or third-party accounts. This is your checklist.
   afterwards can be attributed.
 - In Bing Webmaster Tools, confirm the IndexNow key is recognized.
 
-### 3. Post-deploy verification (manual checks)
-- Confirm the production proxy (Railway) does not add a second redirect hop on top of the
-  app's single 308 — test HTTP, `www`, no-slash, and mixed-case URLs each resolve in one hop.
+### 3. Post-deploy verification
+
+Run `npm run audit:seo` first. It probes the **running** site — sitemap status codes,
+every internal link and image, apex-URL leakage, self-canonical tags, one-hop
+canonicalization, soft-404s, and robots.txt — and exits non-zero on any failure, so it
+can gate a deploy. It is read-only (unauthenticated GET/HEAD) and safe against
+production. `--verbose` lists every URL; `--origin <url>` points it at staging.
+
+It exists because the two bugs in `move-to-prod.md` both lived *after* the proxy hop,
+where no unit test could see them, and because a Search Console export takes days to
+reflect what one command can confirm in thirty seconds.
+
+The remaining checks still need a human:
 - Run URL Inspection (GSC) on: homepage, trips listing, one trip, FAQ, one album.
 - Validate TouristTrip, Event, Breadcrumb, and Organization JSON-LD against visible content
   using Google's Rich Results Test.

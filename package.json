@@ -19,6 +19,7 @@
     "test:report": "npm run test && node tests/write-report.mjs",
     "test:watch": "vitest",
     "perf:lhci": "npx @lhci/cli autorun",
+    "audit:seo": "node scripts/audit-seo-health.mjs",
     "backfill:profile-stats": "node scripts/backfill-profile-stats.mjs",
     "warm:geocode": "node scripts/warm-geocode-cache.mjs",
     "normalize:cities": "node scripts/normalize-registration-cities.mjs"
