@@ -11,11 +11,14 @@ const tripsDir = path.join(process.env.CONTENT_DIR ?? path.join(root, 'src', 'co
 // so a row that went stale (a trip renamed, a location added to a YAML) stays
 // wrong indefinitely and there is no other way to repair it.
 const recomputeAll = process.argv.includes('--all');
+// --dry-run reports what would change and writes nothing. Worth having: --all
+// rewrites rows that are already serving the public leaderboard.
+const dryRun = process.argv.includes('--dry-run');
 const candidates = db.prepare(`
   SELECT id, email, displayName, username, avatarUrl, homeCityLatLng
   FROM users u ${recomputeAll ? '' : 'WHERE NOT EXISTS (SELECT 1 FROM leaderboard_cache c WHERE c.userId=u.id)'}
 `).all();
-const existing = db.prepare('SELECT kmsFromHome FROM leaderboard_cache WHERE userId=?');
+const existing = db.prepare('SELECT kmsFromHome,daysOutdoors,destinationsCount,tripsCount FROM leaderboard_cache WHERE userId=?');
 const loadTrip = (slug) => {
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return null;
   try { return YAML.parse(fs.readFileSync(path.join(tripsDir, `${slug}.yaml`), 'utf8')); } catch { return null; }
@@ -55,7 +58,7 @@ const cachedCoords = (query) => query ? db.prepare('SELECT lat,lng FROM geocode_
 const upsert = db.prepare(`INSERT OR REPLACE INTO leaderboard_cache
   (userId,email,displayName,username,avatarUrl,homeCityLatLng,kmsFromHome,daysOutdoors,destinationsCount,tripsCount,updatedAt)
   VALUES (?,?,?,?,?,?,?,?,?,?,unixepoch())`);
-let processed=0, failed=0, kmsPreserved=0;
+let processed=0, failed=0, kmsPreserved=0; const changes=[];
 for (const user of candidates) {
   try {
     const regs=db.prepare("SELECT city,trip_name,trip_slug,batch_id FROM registrations WHERE lower(trim(email))=lower(trim(?)) AND status='confirmed'").all(user.email);
@@ -77,10 +80,15 @@ for (const user of candidates) {
     const prior = existing.get(user.id);
     const kmsToWrite = geocodeMissed && prior ? prior.kmsFromHome : Math.round(kms);
     if (geocodeMissed && prior) kmsPreserved++;
-    upsert.run(user.id,user.email,user.displayName,user.username,user.avatarUrl,user.homeCityLatLng,kmsToWrite,outdoorDays,destinations.size,regs.length);
+    const next={kmsFromHome:kmsToWrite,daysOutdoors:outdoorDays,destinationsCount:destinations.size,tripsCount:regs.length};
+    const diff=Object.keys(next).filter((k)=>!prior||Math.round(prior[k]??0)!==Math.round(next[k]));
+    if (diff.length) changes.push({ userId:user.id, email:user.email, new:prior?undefined:true,
+      ...Object.fromEntries(diff.map((k)=>[k, prior?`${Math.round(prior[k]??0)} -> ${Math.round(next[k])}`:Math.round(next[k])])) });
+    if (!dryRun) upsert.run(user.id,user.email,user.displayName,user.username,user.avatarUrl,user.homeCityLatLng,kmsToWrite,outdoorDays,destinations.size,regs.length);
     processed++;
   } catch (error) { failed++; console.error(`[profile-stats] ${user.id}:`, error); }
 }
-console.log(JSON.stringify({ mode:recomputeAll?'all':'missing-only', candidates:candidates.length, processed, kmsPreserved, failed }));
+for (const c of changes) console.log(`[profile-stats] ${dryRun?'would update':'updated'} ${JSON.stringify(c)}`);
+console.log(JSON.stringify({ mode:recomputeAll?'all':'missing-only', dryRun, candidates:candidates.length, processed, changed:changes.length, kmsPreserved, failed }));
 db.close();
 if (failed) process.exitCode=1;
