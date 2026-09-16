@@ -1,0 +1,24 @@
+{
+  "_comment": "Shared by src/lib/geocode.ts and scripts/warm-geocode-cache.mjs. Kept as data, not TypeScript, so the repair script and the live path cannot drift apart. Keys are lowercased and trimmed.",
+
+  "queryOverrides": {
+    "kashmir": "Srinagar, Jammu and Kashmir",
+    "mulki & agumbe, karnataka": "Agumbe, Karnataka",
+    "blr": "Bangalore",
+    "banglore": "Bangalore",
+    "hyd": "Hyderabad",
+    "hyderbad": "Hyderabad",
+    "mumbaii": "Mumbai",
+    "lucknos": "Lucknow"
+  },
+
+  "countryCodes": {
+    "india": "in", "bharat": "in", "in": "in",
+    "oman": "om", "uae": "ae", "united arab emirates": "ae",
+    "singapore": "sg", "united kingdom": "gb", "uk": "gb",
+    "united states": "us", "usa": "us",
+    "nepal": "np", "bhutan": "bt", "sri lanka": "lk"
+  },
+
+  "defaultCountryCode": "in"
+}

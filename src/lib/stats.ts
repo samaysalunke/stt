@@ -4,6 +4,7 @@ import { findTripByName, readTrip } from './content';
 
 interface RegRow {
   city: string;
+  country: string | null;
   trip_name: string;
   trip_slug: string | null;
   batch_id: string | null;
@@ -53,8 +54,10 @@ async function computeStats(regs: RegRow[]) {
     const tripLocation = ((trip?.location as string | undefined) ?? reg.trip_name ?? '').trim();
 
     // Sequential geocode calls to respect Nominatim 1 req/sec limit
-    const homeCoords = await geocodeCity(reg.city);
-    const destCoords = await geocodeCity(tripLocation);
+    // The traveller's own country biases their home lookup; a trip location is
+    // always Indian, whoever booked it.
+    const homeCoords = await geocodeCity(reg.city, { country: reg.country });
+    const destCoords = await geocodeCity(tripLocation, { country: 'India' });
 
     if (homeCoords && destCoords) {
       kmsFromHome += haversine(homeCoords.lat, homeCoords.lng, destCoords.lat, destCoords.lng);
@@ -98,7 +101,7 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
 
   const regs = db
     .prepare(
-      "SELECT city, trip_name, trip_slug, batch_id FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed'"
+      "SELECT city, country, trip_name, trip_slug, batch_id FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed'"
     )
     .all(user.email) as RegRow[];
 
@@ -124,12 +127,12 @@ export async function recalculateUserLeaderboard(email: string): Promise<void> {
   // Keep homeCityLatLng updated to most recent confirmed booking city
   const lastReg = db
     .prepare(
-      "SELECT city FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed' ORDER BY created_at DESC LIMIT 1"
+      "SELECT city, country FROM registrations WHERE lower(trim(email)) = lower(trim(?)) AND status = 'confirmed' ORDER BY created_at DESC LIMIT 1"
     )
-    .get(user.email) as { city: string } | undefined;
+    .get(user.email) as { city: string; country: string | null } | undefined;
 
   if (lastReg?.city) {
-    const coords = await geocodeCity(lastReg.city);
+    const coords = await geocodeCity(lastReg.city, { country: lastReg.country });
     if (coords) {
       const latLng = JSON.stringify({ lat: coords.lat, lng: coords.lng, city: lastReg.city });
       db.prepare('UPDATE users SET homeCityLatLng = ? WHERE id = ?').run(latLng, user.id);

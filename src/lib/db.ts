@@ -223,6 +223,12 @@ function initializeSchema(db: Database.Database) {
       fetchedAt INTEGER DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS geocode_failures (
+      query TEXT PRIMARY KEY,
+      attempts INTEGER DEFAULT 1,
+      lastAttemptAt INTEGER DEFAULT (unixepoch())
+    );
+
     CREATE TABLE IF NOT EXISTS leaderboard_cache (
       userId TEXT PRIMARY KEY,
       email TEXT NOT NULL,

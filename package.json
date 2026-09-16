@@ -19,7 +19,8 @@
     "test:report": "npm run test && node tests/write-report.mjs",
     "test:watch": "vitest",
     "perf:lhci": "npx @lhci/cli autorun",
-    "backfill:profile-stats": "node scripts/backfill-profile-stats.mjs"
+    "backfill:profile-stats": "node scripts/backfill-profile-stats.mjs",
+    "warm:geocode": "node scripts/warm-geocode-cache.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.4",
