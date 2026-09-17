@@ -12,11 +12,9 @@ import { test, expect } from '@playwright/test';
  */
 const ALBUM = '/photo-vault/qa-test-album/';
 
-async function waitForLightboxChunk(page: import('@playwright/test').Page) {
+async function waitForLightboxReady(page: import('@playwright/test').Page) {
   await page.waitForFunction(
-    () => performance
-      .getEntriesByType('resource')
-      .some((r) => r.name.includes('glightbox') && !r.name.includes('.css')),
+    () => document.documentElement.dataset.lightboxReady === '1',
     undefined,
     { timeout: 15_000 },
   );
@@ -29,11 +27,12 @@ test.describe('photo vault lightbox', () => {
     const photos = page.locator('a[data-glightbox]');
     await expect(photos).toHaveCount(2);
 
-    // GLightbox binds on a dynamic import and leaves no marker in the DOM — it
-    // attaches listeners to whatever the selector matched and adds no class of
-    // its own. Until that import resolves the anchor is a plain link to the
-    // image file, and clicking navigates away. So wait on the chunk itself.
-    await waitForLightboxChunk(page);
+    // GLightbox binds on a dynamic import and leaves no marker of its own in
+    // the DOM. Until that import resolves the anchor is a plain link to the
+    // image file, and clicking navigates away. `src/lib/lightbox.ts` sets
+    // data-lightbox-ready once the stylesheet has applied and the instance is
+    // built, which is the one point where a click is safe.
+    await waitForLightboxReady(page);
 
     await photos.first().click();
 
@@ -45,7 +44,7 @@ test.describe('photo vault lightbox', () => {
 
   test('the gallery advances and closes', async ({ page }) => {
     await page.goto(ALBUM);
-    await waitForLightboxChunk(page);
+    await waitForLightboxReady(page);
     await page.locator('a[data-glightbox]').first().click();
     await expect(page.locator('.glightbox-container')).toBeVisible();
 

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import 'glightbox/dist/css/glightbox.css';
 import { imageSrcset } from '../lib/imageVariants';
 
 interface DayPhoto {
@@ -34,10 +33,15 @@ export default function DayAccordion({ itinerary, tripName }: Props) {
   useEffect(() => {
     if (!hasPhotos) return;
     let cancelled = false;
-    import('glightbox').then(({ default: GLightbox }) => {
-      if (cancelled) return;
+    import('../lib/lightbox').then(({ default: createLightbox }) =>
+      createLightbox({ selector: '[data-glightbox]', touchNavigation: true, loop: true }),
+    ).then((instance) => {
+      if (cancelled) {
+        instance?.destroy?.();
+        return;
+      }
       lightbox.current?.destroy?.();
-      lightbox.current = GLightbox({ selector: '[data-glightbox]', touchNavigation: true, loop: true });
+      lightbox.current = instance;
     });
     return () => {
       cancelled = true;
