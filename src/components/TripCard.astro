@@ -36,6 +36,15 @@ interface Props {
    * lazy, which is right for them and wrong for that one.
    */
   priority?: boolean;
+  /**
+   * Hold this card's cover out of the network until the page's priority image
+   * has finished, then load it on approach. `loading="lazy"` alone does not do
+   * this: Chrome's lazy threshold *widens* on a slow connection, so on /trips/
+   * the below-fold covers get fetched during the initial load and take
+   * bandwidth from the very image they are meant to yield to. Promoted by the
+   * observer in BaseLayout.astro.
+   */
+  defer?: boolean;
 }
 
 const {
@@ -59,10 +68,13 @@ const {
   departures = [],
   sizes = TRIP_GRID_SIZES,
   priority = false,
+  defer = false,
 } = Astro.props;
 
 const tripName = title || name || slug;
 const img = coverImage || featuredImage || FALLBACK_HERO;
+const imgSrcset = imageSrcset(img);
+const coverClass = 'h-full w-full object-cover transition-transform duration-700 group-hover:scale-105';
 const cardImageAlt = `${tripName} group trip${location && !tripName.toLowerCase().includes(location.toLowerCase()) ? ` in ${location}` : ''}`;
 
 const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : null;
@@ -85,17 +97,34 @@ const departureSummary = getDepartureSummary(departures);
     <a href={`/trips/${slug}/`} class="block h-full">
       <img
         data-skeleton-image
-        src={img}
-        srcset={imageSrcset(img)}
+        src={defer ? undefined : img}
+        srcset={defer ? undefined : imgSrcset}
+        data-defer-src={defer ? img : undefined}
+        data-defer-srcset={defer ? imgSrcset : undefined}
         sizes={sizes}
         alt={cardImageAlt}
         width="800"
         height="600"
-        class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        class={coverClass}
         loading={priority ? 'eager' : 'lazy'}
         fetchpriority={priority ? 'high' : undefined}
         decoding="async"
       />
+      {defer && (
+        <noscript>
+          <img
+            src={img}
+            srcset={imgSrcset}
+            sizes={sizes}
+            alt={cardImageAlt}
+            width="800"
+            height="600"
+            class={coverClass}
+            loading="lazy"
+            decoding="async"
+          />
+        </noscript>
+      )}
     </a>
     {duration && (
       <span
