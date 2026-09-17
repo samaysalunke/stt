@@ -3,7 +3,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { readAlbum, isAlbumPublic } from '../../lib/content';
 import { buildBreadcrumb } from '../../lib/breadcrumbs';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
-import 'glightbox/dist/css/glightbox.css';
 
 export const prerender = false;
 
@@ -138,7 +137,7 @@ const albumSchema = {
   });
 
   // GLightbox
-  import('glightbox').then(({ default: GLightbox }) => {
-    GLightbox({ selector: '[data-glightbox]', touchNavigation: true, loop: true, autoplayVideos: false });
+  import('../../lib/lightbox').then(({ default: createLightbox }) => {
+    createLightbox({ selector: '[data-glightbox]', touchNavigation: true, loop: true, autoplayVideos: false });
   });
 </script>
