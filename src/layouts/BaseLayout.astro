@@ -95,10 +95,17 @@ const orgSchema = {
     {settings.bingSiteVerification && <meta name="msvalidate.01" content={settings.bingSiteVerification} />}
 
     {/* Self-hosted; @font-face and the reasoning live in src/styles/fonts.css.
-        Only the two latin faces that render above the fold are preloaded —
-        latin-ext stays lazy behind its unicode-range. */}
+        Only the body face is preloaded, and latin-ext stays lazy behind its
+        unicode-range.
+
+        Fraunces is deliberately NOT preloaded. A preload is a high-priority
+        request, so its 66 KiB went out ahead of the LCP card cover on /trips/
+        and took bandwidth from it on a connection that has little to spare —
+        the display face is not what the page is waiting to show. It still
+        arrives on its own, and `font-display: swap` means headings paint in
+        the fallback until it does. That swap is the cost of this: headings
+        reflow once on a cold load where previously they did not. */}
     <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin />
-    <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-latin.woff2" crossorigin />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -220,7 +227,10 @@ const orgSchema = {
             reveal();
             return;
           }
-          if (image.complete) reveal();
+          // An <img> with no src reports complete === true, so a cover held
+          // back by data-defer-src would drop its skeleton immediately and
+          // show an empty box. Wait for the promoted load instead.
+          if (image.complete && !image.hasAttribute('data-defer-src')) reveal();
           else {
             image.addEventListener('load', reveal, { once: true });
             image.addEventListener('error', reveal, { once: true });
@@ -231,22 +241,31 @@ const orgSchema = {
       };
       initializeCardSkeletons();
 
-      // Images held back by DeferredImage.astro.
+      // Images held back by DeferredImage.astro and by TripCard's `defer`.
       //
-      // These are gallery photos a few hundred pixels below the fold, so
-      // Chrome's own lazy threshold (~1250px) fetches them during the initial
-      // load — correctly, by spec. The problem is not distance, it is that on
-      // /trips/[slug] they put ~1.6MB into the network while the LCP hero is
-      // still downloading, and the hero loses the bandwidth race badly.
+      // These sit a few hundred pixels below the fold, so Chrome's own lazy
+      // threshold (~1250px, and wider still on a slow connection) fetches them
+      // during the initial load — correctly, by spec. The problem is not
+      // distance, it is that they put megabytes into the network while the LCP
+      // image is still downloading, and it loses the bandwidth race badly:
+      // 1.6MB of gallery photos on /trips/[slug], 238 KiB of card covers on
+      // /trips/.
       //
-      // So the gate is the hero, not a tighter margin: nothing deferred starts
-      // until the priority image has finished, after which a generous margin
-      // keeps scrolling smooth.
+      // So the gate is the priority image, not a tighter margin: nothing
+      // deferred starts until that image has finished, after which a generous
+      // margin keeps scrolling smooth.
       const deferredImages = document.querySelectorAll<HTMLImageElement>('img[data-defer-src]');
       if (deferredImages.length) {
         const loadDeferred = (img: HTMLImageElement) => {
           const src = img.dataset.deferSrc;
           if (!src) return;
+          // srcset first, so candidate selection happens with the full list in
+          // place: TripCard defers responsive covers, not just a bare src.
+          const srcset = img.dataset.deferSrcset;
+          if (srcset) {
+            img.srcset = srcset;
+            img.removeAttribute('data-defer-srcset');
+          }
           img.src = src;
           img.removeAttribute('data-defer-src');
         };

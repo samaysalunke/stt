@@ -54,10 +54,13 @@ const listingSchema = {
           {trips.map((trip, i) => {
             const card = tripCardSummary(trip);
             // The first card's cover is this page's LCP element, so it is the
-            // one image here that must not be lazy. The rest stay lazy.
+            // one image here that must not be lazy. The rest are not merely
+            // lazy: they are held back until that cover has loaded, because
+            // lazy alone still lets them race it for bandwidth.
             return (
               <TripCard
                 priority={i === 0}
+                defer={i > 0}
                 slug={trip.slug}
                 title={trip.title}
                 name={trip.name}

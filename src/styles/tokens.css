@@ -220,6 +220,16 @@ html.card-skeletons-active [data-card-skeleton]:not([data-skeleton-ready])::afte
   }
 }
 
+/* A deferred image carries no src until the observer in BaseLayout promotes
+   it, which never happens without JavaScript. Inside a fixed-ratio slot the
+   empty box still fills the slot and pushes the <noscript> copy — the one
+   carrying the real src — out of the clipped overflow, so a no-JS visitor sees
+   no cover at all. Take it out of the flow instead, keyed on the same
+   "JS ran" class the skeletons use. */
+html:not(.card-skeletons-active) img[data-defer-src] {
+  display: none;
+}
+
 @layer base {
   html {
     font-family: var(--font-sans);
