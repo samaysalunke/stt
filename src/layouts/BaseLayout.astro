@@ -95,10 +95,17 @@ const orgSchema = {
     {settings.bingSiteVerification && <meta name="msvalidate.01" content={settings.bingSiteVerification} />}
 
     {/* Self-hosted; @font-face and the reasoning live in src/styles/fonts.css.
-        Only the two latin faces that render above the fold are preloaded —
-        latin-ext stays lazy behind its unicode-range. */}
+        Only the body face is preloaded, and latin-ext stays lazy behind its
+        unicode-range.
+
+        Fraunces is deliberately NOT preloaded. A preload is a high-priority
+        request, so its 66 KiB went out ahead of the LCP card cover on /trips/
+        and took bandwidth from it on a connection that has little to spare —
+        the display face is not what the page is waiting to show. It still
+        arrives on its own, and `font-display: swap` means headings paint in
+        the fallback until it does. That swap is the cost of this: headings
+        reflow once on a cold load where previously they did not. */}
     <link rel="preload" as="font" type="font/woff2" href="/fonts/manrope-latin.woff2" crossorigin />
-    <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-latin.woff2" crossorigin />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />

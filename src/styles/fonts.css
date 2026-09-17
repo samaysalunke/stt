@@ -7,8 +7,11 @@
  *
  * Serving them from our own origin puts the declarations in the app's own CSS
  * bundle, so the blocking third-party round trip disappears entirely and the
- * files land behind the same edge cache and 1-year immutable TTL as the rest of
- * /fonts.
+ * files land behind our own edge cache.
+ *
+ * Note that the TTL is Cloudflare's 4-hour default, not the 1-year immutable
+ * one this comment used to claim: nothing under public/ is sent with a
+ * Cache-Control header at all. Worth fixing, but on repeat visits only.
  *
  * Both families are VARIABLE fonts: one file covers the whole weight range
  * (Fraunces 400–900, Manrope 200–800) instead of a file per weight.
