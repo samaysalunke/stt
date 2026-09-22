@@ -122,30 +122,89 @@ const orgSchema = {
       HTML response itself, which cannot coexist with edge caching — see the
       comment in src/pages/api/attribution.ts. Fires once per session (not per
       pageview) via a sessionStorage flag, and only on public pages.
+
+      Two things the session flag alone got wrong for campaign traffic:
+
+      - A landing that carries campaign params is always worth sending, even
+        when this tab has already reported one. Otherwise a visitor who arrives
+        direct and then opens a DM link in the same tab is recorded as direct
+        and the campaign is never seen at all.
+      - The httpOnly cookie is the only copy the server holds, and it is the
+        copy that gets cleared. The effective first touch is mirrored into
+        localStorage and replayed on the next visit, so a lost cookie costs a
+        90-day window rather than the whole attribution. The cookie still wins
+        when it exists; the replay only refills an empty one.
     -->
     <script is:inline>
       (function () {
+        var MIRROR = 'stt_first_touch';
         try {
-          if (sessionStorage.getItem('stt_attr') === '1') return;
           var p = location.pathname;
           if (p.indexOf('/admin') === 0 || p.indexOf('/api') === 0) return;
+
+          // Identifies the campaign on this landing, '' when there is none. A
+          // second campaign in the same tab has a different signature and is
+          // therefore reported; a plain pageview is not.
+          var q = new URLSearchParams(location.search);
+          var sig = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'subscriber_id', 'sub_id']
+            .map(function (k) { return q.get(k) || ''; }).join('|');
+          if (!/[^|]/.test(sig)) sig = '';
+
+          if (sig ? sessionStorage.getItem('stt_attr_campaign') === sig
+                  : sessionStorage.getItem('stt_attr') === '1') return;
+
+          var mirrored = null;
+          try { mirrored = JSON.parse(localStorage.getItem(MIRROR) || 'null'); } catch (e) {}
+
           var body = JSON.stringify({
             landingPage: p,
             search: location.search,
             referrer: document.referrer,
+            firstTouch: mirrored,
           });
-          var done = function () { try { sessionStorage.setItem('stt_attr', '1'); } catch (e) {} };
-          if (navigator.sendBeacon &&
-              navigator.sendBeacon('/api/attribution', new Blob([body], { type: 'application/json' }))) {
-            done();
-          } else {
-            fetch('/api/attribution', {
+          var done = function () {
+            try {
+              sessionStorage.setItem('stt_attr', '1');
+              if (sig) sessionStorage.setItem('stt_attr_campaign', sig);
+            } catch (e) {}
+          };
+
+          // The touch matters more than the mirror, so a failed or unavailable
+          // fetch still reports through the beacon — it just cannot read the
+          // echo back.
+          var beacon = function () {
+            try {
+              if (navigator.sendBeacon &&
+                  navigator.sendBeacon('/api/attribution', new Blob([body], { type: 'application/json' }))) {
+                done();
+              }
+            } catch (e) {}
+          };
+
+          // fetch over sendBeacon on the happy path: keepalive gives the same
+          // survives-the-unload guarantee, and unlike a beacon it hands back the
+          // first touch the server settled on, which is what the mirror stores.
+          var sent = null;
+          try {
+            sent = fetch('/api/attribution', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: body,
               keepalive: true,
-            }).then(function (r) { if (r.ok) done(); }).catch(function () {});
-          }
+            });
+          } catch (e) { /* no fetch — fall through to the beacon */ }
+
+          if (!sent) { beacon(); return; }
+
+          sent.then(function (r) {
+            return r.ok ? r.json() : null;
+          }).then(function (data) {
+            if (!data || !data.success) return;
+            done();
+            if (data.firstTouch) {
+              try { localStorage.setItem(MIRROR, JSON.stringify(data.firstTouch)); } catch (e) {}
+            }
+          }).catch(beacon);
         } catch (e) { /* attribution is best-effort */ }
       })();
     </script>

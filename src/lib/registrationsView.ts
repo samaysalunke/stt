@@ -180,6 +180,10 @@ export const ATTRIBUTION_FIELDS: readonly AttributionField[] = [
   // would be one option per row.
   touchField({ key: 'utmContent', param: 'utm_content', label: 'UTM content', match: 'contains', touchKey: 'utmContent' }),
   touchField({ key: 'utmTerm', param: 'utm_term', label: 'UTM term', match: 'contains', touchKey: 'utmTerm' }),
+  // One value per person rather than per campaign, so free text: a dropdown
+  // here would be one option per row. Searched, not browsed — the question it
+  // answers is "which DM conversation produced this booking".
+  touchField({ key: 'subscriberId', param: 'subscriber_id', label: 'DM subscriber', match: 'contains', touchKey: 'subscriberId' }),
   touchField({ key: 'landingPage', param: 'landing_page', label: 'Landing page', match: 'contains', touchKey: 'landingPage' }),
   touchField({ key: 'referrer', param: 'referrer', label: 'Referrer', match: 'contains', touchKey: 'referrer' }),
 ];

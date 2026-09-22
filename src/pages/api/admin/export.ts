@@ -21,6 +21,10 @@ const ATTRIBUTION_COLUMNS = {
   utm_source: 'utmSource', utm_medium: 'utmMedium', utm_campaign: 'utmCampaign',
   utm_term: 'utmTerm', utm_content: 'utmContent',
   landing_page: 'landingPage', referrer: 'referrer',
+  // Appended rather than filed next to the UTMs: a spreadsheet built against
+  // this download reads by position often enough that inserting a column in the
+  // middle is the more expensive choice.
+  subscriber_id: 'subscriberId',
 } as const;
 
 function flattenAttribution(row: Record<string, any>): Record<string, any> {

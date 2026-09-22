@@ -10,10 +10,31 @@ export interface AttributionTouch {
   utmCampaign: string;
   utmTerm: string;
   utmContent: string;
+  /**
+   * The DM-automation subscriber the link was sent to, when the flow appends
+   * one. UTMs answer "which reel", this answers "which conversation" — it is
+   * what joins a booking on the site back to the exact Instagram thread that
+   * produced it. Purely a foreign key into the DM tool; we never derive a
+   * channel from it.
+   */
+  subscriberId: string;
   capturedAt: string;
 }
 
+/** Params a DM flow may carry the subscriber in, in precedence order. The tool
+ *  chooses the name when it builds the link, so accept both spellings rather
+ *  than making the flow match ours exactly. */
+const SUBSCRIBER_PARAMS = ['subscriber_id', 'sub_id'] as const;
+
 const clean = (value: unknown) => String(value ?? '').trim().slice(0, MAX_VALUE);
+
+const firstParam = (url: URL, names: readonly string[]) => {
+  for (const name of names) {
+    const value = clean(url.searchParams.get(name));
+    if (value) return value;
+  }
+  return '';
+};
 
 export function attributionFromRequest(url: URL, request: Request): AttributionTouch {
   return {
@@ -24,6 +45,7 @@ export function attributionFromRequest(url: URL, request: Request): AttributionT
     utmCampaign: clean(url.searchParams.get('utm_campaign')),
     utmTerm: clean(url.searchParams.get('utm_term')),
     utmContent: clean(url.searchParams.get('utm_content')),
+    subscriberId: firstParam(url, SUBSCRIBER_PARAMS),
     capturedAt: new Date().toISOString(),
   };
 }
@@ -46,22 +68,60 @@ export function sameOriginLandingPath(value: string): string {
 }
 
 export function hasCampaignTouch(touch: AttributionTouch, siteOrigin: string): boolean {
-  if (touch.utmSource || touch.utmMedium || touch.utmCampaign) return true;
+  if (touch.utmSource || touch.utmMedium || touch.utmCampaign || touch.subscriberId) return true;
   if (!touch.referrer) return false;
   try { return new URL(touch.referrer).origin !== siteOrigin; } catch { return false; }
+}
+
+function touchFromObject(parsed: any): AttributionTouch {
+  return {
+    landingPage: clean(parsed?.landingPage), referrer: clean(parsed?.referrer),
+    utmSource: clean(parsed?.utmSource), utmMedium: clean(parsed?.utmMedium),
+    utmCampaign: clean(parsed?.utmCampaign), utmTerm: clean(parsed?.utmTerm),
+    utmContent: clean(parsed?.utmContent), subscriberId: clean(parsed?.subscriberId),
+    capturedAt: clean(parsed?.capturedAt),
+  };
 }
 
 function parseTouch(raw: string | undefined): AttributionTouch | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return {
-      landingPage: clean(parsed.landingPage), referrer: clean(parsed.referrer),
-      utmSource: clean(parsed.utmSource), utmMedium: clean(parsed.utmMedium),
-      utmCampaign: clean(parsed.utmCampaign), utmTerm: clean(parsed.utmTerm),
-      utmContent: clean(parsed.utmContent), capturedAt: clean(parsed.capturedAt),
-    };
+    // `null` is a valid JSON document and a stored "no touch": it must read as
+    // absent, not as a touch whose every field happens to be blank.
+    if (!parsed || typeof parsed !== 'object') return null;
+    return touchFromObject(parsed);
   } catch { return null; }
+}
+
+/**
+ * Validate a first touch the PAGE hands back — the localStorage mirror the
+ * capture beacon replays when the cookie is gone (see POST /api/attribution).
+ *
+ * Everything here is attacker-controlled, so nothing is taken on trust: fields
+ * are clamped like a cookie's, the landing page is forced back onto our own
+ * origin, and `capturedAt` must be a real, non-future timestamp — a replay that
+ * could claim tomorrow's date would outrank every genuine touch in any
+ * chronological report. A touch carrying no campaign signal and no referrer is
+ * rejected too: it restores nothing the current visit doesn't already know, and
+ * accepting it would let a page pin a visitor's first touch to a blank.
+ */
+export function restoreTouch(value: unknown, now: Date = new Date()): AttributionTouch | null {
+  if (!value || typeof value !== 'object') return null;
+  const touch = touchFromObject(value);
+
+  const capturedAt = Date.parse(touch.capturedAt);
+  if (!Number.isFinite(capturedAt) || capturedAt > now.getTime()) return null;
+
+  const carriesSignal = touch.utmSource || touch.utmMedium || touch.utmCampaign
+    || touch.utmTerm || touch.utmContent || touch.subscriberId || touch.referrer;
+  if (!carriesSignal) return null;
+
+  return {
+    ...touch,
+    landingPage: touch.landingPage ? sameOriginLandingPath(touch.landingPage) : '',
+    capturedAt: new Date(capturedAt).toISOString(),
+  };
 }
 
 export function readAttribution(cookies: { get(name: string): { value: string } | undefined }) {

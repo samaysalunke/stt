@@ -133,6 +133,9 @@ const attributionFields = [
   field('Medium', firstTouch?.utmMedium),
   field('Term', firstTouch?.utmTerm),
   field('Content', firstTouch?.utmContent),
+  // The join back to the DM thread this booking started in, when the flow's
+  // link carried one.
+  field('DM subscriber', firstTouch?.subscriberId),
   // Referrer is filterable on the trip page, so it belongs on the booking too.
   wideField('Referrer', firstTouch?.referrer),
   wideField('First landing page', firstTouch?.landingPage),
