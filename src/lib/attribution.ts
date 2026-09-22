@@ -2,6 +2,11 @@ const FIRST_TOUCH_COOKIE = 'stt_first_touch';
 const LATEST_TOUCH_COOKIE = 'stt_latest_touch';
 const MAX_VALUE = 500;
 
+/** How long a touch is kept. The cookie's max-age and the oldest replay the
+ *  page may restore are the same number on purpose: the mirror exists to
+ *  survive the cookie, not to outlive the retention window /privacy states. */
+export const ATTRIBUTION_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+
 export interface AttributionTouch {
   landingPage: string;
   referrer: string;
@@ -100,18 +105,23 @@ function parseTouch(raw: string | undefined): AttributionTouch | null {
  *
  * Everything here is attacker-controlled, so nothing is taken on trust: fields
  * are clamped like a cookie's, the landing page is forced back onto our own
- * origin, and `capturedAt` must be a real, non-future timestamp — a replay that
- * could claim tomorrow's date would outrank every genuine touch in any
- * chronological report. A touch carrying no campaign signal and no referrer is
- * rejected too: it restores nothing the current visit doesn't already know, and
- * accepting it would let a page pin a visitor's first touch to a blank.
+ * origin, and `capturedAt` must be a real timestamp inside the retention
+ * window. Both ends of that window matter. A replay claiming tomorrow's date
+ * would outrank every genuine touch in any chronological report; one claiming a
+ * date two years back would make first touch immortal, because localStorage has
+ * no expiry of its own and each restore rewrites the cookie. Expiring the replay
+ * on the same 90 days as the cookie is what keeps the retention window /privacy
+ * promises true. A touch carrying no campaign signal and no referrer is rejected
+ * too: it restores nothing the current visit doesn't already know, and accepting
+ * it would let a page pin a visitor's first touch to a blank.
  */
 export function restoreTouch(value: unknown, now: Date = new Date()): AttributionTouch | null {
   if (!value || typeof value !== 'object') return null;
   const touch = touchFromObject(value);
 
   const capturedAt = Date.parse(touch.capturedAt);
-  if (!Number.isFinite(capturedAt) || capturedAt > now.getTime()) return null;
+  const age = now.getTime() - capturedAt;
+  if (!Number.isFinite(capturedAt) || age < 0 || age > ATTRIBUTION_MAX_AGE_MS) return null;
 
   const carriesSignal = touch.utmSource || touch.utmMedium || touch.utmCampaign
     || touch.utmTerm || touch.utmContent || touch.subscriberId || touch.referrer;

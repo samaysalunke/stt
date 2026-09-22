@@ -162,16 +162,27 @@ const orgSchema = {
             referrer: document.referrer,
             firstTouch: mirrored,
           });
+          // Marked reported as soon as the request LEAVES, never on the response.
+          // sendBeacon used to set this synchronously; waiting for the response
+          // means a visitor who bounces before it arrives re-POSTs on every
+          // later pageview, and the endpoint allows 20 an hour per IP — on a
+          // shared mobile IP that budget is what a real campaign landing needs.
+          var reported = false;
           var done = function () {
+            if (reported) return;
+            reported = true;
             try {
               sessionStorage.setItem('stt_attr', '1');
               if (sig) sessionStorage.setItem('stt_attr_campaign', sig);
             } catch (e) {}
           };
 
-          // The touch matters more than the mirror, so a failed or unavailable
-          // fetch still reports through the beacon — it just cannot read the
-          // echo back.
+          // Only for a browser without fetch. It is deliberately NOT a retry for
+          // a fetch that failed: keepalive already carries the request through
+          // the unload, so a rejection here is either a dead network, where a
+          // beacon to the same endpoint fares no better, or a navigation that
+          // aborted a request the server may well have received — and a retry
+          // there is a second post per bounce, against a 20/hour budget.
           var beacon = function () {
             try {
               if (navigator.sendBeacon &&
@@ -195,16 +206,17 @@ const orgSchema = {
           } catch (e) { /* no fetch — fall through to the beacon */ }
 
           if (!sent) { beacon(); return; }
+          done();
 
+          // The echo only comes back on the visit that actually wrote the
+          // cookie, which is the visit the mirror needs to record. Later visits
+          // answer without it and leave the stored mirror alone.
           sent.then(function (r) {
             return r.ok ? r.json() : null;
           }).then(function (data) {
-            if (!data || !data.success) return;
-            done();
-            if (data.firstTouch) {
-              try { localStorage.setItem(MIRROR, JSON.stringify(data.firstTouch)); } catch (e) {}
-            }
-          }).catch(beacon);
+            if (!data || !data.firstTouch) return;
+            try { localStorage.setItem(MIRROR, JSON.stringify(data.firstTouch)); } catch (e) {}
+          }).catch(function () { /* the touch was already sent; only the mirror is lost */ });
         } catch (e) { /* attribution is best-effort */ }
       })();
     </script>

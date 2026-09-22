@@ -2,8 +2,8 @@ import type { APIRoute } from 'astro';
 import { rateLimit } from '../../lib/rateLimit';
 import { SITE_ORIGIN } from '../../lib/siteUrl';
 import {
-  attributionCookieNames, attributionFromRequest, hasCampaignTouch, readAttribution,
-  restoreTouch, sameOriginLandingPath,
+  ATTRIBUTION_MAX_AGE_MS, attributionCookieNames, attributionFromRequest, hasCampaignTouch,
+  readAttribution, restoreTouch, sameOriginLandingPath,
 } from '../../lib/attribution';
 
 // Server-rendered endpoint (sets cookies) — never prerender.
@@ -72,7 +72,7 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
     const cookieOptions = {
       path: '/', httpOnly: true, sameSite: 'lax' as const,
-      secure: import.meta.env.PROD, maxAge: 60 * 60 * 24 * 90,
+      secure: import.meta.env.PROD, maxAge: ATTRIBUTION_MAX_AGE_MS / 1000,
     };
 
     // Same guards the middleware applied: first-touch is written once and never
@@ -95,10 +95,14 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
       cookies.set(attributionCookieNames.latest, JSON.stringify(touch), cookieOptions);
     }
 
-    // Echo the first touch back so the page can keep its mirror in step — and
-    // so a visitor who still has the cookie but lost localStorage gets the
-    // mirror rebuilt from the cookie, rather than from this visit.
-    return new Response(JSON.stringify({ success: true, firstTouch }), {
+    // The echo exists so the page can mirror what was just written, so it is
+    // sent ONLY on the visit that wrote it. Echoing a cookie we already hold
+    // would hand a stored first touch — landing page, referrer, campaign, the
+    // DM subscriber — to any script on the page for the price of an empty POST,
+    // which is exactly what httpOnly is there to prevent. Nothing is lost: the
+    // mirror is written the moment the cookie is, and a visitor who still has
+    // the cookie has nothing to restore.
+    return new Response(JSON.stringify({ success: true, ...(stored ? {} : { firstTouch }) }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });

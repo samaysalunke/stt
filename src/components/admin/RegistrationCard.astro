@@ -134,8 +134,14 @@ const attributionFields = [
   field('Term', firstTouch?.utmTerm),
   field('Content', firstTouch?.utmContent),
   // The join back to the DM thread this booking started in, when the flow's
-  // link carried one.
+  // link carried one. Shown from the latest touch as well: every filter and
+  // every export column reads the FIRST touch, so a traveller who found us some
+  // other way and only later came through a DM has the conversation reference
+  // nowhere else on the page.
   field('DM subscriber', firstTouch?.subscriberId),
+  ...(latestTouch?.subscriberId && latestTouch.subscriberId !== firstTouch?.subscriberId
+    ? [field('DM subscriber (latest)', latestTouch.subscriberId)]
+    : []),
   // Referrer is filterable on the trip page, so it belongs on the booking too.
   wideField('Referrer', firstTouch?.referrer),
   wideField('First landing page', firstTouch?.landingPage),

@@ -72,8 +72,10 @@ test('a second campaign in the same tab is still reported', async ({ page, conte
   await mirror(page);
 
   // Same tab, so the once-per-session flag is already set. A campaign landing
-  // has to get through it anyway — this is the visitor who browsed first and
-  // opened the DM link second, and before this they counted as direct.
+  // has to get through it anyway — this is the visitor who browsed the site
+  // first and opened the DM link second, whose campaign was previously never
+  // recorded at all. First touch still belongs to the direct visit that
+  // actually found them; what this rescues is the latest touch.
   await page.goto(DM_LINK);
 
   await expect
@@ -83,4 +85,27 @@ test('a second campaign in the same tab is still reported', async ({ page, conte
   expect((await touchCookie(context, 'stt_latest_touch')).subscriberId).toBe('ig-88421');
   // First touch still belongs to the visit that actually found them.
   expect((await touchCookie(context, 'stt_first_touch')).utmCampaign).toBe('');
+});
+
+// The endpoint allows 20 posts an hour per IP, and mobile visitors share IPs.
+// A flag set on the response rather than on the request means a visitor who
+// bounces before the response lands re-posts on every later pageview and can
+// burn that budget — after which a real campaign landing gets a 429 and is
+// dropped, which is the loss this whole change exists to prevent.
+test('a visitor who leaves before the response does not re-post on every page', async ({ page }) => {
+  let posts = 0;
+  await page.route('**/api/attribution', async (route) => {
+    posts++;
+    // Hold the response open past the navigation, so the page is gone before
+    // any answer could arrive.
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    try { await route.continue(); } catch { /* the page navigated away */ }
+  });
+
+  await page.goto('/trips/qa-test-bookable/');
+  await page.goto('/trips/', { waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2_500);
+
+  expect(posts).toBe(1);
 });

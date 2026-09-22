@@ -29,7 +29,7 @@ booking.
 | Layer | Written by | Covers | Loses |
 | --- | --- | --- | --- |
 | `stt_first_touch` / `stt_latest_touch` cookies, 90 days, httpOnly | `POST /api/attribution` | Everything in the same browser for 90 days | Cleared cookies, another browser |
-| localStorage mirror (`stt_first_touch`) | the capture script in `BaseLayout.astro` | The cookie expiring or being cleared — the next visit replays it and the cookie is refilled | Another browser |
+| localStorage mirror (`stt_first_touch`) | the capture script in `BaseLayout.astro`, on the visit that writes the cookie | The cookie expiring or being cleared — the next visit replays it and the cookie is refilled, for up to the same 90 days | Another browser |
 | `first_touch_json` / `latest_touch_json` on the row | `/api/register`, `/api/leads`, `/api/wishlist`, `/api/newsletter` | Permanently, once the form is submitted — this is the copy that joins to revenue | Nothing; it is a snapshot at submit time |
 | `subscriber_id` on the link | the DM flow | The hop to a different browser, because it identifies the conversation rather than the device | Flows that do not append it |
 
@@ -94,6 +94,16 @@ Both are one manual DM to check, and both are cheap to get wrong silently.
 
 ## Known limits
 
+- **Every filter, the chip and every CSV column read the FIRST touch.** That is
+  deliberate — a later campaign must not take credit for the visit that actually
+  found someone — but it has a consequence worth knowing when reading these
+  reports: a traveller who arrived some other way and only later came through a
+  DM has the campaign and the subscriber id in their *latest* touch only. They
+  will not appear under a campaign filter, their `subscriber_id` export column
+  is blank, and their chip reads by their original channel. The booking's
+  attribution block shows both touches, so the conversation reference is still
+  there to read per booking. Making the latest touch filterable is a separate
+  decision, not a bug fix — it changes what "campaign = goa-sept" means.
 - A first visit with JavaScript disabled records no touch at all. The capture
   moved off the HTML response so it could survive edge caching; see the comment
   at the top of `src/pages/api/attribution.ts`.
@@ -101,5 +111,11 @@ Both are one manual DM to check, and both are cheap to get wrong silently.
   one — the page cannot read an httpOnly cookie, so it cannot tell that it went
   missing.
 - A replayed mirror is only trusted when it carries a campaign or a referrer and
-  a real, non-future timestamp. Anything else is discarded and the current visit
-  stands.
+  a real timestamp inside the 90-day window. Anything else — junk, a future
+  date, a touch older than the window — is discarded and the current visit
+  stands. First touch therefore expires on schedule rather than living forever
+  in localStorage.
+- The mirror is written from the server's echo, and the echo is only sent on the
+  visit that writes the cookie. A visitor who clears localStorage but keeps the
+  cookie does not get a new mirror; the alternative was handing a stored first
+  touch to any script on the page for the price of an empty POST.

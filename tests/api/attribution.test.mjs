@@ -293,8 +293,11 @@ test('a mirror can neither overwrite a live cookie nor forge a touch', async () 
   // not move it — the cookie is the source of truth for conversions.
   const forged = { ...live.firstTouch, utmSource: 'not-instagram', utmCampaign: 'forged' };
   const second = await captureRaw({ firstTouch: forged, cookie: live.cookie });
-  assert.equal(second.firstTouch.utmCampaign, 'genuine', 'a live cookie must outrank the mirror');
   assert.ok(!second.cookie.includes('stt_first_touch='), 'an existing first touch must not be rewritten');
+  // And the stored touch is not handed back either: the echo is for the visit
+  // that wrote the cookie. Otherwise any script on the page could read what
+  // httpOnly hides, for the price of an empty POST.
+  assert.equal(second.firstTouch, undefined, 'a held first touch must not be echoed to the page');
 
   // A replay dated in the future would outrank every genuine touch in any
   // chronological report, so it is refused outright and this visit stands.
@@ -303,4 +306,12 @@ test('a mirror can neither overwrite a live cookie nor forge a touch', async () 
     firstTouch: { ...live.firstTouch, capturedAt: new Date(Date.now() + 864e5).toISOString() },
   });
   assert.equal(future.firstTouch.utmCampaign, 'this-visit', 'a future-dated replay must be refused');
+
+  // localStorage has no expiry of its own, so without an age bound a mirror
+  // would make first touch immortal — past the 90 days /privacy promises.
+  const stale = await captureRaw({
+    search: utm({ source: 'google', campaign: 'this-visit-too' }),
+    firstTouch: { ...live.firstTouch, capturedAt: new Date(Date.now() - 91 * 864e5).toISOString() },
+  });
+  assert.equal(stale.firstTouch.utmCampaign, 'this-visit-too', 'a replay older than the window must be refused');
 });

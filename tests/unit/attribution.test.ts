@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ATTRIBUTION_MAX_AGE_MS,
   attributionCookieNames,
   attributionFromRequest,
   attributionSource,
@@ -102,6 +103,18 @@ describe('conversion attribution', () => {
       expect(restoreTouch({ ...mirror, capturedAt: '' }, now)).toBeNull();
       expect(restoreTouch({ ...mirror, capturedAt: 'whenever' }, now)).toBeNull();
       expect(restoreTouch({ ...mirror, capturedAt: '2026-09-23T00:00:00.000Z' }, now)).toBeNull();
+    });
+
+    // localStorage never expires on its own and every restore rewrites the
+    // cookie, so without this the first touch would outlive the window the
+    // privacy page states.
+    it('expires a replay on the same 90 days as the cookie', () => {
+      const at = (capturedAt: string) => restoreTouch({ ...mirror, capturedAt }, now);
+      const daysAgo = (n: number) => new Date(now.getTime() - n * 864e5).toISOString();
+
+      expect(at(daysAgo(89))).not.toBeNull();
+      expect(at(daysAgo(91))).toBeNull();
+      expect(ATTRIBUTION_MAX_AGE_MS).toBe(90 * 864e5);
     });
 
     it('scrubs a hostile replay instead of storing it', () => {
