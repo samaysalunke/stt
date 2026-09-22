@@ -7,6 +7,9 @@ import {
   attributionFilterModels,
   clientAttributionFields,
   UNATTRIBUTED,
+  TOUCH_SCOPES,
+  TOUCH_SCOPE_LABELS,
+  DEFAULT_TOUCH_SCOPE,
   NON_REVENUE_STATUSES,
   type RegTrip,
   type RegDeparture,
@@ -142,6 +145,18 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         <details id="attr-panel" class="attr-filter">
           <summary>Attribution <span id="attr-count" class="attr-count"></span></summary>
           <div class="attr-grid">
+            {/*
+              Which stored touch every control below reads. First touch is the
+              default and the meaning every existing link and bookmark carries;
+              the channel filter is written from the first touch at registration
+              and does not move with it.
+            */}
+            <label class="attr-field">
+              <span>Touch</span>
+              <select id="filter-attr-scope">
+                {TOUCH_SCOPES.map((s) => <option value={s}>{TOUCH_SCOPE_LABELS[s]}</option>)}
+              </select>
+            </label>
             {attrFilters.map(({ field, options, hasNone }) => (
               <label class="attr-field">
                 <span>{field.label}</span>
@@ -330,12 +345,21 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   @media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr)}.toolbar{position:static}.toolbar-row{align-items:stretch;flex-direction:column}}
 </style>
 
-<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS, NON_REVENUE_STATUSES, UNATTRIBUTED, attrClientFields }}>
+<script define:vars={{ depStatsMap, allDepStats, tripSlug: trip.slug, PAYMENT_OPTIONS, PAYMENT_STATUS_COLORS, PAYMENT_STATUS_LABELS, REG_STATUS_COLORS, NON_REVENUE_STATUSES, UNATTRIBUTED, DEFAULT_TOUCH_SCOPE, attrClientFields }}>
   // Attribution filter plumbing. Every site that touches these fields loops the
   // same server-built list, so adding a dimension needs no change here.
   // Read the attribute by name rather than through dataset: HTML lowercases
   // attribute names, so any camelCase dataset lookup silently misses.
-  const attrRowValue = (row, f) => row.getAttribute('data-' + f.dataAttr) || '';
+  const attrRowValue = (row, attr) => row.getAttribute('data-' + attr) || '';
+  /** The row's value(s) for one field under the selected touch scope — the
+   *  hand-written mirror of scopedReaders() in registrationsView.ts. */
+  const attrRowValues = (row, f, scope) => (
+    scope === 'latest' ? [attrRowValue(row, f.latestDataAttr)]
+    : scope === 'either' ? [attrRowValue(row, f.dataAttr), attrRowValue(row, f.latestDataAttr)]
+    : [attrRowValue(row, f.dataAttr)]
+  );
+  const scopeEl = () => document.getElementById('filter-attr-scope');
+  const attrScope = () => scopeEl()?.value || DEFAULT_TOUCH_SCOPE;
   const attrEl = (f) => document.getElementById('filter-attr-' + f.key);
   // A control is only rendered when it can split the rows on screen, so a
   // missing element is normal and means "no filter".
@@ -352,9 +376,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
    */
   function updateAttrUI(attrs, shown, total) {
     const badge = document.getElementById('attr-count');
-    if (badge) badge.textContent = attrs.length ? `· ${attrs.length} active` : '';
+    // A non-default touch scope is announced too: inside a closed panel it is
+    // invisible state that changes what every filter below it answers.
+    const scope = attrScope();
+    if (badge) {
+      const parts = [];
+      if (attrs.length) parts.push(`${attrs.length} active`);
+      if (scope !== DEFAULT_TOUCH_SCOPE) parts.push(scope === 'latest' ? 'latest touch' : 'either touch');
+      badge.textContent = parts.length ? `· ${parts.join(' · ')}` : '';
+    }
     const clear = document.getElementById('attr-clear');
-    if (clear) clear.disabled = attrs.length === 0;
+    if (clear) clear.disabled = attrs.length === 0 && scope === DEFAULT_TOUCH_SCOPE;
     const count = document.getElementById('rowCount');
     if (count) {
       const filtered = shown < total;
@@ -374,6 +406,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     if (sf) p.set('status', sf);
     if (dep) p.set('dep', dep);
     for (const [f, v] of activeAttrs()) p.set(f.param, v);
+    if (attrScope() !== DEFAULT_TOUCH_SCOPE) p.set('touch', attrScope());
     if (document.getElementById('show-history')?.checked) p.set('hist', '1');
     location.href = location.pathname + (p.size ? '?' + p : '');
   }
@@ -800,10 +833,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   // UNATTRIBUTED bucket meaning the row carries no value at all. A 'contains'
   // field substring-matches instead. The rule comes from the field itself, never
   // from how the control happened to render, so the CSV export cannot disagree.
-  function matchAttr(value, filter, match) {
+  //
+  // This is the hand-written twin of attributionMatches() in
+  // registrationsView.ts — an inline script cannot import — and a unit test
+  // runs that function and the export's SQL over the same rows for exactly this
+  // reason. Note the asymmetry under "either": a value matches when EITHER
+  // touch carries it, but UNATTRIBUTED means NEITHER does.
+  function matchAttr(values, filter, match) {
     if (!filter) return true;
-    if (match === 'contains') return (value || '').includes(filter);
-    return filter === UNATTRIBUTED ? !value : value === filter;
+    if (match === 'contains') return values.some((v) => (v || '').includes(filter));
+    if (filter === UNATTRIBUTED) return values.every((v) => !v);
+    return values.some((v) => v === filter);
   }
 
   const TALLY_STATUSES = ['wishlist', 'lead', 'pending', 'confirmed', 'rejected', 'cancelled'];
@@ -829,6 +869,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     // Read every attribution control once. The stats guard below derives from
     // this same array — re-reading the DOM there is how a field gets missed.
     const attrs = activeAttrs();
+    const scope = attrScope();
     let totalVisible = 0;
     let totalRows = 0;
     const visibleRows = [];
@@ -846,7 +887,7 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         const matchText = !q || (row.dataset.name||'').includes(q) || (row.dataset.email||'').includes(q) || (row.dataset.phone||'').includes(q);
         const matchStatus = !sf || row.dataset.status === sf;
         const show = matchText && matchStatus
-          && attrs.every(([f, v]) => matchAttr(attrRowValue(row, f), v, f.match));
+          && attrs.every(([f, v]) => matchAttr(attrRowValues(row, f, scope), v, f.match));
         row.style.display = show ? '' : 'none';
         if (!show) { const cb = row.querySelector('.registration-checkbox'); if (cb) cb.checked = false; }
         if (show) { rowsVisible++; visibleRows.push(row); }
@@ -893,6 +934,11 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       if (active.has(f.param)) exportUrl.searchParams.set(f.param, active.get(f.param));
       else exportUrl.searchParams.delete(f.param);
     }
+    // Only when it differs from the default, so a first-touch export link stays
+    // byte-identical to the one this page has always produced.
+    const scope = attrScope();
+    if (scope !== DEFAULT_TOUCH_SCOPE) exportUrl.searchParams.set('touch', scope);
+    else exportUrl.searchParams.delete('touch');
     exportUrl.searchParams.delete('batch_id');
     exportUrl.searchParams.delete('batch_filter');
     if (selectedId || !showHistory) {
@@ -979,8 +1025,13 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   for (const f of attrClientFields) {
     attrEl(f)?.addEventListener(f.match === 'contains' ? 'input' : 'change', applyFilters);
   }
+  scopeEl()?.addEventListener('change', applyFilters);
   document.getElementById('attr-clear')?.addEventListener('click', () => {
     for (const f of attrClientFields) { const el = attrEl(f); if (el) el.value = ''; }
+    // The scope is part of what "clear attribution" means: leaving it on
+    // "latest touch" with no values set would silently change what the next
+    // filter answers.
+    if (scopeEl()) scopeEl().value = DEFAULT_TOUCH_SCOPE;
     applyFilters();
   });
   depSelect?.addEventListener('change', applyFilters);
@@ -1030,6 +1081,11 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
     const el = attrEl(f);
     const v = sp.get(f.param);
     if (el && v) { el.value = v; restoredAttr = true; }
+  }
+  const restoredScope = sp.get('touch');
+  if (scopeEl() && restoredScope && [...scopeEl().options].some((o) => o.value === restoredScope)) {
+    scopeEl().value = restoredScope;
+    restoredAttr = true;
   }
   if (restoredAttr) document.getElementById('attr-panel')?.setAttribute('open', '');
   if (depSelect && sp.get('dep')) depSelect.value = sp.get('dep');

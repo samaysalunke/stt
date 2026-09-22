@@ -85,11 +85,42 @@ export const UNATTRIBUTED = '__none__';
  * nothing.
  */
 
-/** The stored first touch, or null when the row predates attribution or the
- *  blob is malformed. The only place first_touch_json is parsed. */
-function firstTouch(r: Reg): Record<string, any> | null {
+/**
+ * Which stored touch a filter reads.
+ *
+ * First touch is the default and stays the default: it answers "what found
+ * this traveller", and register.ts COALESCEs it so a later campaign can never
+ * take credit for the visit that did. Latest touch answers a different
+ * question — "what were they last acting on" — which is the only place a
+ * campaign shows up for someone who arrived another way and came back through
+ * a DM. `either` is the union, for "did this campaign touch them at all".
+ *
+ * The scope never changes what is STORED or what the row's derived channel
+ * says; it changes only which of the two stored touches a filter reads.
+ */
+export type TouchScope = 'first' | 'latest' | 'either';
+export const TOUCH_SCOPES = ['first', 'latest', 'either'] as const;
+export const DEFAULT_TOUCH_SCOPE: TouchScope = 'first';
+export const TOUCH_SCOPE_LABELS: Record<TouchScope, string> = {
+  first: 'First touch',
+  latest: 'Latest touch',
+  either: 'Either touch',
+};
+
+/** Anything unrecognised reads as the default, so a hand-edited URL narrows
+ *  nothing silently. */
+export function toTouchScope(value: unknown): TouchScope {
+  const scope = String(value ?? '');
+  return (TOUCH_SCOPES as readonly string[]).includes(scope) ? (scope as TouchScope) : DEFAULT_TOUCH_SCOPE;
+}
+
+type TouchColumn = 'first_touch_json' | 'latest_touch_json';
+
+/** A stored touch, or null when the row predates attribution or the blob is
+ *  malformed. The only place the touch columns are parsed. */
+function storedTouch(r: Reg, column: TouchColumn): Record<string, any> | null {
   try {
-    return typeof r.first_touch_json === 'string' ? JSON.parse(r.first_touch_json) : null;
+    return typeof r[column] === 'string' ? JSON.parse(r[column]) : null;
   } catch {
     return null;
   }
@@ -97,8 +128,9 @@ function firstTouch(r: Reg): Record<string, any> | null {
 
 const norm = (value: unknown) => String(value ?? '').trim().toLowerCase();
 
-/** Reader for one camelCase key of the stored first touch. */
-const touchReader = (touchKey: string) => (r: Reg) => norm(firstTouch(r)?.[touchKey]);
+/** Reader for one camelCase key of one stored touch. */
+const touchReader = (touchKey: string, column: TouchColumn = 'first_touch_json') =>
+  (r: Reg) => norm(storedTouch(r, column)?.[touchKey]);
 
 /**
  * `source` is the DERIVED channel written by attributionSource() at registration
@@ -127,6 +159,9 @@ export interface AttributionField {
    * `data-attr-utmmedium`, which no camelCase lookup would ever find.
    */
   dataAttr: string;
+  /** The same, for the latest touch. Equal to `dataAttr` on an unscoped field,
+   *  where one attribute serves every scope. */
+  latestDataAttr: string;
   /** Query-string parameter. `source` and `campaign` keep the names they
    *  shipped with, so existing export links and bookmarks keep working. */
   param: string;
@@ -143,35 +178,55 @@ export interface AttributionField {
    * download and the screen disagree about the same filter.
    */
   match: 'exact' | 'contains';
+  /**
+   * Whether first and latest are genuinely different readings of this row.
+   *
+   * False for the derived channel alone: `source` is a flat column written once
+   * at registration from the FIRST touch, and the latest touch has no stored
+   * equivalent — deriving one would mean parsing a referrer hostname, which the
+   * export's SQL cannot do, and a filter the screen and the CSV disagree about
+   * is worse than one that does not move. So it reads the same under every
+   * scope, and its label says so.
+   */
+  scoped: boolean;
   /** SQL yielding exactly what `read` yields, for the export's WHERE clause. */
   sqlExpr: string;
+  /** The same, for `readLatest`. */
+  latestSqlExpr: string;
   read: (r: Reg) => string;
+  readLatest: (r: Reg) => string;
 }
 
 /** json_extract() THROWS on a malformed blob (and on an empty string), which
  *  would 500 the whole export for one bad row — hence the json_valid() guard.
  *  trim(lower()) mirrors norm(), so SQL and JS cannot disagree on whitespace. */
-const touchSql = (touchKey: string) =>
-  `trim(lower(COALESCE(CASE WHEN json_valid(first_touch_json) THEN json_extract(first_touch_json, '$.${touchKey}') END, '')))`;
+const touchSql = (touchKey: string, column: TouchColumn = 'first_touch_json') =>
+  `trim(lower(COALESCE(CASE WHEN json_valid(${column}) THEN json_extract(${column}, '$.${touchKey}') END, '')))`;
 
 /** `utmMedium` -> `attr-utm-medium`. */
 const dataAttrFor = (key: string) => `attr-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
 
 const touchField = (
-  f: Omit<AttributionField, 'sqlExpr' | 'read' | 'dataAttr'> & { touchKey: string },
+  f: Omit<AttributionField, 'sqlExpr' | 'latestSqlExpr' | 'read' | 'readLatest' | 'dataAttr' | 'latestDataAttr' | 'scoped'>
+    & { touchKey: string },
 ): AttributionField => ({
-  key: f.key, dataAttr: dataAttrFor(f.key), param: f.param, label: f.label,
-  allLabel: f.allLabel, noneLabel: f.noneLabel, match: f.match,
+  key: f.key, dataAttr: dataAttrFor(f.key), latestDataAttr: `${dataAttrFor(f.key)}-latest`,
+  param: f.param, label: f.label,
+  allLabel: f.allLabel, noneLabel: f.noneLabel, match: f.match, scoped: true,
   sqlExpr: touchSql(f.touchKey), read: touchReader(f.touchKey),
+  latestSqlExpr: touchSql(f.touchKey, 'latest_touch_json'),
+  readLatest: touchReader(f.touchKey, 'latest_touch_json'),
 });
 
 /** The one list the row data attributes, the filter panel, the client matcher
  *  and the export SQL all read from. Add a dimension here and nowhere else. */
 export const ATTRIBUTION_FIELDS: readonly AttributionField[] = [
   {
-    key: 'source', dataAttr: 'attr-source', param: 'source', label: 'Channel (derived)',
-    allLabel: 'All channels', noneLabel: '(not attributed)', match: 'exact',
-    sqlExpr: "trim(lower(COALESCE(source, '')))", read: regSource,
+    key: 'source', dataAttr: 'attr-source', latestDataAttr: 'attr-source',
+    param: 'source', label: 'Channel (derived, first touch)',
+    allLabel: 'All channels', noneLabel: '(not attributed)', match: 'exact', scoped: false,
+    sqlExpr: "trim(lower(COALESCE(source, '')))", latestSqlExpr: "trim(lower(COALESCE(source, '')))",
+    read: regSource, readLatest: regSource,
   },
   touchField({ key: 'utmSource', param: 'utm_source', label: 'UTM source', allLabel: 'All utm_source', noneLabel: '(no utm_source)', match: 'exact', touchKey: 'utmSource' }),
   touchField({ key: 'utmMedium', param: 'utm_medium', label: 'UTM medium', allLabel: 'All utm_medium', noneLabel: '(no utm_medium)', match: 'exact', touchKey: 'utmMedium' }),
@@ -187,6 +242,62 @@ export const ATTRIBUTION_FIELDS: readonly AttributionField[] = [
   touchField({ key: 'landingPage', param: 'landing_page', label: 'Landing page', match: 'contains', touchKey: 'landingPage' }),
   touchField({ key: 'referrer', param: 'referrer', label: 'Referrer', match: 'contains', touchKey: 'referrer' }),
 ];
+
+/** The readers one field contributes under a scope — one value for a single
+ *  touch, both for `either`. */
+export function scopedReaders(field: AttributionField, scope: TouchScope): ((r: Reg) => string)[] {
+  if (scope === 'latest') return [field.readLatest];
+  if (scope === 'either') return [field.read, field.readLatest];
+  return [field.read];
+}
+
+/**
+ * Whether one row matches one filter value under a scope. THE rule: the client
+ * matcher in the trip page mirrors this by hand (an inline script cannot
+ * import), and attributionPredicate() below states the same thing in SQL. A
+ * unit test runs the two against the same rows, because the failure mode when
+ * they drift is a download that quietly holds different rows than the screen.
+ *
+ * Note the asymmetry under `either`: a VALUE matches when either touch carries
+ * it, but UNATTRIBUTED means neither does. "Touched by this campaign at all"
+ * and "touched by no campaign at all" are both union questions, and reading the
+ * second as "some touch is blank" would put almost every row in that bucket.
+ */
+export function attributionMatches(
+  field: AttributionField, r: Reg, filter: string, scope: TouchScope,
+): boolean {
+  if (!filter) return true;
+  const values = scopedReaders(field, scope).map((read) => read(r));
+  if (field.match === 'contains') return values.some((v) => v.includes(filter));
+  if (filter === UNATTRIBUTED) return values.every((v) => !v);
+  return values.some((v) => v === filter);
+}
+
+/** The same rule as SQL, for the export's WHERE clause. */
+export function attributionPredicate(
+  field: AttributionField, filter: string, scope: TouchScope,
+): { sql: string; params: string[] } | null {
+  if (!filter) return null;
+  const exprs = scope === 'latest' ? [field.latestSqlExpr]
+    : scope === 'either' ? [field.sqlExpr, field.latestSqlExpr]
+    : [field.sqlExpr];
+
+  if (field.match === 'contains') {
+    // instr() rather than LIKE, so no wildcard escaping is needed.
+    return {
+      sql: `(${exprs.map((e) => `instr(${e}, ?) > 0`).join(' OR ')})`,
+      params: exprs.map(() => filter),
+    };
+  }
+  if (filter === UNATTRIBUTED) {
+    // Catches legacy and imported rows, whose touch column is NULL.
+    return { sql: `(${exprs.map((e) => `${e} = ''`).join(' AND ')})`, params: [] };
+  }
+  return {
+    sql: `(${exprs.map((e) => `${e} = ?`).join(' OR ')})`,
+    params: exprs.map(() => filter),
+  };
+}
 
 /** Sorted distinct non-empty values, for building a filter's <option> list. */
 export function distinctValues(regs: Reg[], pick: (r: Reg) => string): string[] {
@@ -209,8 +320,14 @@ export interface AttributionFilterModel {
  */
 export function attributionFilterModels(regs: Reg[]): AttributionFilterModel[] {
   return ATTRIBUTION_FIELDS.map((field) => {
-    const options = distinctValues(regs, field.read);
-    const hasNone = regs.some((r) => !field.read(r));
+    // Both touches, always: the panel is rendered once on the server while the
+    // scope switches on the client, so a campaign that exists only in the
+    // latest touch still has to be selectable — otherwise switching to "latest
+    // touch" offers a dropdown that cannot express the thing you switched for.
+    const options = [...new Set(
+      scopedReaders(field, 'either').flatMap((read) => regs.map(read)).filter(Boolean),
+    )].sort();
+    const hasNone = regs.some((r) => scopedReaders(field, 'either').some((read) => !read(r)));
     const show = field.match === 'exact'
       ? options.length > 1 || (options.length === 1 && hasNone)
       : options.length > 0;
@@ -221,6 +338,7 @@ export function attributionFilterModels(regs: Reg[]): AttributionFilterModel[] {
 export interface ClientAttributionField {
   key: string;
   dataAttr: string;
+  latestDataAttr: string;
   param: string;
   match: 'exact' | 'contains';
 }
@@ -228,7 +346,8 @@ export interface ClientAttributionField {
 /** JSON-safe projection for `define:vars`, which serialises with JSON.stringify
  *  and would silently drop `read` and leave the client calling undefined. */
 export function clientAttributionFields(): ClientAttributionField[] {
-  return ATTRIBUTION_FIELDS.map(({ key, dataAttr, param, match }) => ({ key, dataAttr, param, match }));
+  return ATTRIBUTION_FIELDS.map(({ key, dataAttr, latestDataAttr, param, match }) =>
+    ({ key, dataAttr, latestDataAttr, param, match }));
 }
 
 /**
@@ -238,7 +357,7 @@ export function clientAttributionFields(): ClientAttributionField[] {
  * empty row falls back.
  */
 export function attributionChip(r: Reg): { label: string; title: string; attributed: boolean } {
-  const touch = firstTouch(r);
+  const touch = storedTouch(r, 'first_touch_json');
   const source = regSource(r);
   const medium = norm(touch?.utmMedium);
   const campaign = norm(touch?.utmCampaign);

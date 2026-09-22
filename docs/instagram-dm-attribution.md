@@ -86,24 +86,39 @@ Both are one manual DM to check, and both are cheap to get wrong silently.
   by channel, utm_source, utm_medium, campaign, utm_content, DM subscriber,
   landing page and referrer, and the stat cards recompute over whatever the
   filter leaves. "Which reel filled this batch" is campaign + utm_content.
+- **Which touch those filters read** is the panel's first control:
+  - *First touch* (the default) — "what found this traveller". Every existing
+    link and bookmark means this, and it is the honest answer to "which reel
+    filled this batch", because a later campaign cannot take credit for a visit
+    it did not cause.
+  - *Latest touch* — "what were they last acting on". This is where the campaign
+    lives for someone who found the site another way and came back through a DM.
+  - *Either* — "did this campaign touch them at all", the widest count. Note the
+    one asymmetry: a value matches when either touch carries it, but the
+    "(no campaign)" bucket means *neither* does.
+
+  The choice rides along to the CSV as `touch=latest` / `touch=either`, so a
+  download always holds the rows that were on screen. Omitted for first touch,
+  so old export URLs are unchanged.
 - **Per booking:** the attribution block on an expanded row shows first and
   latest touch, including the DM subscriber when the link carried one.
 - **Export:** the same filters apply to `GET /api/admin/export`, which carries
-  flat `utm_*`, `subscriber_id`, `landing_page` and `referrer` columns alongside
-  the raw JSON.
+  flat `utm_*`, `subscriber_id`, `landing_page` and `referrer` columns for the
+  first touch, then the same set again prefixed `latest_`, alongside the raw
+  JSON.
 
 ## Known limits
 
-- **Every filter, the chip and every CSV column read the FIRST touch.** That is
-  deliberate — a later campaign must not take credit for the visit that actually
-  found someone — but it has a consequence worth knowing when reading these
-  reports: a traveller who arrived some other way and only later came through a
-  DM has the campaign and the subscriber id in their *latest* touch only. They
-  will not appear under a campaign filter, their `subscriber_id` export column
-  is blank, and their chip reads by their original channel. The booking's
-  attribution block shows both touches, so the conversation reference is still
-  there to read per booking. Making the latest touch filterable is a separate
-  decision, not a bug fix — it changes what "campaign = goa-sept" means.
+- **The chip on a collapsed row still reads the first touch**, so a traveller
+  who arrived another way and came back through a DM reads by their original
+  channel there, whatever the Touch control is set to. Their campaign is on the
+  expanded row, under Latest touch.
+- **"Channel (derived, first touch)" never moves with the Touch control.** It is
+  a flat column written once at registration from the first touch; the latest
+  touch has no stored equivalent, and deriving one would need a referrer-hostname
+  parser the export's SQL cannot have — a filter the screen and the CSV disagree
+  about would be worse than one that stays put. Filter on UTM source instead when
+  you want the latest touch's channel.
 - A first visit with JavaScript disabled records no touch at all. The capture
   moved off the HTML response so it could survive edge caching; see the comment
   at the top of `src/pages/api/attribution.ts`.
