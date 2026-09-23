@@ -119,10 +119,14 @@ const docStateLabel = (d: any) => {
   return 'Not issued yet';
 };
 
-// One data attribute per filterable dimension, written by the same read() the
-// filter options are built from — a hand-written attribute here is how a filter
-// silently stops matching.
-const attrData = Object.fromEntries(ATTRIBUTION_FIELDS.map((f) => [`data-${f.dataAttr}`, f.read(r)]));
+// One data attribute per filterable dimension per touch, written by the same
+// readers the filter options are built from — a hand-written attribute here is
+// how a filter silently stops matching. An unscoped field names the same
+// attribute twice and simply writes it once.
+const attrData = Object.fromEntries(ATTRIBUTION_FIELDS.flatMap((f) => [
+  [`data-${f.dataAttr}`, f.read(r)],
+  [`data-${f.latestDataAttr}`, f.readLatest(r)],
+]));
 const chip = attributionChip(r);
 
 const attributionFields = [
@@ -133,6 +137,15 @@ const attributionFields = [
   field('Medium', firstTouch?.utmMedium),
   field('Term', firstTouch?.utmTerm),
   field('Content', firstTouch?.utmContent),
+  // The join back to the DM thread this booking started in, when the flow's
+  // link carried one. Shown from the latest touch as well: every filter and
+  // every export column reads the FIRST touch, so a traveller who found us some
+  // other way and only later came through a DM has the conversation reference
+  // nowhere else on the page.
+  field('DM subscriber', firstTouch?.subscriberId),
+  ...(latestTouch?.subscriberId && latestTouch.subscriberId !== firstTouch?.subscriberId
+    ? [field('DM subscriber (latest)', latestTouch.subscriberId)]
+    : []),
   // Referrer is filterable on the trip page, so it belongs on the booking too.
   wideField('Referrer', firstTouch?.referrer),
   wideField('First landing page', firstTouch?.landingPage),

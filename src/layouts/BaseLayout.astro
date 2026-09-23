@@ -122,30 +122,101 @@ const orgSchema = {
       HTML response itself, which cannot coexist with edge caching — see the
       comment in src/pages/api/attribution.ts. Fires once per session (not per
       pageview) via a sessionStorage flag, and only on public pages.
+
+      Two things the session flag alone got wrong for campaign traffic:
+
+      - A landing that carries campaign params is always worth sending, even
+        when this tab has already reported one. Otherwise a visitor who arrives
+        direct and then opens a DM link in the same tab is recorded as direct
+        and the campaign is never seen at all.
+      - The httpOnly cookie is the only copy the server holds, and it is the
+        copy that gets cleared. The effective first touch is mirrored into
+        localStorage and replayed on the next visit, so a lost cookie costs a
+        90-day window rather than the whole attribution. The cookie still wins
+        when it exists; the replay only refills an empty one.
     -->
     <script is:inline>
       (function () {
+        var MIRROR = 'stt_first_touch';
         try {
-          if (sessionStorage.getItem('stt_attr') === '1') return;
           var p = location.pathname;
           if (p.indexOf('/admin') === 0 || p.indexOf('/api') === 0) return;
+
+          // Identifies the campaign on this landing, '' when there is none. A
+          // second campaign in the same tab has a different signature and is
+          // therefore reported; a plain pageview is not.
+          var q = new URLSearchParams(location.search);
+          var sig = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'subscriber_id', 'sub_id']
+            .map(function (k) { return q.get(k) || ''; }).join('|');
+          if (!/[^|]/.test(sig)) sig = '';
+
+          if (sig ? sessionStorage.getItem('stt_attr_campaign') === sig
+                  : sessionStorage.getItem('stt_attr') === '1') return;
+
+          var mirrored = null;
+          try { mirrored = JSON.parse(localStorage.getItem(MIRROR) || 'null'); } catch (e) {}
+
           var body = JSON.stringify({
             landingPage: p,
             search: location.search,
             referrer: document.referrer,
+            firstTouch: mirrored,
           });
-          var done = function () { try { sessionStorage.setItem('stt_attr', '1'); } catch (e) {} };
-          if (navigator.sendBeacon &&
-              navigator.sendBeacon('/api/attribution', new Blob([body], { type: 'application/json' }))) {
-            done();
-          } else {
-            fetch('/api/attribution', {
+          // Marked reported as soon as the request LEAVES, never on the response.
+          // sendBeacon used to set this synchronously; waiting for the response
+          // means a visitor who bounces before it arrives re-POSTs on every
+          // later pageview, and the endpoint allows 20 an hour per IP — on a
+          // shared mobile IP that budget is what a real campaign landing needs.
+          var reported = false;
+          var done = function () {
+            if (reported) return;
+            reported = true;
+            try {
+              sessionStorage.setItem('stt_attr', '1');
+              if (sig) sessionStorage.setItem('stt_attr_campaign', sig);
+            } catch (e) {}
+          };
+
+          // Only for a browser without fetch. It is deliberately NOT a retry for
+          // a fetch that failed: keepalive already carries the request through
+          // the unload, so a rejection here is either a dead network, where a
+          // beacon to the same endpoint fares no better, or a navigation that
+          // aborted a request the server may well have received — and a retry
+          // there is a second post per bounce, against a 20/hour budget.
+          var beacon = function () {
+            try {
+              if (navigator.sendBeacon &&
+                  navigator.sendBeacon('/api/attribution', new Blob([body], { type: 'application/json' }))) {
+                done();
+              }
+            } catch (e) {}
+          };
+
+          // fetch over sendBeacon on the happy path: keepalive gives the same
+          // survives-the-unload guarantee, and unlike a beacon it hands back the
+          // first touch the server settled on, which is what the mirror stores.
+          var sent = null;
+          try {
+            sent = fetch('/api/attribution', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: body,
               keepalive: true,
-            }).then(function (r) { if (r.ok) done(); }).catch(function () {});
-          }
+            });
+          } catch (e) { /* no fetch — fall through to the beacon */ }
+
+          if (!sent) { beacon(); return; }
+          done();
+
+          // The echo only comes back on the visit that actually wrote the
+          // cookie, which is the visit the mirror needs to record. Later visits
+          // answer without it and leave the stored mirror alone.
+          sent.then(function (r) {
+            return r.ok ? r.json() : null;
+          }).then(function (data) {
+            if (!data || !data.firstTouch) return;
+            try { localStorage.setItem(MIRROR, JSON.stringify(data.firstTouch)); } catch (e) {}
+          }).catch(function () { /* the touch was already sent; only the mirror is lost */ });
         } catch (e) { /* attribution is best-effort */ }
       })();
     </script>

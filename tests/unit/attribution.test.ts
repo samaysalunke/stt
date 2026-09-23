@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ATTRIBUTION_MAX_AGE_MS,
   attributionCookieNames,
   attributionFromRequest,
   attributionSource,
   hasCampaignTouch,
   readAttribution,
+  restoreTouch,
   sameOriginLandingPath,
 } from '../../src/lib/attribution';
 
@@ -55,5 +57,75 @@ describe('conversion attribution', () => {
   it('fails closed when attribution cookies are malformed', () => {
     const cookies = { get: (name: string) => ({ value: name === attributionCookieNames.first ? '{bad' : 'null' }) };
     expect(readAttribution(cookies)).toEqual({ firstTouch: null, latestTouch: null });
+  });
+
+  // A DM flow appends the subscriber it sent the link to, which is what joins a
+  // booking back to the conversation rather than to the browser that paid.
+  it('captures the DM subscriber from either param spelling', () => {
+    const at = (search: string) => {
+      const url = new URL(`https://www.seekthethrill.in/trips/goa/${search}`);
+      return attributionFromRequest(url, new Request(url));
+    };
+
+    expect(at('?utm_source=instagram&subscriber_id=ig-88421').subscriberId).toBe('ig-88421');
+    expect(at('?sub_id=ig-88421').subscriberId).toBe('ig-88421');
+    // Precedence, so a flow that sends both cannot produce two answers.
+    expect(at('?subscriber_id=canonical&sub_id=shorthand').subscriberId).toBe('canonical');
+    expect(at('?utm_source=instagram').subscriberId).toBe('');
+
+    // A bare DM link carries no UTMs at all, so the subscriber alone has to be
+    // enough to refresh the latest touch — otherwise it reads as internal.
+    expect(hasCampaignTouch(at('?sub_id=ig-1'), 'https://www.seekthethrill.in')).toBe(true);
+  });
+
+  describe('localStorage first-touch replay', () => {
+    const mirror = {
+      landingPage: '/trips/goa/?utm_source=instagram&utm_campaign=goa-sept',
+      referrer: 'https://l.instagram.com/',
+      utmSource: 'instagram', utmMedium: 'dm', utmCampaign: 'goa-sept',
+      utmTerm: '', utmContent: 'reel-sunset-ferry', subscriberId: 'ig-88421',
+      capturedAt: '2026-09-01T10:00:00.000Z',
+    };
+    const now = new Date('2026-09-22T00:00:00.000Z');
+
+    it('restores a mirrored touch whole, keeping its original timestamp', () => {
+      expect(restoreTouch(mirror, now)).toEqual(mirror);
+    });
+
+    it('refuses a replay it cannot trust', () => {
+      expect(restoreTouch(null, now)).toBeNull();
+      expect(restoreTouch('a string', now)).toBeNull();
+      // No campaign signal and no referrer: restoring it would pin the visitor's
+      // first touch to a blank the current visit already beats.
+      expect(restoreTouch({ landingPage: '/trips/goa/', capturedAt: mirror.capturedAt }, now)).toBeNull();
+      // Nonsense and future timestamps — a replay must never be able to claim it
+      // came before, or after, everything else.
+      expect(restoreTouch({ ...mirror, capturedAt: '' }, now)).toBeNull();
+      expect(restoreTouch({ ...mirror, capturedAt: 'whenever' }, now)).toBeNull();
+      expect(restoreTouch({ ...mirror, capturedAt: '2026-09-23T00:00:00.000Z' }, now)).toBeNull();
+    });
+
+    // localStorage never expires on its own and every restore rewrites the
+    // cookie, so without this the first touch would outlive the window the
+    // privacy page states.
+    it('expires a replay on the same 90 days as the cookie', () => {
+      const at = (capturedAt: string) => restoreTouch({ ...mirror, capturedAt }, now);
+      const daysAgo = (n: number) => new Date(now.getTime() - n * 864e5).toISOString();
+
+      expect(at(daysAgo(89))).not.toBeNull();
+      expect(at(daysAgo(91))).toBeNull();
+      expect(ATTRIBUTION_MAX_AGE_MS).toBe(90 * 864e5);
+    });
+
+    it('scrubs a hostile replay instead of storing it', () => {
+      const hostile = restoreTouch({
+        ...mirror,
+        landingPage: 'https://evil.example/x',
+        utmCampaign: 'x'.repeat(900),
+      }, now);
+
+      expect(hostile?.landingPage).toBe('/');
+      expect(hostile?.utmCampaign).toHaveLength(500);
+    });
   });
 });

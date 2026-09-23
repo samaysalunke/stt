@@ -4,7 +4,9 @@ import { likeTerm } from '../../../lib/utils';
 import {
   buildCustomerQuery, CUSTOMER_ORDER_BY, CUSTOMER_TYPES, EXPORT_COLUMNS,
 } from '../../../lib/customersView';
-import { ATTRIBUTION_FIELDS, UNATTRIBUTED } from '../../../lib/registrationsView';
+import {
+  ATTRIBUTION_FIELDS, attributionPredicate, toTouchScope,
+} from '../../../lib/registrationsView';
 import type { AdminUser } from '../../../lib/admin-session';
 
 /**
@@ -21,15 +23,32 @@ const ATTRIBUTION_COLUMNS = {
   utm_source: 'utmSource', utm_medium: 'utmMedium', utm_campaign: 'utmCampaign',
   utm_term: 'utmTerm', utm_content: 'utmContent',
   landing_page: 'landingPage', referrer: 'referrer',
+  // Appended rather than filed next to the UTMs, for the same reason the whole
+  // latest-touch block is appended below.
+  subscriber_id: 'subscriberId',
 } as const;
 
-function flattenAttribution(row: Record<string, any>): Record<string, any> {
-  let touch: Record<string, any> | null = null;
+function parseTouch(raw: unknown): Record<string, any> | null {
   try {
-    touch = typeof row.first_touch_json === 'string' ? JSON.parse(row.first_touch_json) : null;
-  } catch { /* malformed stored touch — export the row with blank columns */ }
+    return typeof raw === 'string' ? JSON.parse(raw) : null;
+  } catch {
+    return null; // malformed stored touch — export the row with blank columns
+  }
+}
+
+function flattenAttribution(row: Record<string, any>): Record<string, any> {
+  const first = parseTouch(row.first_touch_json);
+  // The latest touch is filterable, so it is readable too: a download taken
+  // with `touch=latest` would otherwise hold rows whose matching campaign
+  // appears in no column of the file.
+  const latest = parseTouch(row.latest_touch_json);
   const flat: Record<string, any> = {};
-  for (const [column, key] of Object.entries(ATTRIBUTION_COLUMNS)) flat[column] = touch?.[key] ?? '';
+  // First-touch columns keep their positions and the latest-touch block is
+  // appended whole, rather than interleaving the pairs: a spreadsheet built
+  // against this download reads by position often enough that inserting
+  // columns in the middle is the more expensive choice.
+  for (const [column, key] of Object.entries(ATTRIBUTION_COLUMNS)) flat[column] = first?.[key] ?? '';
+  for (const [column, key] of Object.entries(ATTRIBUTION_COLUMNS)) flat[`latest_${column}`] = latest?.[key] ?? '';
   return { ...row, ...flat };
 }
 
@@ -102,20 +121,16 @@ export const GET: APIRoute = async ({ url, locals }) => {
     // including trim(lower(...)), because the readers trim and bare lower()
     // does not, and a json_valid() guard, because json_extract THROWS on a
     // malformed blob and would 500 the whole download for one bad row.
+    //
+    // `touch` says which stored touch those filters read — first (the default
+    // and what every existing link means), latest, or either.
+    const scope = toTouchScope(url.searchParams.get('touch'));
     for (const field of ATTRIBUTION_FIELDS) {
       const value = (url.searchParams.get(field.param) ?? '').trim().toLowerCase().slice(0, 200);
-      if (!value) continue;
-      if (field.match === 'contains') {
-        // instr() rather than LIKE, so no wildcard escaping is needed.
-        where.push(`instr(${field.sqlExpr}, ?) > 0`);
-        params.push(value);
-      } else if (value === UNATTRIBUTED) {
-        // Catches legacy and imported rows, whose touch column is NULL.
-        where.push(`${field.sqlExpr} = ''`);
-      } else {
-        where.push(`${field.sqlExpr} = ?`);
-        params.push(value);
-      }
+      const predicate = attributionPredicate(field, value, scope);
+      if (!predicate) continue;
+      where.push(predicate.sql);
+      params.push(...predicate.params);
     }
 
     const sql = `SELECT * FROM registrations ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id DESC`;

@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
 import { rateLimit } from '../../lib/rateLimit';
 import { SITE_ORIGIN } from '../../lib/siteUrl';
-import { attributionCookieNames, attributionFromRequest, hasCampaignTouch, sameOriginLandingPath } from '../../lib/attribution';
+import {
+  ATTRIBUTION_MAX_AGE_MS, attributionCookieNames, attributionFromRequest, hasCampaignTouch,
+  readAttribution, restoreTouch, sameOriginLandingPath,
+} from '../../lib/attribution';
 
 // Server-rendered endpoint (sets cookies) — never prerender.
 export const prerender = false;
@@ -22,6 +25,16 @@ export const prerender = false;
  * is strictly better than losing it for every new visitor once caching is on.
  *
  * The conversion endpoints are unchanged — they still read the cookies.
+ *
+ * The cookie is not the only copy. The page mirrors whatever first touch this
+ * endpoint settles on into localStorage and replays it on the next visit, so a
+ * cleared or expired cookie no longer erases the campaign that found someone.
+ * That matters most for exactly the traffic this was built for: a ₹20-30k trip
+ * booked days after the Instagram DM that started it. Both stores are still
+ * per-browser — nothing here recovers a visitor who reads the trip page in
+ * Instagram's in-app browser and pays from Chrome two days later. The subscriber
+ * id on the DM link is what covers that hop, by joining the site lead back to
+ * the conversation rather than to the browser.
  */
 
 const MAX_VALUE = 500;
@@ -59,19 +72,37 @@ export const POST: APIRoute = async ({ request, clientAddress, cookies }) => {
 
     const cookieOptions = {
       path: '/', httpOnly: true, sameSite: 'lax' as const,
-      secure: import.meta.env.PROD, maxAge: 60 * 60 * 24 * 90,
+      secure: import.meta.env.PROD, maxAge: ATTRIBUTION_MAX_AGE_MS / 1000,
     };
 
     // Same guards the middleware applied: first-touch is written once and never
     // overwritten; latest-touch is refreshed on a campaign or off-site referrer.
-    if (!cookies.get(attributionCookieNames.first)) {
-      cookies.set(attributionCookieNames.first, JSON.stringify(touch), cookieOptions);
+    //
+    // What is new is where a missing first-touch cookie can be refilled from.
+    // The page replays its localStorage mirror, and a valid replay wins over
+    // this visit: a visitor whose cookie was cleared is not a new visitor, and
+    // treating them as one is precisely how Instagram loses credit for a
+    // booking to "direct" a week later. A readable cookie still wins over the
+    // replay, so the page can never rewrite a first touch we already hold; an
+    // absent or unreadable one is what the replay refills.
+    const stored = readAttribution(cookies).firstTouch;
+    const firstTouch = stored ?? restoreTouch(body?.firstTouch) ?? touch;
+
+    if (!stored) {
+      cookies.set(attributionCookieNames.first, JSON.stringify(firstTouch), cookieOptions);
     }
     if (!cookies.get(attributionCookieNames.latest) || hasCampaignTouch(touch, SITE_ORIGIN)) {
       cookies.set(attributionCookieNames.latest, JSON.stringify(touch), cookieOptions);
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    // The echo exists so the page can mirror what was just written, so it is
+    // sent ONLY on the visit that wrote it. Echoing a cookie we already hold
+    // would hand a stored first touch — landing page, referrer, campaign, the
+    // DM subscriber — to any script on the page for the price of an empty POST,
+    // which is exactly what httpOnly is there to prevent. Nothing is lost: the
+    // mirror is written the moment the cookie is, and a visitor who still has
+    // the cookie has nothing to restore.
+    return new Response(JSON.stringify({ success: true, ...(stored ? {} : { firstTouch }) }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });

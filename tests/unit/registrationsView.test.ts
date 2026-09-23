@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 import {
   ATTRIBUTION_FIELDS,
   attributionChip,
   attributionFilterModels,
+  attributionMatches,
+  attributionPredicate,
   clientAttributionFields,
+  DEFAULT_TOUCH_SCOPE,
   distinctValues,
   isHistoricalDeparture,
   regCampaign,
   regSource,
   tallyRegs,
+  toTouchScope,
+  TOUCH_SCOPES,
+  UNATTRIBUTED,
 } from '../../src/lib/registrationsView';
 
 const today = new Date('2026-09-01T12:00:00+05:30');
@@ -79,8 +86,13 @@ describe('ATTRIBUTION_FIELDS', () => {
    */
   it('gives every field a data attribute that survives HTML lowercasing', () => {
     for (const f of ATTRIBUTION_FIELDS) {
-      expect(f.dataAttr, f.key).toBe(f.dataAttr.toLowerCase());
-      expect(f.dataAttr, f.key).toMatch(/^attr-[a-z0-9-]+$/);
+      for (const attr of [f.dataAttr, f.latestDataAttr]) {
+        expect(attr, f.key).toBe(attr.toLowerCase());
+        expect(attr, f.key).toMatch(/^attr-[a-z0-9-]+$/);
+      }
+      // A scoped field must not write both touches to one attribute, and an
+      // unscoped one must not claim two readings it does not have.
+      expect(f.dataAttr === f.latestDataAttr, f.key).toBe(!f.scoped);
     }
   });
 
@@ -137,7 +149,34 @@ describe('ATTRIBUTION_FIELDS', () => {
     const projected = clientAttributionFields();
     expect(projected).toHaveLength(ATTRIBUTION_FIELDS.length);
     expect(JSON.parse(JSON.stringify(projected))).toEqual(projected);
-    for (const f of projected) expect(Object.keys(f).sort()).toEqual(['dataAttr', 'key', 'match', 'param']);
+    for (const f of projected) {
+      expect(Object.keys(f).sort()).toEqual(['dataAttr', 'key', 'latestDataAttr', 'match', 'param']);
+    }
+  });
+
+  it.each(ATTRIBUTION_FIELDS.filter((f) => f.scoped))(
+    'reads $key out of the latest touch too',
+    (field) => {
+      const key = field.sqlExpr.match(/\$\.(\w+)/)![1];
+      const row = {
+        first_touch_json: touch({ [key]: 'from-first' }),
+        latest_touch_json: touch({ [key]: '  FROM-Latest ' }),
+      };
+      expect(field.read(row)).toBe('from-first');
+      expect(field.readLatest(row)).toBe('from-latest');
+      expect(field.latestSqlExpr).toContain('latest_touch_json');
+    },
+  );
+
+  // The derived channel is a flat column written once from the first touch;
+  // there is no latest-touch equivalent to read, and inventing one would need a
+  // referrer-hostname parser the export's SQL cannot have.
+  it('leaves the derived channel unscoped, and says so in its label', () => {
+    const source = ATTRIBUTION_FIELDS.find((f) => f.param === 'source')!;
+    expect(source.scoped).toBe(false);
+    expect(source.label).toMatch(/first touch/i);
+    const row = { source: 'instagram', latest_touch_json: touch({ utmSource: 'google' }) };
+    expect(source.readLatest(row)).toBe('instagram');
   });
 });
 
@@ -240,4 +279,108 @@ describe('tallyRegs', () => {
   it('tallies an empty filtered set to zeroes rather than NaN', () => {
     expect(tallyRegs([])).toMatchObject({ count: 0, revenue: 0, confirmed: 0 });
   });
+});
+
+describe('touch scope', () => {
+  const campaign = ATTRIBUTION_FIELDS.find((f) => f.param === 'campaign')!;
+  const content = ATTRIBUTION_FIELDS.find((f) => f.param === 'utm_content')!;
+
+  // The visitor this exists for: found some other way, came back through a DM.
+  const dmSecond = {
+    source: 'google',
+    first_touch_json: touch({ utmSource: 'google' }),
+    latest_touch_json: touch({ utmCampaign: 'goa-sept', utmContent: 'reel-ferry' }),
+  };
+  const dmFirst = {
+    source: 'instagram',
+    first_touch_json: touch({ utmCampaign: 'goa-sept', utmContent: 'reel-ferry' }),
+    latest_touch_json: touch({ utmCampaign: 'goa-sept', utmContent: 'reel-ferry' }),
+  };
+
+  it('defaults to the first touch, whatever the URL says', () => {
+    expect(toTouchScope(undefined)).toBe('first');
+    expect(toTouchScope('sideways')).toBe('first');
+    expect(toTouchScope('latest')).toBe('latest');
+    expect(toTouchScope('either')).toBe('either');
+    expect(DEFAULT_TOUCH_SCOPE).toBe('first');
+  });
+
+  it('finds a campaign that only the latest touch carries', () => {
+    expect(attributionMatches(campaign, dmSecond, 'goa-sept', 'first')).toBe(false);
+    expect(attributionMatches(campaign, dmSecond, 'goa-sept', 'latest')).toBe(true);
+    expect(attributionMatches(campaign, dmSecond, 'goa-sept', 'either')).toBe(true);
+    // And the row that arrived through the campaign still matches every scope.
+    for (const scope of TOUCH_SCOPES) {
+      expect(attributionMatches(campaign, dmFirst, 'goa-sept', scope), scope).toBe(true);
+    }
+  });
+
+  it('substring-matches under every scope', () => {
+    expect(attributionMatches(content, dmSecond, 'ferry', 'first')).toBe(false);
+    expect(attributionMatches(content, dmSecond, 'ferry', 'latest')).toBe(true);
+    expect(attributionMatches(content, dmSecond, 'ferry', 'either')).toBe(true);
+  });
+
+  /**
+   * The asymmetry that makes "either" usable: a VALUE matches when either touch
+   * carries it, but "(no campaign)" means NEITHER does. Reading the bucket as
+   * "some touch is blank" would drop almost every row into it — including the
+   * ones whose campaign is the reason you are looking.
+   */
+  it('reads the unattributed bucket as neither touch, not either touch', () => {
+    expect(attributionMatches(campaign, dmSecond, UNATTRIBUTED, 'first')).toBe(true);
+    expect(attributionMatches(campaign, dmSecond, UNATTRIBUTED, 'latest')).toBe(false);
+    expect(attributionMatches(campaign, dmSecond, UNATTRIBUTED, 'either')).toBe(false);
+    expect(attributionMatches(campaign, {}, UNATTRIBUTED, 'either')).toBe(true);
+  });
+
+  it('offers values from both touches, so the scope switch has something to select', () => {
+    const models = Object.fromEntries(attributionFilterModels([dmSecond, {}]).map((m) => [m.field.param, m]));
+    expect(models.campaign.options).toEqual(['goa-sept']);
+    expect(models.campaign.hasNone).toBe(true);
+  });
+});
+
+/**
+ * The screen filters rows in JS; the CSV export filters them in SQL. They are
+ * two implementations of one rule, and when they drift the download quietly
+ * holds a different set of rows than the admin was looking at — with nothing on
+ * screen to say so. Run both over the same rows.
+ */
+describe('export SQL agrees with the client matcher', () => {
+  const rows = [
+    { id: 1, source: 'instagram', first_touch_json: touch({ utmSource: 'instagram', utmCampaign: 'goa-sept', utmContent: 'reel-ferry' }), latest_touch_json: touch({ utmCampaign: 'goa-sept' }) },
+    { id: 2, source: 'google', first_touch_json: touch({ utmSource: 'google' }), latest_touch_json: touch({ utmCampaign: 'goa-sept', utmContent: 'reel-sunset' }) },
+    { id: 3, source: 'direct', first_touch_json: touch({}), latest_touch_json: touch({}) },
+    { id: 4, source: 'admin', first_touch_json: null, latest_touch_json: null },
+    // A malformed blob 500'd the whole download once; json_valid() guards it.
+    { id: 5, source: 'instagram', first_touch_json: '{not json', latest_touch_json: '{not json' },
+  ];
+
+  const db = new Database(':memory:');
+  db.exec('CREATE TABLE registrations (id INTEGER PRIMARY KEY, source TEXT, first_touch_json TEXT, latest_touch_json TEXT)');
+  const insert = db.prepare('INSERT INTO registrations VALUES (?, ?, ?, ?)');
+  for (const r of rows) insert.run(r.id, r.source, r.first_touch_json, r.latest_touch_json);
+
+  const cases = [
+    { param: 'campaign', value: 'goa-sept' },
+    { param: 'campaign', value: UNATTRIBUTED },
+    { param: 'utm_content', value: 'reel' },
+    { param: 'utm_content', value: 'sunset' },
+    { param: 'utm_source', value: 'instagram' },
+    { param: 'utm_source', value: UNATTRIBUTED },
+    { param: 'source', value: 'instagram' },
+  ];
+
+  it.each(TOUCH_SCOPES.flatMap((scope) => cases.map((c) => ({ ...c, scope }))))(
+    'matches the same rows for $param=$value under $scope',
+    ({ param, value, scope }) => {
+      const field = ATTRIBUTION_FIELDS.find((f) => f.param === param)!;
+      const predicate = attributionPredicate(field, value, scope)!;
+      const fromSql = db.prepare(`SELECT id FROM registrations WHERE ${predicate.sql} ORDER BY id`)
+        .all(...predicate.params).map((r: any) => r.id);
+      const fromJs = rows.filter((r) => attributionMatches(field, r, value, scope)).map((r) => r.id);
+      expect(fromSql).toEqual(fromJs);
+    },
+  );
 });

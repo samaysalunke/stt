@@ -16,12 +16,18 @@ const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.resolve(__dirname, '../../data/seekthethrill.db');
 
-/** Fire the capture beacon and return the two touch cookies as a Cookie header. */
-async function capture({ landingPage = '/trips/qa-test-bookable', search = '', referrer = '' } = {}) {
+/**
+ * Fire the capture beacon. Returns the cookie jar the browser would keep AND the
+ * echoed first touch, which is what the page mirrors into localStorage.
+ *
+ * `cookie` models a visitor who still has their cookies; `firstTouch` models the
+ * mirror they replay when they do not.
+ */
+async function captureRaw({ landingPage = '/trips/qa-test-bookable', search = '', referrer = '', firstTouch = null, cookie = '' } = {}) {
   const res = await fetch(`${BASE}/api/attribution`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ landingPage, search, referrer }),
+    headers: { 'Content-Type': 'application/json', ...(cookie ? { cookie } : {}) },
+    body: JSON.stringify({ landingPage, search, referrer, firstTouch }),
   });
   assert.equal(res.status, 200, 'attribution beacon should accept the touch');
   // getSetCookie() keeps the cookies separate; a joined set-cookie string cannot
@@ -29,7 +35,12 @@ async function capture({ landingPage = '/trips/qa-test-bookable', search = '', r
   const jar = (res.headers.getSetCookie?.() ?? [])
     .map((c) => c.split(';')[0])
     .filter((c) => c.startsWith('stt_first_touch=') || c.startsWith('stt_latest_touch='));
-  return jar.join('; ');
+  return { cookie: jar.join('; '), ...(await res.json()) };
+}
+
+/** The common case: just the two touch cookies, as a Cookie header. */
+async function capture(options = {}) {
+  return (await captureRaw(options)).cookie;
 }
 
 function utm({ source = '', medium = '', campaign = '', term = '', content = '' }) {
@@ -219,4 +230,156 @@ test('a malformed stored touch does not break a filtered export', async () => {
   }
   // ...and belongs in the unattributed bucket rather than disappearing entirely.
   assert.ok((await csvFor('utm_medium=__none__')).includes(email), 'an unreadable touch is unattributed, not invisible');
+});
+
+// The Instagram DM path. UTMs answer which reel; the subscriber id the flow
+// appends answers which conversation — and it is the only identifier that can
+// survive the hop out of Instagram's in-app browser, because it does not live
+// in the browser at all.
+test('a DM subscriber id on the landing URL reaches the booking row', async () => {
+  const email = 'qa-attr-subscriber@example.invalid';
+  const cookie = await capture({
+    landingPage: '/trips/qa-test-bookable',
+    search: '?utm_source=instagram&utm_medium=dm&utm_campaign=goa-sept&utm_content=reel-ferry&subscriber_id=ig-88421',
+    referrer: 'https://l.instagram.com/',
+  });
+  await register(email, cookie);
+
+  const first = JSON.parse(rowFor(email).first_touch_json);
+  assert.equal(first.subscriberId, 'ig-88421');
+  assert.equal(first.utmCampaign, 'goa-sept');
+
+  const { cookie: adminCookie } = await adminLogin();
+  const res = await fetch(`${BASE}/api/admin/export?type=registrations&subscriber_id=ig-884`, { headers: { cookie: adminCookie } });
+  assert.equal(res.status, 200);
+  const csv = await res.text();
+  assert.ok(csv.split('\r\n')[0].replace(/^﻿/, '').split(',').includes('subscriber_id'),
+    'export is missing the subscriber_id column');
+  assert.ok(csv.includes(email), 'a subscriber id should be searchable in the export');
+});
+
+// A ₹20-30k trip is booked days after the DM that started it, so the 90-day
+// cookie is the thing most likely to be missing at the moment that matters.
+// Losing it used to mean the booking read as direct.
+test('a lost first-touch cookie is refilled from the page mirror', async () => {
+  const email = 'qa-attr-replay@example.invalid';
+
+  // Visit one: the campaign lands, and the page mirrors what the server settled on.
+  const visit = await captureRaw({
+    search: utm({ source: 'instagram', medium: 'dm', campaign: 'replay-a', content: 'reel-7' }),
+    referrer: 'https://l.instagram.com/',
+  });
+  assert.equal(visit.firstTouch.utmCampaign, 'replay-a', 'the beacon should echo the first touch back to the page');
+
+  // Visit two: cookies gone (cleared, expired, another storage partition), only
+  // the mirror left. It replays, and the campaign is restored rather than lost.
+  const restored = await captureRaw({ landingPage: '/trips/qa-test-bookable', firstTouch: visit.firstTouch });
+  await register(email, restored.cookie);
+
+  const row = rowFor(email);
+  const first = JSON.parse(row.first_touch_json);
+  assert.equal(first.utmCampaign, 'replay-a', 'the mirrored campaign should survive the cookie');
+  assert.equal(first.capturedAt, visit.firstTouch.capturedAt, 'a restored touch keeps the time it actually happened');
+  assert.equal(row.source, 'instagram', 'a restored first touch still drives the derived channel');
+  // The visit itself is still the latest touch — a replay restores history, it
+  // does not rewrite the present.
+  assert.equal(JSON.parse(row.latest_touch_json).utmCampaign, '');
+});
+
+test('a mirror can neither overwrite a live cookie nor forge a touch', async () => {
+  const live = await captureRaw({ search: utm({ source: 'instagram', campaign: 'genuine' }) });
+
+  // A page replaying a different first touch while the cookie is present must
+  // not move it — the cookie is the source of truth for conversions.
+  const forged = { ...live.firstTouch, utmSource: 'not-instagram', utmCampaign: 'forged' };
+  const second = await captureRaw({ firstTouch: forged, cookie: live.cookie });
+  assert.ok(!second.cookie.includes('stt_first_touch='), 'an existing first touch must not be rewritten');
+  // And the stored touch is not handed back either: the echo is for the visit
+  // that wrote the cookie. Otherwise any script on the page could read what
+  // httpOnly hides, for the price of an empty POST.
+  assert.equal(second.firstTouch, undefined, 'a held first touch must not be echoed to the page');
+
+  // A replay dated in the future would outrank every genuine touch in any
+  // chronological report, so it is refused outright and this visit stands.
+  const future = await captureRaw({
+    search: utm({ source: 'google', campaign: 'this-visit' }),
+    firstTouch: { ...live.firstTouch, capturedAt: new Date(Date.now() + 864e5).toISOString() },
+  });
+  assert.equal(future.firstTouch.utmCampaign, 'this-visit', 'a future-dated replay must be refused');
+
+  // localStorage has no expiry of its own, so without an age bound a mirror
+  // would make first touch immortal — past the 90 days /privacy promises.
+  const stale = await captureRaw({
+    search: utm({ source: 'google', campaign: 'this-visit-too' }),
+    firstTouch: { ...live.firstTouch, capturedAt: new Date(Date.now() - 91 * 864e5).toISOString() },
+  });
+  assert.equal(stale.firstTouch.utmCampaign, 'this-visit-too', 'a replay older than the window must be refused');
+});
+
+/**
+ * A second visit from the same browser: the first-touch cookie is already set,
+ * so the beacon only refreshes the latest touch. Returns the jar a browser
+ * would then hold — first touch from the original visit, latest from this one.
+ */
+async function revisit(cookie, options) {
+  const again = await captureRaw({ ...options, cookie });
+  const jar = new Map(
+    [...cookie.split('; '), ...again.cookie.split('; ')]
+      .filter(Boolean)
+      .map((c) => [c.slice(0, c.indexOf('=')), c]),
+  );
+  return [...jar.values()].join('; ');
+}
+
+// The visitor the touch scope exists for: found the site some other way, then
+// came back through a DM. First touch is theirs; the campaign is only in the
+// latest touch, where no filter used to look.
+test('a campaign only the latest touch carries is filterable with touch=latest', async () => {
+  const dmSecond = 'qa-attr-scope-dm@example.invalid';
+  const dmFirst = 'qa-attr-scope-both@example.invalid';
+
+  const arrivedViaSearch = await capture({ landingPage: '/trips/qa-test-bookable', referrer: 'https://www.google.com/search' });
+  await register(dmSecond, await revisit(arrivedViaSearch, {
+    search: utm({ source: 'instagram', medium: 'dm', campaign: 'scope-goa' }),
+  }));
+  // A row that arrived through the campaign, to prove no scope loses it.
+  await register(dmFirst, await capture({ search: utm({ source: 'instagram', medium: 'dm', campaign: 'scope-goa' }) }));
+
+  const first = JSON.parse(rowFor(dmSecond).first_touch_json);
+  assert.equal(first.utmCampaign, '', 'first touch must still belong to the visit that found them');
+  assert.equal(JSON.parse(rowFor(dmSecond).latest_touch_json).utmCampaign, 'scope-goa');
+
+  const { cookie: adminCookie } = await adminLogin();
+  const csvFor = async (query) => {
+    const res = await fetch(`${BASE}/api/admin/export?type=registrations&${query}`, { headers: { cookie: adminCookie } });
+    assert.equal(res.status, 200, `${query} should not error`);
+    return res.text();
+  };
+
+  // Default: first touch, exactly as every existing link means it.
+  const byFirst = await csvFor('campaign=scope-goa');
+  assert.ok(!byFirst.includes(dmSecond), 'the DM-second row is not a first-touch match');
+  assert.ok(byFirst.includes(dmFirst), 'the DM-first row still matches');
+
+  for (const scope of ['latest', 'either']) {
+    const csv = await csvFor(`campaign=scope-goa&touch=${scope}`);
+    assert.ok(csv.includes(dmSecond), `touch=${scope} should find the DM-second row`);
+    assert.ok(csv.includes(dmFirst), `touch=${scope} must not lose the DM-first row`);
+  }
+
+  // An unknown scope narrows nothing silently — it reads as the default.
+  const bogus = await csvFor('campaign=scope-goa&touch=sideways');
+  assert.equal(bogus.includes(dmSecond), false, 'an unrecognised scope must behave as first touch');
+
+  // "(no campaign)" under either scope means NEITHER touch carries one, so the
+  // DM-second row is not in that bucket even though its first touch is blank.
+  const none = await csvFor('campaign=__none__&touch=either');
+  assert.ok(!none.includes(dmSecond), 'a row with a latest campaign is not unattributed under either');
+
+  // Filtering on the latest touch is useless if the file cannot show it.
+  const headers = (await csvFor('campaign=scope-goa&touch=latest')).split('\r\n')[0].replace(/^﻿/, '').split(',');
+  for (const column of ['latest_utm_campaign', 'latest_utm_source', 'latest_subscriber_id']) {
+    assert.ok(headers.includes(column), `export is missing the ${column} column`);
+  }
+  assert.ok(headers.includes('utm_campaign'), 'the first-touch columns must stay');
 });
