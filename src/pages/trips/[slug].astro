@@ -13,6 +13,11 @@ import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSu
 import { FALLBACK_HERO } from '../../lib/images';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 import { generateTripSeo, markdownToPlainText } from '../../lib/tripSeo';
+import { getDb } from '../../lib/db';
+import { todayInIndia } from '../../lib/profileTrips';
+import { balanceDueDate } from '../../lib/balanceDue';
+import { derivePaymentStatus, paymentStatusLabel, paymentStatusStyle, PAYMENT_STATUSES, regStatusStyle } from '../../lib/registrationStatus';
+import { formatDateIN, formatINR } from '../../lib/utils';
 
 export const prerender = false;
 
@@ -143,6 +148,50 @@ const departuresForPanel = departures.map((d) =>
 const wishlistUser = Astro.locals.user
   ? { name: Astro.locals.user.displayName ?? '', email: Astro.locals.user.email, phone: Astro.locals.user.phone ?? '' }
   : null;
+
+// A signed-in traveller already holding a seat is shown their booking instead
+// of the sales panel — the panel's "Book now" sent them into a fresh
+// registration for whichever departure happened to be first. Only a departure
+// that has not ended counts, or last year's traveller could never book again.
+// Safe to vary per user: middleware sends `private, no-cache` whenever a
+// session cookie is present, so the CDN never stores this render.
+const wantsAnotherDate = Astro.url.searchParams.has('another');
+let existingBooking: {
+  id: number; dateLabel: string; paymentLabel: string; paymentStyle: string;
+  balance: number | null; dueText: string | null;
+} | null = null;
+if (Astro.locals.user?.email) {
+  const today = todayInIndia();
+  const batches: any[] = Array.isArray(trip.batches) ? trip.batches : [];
+  const rows = getDb().prepare(`
+    SELECT id, batch_id, status, total_amount, amount_paid, payment_status
+      FROM registrations
+     WHERE lower(trim(email)) = lower(trim(?)) AND trip_slug = ?
+       AND status IN ('pending','confirmed')
+     ORDER BY created_at DESC
+  `).all(Astro.locals.user.email, slug) as Array<Record<string, any>>;
+  for (const row of rows) {
+    const batch = batches.find((b) => String(b?.id) === String(row.batch_id));
+    const start = typeof batch?.startDate === 'string' ? batch.startDate.slice(0, 10) : null;
+    const end = typeof batch?.endDate === 'string' ? batch.endDate.slice(0, 10) : start;
+    if (!start || !end || end < today) continue;
+    const total = Number(row.total_amount) > 0 ? Number(row.total_amount) : null;
+    const balance = total == null ? null : Math.max(0, total - (Number(row.amount_paid) || 0));
+    const paymentStatus = (PAYMENT_STATUSES as readonly string[]).includes(String(row.payment_status ?? ''))
+      ? String(row.payment_status) : derivePaymentStatus(row);
+    const dueOn = balanceDueDate(start, balanceDueRule);
+    existingBooking = {
+      id: Number(row.id),
+      dateLabel: formatDepartureRange(start, end),
+      paymentLabel: row.status === 'pending' ? 'Payment under review' : paymentStatusLabel(paymentStatus),
+      paymentStyle: row.status === 'pending' ? regStatusStyle('pending') : paymentStatusStyle(paymentStatus),
+      balance: row.status === 'confirmed' ? balance : null,
+      dueText: dueOn ? `due by ${formatDateIN(dueOn)}` : `due ${balanceDueRule}`,
+    };
+    break;
+  }
+}
+const showBookedCard = existingBooking != null && !wantsAnotherDate;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
 const itinerary = (trip.itinerary ?? []).map((d: any) => ({
@@ -639,7 +688,21 @@ const tripSchema: Record<string, any> = {
         <div id="booking-panel" class="bg-white rounded-2xl overflow-hidden scroll-mt-24 shadow-lifted border-t-4 border-coral">
           <div class="p-6">
 
-            {showBookingPanel ? (
+            {showBookedCard && existingBooking ? (
+              <div data-testid="existing-booking">
+                <p class="text-xs font-semibold uppercase tracking-wide text-coral-ink">Your booking</p>
+                <h2 class="mt-1 text-xl font-bold font-display text-navy">You're booked on this departure</h2>
+                <p class="mt-2 text-sm text-gray-text">{existingBooking.dateLabel}</p>
+                <span class="mt-3 inline-block rounded-full px-2.5 py-1 text-xs font-bold" style={existingBooking.paymentStyle}>{existingBooking.paymentLabel}</span>
+                {existingBooking.balance != null && existingBooking.balance > 0 && (
+                  <p class="mt-4 text-sm text-navy"><strong>{formatINR(existingBooking.balance)} balance</strong> <span class="text-gray-text">· {existingBooking.dueText}</span></p>
+                )}
+                <a href="/profile?tab=trips" class="mt-5 block w-full rounded-[var(--radius-pill)] bg-cta px-7 py-3 text-center text-sm font-semibold text-white">View my booking</a>
+                {showBookingPanel && (
+                  <a href="?another=1#booking-panel" class="mt-3 block text-center text-sm font-semibold text-coral-ink underline underline-offset-2">Book another date</a>
+                )}
+              </div>
+            ) : showBookingPanel ? (
               <BookingPanel
                 departures={departuresForPanel}
                 advanceAmount={paymentAmount}
@@ -691,7 +754,7 @@ const tripSchema: Record<string, any> = {
     </div>
 
     <!-- ── CLOSED / SOLD-OUT STATE ────────────────────────── -->
-    {!showBookingPanel && (
+    {!showBookingPanel && !showBookedCard && (
       <div class="mt-16">
         <div class="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-2xl shadow-card">
           <p class="text-base font-medium mb-4 text-navy">
@@ -738,7 +801,7 @@ const tripSchema: Record<string, any> = {
   </div>
 
   <!-- Mobile sticky booking bar -->
-  {showBookingPanel && (
+  {showBookingPanel && !showBookedCard && (
     <div id="booking-sticky" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-peach px-5 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] transition-all duration-300">
       <a
         id="sticky-cta"
