@@ -1,12 +1,43 @@
 ---
 import type { ProfileTripRecord } from '../lib/profileTrips';
-interface Props { record: ProfileTripRecord; supportHref: string }
-const { record, supportHref } = Astro.props;
-const money = (value: number | null) => value == null ? 'Not recorded' : `₹${value.toLocaleString('en-IN')}`;
+import { paymentStatusStyle } from '../lib/registrationStatus';
+import { formatDateIN, formatINR } from '../lib/utils';
+interface Props { record: ProfileTripRecord; supportHref: string; whatsappHref: string }
+const { record, supportHref, whatsappHref } = Astro.props;
+const money = (value: number | null) => value == null ? 'Not recorded' : formatINR(value);
 const statusClass = `status-${record.status}`;
-let primary = { href: supportHref, label: 'Contact support' };
-if (record.status === 'lead' && record.bookable && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/book${record.batchId ? `?batch=${encodeURIComponent(record.batchId)}` : ''}`, label: 'Continue booking' };
-else if (['confirmed', 'wishlist'].includes(record.status) && record.tripExists && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/`, label: 'View trip' };
+const { balance, balanceDueDate, balanceDueRule, daysOverdue, balanceActionable } = record.details;
+const tripPage = record.tripExists && record.tripSlug ? `/trips/${record.tripSlug}/` : null;
+
+// Interim until the pay-balance page exists: a WhatsApp message that already
+// names the trip and the amount. Built with URL so a settings link that already
+// carries a query string still works.
+const payHref = (() => {
+  if (!balanceActionable || balance == null) return null;
+  try {
+    const url = new URL(whatsappHref);
+    url.searchParams.set('text', `Hi, I'd like to pay the ${formatINR(balance)} balance for ${record.tripName} (${record.dateLabel}), booking #${record.id}.`);
+    return url.toString();
+  } catch { return whatsappHref; }
+})();
+
+// One filled action per card, and when money is owed it is the money action.
+let primary: { href: string; label: string; external?: boolean } | null = null;
+if (payHref) primary = { href: payHref, label: 'Pay balance', external: true };
+else if (record.status === 'lead' && record.bookable && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/book${record.batchId ? `?batch=${encodeURIComponent(record.batchId)}` : ''}`, label: 'Continue booking' };
+else if (record.status === 'wishlist' && tripPage) primary = { href: tripPage, label: 'View trip' };
+const quiet = primary?.href === tripPage ? null
+  : tripPage ? { href: tripPage, label: 'View trip page' }
+  : { href: supportHref, label: 'Contact support' };
+
+// A finished trip's balance is shown but never chased as "late" — see
+// balanceActionable in profileTrips.ts.
+// Only once a seat is held: a lead's next payment is the advance, and calling
+// the full price a "balance" would overstate what they owe.
+const showBalance = ['confirmed', 'pending'].includes(record.status) && balance != null && balance > 0;
+const dueState = record.period === 'completed' || daysOverdue == null ? 'plain'
+  : daysOverdue > 0 ? 'overdue' : daysOverdue >= -7 ? 'soon' : 'plain';
+const dueText = balanceDueDate ? `due by ${formatDateIN(balanceDueDate)} · ${balanceDueRule}` : `due ${balanceDueRule}`;
 const travellerFields = [
   ['Traveller', record.details.traveller.name], ['Phone', record.details.traveller.phone],
   ['Age', record.details.traveller.age], ['Gender', record.details.traveller.gender],
@@ -21,10 +52,19 @@ const travellerFields = [
       <p>{record.dateLabel}</p>
       <div class="badges">
         <span class={`badge ${statusClass}`}>{record.statusLabel}</span>
-        <span class="badge payment">{record.paymentLabel}</span>
+        <span class="badge payment" style={paymentStatusStyle(record.paymentStatus)}>{record.paymentLabel}</span>
       </div>
+      {showBalance && (
+        <div class={`balance balance-${dueState}`}>
+          <strong>{formatINR(balance!)} balance</strong>
+          <span>{dueState === 'overdue' && <span aria-hidden="true">⚠ </span>}{dueText}{dueState === 'overdue' && ` · ${daysOverdue} ${daysOverdue === 1 ? 'day' : 'days'} late`}</span>
+        </div>
+      )}
+      {quiet && <a class="quiet-link" href={quiet.href}>{quiet.label}</a>}
     </div>
-    <a class="card-action" href={primary.href}>{primary.label}</a>
+    {primary && (primary.external
+      ? <a class="card-action" href={primary.href} target="_blank" rel="noopener noreferrer">{primary.label}</a>
+      : <a class="card-action" href={primary.href}>{primary.label}</a>)}
   </div>
   <details>
     <summary>Booking and traveller details</summary>
@@ -59,6 +99,9 @@ const travellerFields = [
   .trip-card-copy{min-width:0}.trip-card h3{font-size:.96rem;font-weight:700;overflow-wrap:anywhere}.trip-card p{margin-top:.18rem;color:var(--color-gray-text);font-size:.78rem}
   .badges{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.7rem}.badge{padding:.28rem .55rem;border-radius:999px;font-size:.68rem;font-weight:700;background:var(--color-muted-surface);color:var(--color-muted-ink)}
   .status-confirmed{background:var(--color-success-surface);color:var(--color-success-surface-ink)}.status-pending{background:var(--color-warning-surface);color:var(--color-warning-ink)}.status-lead{background:var(--color-caution-surface);color:var(--color-caution-ink)}.status-wishlist{background:var(--color-interest-surface);color:var(--color-interest-ink)}.status-cancelled,.status-rejected{background:var(--color-neutral-surface);color:var(--color-neutral-ink)}
+  .balance{margin-top:.7rem;padding:.55rem .7rem;border-radius:.7rem;display:flex;flex-direction:column;gap:.1rem;background:var(--color-muted-surface);color:var(--color-muted-ink)}.balance strong{font-size:.9rem;font-weight:700}.balance span{font-size:.74rem}
+  .balance-soon{background:var(--color-caution-surface);color:var(--color-caution-ink)}.balance-overdue{background:var(--color-warning-surface);color:var(--color-warning-ink)}
+  .quiet-link{margin-top:.55rem;min-height:44px;display:inline-flex;align-items:center;color:var(--color-coral-ink);font-size:.78rem;font-weight:700;text-decoration:underline;text-underline-offset:2px}
   .card-action{min-height:44px;padding:.65rem .85rem;border-radius:.8rem;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:var(--color-blush);color:var(--color-coral-ink);font-size:.78rem;font-weight:700}
   details{border-top:1px solid var(--color-peach)}summary{cursor:pointer;min-height:48px;padding:.8rem 1rem;display:flex;align-items:center;color:var(--color-coral-ink);font-size:.78rem;font-weight:700}summary:focus-visible,.card-action:focus-visible,a:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
   .detail-grid{padding:0 1rem 1rem;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.detail-grid div{min-width:0}.detail-grid span,.trip-card dt{display:block;color:var(--color-gray-text);font-size:.68rem}.detail-grid strong,.trip-card dd{font-size:.8rem;overflow-wrap:anywhere}

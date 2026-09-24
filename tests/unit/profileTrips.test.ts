@@ -1,4 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Only rows with a trip_slug reach readTrip, so the existing slug-less cases
+// are unaffected by this stub.
+const TRIPS: Record<string, Record<string, any>> = {
+  'ladakh': {
+    balanceDueRule: '15 days before trip',
+    batches: [
+      { id: 'oct', startDate: '2026-10-10', endDate: '2026-10-16' },
+      { id: 'past', startDate: '2026-05-01', endDate: '2026-05-06' },
+    ],
+  },
+  'no-rule': { balanceDueRule: 'on arrival', batches: [{ id: 'oct', startDate: '2026-10-10', endDate: '2026-10-16' }] },
+};
+vi.mock('../../src/lib/content', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/lib/content')>()),
+  readTrip: (slug: string) => { if (!TRIPS[slug]) throw new Error('missing'); return TRIPS[slug]; },
+  isTripPublic: () => true,
+}));
+
 import { canonicalizeProfileTrips, groupProfileTrips, indiaDateOnly, shapePublicTrips, todayInIndia, type ProfileRegistrationRow } from '../../src/lib/profileTrips';
 
 const row = (overrides: Partial<ProfileRegistrationRow> = {}): ProfileRegistrationRow => ({
@@ -59,5 +78,74 @@ describe('profile trip view model', () => {
     const publicRow = shapePublicTrips([record])[0];
     expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
     expect(JSON.stringify(publicRow)).not.toContain('Private Name');
+  });
+
+  describe('balance due', () => {
+    const booked = (overrides: Partial<ProfileRegistrationRow> = {}) => row({
+      trip_slug: 'ladakh', batch_id: 'oct', trip_date: '2026-10-10', status: 'confirmed',
+      total_amount: 30000, amount_paid: 6000, created_at: '2026-06-01 10:00:00', ...overrides,
+    });
+    const today = '2026-09-24';
+
+    it('derives the due date from the batch and the trip rule', () => {
+      const [record] = canonicalizeProfileTrips([booked()], today);
+      expect(record.details.balance).toBe(24000);
+      expect(record.details.balanceDueDate).toBe('2026-09-25');
+      expect(record.details.balanceDueRule).toBe('15 days before trip');
+      expect(record.details.daysOverdue).toBe(-1);
+      expect(record.details.balanceActionable).toBe(true);
+    });
+
+    it('reports days late, clamped by the booking date', () => {
+      const [late] = canonicalizeProfileTrips([booked()], '2026-10-01');
+      expect(late.details.daysOverdue).toBe(6);
+      const [fresh] = canonicalizeProfileTrips([booked({ created_at: '2026-09-29 10:00:00' })], '2026-10-01');
+      expect(fresh.details.daysOverdue).toBe(2);
+    });
+
+    it.each([[null], [0]])('treats a total of %p as unknown, never as ₹0 owed', (total) => {
+      const [record] = canonicalizeProfileTrips([booked({ total_amount: total })], today);
+      expect(record.details.balance).toBeNull();
+      expect(record.details.balanceActionable).toBe(false);
+    });
+
+    it('has no due date when the rule does not parse', () => {
+      const [record] = canonicalizeProfileTrips([booked({ trip_slug: 'no-rule' })], today);
+      expect(record.details.balanceDueDate).toBeNull();
+      expect(record.details.daysOverdue).toBeNull();
+      expect(record.details.balance).toBe(24000);
+    });
+
+    // startDate falls back to trip_date and then created_at; a due date built
+    // from that would be overdue the moment the booking was made.
+    it('has no due date when the batch matches nothing, even though startDate falls back', () => {
+      const [record] = canonicalizeProfileTrips([booked({ batch_id: 'gone', trip_date: null })], today);
+      expect(record.startDate).toBe('2026-06-01');
+      expect(record.details.balanceDueDate).toBeNull();
+      expect(record.details.daysOverdue).toBeNull();
+    });
+
+    it.each(['lead', 'pending', 'cancelled'])('does not ask a %s booking to pay the balance', (status) => {
+      const [record] = canonicalizeProfileTrips([booked({ status })], today);
+      expect(record.details.balanceActionable).toBe(false);
+    });
+
+    it('does not ask for the balance on a trip that has already run', () => {
+      const [record] = canonicalizeProfileTrips([booked({ batch_id: 'past', trip_date: '2026-05-01' })], today);
+      expect(record.period).toBe('completed');
+      expect(record.details.balance).toBe(24000);
+      expect(record.details.balanceActionable).toBe(false);
+    });
+
+    it('does not ask a fully paid booking to pay', () => {
+      const [record] = canonicalizeProfileTrips([booked({ amount_paid: 30000 })], today);
+      expect(record.details.balance).toBe(0);
+      expect(record.details.balanceActionable).toBe(false);
+    });
+
+    it('keeps the new fields off the public shape', () => {
+      const publicRow = shapePublicTrips(canonicalizeProfileTrips([booked()], today))[0];
+      expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
+    });
   });
 });
