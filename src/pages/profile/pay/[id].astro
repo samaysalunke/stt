@@ -1,0 +1,201 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import ProfileChrome from '../../../components/ProfileChrome.astro';
+import { getDb } from '../../../lib/db';
+import { readSiteSettings } from '../../../lib/settings';
+import { loadPayableBalance } from '../../../lib/balancePayment';
+import { overdueDays } from '../../../lib/balanceDue';
+import { todayInIndia } from '../../../lib/profileTrips';
+import { formatDepartureRange } from '../../../lib/departureSummary';
+import { formatDateIN, formatINR } from '../../../lib/utils';
+
+export const prerender = false;
+
+// Middleware already redirects signed-out visitors away from /profile/*; this
+// is the second layer.
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+
+// Owner, confirmed, known price, money owing — or nothing. The same 404 for
+// "not yours" and "nothing to pay", so an id reveals nothing about other people.
+const payable = loadPayableBalance(getDb(), Number(Astro.params.id), user.email);
+if (!payable) Astro.response.status = 404;
+
+let settings: any = {};
+try { settings = readSiteSettings(); } catch {}
+const upiId = String(settings.upiId ?? '').trim();
+const bank = {
+  name: String(settings.bankAccountName ?? '').trim(),
+  number: String(settings.bankAccountNumber ?? '').trim(),
+  branch: String(settings.bankBranch ?? '').trim(),
+  ifsc: String(settings.bankIfsc ?? '').trim(),
+};
+const hasBank = Boolean(bank.number);
+
+const late = payable
+  ? overdueDays({ dueDate: payable.balanceDueDate, todayKey: todayInIndia(), createdAt: payable.createdAt })
+  : null;
+const dueText = payable
+  ? payable.balanceDueDate ? `Due by ${formatDateIN(payable.balanceDueDate)} · ${payable.balanceDueRule}` : `Due ${payable.balanceDueRule}`
+  : '';
+const dateLabel = payable?.startDate ? formatDepartureRange(payable.startDate, payable.endDate ?? undefined) : null;
+---
+<BaseLayout title="Pay your balance — Seek the Thrill" description="Pay the balance on your Seek the Thrill booking." robots="noindex, nofollow" nav="none" hideWhatsApp={true}>
+  <ProfileChrome backLabel="Back to my trips">
+    <main class="profile-shell pay-page">
+      <a class="back" href="/profile?tab=trips">← My trips</a>
+      {!payable ? (
+        <section class="panel">
+          <h1>Nothing to pay here</h1>
+          <p class="muted">This booking has no balance to pay, or it isn't on your account.</p>
+          <a class="primary" href="/profile?tab=trips">Go to my trips</a>
+        </section>
+      ) : (
+        <section class="panel" data-pay-root data-registration-id={payable.id}>
+          <p class="eyebrow">Pay your balance</p>
+          <h1>{payable.tripName}</h1>
+          {dateLabel && <p class="muted">{dateLabel}</p>}
+
+          <div class={`amount ${late != null && late > 0 ? 'amount-late' : ''}`}>
+            <strong>{formatINR(payable.balance)}</strong>
+            <span>{late != null && late > 0 && <span aria-hidden="true">⚠ </span>}{dueText}{late != null && late > 0 && ` · ${late} ${late === 1 ? 'day' : 'days'} late`}</span>
+            <span class="small">{formatINR(payable.amountPaid)} paid of {formatINR(payable.totalAmount)}</span>
+          </div>
+
+          {payable.balanceReportedAt && (
+            <p class="notice">You reported this payment on {formatDateIN(payable.balanceReportedAt)}. We're checking it — you only need to send it again to add a screenshot.</p>
+          )}
+
+          <h2>How to pay</h2>
+          {!upiId && !hasBank && <p class="muted">Payment details aren't available right now. Please contact us on WhatsApp.</p>}
+          {upiId && (
+            <div class="method">
+              <p class="label">UPI ID</p>
+              <div class="copy-row"><span id="upi-id">{upiId}</span><button type="button" data-copy={upiId} data-copy-target="upi-id">Copy</button></div>
+            </div>
+          )}
+          {hasBank && (
+            <div class="method">
+              <p class="label">Bank transfer</p>
+              <dl>
+                {bank.name && <div><dt>Account name</dt><dd>{bank.name}</dd></div>}
+                <div><dt>Account no.</dt><dd><span id="bank-number">{bank.number}</span><button type="button" data-copy={bank.number} data-copy-target="bank-number">Copy</button></dd></div>
+                {bank.branch && <div><dt>Branch</dt><dd>{bank.branch}</dd></div>}
+                {bank.ifsc && <div><dt>IFSC</dt><dd><span id="bank-ifsc">{bank.ifsc}</span><button type="button" data-copy={bank.ifsc} data-copy-target="bank-ifsc">Copy</button></dd></div>}
+              </dl>
+            </div>
+          )}
+          <p class="live" id="copy-msg" aria-live="polite"></p>
+
+          <form id="report-form" novalidate>
+            <h2>Tell us you've paid</h2>
+            <label for="screenshot">Attach a screenshot (optional)</label>
+            <p class="muted small">A screenshot or photo of your UPI or bank confirmation helps us confirm it faster. JPG, PNG or PDF.</p>
+            <input id="screenshot" name="screenshot" type="file" accept="image/jpeg,image/png,application/pdf" />
+            <button class="primary" type="submit">I've paid {formatINR(payable.balance)}</button>
+            <p class="live" id="report-msg" aria-live="polite"></p>
+          </form>
+
+          <div id="report-done" class="done" hidden>
+            <h2>Thanks — we'll confirm within 24 hours</h2>
+            <p class="muted">We'll check the payment and update your booking. Your trips page will show it as under review until then.</p>
+            <a class="primary" href="/profile?tab=trips">Back to my trips</a>
+          </div>
+        </section>
+      )}
+    </main>
+  </ProfileChrome>
+</BaseLayout>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-pay-root]');
+  const say = (id: string, text: string, error = false) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('error', error);
+  };
+
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? '');
+        say('copy-msg', 'Copied.');
+      } catch {
+        const target = document.getElementById(button.dataset.copyTarget ?? '');
+        if (target) {
+          const range = document.createRange();
+          range.selectNodeContents(target);
+          const selection = getSelection();
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+        say('copy-msg', 'Selected. Press Ctrl/Cmd+C to copy.', true);
+      }
+    });
+  });
+
+  const form = document.getElementById('report-form') as HTMLFormElement | null;
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+    const input = document.getElementById('screenshot') as HTMLInputElement;
+    button.disabled = true;
+    try {
+      let screenshotUrl: string | undefined;
+      const file = input.files?.[0];
+      if (file) {
+        say('report-msg', 'Uploading screenshot…');
+        const data = new FormData();
+        data.append('file', file);
+        const uploaded = await fetch('/api/upload', { method: 'POST', body: data }).then((r) => r.json()).catch(() => null);
+        if (!uploaded?.success) {
+          say('report-msg', uploaded?.error ?? 'Upload failed. Try again, or send without a screenshot.', true);
+          return;
+        }
+        screenshotUrl = uploaded.url;
+      }
+      say('report-msg', 'Sending…');
+      const res = await fetch('/api/profile/report-balance-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId: Number(root?.dataset.registrationId), screenshotUrl }),
+      }).then((r) => r.json()).catch(() => null);
+      if (!res?.success) {
+        say('report-msg', res?.error ?? 'Something went wrong. Please try again.', true);
+        return;
+      }
+      form.hidden = true;
+      const done = document.getElementById('report-done');
+      if (done) { done.hidden = false; done.querySelector('h2')?.setAttribute('tabindex', '-1'); (done.querySelector('h2') as HTMLElement | null)?.focus(); }
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  .pay-page{padding:1.5rem 0 3rem;max-width:36rem}
+  .back{display:inline-flex;min-height:44px;align-items:center;color:var(--color-coral-ink);font-size:.85rem;font-weight:700}
+  .panel{margin-top:.5rem;background:#fff;border:1px solid var(--color-peach);border-radius:1.15rem;padding:1.25rem}
+  .eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-coral-ink)}
+  h1{margin-top:.2rem;font-size:1.35rem;font-weight:700;overflow-wrap:anywhere}
+  h2{margin-top:1.5rem;font-size:1rem;font-weight:700}
+  .muted{margin-top:.25rem;color:var(--color-gray-text);font-size:.85rem}.small{font-size:.75rem}
+  .amount{margin-top:1rem;padding:.8rem 1rem;border-radius:.8rem;display:flex;flex-direction:column;gap:.15rem;background:var(--color-muted-surface);color:var(--color-muted-ink)}
+  .amount strong{font-size:1.6rem;font-weight:700}.amount span{font-size:.82rem}
+  .amount-late{background:var(--color-warning-surface);color:var(--color-warning-ink)}
+  .notice{margin-top:1rem;padding:.7rem .9rem;border-radius:.7rem;background:var(--color-caution-surface);color:var(--color-caution-ink);font-size:.82rem}
+  .method{margin-top:.75rem;padding:.9rem 1rem;border-radius:.8rem;background:var(--color-blush)}
+  .label{font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--color-gray-text)}
+  .copy-row{margin-top:.4rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;font-weight:700;overflow-wrap:anywhere}
+  dl{margin-top:.4rem}dl div{display:flex;justify-content:space-between;gap:.75rem;padding:.45rem 0;border-bottom:1px solid var(--color-peach);font-size:.82rem}dl div:last-child{border-bottom:0}
+  dt{color:var(--color-gray-text)}dd{margin:0;display:flex;align-items:center;gap:.5rem;font-weight:700;text-align:right;overflow-wrap:anywhere}
+  [data-copy]{flex:none;min-height:36px;padding:.3rem .7rem;border-radius:.5rem;border:1px solid var(--color-coral);background:#fff;color:var(--color-coral-ink);font-size:.75rem;font-weight:700}
+  label{display:block;margin-top:.75rem;font-size:.85rem;font-weight:700}
+  input[type=file]{margin-top:.6rem;width:100%;font-size:.85rem}
+  .primary{margin-top:1.1rem;min-height:48px;width:100%;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-pill,999px);background:var(--color-cta);color:#fff;font-size:.9rem;font-weight:700;border:0}
+  .primary:disabled{opacity:.6}
+  .live{margin-top:.5rem;min-height:1.2em;font-size:.8rem;color:var(--color-gray-text)}.live.error{color:var(--color-danger-ink)}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
+</style>

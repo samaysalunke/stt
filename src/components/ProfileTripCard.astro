@@ -2,28 +2,21 @@
 import type { ProfileTripRecord } from '../lib/profileTrips';
 import { paymentStatusStyle } from '../lib/registrationStatus';
 import { formatDateIN, formatINR } from '../lib/utils';
-interface Props { record: ProfileTripRecord; supportHref: string; whatsappHref: string }
-const { record, supportHref, whatsappHref } = Astro.props;
+interface Props { record: ProfileTripRecord; supportHref: string }
+const { record, supportHref } = Astro.props;
 const money = (value: number | null) => value == null ? 'Not recorded' : formatINR(value);
 const statusClass = `status-${record.status}`;
-const { balance, balanceDueDate, balanceDueRule, daysOverdue, balanceActionable } = record.details;
+const { balance, balanceDueDate, balanceDueRule, daysOverdue, balanceActionable, balanceReportedAt } = record.details;
 const tripPage = record.tripExists && record.tripSlug ? `/trips/${record.tripSlug}/` : null;
 
-// Interim until the pay-balance page exists: a WhatsApp message that already
-// names the trip and the amount. Built with URL so a settings link that already
-// carries a query string still works.
-const payHref = (() => {
-  if (!balanceActionable || balance == null) return null;
-  try {
-    const url = new URL(whatsappHref);
-    url.searchParams.set('text', `Hi, I'd like to pay the ${formatINR(balance)} balance for ${record.tripName} (${record.dateLabel}), booking #${record.id}.`);
-    return url.toString();
-  } catch { return whatsappHref; }
-})();
+const payHref = balanceActionable ? `/profile/pay/${record.id}` : null;
+// Once they have told us they paid, a filled "Pay balance" would invite a
+// second payment — the same reason `pending` never gets one.
+const reported = Boolean(payHref && balanceReportedAt);
 
 // One filled action per card, and when money is owed it is the money action.
-let primary: { href: string; label: string; external?: boolean } | null = null;
-if (payHref) primary = { href: payHref, label: 'Pay balance', external: true };
+let primary: { href: string; label: string } | null = null;
+if (payHref && !reported) primary = { href: payHref, label: 'Pay balance' };
 else if (record.status === 'lead' && record.bookable && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/book${record.batchId ? `?batch=${encodeURIComponent(record.batchId)}` : ''}`, label: 'Continue booking' };
 else if (record.status === 'wishlist' && tripPage) primary = { href: tripPage, label: 'View trip' };
 const quiet = primary?.href === tripPage ? null
@@ -60,11 +53,12 @@ const travellerFields = [
           <span>{dueState === 'overdue' && <span aria-hidden="true">⚠ </span>}{dueText}{dueState === 'overdue' && ` · ${daysOverdue} ${daysOverdue === 1 ? 'day' : 'days'} late`}</span>
         </div>
       )}
+      {reported && (
+        <p class="reported"><span class="badge reported-chip">Balance payment reported — under review</span> <a class="quiet-link" href={payHref!}>Resend or add a screenshot</a></p>
+      )}
       {quiet && <a class="quiet-link" href={quiet.href}>{quiet.label}</a>}
     </div>
-    {primary && (primary.external
-      ? <a class="card-action" href={primary.href} target="_blank" rel="noopener noreferrer">{primary.label}</a>
-      : <a class="card-action" href={primary.href}>{primary.label}</a>)}
+    {primary && <a class="card-action" href={primary.href}>{primary.label}</a>}
   </div>
   <details>
     <summary>Booking and traveller details</summary>
@@ -101,6 +95,7 @@ const travellerFields = [
   .status-confirmed{background:var(--color-success-surface);color:var(--color-success-surface-ink)}.status-pending{background:var(--color-warning-surface);color:var(--color-warning-ink)}.status-lead{background:var(--color-caution-surface);color:var(--color-caution-ink)}.status-wishlist{background:var(--color-interest-surface);color:var(--color-interest-ink)}.status-cancelled,.status-rejected{background:var(--color-neutral-surface);color:var(--color-neutral-ink)}
   .balance{margin-top:.7rem;padding:.55rem .7rem;border-radius:.7rem;display:flex;flex-direction:column;gap:.1rem;background:var(--color-muted-surface);color:var(--color-muted-ink)}.balance strong{font-size:.9rem;font-weight:700}.balance span{font-size:.74rem}
   .balance-soon{background:var(--color-caution-surface);color:var(--color-caution-ink)}.balance-overdue{background:var(--color-warning-surface);color:var(--color-warning-ink)}
+  .reported{margin-top:.6rem;display:flex;flex-wrap:wrap;align-items:center;gap:0 .75rem}.reported-chip{background:var(--color-warning-surface);color:var(--color-warning-ink)}.reported .quiet-link{margin-top:0}
   .quiet-link{margin-top:.55rem;min-height:44px;display:inline-flex;align-items:center;color:var(--color-coral-ink);font-size:.78rem;font-weight:700;text-decoration:underline;text-underline-offset:2px}
   .card-action{min-height:44px;padding:.65rem .85rem;border-radius:.8rem;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:var(--color-blush);color:var(--color-coral-ink);font-size:.78rem;font-weight:700}
   details{border-top:1px solid var(--color-peach)}summary{cursor:pointer;min-height:48px;padding:.8rem 1rem;display:flex;align-items:center;color:var(--color-coral-ink);font-size:.78rem;font-weight:700}summary:focus-visible,.card-action:focus-visible,a:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}

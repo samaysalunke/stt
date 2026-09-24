@@ -35,6 +35,7 @@ export interface ProfileRegistrationRow {
   amount_paid?: number | null;
   amount_refunded?: number | null;
   payment_status?: string | null;
+  balance_reported_at?: string | null;
 }
 
 export interface ProfileTripRecord {
@@ -66,6 +67,8 @@ export interface ProfileTripRecord {
     daysOverdue: number | null;
     /** Whether the traveller should be asked to pay the balance from their profile. */
     balanceActionable: boolean;
+    /** When the traveller said they paid the balance; a claim, not a payment. */
+    balanceReportedAt: string | null;
     amountRefunded: number;
     traveller: {
       name: string | null;
@@ -212,6 +215,7 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
       // refunds; a completed trip's balance is far more often a missing payment
       // record than a real debt (see receivables.ts).
       balanceActionable: rawStatus === 'confirmed' && balance != null && balance > 0 && period !== 'completed',
+      balanceReportedAt: row.balance_reported_at?.trim() || null,
       amountRefunded: refunded,
       traveller: {
         name: row.full_name?.trim() || null,
