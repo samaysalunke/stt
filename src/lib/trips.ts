@@ -526,12 +526,17 @@ function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
     occupancyCatalog: catalog,
     departures,
     advanceAmount: Number.isFinite(Number(trip?.paymentAmount)) ? Number(trip.paymentAmount) : DEFAULT_ADVANCE,
-    balanceDueRule: typeof trip?.balanceDueRule === 'string' && trip.balanceDueRule.trim()
-      ? trip.balanceDueRule
-      : DEFAULT_BALANCE_RULE,
+    balanceDueRule: resolveBalanceDueRule(trip),
     currency: 'INR',
     fromPrice,
   };
+}
+
+/** The trip's stated balance rule, or the default when it states none. */
+export function resolveBalanceDueRule(trip: Record<string, any> | null | undefined): string {
+  return typeof trip?.balanceDueRule === 'string' && trip.balanceDueRule.trim()
+    ? trip.balanceDueRule
+    : DEFAULT_BALANCE_RULE;
 }
 
 export function tripCardSummary(trip: Record<string, any>): {

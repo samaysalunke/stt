@@ -16,7 +16,7 @@
 
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
-import { balanceDueDate } from './balanceDue';
+import { balanceDueDate, daysBetweenDates, overdueDays } from './balanceDue';
 import {
   COMMITTED_STATUSES,
   buildDepartureIndex,
@@ -108,12 +108,6 @@ const BUCKET_ORDER: ReceivableBucketId[] = [
   'due-soon', 'not-yet-due', 'unknown-value', 'no-due-date', 'unlinked',
 ];
 
-function daysBetween(fromKey: string, toKey: string): number {
-  const from = Date.parse(`${fromKey}T00:00:00Z`);
-  const to = Date.parse(`${toKey}T00:00:00Z`);
-  return Math.round((to - from) / 86_400_000);
-}
-
 export interface ReceivableInput {
   registrationId: number;
   fullName: string;
@@ -159,21 +153,14 @@ export function bucketReceivable(
   // balance, and far more often a missing payment record than a real debtor.
   if (isHistoricalDeparture({ startDate: departure.startDate, status: departure.status }, new Date(`${todayKey}T00:00:00Z`))) {
     const dueDate = balanceDueDate(departure.startDate, departure.balanceDueRule);
-    return { ...base, dueDate, daysOverdue: dueDate ? daysBetween(dueDate, todayKey) : null, bucket: 'post-departure' };
+    return { ...base, dueDate, daysOverdue: dueDate ? daysBetweenDates(dueDate, todayKey) : null, bucket: 'post-departure' };
   }
 
   const dueDate = balanceDueDate(departure.startDate, departure.balanceDueRule);
   if (!dueDate) return { ...base, dueDate: null, daysOverdue: null, bucket: 'no-due-date' };
 
-  let daysOverdue = daysBetween(dueDate, todayKey);
-
-  // A "60 days before" rule on a booking made 10 days out is overdue the instant
-  // it is created; without this the page would claim 50 days overdue on a
-  // three-day-old booking.
-  if (daysOverdue > 0 && input.createdAt) {
-    const created = String(input.createdAt).slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(created)) daysOverdue = Math.min(daysOverdue, Math.max(0, daysBetween(created, todayKey)));
-  }
+  // Clamped by the booking date — see overdueDays().
+  const daysOverdue = overdueDays({ dueDate, todayKey, createdAt: input.createdAt }) as number;
 
   if (daysOverdue <= 0) {
     const daysUntilDue = -daysOverdue;

@@ -56,3 +56,35 @@ export function balanceDueDate(startDate: unknown, rule: unknown): string | null
   date.setUTCDate(date.getUTCDate() - days);
   return date.toISOString().slice(0, 10);
 }
+
+/** Whole days from one `YYYY-MM-DD` to another, both read as UTC midnight. */
+export function daysBetweenDates(fromKey: string, toKey: string): number {
+  const from = Date.parse(`${fromKey}T00:00:00Z`);
+  const to = Date.parse(`${toKey}T00:00:00Z`);
+  return Math.round((to - from) / 86_400_000);
+}
+
+/**
+ * Days past the due date as of `todayKey` — negative or zero while not yet due,
+ * null when there is no due date.
+ *
+ * Shared by the admin receivables ageing and the traveller's own profile card,
+ * so the number a traveller is shown and the one admin chases agree.
+ */
+export function overdueDays({ dueDate, todayKey, createdAt }: {
+  dueDate: string | null;
+  todayKey: string;
+  createdAt?: string | null;
+}): number | null {
+  if (!dueDate) return null;
+  let days = daysBetweenDates(dueDate, todayKey);
+
+  // A "60 days before" rule on a booking made 10 days out is overdue the instant
+  // it is created; without this the page would claim 50 days overdue on a
+  // three-day-old booking.
+  if (days > 0 && createdAt) {
+    const created = String(createdAt).slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(created)) days = Math.min(days, Math.max(0, daysBetweenDates(created, todayKey)));
+  }
+  return days;
+}
