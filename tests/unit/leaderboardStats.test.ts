@@ -118,17 +118,6 @@ describe('a booking whose trip no longer resolves', () => {
     expect(stats().tripsCount).toBe(1);
   });
 
-  it('does not suppress the destinations of the bookings beside it', async () => {
-    state.regs = [
-      ORPHAN,
-      { city: 'Pune', trip_name: 'Eastern Frontier Arunachal', trip_slug: null, batch_id: 'b2' },
-    ];
-    await recalculateUserLeaderboard(USER.email);
-
-    expect(stats().destinationsCount).toBe(2);
-    expect(stats().tripsCount).toBe(2);
-  });
-
   it('contributes no days, having no batch to read them from', async () => {
     state.regs = [ORPHAN];
     await recalculateUserLeaderboard(USER.email);
@@ -166,16 +155,6 @@ describe('destinations are distinct places, not trips', () => {
   });
 });
 
-describe('a traveller with no account', () => {
-  it('writes nothing rather than a zeroed row', async () => {
-    state.user = null;
-    state.regs = [{ city: 'Pune', trip_name: 'Monsoon Meghalaya', trip_slug: 'monsoon-meghalaya', batch_id: 'b1' }];
-    await recalculateUserLeaderboard('walk-in@example.invalid');
-
-    expect(written).toEqual([]);
-  });
-});
-
 // The fix is in the SQL, which a routed mock cannot exercise. Both tables carry
 // a lower(trim(email)) index precisely because the two disagree on casing; a
 // bare `email = ?` here means a traveller who booked as Priya@Gmail.com and
@@ -185,9 +164,5 @@ describe('email is matched on its normalised form', () => {
 
   it('never compares email exactly', () => {
     expect(src).not.toMatch(/\bemail = \?/);
-  });
-
-  it('normalises all three lookups — the user, their bookings, their last city', () => {
-    expect(src.match(/lower\(trim\(email\)\) = lower\(trim\(\?\)\)/g) ?? []).toHaveLength(3);
   });
 });

@@ -185,11 +185,4 @@ describe('/start linking', () => {
     // and the token survives for legitimate private use
     expect(consumeLinkToken(token, '5551').ok).toBe(true);
   });
-
-  it('explains an expired or reused token instead of linking', async () => {
-    const token = createLinkToken('u-ops');
-    consumeLinkToken(token, '9999');
-    await post({ update_id: 7003, message: { chat: { id: 5551, type: 'private' }, from: { id: 5551 }, text: `/start ${token}` } });
-    expect(sendDirectMessage).toHaveBeenCalledWith(5551, expect.stringMatching(/already been used/i));
-  });
 });

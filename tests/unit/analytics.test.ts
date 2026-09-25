@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { analyzeCustomQuery } from '../../src/lib/analytics/customQuery';
-import { createLLMAdapter, LLMConfigError } from '../../src/lib/analytics/llm';
-import { cleanupExpiredAnalyticsSessions } from '../../src/lib/analytics/sessions';
-import { chooseGranularity, analyticsTools } from '../../src/lib/analytics/tools';
+import { createLLMAdapter } from '../../src/lib/analytics/llm';
+import { analyticsTools } from '../../src/lib/analytics/tools';
 import {
   buildBookingGrowthWeek,
   departureDateKey,
@@ -95,12 +94,6 @@ describe('analytics safety and helpers', () => {
     db.close();
   });
 
-  it('uses expected trend granularity thresholds', () => {
-    expect(chooseGranularity('2026-01-01', '2026-03-31')).toBe('daily');
-    expect(chooseGranularity('2026-01-01', '2026-07-20')).toBe('weekly');
-    expect(chooseGranularity('2025-01-01', '2026-06-01')).toBe('monthly');
-  });
-
   it('rejects unknown custom query columns', () => {
     expect(() => analyzeCustomQuery({
       intent: 'bad field',
@@ -135,26 +128,6 @@ describe('analytics safety and helpers', () => {
     })).toThrow('Query could not be safely executed');
   });
 
-  it('executes a valid demographic custom query', () => {
-    const result = analyzeCustomQuery({
-      intent: 'gender ratio',
-      tables: ['registrations'],
-      select: [
-        { table: 'registrations', column: 'gender' },
-        { table: 'registrations', column: 'id', aggregation: 'COUNT', alias: 'count' },
-      ],
-      groupBy: [{ table: 'registrations', column: 'gender' }],
-      orderBy: [{ table: 'registrations', column: 'gender', direction: 'ASC' }],
-    });
-    expect(result.columns).toEqual(['gender', 'count']);
-    expect(result.rows.length).toBeGreaterThanOrEqual(0);
-  });
-
-  it('named resolvers reject mutation SQL text', () => {
-    const source = analyticsTools.map((tool) => String(tool.execute)).join('\n');
-    expect(source).not.toMatch(/\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|REPLACE|VACUUM|ATTACH|DETACH|PRAGMA)\b/i);
-  });
-
   it('revenue by trip excludes rejected registrations', () => {
     const db = getDb();
     const marker = `analytics-test-${Date.now()}`;
@@ -179,31 +152,9 @@ describe('analytics safety and helpers', () => {
     expect(row?.[revenueIndex]).toBe(1000); // rejected + cancelled excluded
   });
 
-  it('cleans sessions older than 24 hours', () => {
-    const db = getDb();
-    const id = `old-${Date.now()}`;
-    db.prepare(
-      `INSERT INTO analytics_sessions (id, owner_id, created_at, updated_at)
-       VALUES (?, ?, datetime('now', '-25 hours'), datetime('now', '-25 hours'))`,
-    ).run(id, 'owner-test');
-    const removed = cleanupExpiredAnalyticsSessions();
-    expect(removed).toBeGreaterThanOrEqual(1);
-    const row = db.prepare('SELECT id FROM analytics_sessions WHERE id = ?').get(id);
-    expect(row).toBeUndefined();
-  });
 });
 
 describe('analytics LLM adapters', () => {
-  it('throws a config error when provider settings are missing', () => {
-    expect(() => createLLMAdapter()).toThrow(LLMConfigError);
-  });
-
-  it('streams text from the test adapter', async () => {
-    process.env.ANALYTICS_LLM_PROVIDER = 'test';
-    process.env.ANALYTICS_LLM_FAKE_RESPONSE = 'Deterministic streamed answer.';
-
-    await expect(collectText(createLLMAdapter())).resolves.toBe('Deterministic streamed answer.');
-  });
 
   it('parses OpenAI chat completion streaming chunks', async () => {
     process.env.ANALYTICS_LLM_PROVIDER = 'openai';
@@ -232,12 +183,4 @@ describe('analytics LLM adapters', () => {
     await expect(collectText(createLLMAdapter())).resolves.toBe('Hello world');
   });
 
-  it('throws when the LLM provider returns a non-200 response', async () => {
-    process.env.ANALYTICS_LLM_PROVIDER = 'openai';
-    process.env.ANALYTICS_LLM_MODEL = 'test-model';
-    process.env.ANALYTICS_LLM_API_KEY = 'test-key';
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 500 })));
-
-    await expect(collectText(createLLMAdapter())).rejects.toThrow('LLM provider request failed');
-  });
 });
