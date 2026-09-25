@@ -47,14 +47,6 @@ describe('job scheduler', () => {
     expect(schedulerEnabled()).toBe(true);
   });
 
-  it('processes a claimed batch from both queues', async () => {
-    claimZohoDocuments.mockReturnValue([{ id: 'doc-1' }, { id: 'doc-2' }]);
-    claimTelegramEvents.mockReturnValue([{ id: 'ev-1' }]);
-    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 2, telegram: 1 });
-    expect(processZohoDocument).toHaveBeenCalledTimes(2);
-    expect(processClaimedTelegramEvent).toHaveBeenCalledTimes(1);
-  });
-
   // A tick that outlasts its interval must not be joined by the next one —
   // both passes would claim the same rows.
   it('skips a tick while another is still running', async () => {

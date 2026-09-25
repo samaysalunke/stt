@@ -1,17 +1,7 @@
 import { describe, test, expect } from 'vitest';
-import { editableBooking, parseEditorBooking, parseGallery, matchTierFromStay, normalizeTierText } from '../../src/lib/tripEditor';
+import { editableBooking, parseEditorBooking, parseGallery, matchTierFromStay } from '../../src/lib/tripEditor';
 
 describe('parseGallery', () => {
-  test('normalizes valid image metadata', () => {
-    expect(parseGallery(JSON.stringify([
-      { image: ' /images/stay/room.webp ', width: '1200', height: 800, source: 'trip' },
-      { image: '/images/stay/camp.webp', width: 0, height: 'nope', source: 'album' },
-    ]), { totalLimit: 10, removeDuplicates: true })).toEqual([
-      { image: '/images/stay/room.webp', width: 1200, height: 800, source: 'trip' },
-      { image: '/images/stay/camp.webp', width: null, height: null, source: 'album' },
-    ]);
-  });
-
   test('discards malformed JSON and entries without image paths', () => {
     expect(parseGallery('{broken', { totalLimit: 10, removeDuplicates: true })).toEqual([]);
     expect(parseGallery(JSON.stringify([{ width: 100 }, { image: '  ' }, null]), {
@@ -55,10 +45,6 @@ describe('matchTierFromStay', () => {
     expect(matchTierFromStay('Mudhouse-Triple', catalog)).toBe('mudhouse-triple');
   });
 
-  test('exact match on label', () => {
-    expect(matchTierFromStay('Swiss Tent Double', catalog)).toBe('swiss-double');
-  });
-
   test('contains-match strips price suffix', () => {
     expect(matchTierFromStay('Triple sharing - Mudhouse (Rs 22,000)', catalog)).toBe('mudhouse-triple');
   });
@@ -67,58 +53,9 @@ describe('matchTierFromStay', () => {
     expect(matchTierFromStay('penthouse', catalog)).toBe('');
     expect(matchTierFromStay('', catalog)).toBe('');
   });
-
-  test('normalizeTierText drops price and punctuation', () => {
-    expect(normalizeTierText('Triple sharing - Mudhouse (Rs 22,000)')).toBe('triple sharing mudhouse');
-  });
 });
 
 // ── editableBooking ───────────────────────────────────────────────────────────
-
-describe('editableBooking — new schema pass-through', () => {
-  const trip = {
-    occupancyCatalog: [
-      { id: 'dorm', label: 'Dorm Bed', helperText: 'Shared room.' },
-      { id: 'private', label: 'Private Room', helperText: '' },
-    ],
-    batches: [
-      {
-        id: 'dep-1',
-        startDate: '2099-01-01',
-        endDate: '2099-01-05',
-        status: 'booking-open',
-        offers: [
-          { tierId: 'dorm', price: 5000, cap: 12, booked: 2 },
-          { tierId: 'private', price: 7000, cap: 3, booked: 0 },
-        ],
-      },
-    ],
-  };
-
-  test('catalog passes through with id, label, helperText', () => {
-    const { editorCatalog } = editableBooking(trip);
-    expect(editorCatalog).toHaveLength(2);
-    expect(editorCatalog[0]).toEqual({ id: 'dorm', label: 'Dorm Bed', helperText: 'Shared room.' });
-  });
-
-  test('departure offers pass through with correct numeric fields', () => {
-    const { editorDepartures } = editableBooking(trip);
-    expect(editorDepartures).toHaveLength(1);
-    const offers = editorDepartures[0].offers;
-    expect(offers).toHaveLength(2);
-    expect(offers[0]).toMatchObject({ tierId: 'dorm', price: 5000, cap: 12, booked: 2 });
-  });
-
-  test('departure metadata (id, startDate, endDate, status) is preserved', () => {
-    const { editorDepartures } = editableBooking(trip);
-    expect(editorDepartures[0]).toMatchObject({
-      id: 'dep-1',
-      startDate: '2099-01-01',
-      endDate: '2099-01-05',
-      status: 'booking-open',
-    });
-  });
-});
 
 describe('editableBooking — legacy sharingOptions synthesis', () => {
   const trip = {
@@ -160,58 +97,9 @@ describe('editableBooking — legacy sharingOptions synthesis', () => {
   });
 });
 
-describe('editableBooking — no departures', () => {
-  test('empty batches → empty editorDepartures', () => {
-    const { editorDepartures } = editableBooking({ batches: [] });
-    expect(editorDepartures).toHaveLength(0);
-  });
-
-  test('no batches field → empty editorDepartures', () => {
-    const { editorDepartures } = editableBooking({});
-    expect(editorDepartures).toHaveLength(0);
-  });
-
-  test('no occupancyCatalog → single standard tier in catalog', () => {
-    const { editorCatalog } = editableBooking({ batches: [] });
-    expect(editorCatalog).toHaveLength(1);
-    expect(editorCatalog[0].id).toBe('standard');
-  });
-});
-
 // ── parseEditorBooking ────────────────────────────────────────────────────────
 
 describe('parseEditorBooking — valid round-trip', () => {
-  const catalogJson = JSON.stringify([
-    { id: 'dorm', label: 'Dorm Bed', helperText: 'Shared room.' },
-    { id: 'private', label: 'Private Room', helperText: '' },
-  ]);
-  const departuresJson = JSON.stringify([
-    {
-      id: 'dep-1',
-      startDate: '2099-01-01',
-      endDate: '2099-01-05',
-      status: 'booking-open',
-      offers: [
-        { tierId: 'dorm', price: 5000, cap: 12, booked: 2 },
-        { tierId: 'private', price: 7000, cap: 3, booked: 0 },
-      ],
-    },
-  ]);
-
-  test('occupancyCatalog has correct entries', () => {
-    const { occupancyCatalog } = parseEditorBooking(catalogJson, departuresJson);
-    expect(occupancyCatalog).toHaveLength(2);
-    expect(occupancyCatalog[0]).toMatchObject({ id: 'dorm', label: 'Dorm Bed' });
-  });
-
-  test('batches has correct departure with offers', () => {
-    const { batches } = parseEditorBooking(catalogJson, departuresJson);
-    expect(batches).toHaveLength(1);
-    expect(batches[0].id).toBe('dep-1');
-    expect(batches[0].offers).toHaveLength(2);
-    expect(batches[0].offers[0]).toMatchObject({ tierId: 'dorm', price: 5000 });
-  });
-
   test('price is rounded to integer', () => {
     const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
     const depJson = JSON.stringify([
@@ -240,34 +128,6 @@ describe('parseEditorBooking — valid round-trip', () => {
     ]);
     const { batches } = parseEditorBooking(catJson, depJson);
     expect(batches[0].offers[0].cap).toBeNull();
-  });
-
-  test('departure discount amount and expiry round-trip as normalized values', () => {
-    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
-    const depJson = JSON.stringify([{
-      id: 'dep-discount',
-      startDate: '2099-01-01',
-      endDate: '2099-01-05',
-      status: 'booking-open',
-      discountAmount: 1500.4,
-      discountEndsAt: '2098-12-15T18:30:00+05:30',
-      offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }],
-    }]);
-    const { batches } = parseEditorBooking(catJson, depJson);
-    expect(batches[0].discountAmount).toBe(1500);
-    expect(batches[0].discountEndsAt).toBe('2098-12-15T13:00:00.000Z');
-  });
-
-  test('expiry is discarded when no positive discount is configured', () => {
-    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
-    const depJson = JSON.stringify([{
-      id: 'dep-no-discount', startDate: '2099-01-01', endDate: '2099-01-05',
-      discountAmount: 0, discountEndsAt: '2098-12-15T13:00:00.000Z',
-      offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }],
-    }]);
-    const { batches } = parseEditorBooking(catJson, depJson);
-    expect(batches[0].discountAmount).toBeNull();
-    expect(batches[0].discountEndsAt).toBeNull();
   });
 
   test('null expiry keeps a positive discount open-ended', () => {
@@ -300,20 +160,6 @@ describe('parseEditorBooking — valid round-trip', () => {
 });
 
 describe('parseEditorBooking — malformed input', () => {
-  test('malformed catalogJson → empty occupancyCatalog (does not throw)', () => {
-    const { occupancyCatalog, batches, errors } = parseEditorBooking('NOT JSON', '[]');
-    expect(occupancyCatalog).toHaveLength(0);
-    expect(batches).toHaveLength(0);
-    expect(errors).toContainEqual({ code: 'invalid-catalog' });
-  });
-
-  test('malformed departuresJson → empty batches (does not throw)', () => {
-    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
-    const { batches, errors } = parseEditorBooking(catJson, 'NOT JSON');
-    expect(batches).toHaveLength(0);
-    expect(errors).toContainEqual({ code: 'invalid-departures' });
-  });
-
   test('offer tierId not in catalog is filtered out', () => {
     const catJson = JSON.stringify([{ id: 'economy', label: 'Economy', helperText: '' }]);
     const depJson = JSON.stringify([

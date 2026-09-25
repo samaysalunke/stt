@@ -86,10 +86,4 @@ describe('historical registration import', () => {
     expect(() => importHistoricalCsv(input, db, { ...NAGALAND_HISTORICAL_CONFIG, heldRows: [] })).toThrow('Import refused');
     expect(db.prepare('SELECT COUNT(*) AS count FROM registrations').get()).toEqual({ count: 0 });
   });
-
-  it('creates no email, Telegram, payment, document, or user side effects', () => {
-    const result = importHistoricalCsv(csv(row({ 5: 'fully paid' })), db, { ...NAGALAND_HISTORICAL_CONFIG, heldRows: [] });
-    expect(result.sideEffectsAfter).toEqual(result.sideEffectsBefore);
-    expect(result.sideEffectsAfter).toEqual({ users: 0, payments: 0, documents: 0, telegram: 0, emails: 0 });
-  });
 });

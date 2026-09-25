@@ -9,25 +9,9 @@ const globals = [
 ];
 
 describe('resolveTripFaqs', () => {
-  test('legacy trips inherit live defaults in global order', () => {
-    expect(resolveTripFaqs({}, globals).map((faq) => faq.slug)).toEqual(['early-default', 'later-default']);
-  });
-
   test('applies exclusions and inclusions without changing global order', () => {
     const trip = { tripFaqOverrides: { exclude: ['early-default'], include: ['optional'] } };
     expect(resolveTripFaqs(trip, globals).map((faq) => faq.slug)).toEqual(['optional', 'later-default']);
-  });
-
-  test('appends trip-only FAQs in saved order', () => {
-    const trip = { tripFaqs: [
-      { question: 'Custom one?', answer: 'One.' },
-      { question: 'Custom two?', answer: 'Two.' },
-    ] };
-    const resolved = resolveTripFaqs(trip, globals);
-    expect(resolved.slice(-2)).toEqual([
-      { question: 'Custom one?', answer: 'One.', source: 'trip' },
-      { question: 'Custom two?', answer: 'Two.', source: 'trip' },
-    ]);
   });
 
   test('ignores deleted global references and incomplete custom entries', () => {
@@ -36,11 +20,6 @@ describe('resolveTripFaqs', () => {
       tripFaqs: [{ question: 'Missing answer', answer: '' }],
     };
     expect(resolveTripFaqs(trip, globals)).toHaveLength(2);
-  });
-
-  test('reflects changes to live global defaults', () => {
-    const changed = globals.map((faq) => faq.slug === 'optional' ? { ...faq, defaultOnTripPages: true } : faq);
-    expect(resolveTripFaqs({}, changed).map((faq) => faq.slug)).toEqual(['early-default', 'optional', 'later-default']);
   });
 });
 

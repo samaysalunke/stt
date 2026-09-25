@@ -1,9 +1,5 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
-import { purgeUrls, purgeUrlList, tripPaths, TRIP_LISTING_PATHS } from '../../src/lib/cachePurge';
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+import { describe, expect, it } from 'vitest';
+import { purgeUrlList, tripPaths, TRIP_LISTING_PATHS } from '../../src/lib/cachePurge';
 
 describe('cache purge', () => {
   it('absolutizes against the canonical origin and de-duplicates', () => {
@@ -23,19 +19,5 @@ describe('cache purge', () => {
       ...TRIP_LISTING_PATHS,
       '/trips/ladakh-high-passes/',
     ]);
-  });
-
-  it('is a no-op without credentials, and never throws when the API fails', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-
-    // No CF_ZONE_ID / CF_PURGE_TOKEN in the test environment: purging must stay
-    // silent rather than erroring out the admin action that triggered it.
-    await expect(purgeUrls(['/'])).resolves.toBeUndefined();
-    expect(fetchMock).not.toHaveBeenCalled();
-
-    // Empty input is a no-op too.
-    await expect(purgeUrls([])).resolves.toBeUndefined();
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

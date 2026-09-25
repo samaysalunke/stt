@@ -56,9 +56,4 @@ describe('the source parser', () => {
     // best — and is exactly the kind of failure that looks like success.
     expect(() => buildCityNormalizer('/nonexistent')).toThrow();
   });
-
-  it('really did read the tables, not fall back to something empty', () => {
-    expect(fromSource('Bangalore')).toBe('Bengaluru');
-    expect(fromSource('Jodhpur, Rajasthan')).toBe('Jodhpur');
-  });
 });

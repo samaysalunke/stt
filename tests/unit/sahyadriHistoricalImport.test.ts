@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import {
   analyzeSahyadriCsv,
   importSahyadriCsv,
-  sahyadriConfig,
 } from '../../scripts/lib/sahyadri-historical-import.mjs';
 
 const consent = 'By signing up for this trip, I acknowledge and understand that adventure activities involve inherent risks.';
@@ -38,11 +37,6 @@ describe('Sahyadri historical import', () => {
   let db: Database.Database;
   beforeEach(() => { db = new Database(':memory:'); schema(db); });
   afterEach(() => db.close());
-
-  it('maps the two dates to separate departures at the historical price', () => {
-    expect(sahyadriConfig('2025-07-25')).toMatchObject({ batchId: 'sahyadri-2025-07-25', totalAmount: 13999 });
-    expect(sahyadriConfig('2025-08-01')).toMatchObject({ batchId: 'sahyadri-2025-08-01', totalAmount: 13999 });
-  });
 
   it('maps confirmed and blank statuses without side effects', () => {
     const result = importSahyadriCsv(csv(

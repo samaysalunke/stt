@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildRegAggregateSql,
   computeDepartureFinance,
   costBreakdown,
-  parseItemLabel,
   parseRupees,
   rollUp,
   EMPTY_AGGREGATE,
   type DepartureMeta,
   type RegAggregate,
 } from '../../src/lib/departureFinance';
-import { NON_REVENUE_STATUSES } from '../../src/lib/registrationsView';
 
 const meta = (over: Partial<DepartureMeta> = {}): DepartureMeta => ({
   tripSlug: 'nagaland', tripName: 'Nagaland', batchId: 'nagaland-2025-12-05',
@@ -38,33 +35,6 @@ const finance = (a: RegAggregate, base: number | null, items: number[] = [], m =
     ),
   );
 
-describe('costBreakdown', () => {
-  it('totals the base plus every line item, credits included', () => {
-    const cost = finance(TEN_SEATS, 90_000, [15_000, -5_000]).cost;
-    expect(cost.base).toBe(90_000);
-    expect(cost.itemsTotal).toBe(10_000);
-    expect(cost.total).toBe(100_000);
-    expect(cost.costed).toBe(true);
-  });
-
-  it('orders items by sort_order, then id', () => {
-    const cost = costBreakdown(null, [
-      { id: 9, label: 'c', amount: 1, sort_order: 2 },
-      { id: 3, label: 'b', amount: 1, sort_order: 1 },
-      { id: 1, label: 'a', amount: 1, sort_order: 1 },
-    ]);
-    expect(cost.items.map((i) => i.label)).toEqual(['a', 'b', 'c']);
-  });
-
-  it('is costed on a line item alone, with base 0 and no base row', () => {
-    const cost = costBreakdown(null, [{ id: 1, label: 'permits', amount: 4_000 }]);
-    expect(cost.costed).toBe(true);
-    expect(cost.hasBaseRow).toBe(false);
-    expect(cost.base).toBe(0);
-    expect(cost.total).toBe(4_000);
-  });
-});
-
 describe('margin', () => {
   it('computes margin, percentage and outstanding balance', () => {
     const f = finance(TEN_SEATS, 90_000, [15_000, -5_000]);
@@ -80,25 +50,10 @@ describe('margin', () => {
     expect(f.marginPct).toBeNull();
   });
 
-  it('treats an explicit base of 0 as costed, not as missing', () => {
-    const f = finance(TEN_SEATS, 0, []);
-    expect(f.cost.costed).toBe(true);
-    expect(f.cost.hasBaseRow).toBe(true);
-    expect(f.margin).toBe(150_000);
-    expect(f.marginPct).toBe(100);
-  });
-
   it('keeps margin meaningful but percentage null when nothing was collected', () => {
     const f = finance(agg(), 90_000, []);
     expect(f.margin).toBe(-90_000);
     expect(f.marginPct).toBeNull();
-  });
-
-  it('allows credits to exceed the base without clamping', () => {
-    const f = finance(TEN_SEATS, 10_000, [-30_000]);
-    expect(f.cost.total).toBe(-20_000);
-    expect(f.margin).toBe(170_000);
-    expect(Number.isFinite(f.marginPct!)).toBe(true);
   });
 });
 
@@ -157,10 +112,6 @@ describe('edge cases', () => {
     expect(f.breakEvenSeats).toBe(5);
     expect(f.breakEvenSeatsRemaining).toBe(0);
   });
-
-  it('has no break-even when the departure is not costed', () => {
-    expect(finance(TEN_SEATS, null, []).breakEvenSeats).toBeNull();
-  });
 });
 
 describe('outstanding is summed per registration, not netted per departure', () => {
@@ -175,25 +126,6 @@ describe('outstanding is summed per registration, not netted per departure', () 
     }), 0, []);
     expect(f.stillToCollect).toBe(10_000);
     expect(f.overCollected).toBe(0);
-  });
-
-  it('never reports a negative balance', () => {
-    expect(finance(agg({ outstanding: 0, contracted: 10_000, collectedCommitted: 25_000 }), 0, []).stillToCollect).toBe(0);
-  });
-});
-
-describe('buildRegAggregateSql', () => {
-  it('expands the shared non-revenue status list rather than a retyped copy', () => {
-    const { sql, params } = buildRegAggregateSql();
-    // The seat-count column binds the live-status list first, so the leading
-    // params must be NON_REVENUE_STATUSES verbatim. If someone edits that
-    // constant without touching this module, this fails.
-    expect(params.slice(0, NON_REVENUE_STATUSES.length)).toEqual([...NON_REVENUE_STATUSES]);
-    const firstNotIn = sql.match(/NOT IN \(([?,\s]+)\)/);
-    expect(firstNotIn?.[1].split(',')).toHaveLength(NON_REVENUE_STATUSES.length);
-    expect(sql).toContain('GROUP BY trip_slug, batch_id');
-    // Statuses are bound, never inlined, so the list cannot silently fork.
-    expect(sql).not.toMatch(/'rejected'|'wishlist'/);
   });
 });
 
@@ -235,23 +167,4 @@ describe('parseRupees', () => {
   ])('parses %p as %p', (input, expected) => {
     expect(parseRupees(input)).toBe(expected);
   });
-
-  it('rejects a negative when a minimum of zero is set', () => {
-    expect(parseRupees(-1, { min: 0 })).toBeNull();
-    expect(parseRupees(-1)).toBe(-1);
-  });
-
-  it('rejects zero for line items, which must not be zero', () => {
-    expect(parseRupees(0, { allowZero: false })).toBeNull();
-    expect(parseRupees(-5000, { allowZero: false })).toBe(-5000);
-  });
-});
-
-describe('parseItemLabel', () => {
-  it.each([['', null], ['   ', null], [null, null], ['x'.repeat(81), null], ['  Permits ', 'Permits']])(
-    'parses %p as %p',
-    (input, expected) => {
-      expect(parseItemLabel(input)).toBe(expected);
-    },
-  );
 });

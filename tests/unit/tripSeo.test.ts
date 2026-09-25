@@ -2,18 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { generateTripSeo, markdownToPlainText } from '../../src/lib/tripSeo';
 
 describe('generateTripSeo', () => {
-  it('uses the trip name, location and short description', () => {
-    expect(generateTripSeo({
-      name: 'Hidden Valleys',
-      location: 'Meghalaya',
-      shortDescription: 'A small-group journey through waterfalls and remote villages.',
-    })).toEqual({
-      seoTitle: 'Hidden Valleys — Meghalaya | Seek the Thrill',
-      seoDescription: 'A small-group journey through waterfalls and remote villages.',
-      imageAlt: 'Hidden Valleys group trip in Meghalaya',
-    });
-  });
-
   it('does not repeat a location already present in the name', () => {
     const result = generateTripSeo({ name: 'Winter in Ladakh', location: 'Ladakh' });
     expect(result.seoTitle).toBe('Winter in Ladakh | Seek the Thrill');

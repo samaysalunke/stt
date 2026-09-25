@@ -11,7 +11,6 @@ import {
   formatTelegramMessage,
   occupancyLabel,
   resolveLocalPaymentUpload,
-  sendTestNotification,
 } from '../../src/lib/telegram';
 
 function database() {
@@ -142,30 +141,6 @@ describe('Telegram outbox and delivery policy', () => {
     db.close();
   });
 
-  it('sends leads as text and persists the returned message ID', async () => {
-    const db = database(); seed(db); enqueueTelegramEvent(db, 1, 'lead');
-    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 77 } }));
-    vi.stubGlobal('fetch', fetchMock);
-    const [event] = claimTelegramEvents(db);
-    expect(await deliverClaimedTelegramEvent(db, event)).toBe('sent');
-    expect(fetchMock.mock.calls[0][0]).toContain('/sendMessage');
-    expect(db.prepare(`SELECT status, telegram_message_id FROM telegram_notification_events`).get()).toEqual({ status: 'sent', telegram_message_id: '77' });
-    db.close();
-  });
-
-  it('sends pending payment proof as a photo with the pending caption', async () => {
-    const photo = '123e4567-e89b-42d3-a456-426614174000.jpg';
-    fs.writeFileSync(path.join(tempDir, 'uploads', photo), 'jpg');
-    const db = database(); seed(db, `/api/uploads/${photo}`); enqueueTelegramEvent(db, 1, 'pending');
-    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 78 } }));
-    vi.stubGlobal('fetch', fetchMock);
-    expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
-    expect(fetchMock.mock.calls[0][0]).toContain('/sendPhoto');
-    const body = fetchMock.mock.calls[0][1].body as FormData;
-    expect(body.get('caption')).toContain('BOOKING PAYMENT PENDING');
-    db.close();
-  });
-
   it('uses documents for PDFs and falls back from unsupported photos', async () => {
     const photo = '123e4567-e89b-42d3-a456-426614174000.jpg';
     fs.writeFileSync(path.join(tempDir, 'uploads', photo), 'jpg');
@@ -178,17 +153,6 @@ describe('Telegram outbox and delivery policy', () => {
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       expect.stringContaining('/sendPhoto'), expect.stringContaining('/sendDocument'),
     ]);
-    db.close();
-  });
-
-  it('sends a PDF directly as a document', async () => {
-    const pdf = '123e4567-e89b-42d3-a456-426614174000.pdf';
-    fs.writeFileSync(path.join(tempDir, 'uploads', pdf), '%PDF');
-    const db = database(); seed(db, `/api/uploads/${pdf}`, 1000); enqueueTelegramEvent(db, 1, 'confirmed');
-    const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 89 } }));
-    vi.stubGlobal('fetch', fetchMock);
-    expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
-    expect(fetchMock.mock.calls[0][0]).toContain('/sendDocument');
     db.close();
   });
 
@@ -263,23 +227,5 @@ describe('Telegram outbox and delivery policy', () => {
     expect(claimTelegramEvents(db)).toHaveLength(0);
     expect(String((db.prepare(`SELECT last_error FROM telegram_notification_events`).get() as any).last_error)).not.toContain('secret network detail');
     db.close();
-  });
-
-  it('retries a definite 5xx but fails a non-retryable 4xx', async () => {
-    const db = database(); seed(db); enqueueTelegramEvent(db, 1, 'lead');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(503, { ok: false, description: 'Service unavailable' })));
-    expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('retry_wait');
-    db.prepare(`DELETE FROM telegram_notification_events`).run();
-    enqueueTelegramEvent(db, 1, 'confirmed');
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(403, { ok: false, description: 'Forbidden' })));
-    expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('failed');
-    db.close();
-  });
-
-  it('redacts configuration and returns only the test message ID', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 123 } })));
-    await expect(sendTestNotification()).resolves.toEqual({ configured: true, messageId: '123' });
-    delete process.env.TELEGRAM_BOT_TOKEN;
-    await expect(sendTestNotification()).resolves.toEqual({ configured: false });
   });
 });

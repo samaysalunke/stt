@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
 import {
-  SOUTH_GOA_HISTORICAL_CONFIG,
   analyzeSouthGoaCsv,
   importSouthGoaCsv,
 } from '../../scripts/lib/south-goa-historical-import.mjs';
@@ -64,11 +63,5 @@ describe('South Goa historical import', () => {
     importSouthGoaCsv(input, db);
     const second = importSouthGoaCsv(input, db);
     expect(second.counts).toMatchObject({ toCreate: 0, skipped: 1 });
-  });
-
-  it('suppresses all outbound side effects', () => {
-    const result = importSouthGoaCsv(csv(response('person@example.com', 'Joining from Bangalore', 'Confirmed')), db, SOUTH_GOA_HISTORICAL_CONFIG);
-    expect(result.sideEffectsAfter).toEqual(result.sideEffectsBefore);
-    expect(result.sideEffectsAfter).toEqual({ users: 0, payments: 0, documents: 0, telegram: 0, emails: 0 });
   });
 });

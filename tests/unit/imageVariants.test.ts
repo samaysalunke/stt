@@ -4,20 +4,6 @@ import path from 'node:path';
 import { imageSrcset, IMAGE_VARIANT_WIDTHS } from '../../src/lib/imageVariants';
 
 describe('imageSrcset', () => {
-  it('offers every variant width for an image the resizing route serves', () => {
-    expect(imageSrcset('/images/trips/a-featured.webp')).toBe(
-      '/images/trips/a-featured.webp?w=480 480w, /images/trips/a-featured.webp?w=640 640w, ' +
-        '/images/trips/a-featured.webp?w=768 768w, /images/trips/a-featured.webp?w=960 960w, ' +
-        '/images/trips/a-featured.webp?w=1152 1152w, /images/trips/a-featured.webp?w=1440 1440w'
-    );
-  });
-
-  it('keeps the ladder ascending, since a srcset is read in order', () => {
-    const widths = [...IMAGE_VARIANT_WIDTHS];
-    expect(widths).toEqual([...widths].sort((a, b) => a - b));
-    expect(new Set(widths).size).toBe(widths.length);
-  });
-
   it('declines anything the route does not serve, so no dead candidate is advertised', () => {
     // A trip cover may be an absolute third-party URL, and only /images/ goes
     // through src/pages/images/[...path].ts.

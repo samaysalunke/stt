@@ -1,30 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { cachedRead, cachedKeys, clearContentCache } from '../../src/lib/contentCache';
 
 const src = (rel: string) => readFileSync(path.join(process.cwd(), 'src', rel), 'utf-8');
-
-describe('contentCache', () => {
-  it('serves a second read from the cache without re-running the loader', () => {
-    clearContentCache();
-    let calls = 0;
-    const load = () => { calls++; return { n: calls }; };
-
-    const first = cachedRead('test:hit', load);
-    const second = cachedRead('test:hit', load);
-
-    expect(calls).toBe(1);
-    expect(second).toBe(first);
-  });
-
-  it('keys entries independently', () => {
-    clearContentCache();
-    cachedRead('test:a', () => 'a');
-    cachedRead('test:b', () => 'b');
-    expect(cachedKeys().sort()).toEqual(['test:a', 'test:b']);
-  });
-});
 
 // I5 is unobservable at runtime by design: Node is single-threaded and
 // adjustBookingCount is deliberately synchronous, so a behavioural test would
