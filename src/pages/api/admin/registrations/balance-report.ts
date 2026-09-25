@@ -22,13 +22,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return json({ success: false, error: 'Invalid registration ID.' }, 400);
     }
 
-    const res = getDb().prepare(`
-      UPDATE registrations
-         SET balance_reported_at = NULL, balance_payment_screenshot_url = NULL
-       WHERE id = ? AND balance_reported_at IS NOT NULL
-    `).run(id);
+    const db = getDb();
+    const cleared = db.transaction(() => {
+      const res = db.prepare(`
+        UPDATE registrations
+           SET balance_reported_at = NULL, balance_payment_screenshot_url = NULL
+         WHERE id = ? AND balance_reported_at IS NOT NULL
+      `).run(id);
+      // Free the outbox slot so a genuine claim made later is announced too;
+      // otherwise the unique key would swallow it as a repeat of this one.
+      if (res.changes) {
+        db.prepare("DELETE FROM telegram_notification_events WHERE registration_id = ? AND event_type = 'balance_reported'").run(id);
+      }
+      return res.changes > 0;
+    })();
 
-    return json({ success: res.changes > 0 });
+    return json({ success: cleared });
   } catch (err) {
     console.error('[registrations/balance-report]', err);
     return json({ success: false, error: 'Server error.' }, 500);

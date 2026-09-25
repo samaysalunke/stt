@@ -3,7 +3,7 @@ import { getDb } from '../../../lib/db';
 import { jsonOk as json } from '../../../lib/apiResponse';
 import { rateLimit } from '../../../lib/rateLimit';
 import { loadPayableBalance } from '../../../lib/balancePayment';
-import { resolveLocalPaymentUpload } from '../../../lib/telegram';
+import { dispatchTelegramEvent, enqueueTelegramEvent, resolveLocalPaymentUpload } from '../../../lib/telegram';
 
 /**
  * Record a traveller's claim that they have paid their balance.
@@ -43,12 +43,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // COALESCE keeps the first claim date on a resubmission — how long someone
   // has been waiting is what admin needs to see. A new screenshot replaces the
   // old one; a resubmission without one keeps it.
-  db.prepare(`
-    UPDATE registrations
-       SET balance_reported_at = COALESCE(balance_reported_at, CURRENT_TIMESTAMP),
-           balance_payment_screenshot_url = COALESCE(?, balance_payment_screenshot_url)
-     WHERE id = ?
-  `).run(screenshotUrl, payable.id);
+  // Tell the ops group once per claim. The outbox's unique key makes a
+  // resubmission a no-op; clearing the report removes the event, so a fresh
+  // claim after that notifies again.
+  const queued = db.transaction(() => {
+    db.prepare(`
+      UPDATE registrations
+         SET balance_reported_at = COALESCE(balance_reported_at, CURRENT_TIMESTAMP),
+             balance_payment_screenshot_url = COALESCE(?, balance_payment_screenshot_url)
+       WHERE id = ?
+    `).run(screenshotUrl, payable.id);
+    return enqueueTelegramEvent(db, payable.id, 'balance_reported');
+  })();
+  // Best effort: the scheduled job retries anything left queued.
+  if (queued) await dispatchTelegramEvent(payable.id, 'balance_reported').catch((err) => console.error('[Telegram balance_reported]', err));
 
   return json({ success: true });
 };

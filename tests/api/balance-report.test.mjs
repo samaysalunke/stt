@@ -41,6 +41,13 @@ function seedReg(email, { status = 'confirmed', total = 30000, paid = 6000, paym
   return Number(lastInsertRowid);
 }
 
+function balanceEvents(id) {
+  const conn = db();
+  const n = conn.prepare("SELECT COUNT(*) n FROM telegram_notification_events WHERE registration_id = ? AND event_type = 'balance_reported'").get(id).n;
+  conn.close();
+  return n;
+}
+
 function readReg(id) {
   const conn = db();
   const row = conn.prepare(`SELECT status, amount_paid, payment_status, total_amount, payment_screenshot_url,
@@ -118,6 +125,7 @@ test('TC-264 succeeds without a screenshot and never touches the money', async (
   assert.equal(data.success, true);
   const afterRow = readReg(id);
   assert.ok(afterRow.balance_reported_at, 'claim date recorded');
+  assert.equal(balanceEvents(id), 1, 'ops group notification queued');
   assert.equal(afterRow.balance_payment_screenshot_url, null);
   for (const field of ['status', 'amount_paid', 'payment_status', 'total_amount', 'payment_screenshot_url', 'events']) {
     assert.deepEqual(afterRow[field], before[field], `${field} must not change`);
@@ -141,6 +149,9 @@ test('TC-265 a second report keeps the first claim date and replaces the screens
   let row = readReg(id);
   assert.equal(row.balance_reported_at, '2026-01-02 03:04:05');
   assert.equal(row.balance_payment_screenshot_url, second);
+
+  // One claim, one notification — resubmitting does not re-announce it.
+  assert.equal(balanceEvents(id), 1);
 
   // Resending without a file keeps the screenshot already sent.
   await apiPost(ENDPOINT, { registrationId: id }, { headers: { cookie: user.cookie } });
@@ -182,4 +193,9 @@ test('TC-267 admin can clear a report; the ledger is untouched', async () => {
   assert.equal(cleared.amount_paid, before.amount_paid);
   assert.equal(cleared.payment_status, before.payment_status);
   assert.equal(cleared.events, before.events);
+  assert.equal(balanceEvents(id), 0, 'clearing frees the notification slot');
+
+  // A genuine claim after a clear is announced again.
+  await apiPost(ENDPOINT, { registrationId: id }, { headers: { cookie: user.cookie } });
+  assert.equal(balanceEvents(id), 1);
 });

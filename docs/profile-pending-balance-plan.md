@@ -333,10 +333,12 @@ A claim nobody sees is worse than no claim.
   columns, alongside the existing payment controls in
   `src/pages/admin/registrations/[slug].astro:487-525`.
 
-**Explicitly out of scope:** a Telegram notification for this event. `TelegramEventType` is
-`'lead' | 'pending' | 'confirmed'` (`telegram.ts:8`) and the queue table has a
-`CHECK(event_type IN (...))` constraint (`db.ts:428`) requiring a table rebuild to extend. Worth
-doing — recorded here so it isn't silently dropped.
+**Telegram notification — done as a follow-up.** `balance_reported` joined `TelegramEventType`,
+and the outbox table's CHECK constraint is widened by the existing guarded rebuild (now keyed on
+the newest type, preserving every row). The balance screenshot is sent, never the advance proof;
+with no screenshot the message goes as text (`last_error = 'no_screenshot'`), not as
+IMAGE UNAVAILABLE. Clearing a report deletes its outbox row so a later genuine claim is announced
+again. Reported balances also sort to the top of the finance collection queue.
 
 ### Phase 2 verification
 

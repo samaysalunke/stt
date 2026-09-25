@@ -425,14 +425,15 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE invoice_documents ADD COLUMN retainer_applied_at TEXT'); } catch {}
   try { db.exec('ALTER TABLE invoice_documents ADD COLUMN balance_recorded_at TEXT'); } catch {}
 
-  // Idempotent Telegram lifecycle notifications. Rows are created only when a
-  // live booking enters lead/pending/confirmed; the unique key deliberately survives
-  // later status changes so the same event can never be sent twice.
+  // Idempotent Telegram lifecycle notifications. Rows are created when a live
+  // booking enters lead/pending/confirmed, or when a traveller reports paying
+  // their balance; the unique key deliberately survives later status changes so
+  // the same event can never be sent twice.
   db.exec(`
     CREATE TABLE IF NOT EXISTS telegram_notification_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK(event_type IN ('lead','pending','confirmed')),
+      event_type TEXT NOT NULL CHECK(event_type IN ('lead','pending','confirmed','balance_reported')),
       status TEXT NOT NULL DEFAULT 'queued'
         CHECK(status IN ('queued','dispatching','retry_wait','sent','uncertain','failed')),
       attempts INTEGER NOT NULL DEFAULT 0,
@@ -450,16 +451,18 @@ function initializeSchema(db: Database.Database) {
   `);
 
   // SQLite cannot alter a CHECK constraint in place. Rebuild databases created
-  // before pending notifications were introduced, preserving the outbox rows.
+  // before the newest event type existed ('pending', then 'balance_reported'),
+  // preserving the outbox rows. Keyed on the newest type, so one rebuild brings
+  // any older table fully up to date.
   const telegramTableSql = (db.prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='telegram_notification_events'`).get() as { sql?: string } | undefined)?.sql ?? '';
-  if (!telegramTableSql.includes("'pending'")) {
+  if (!telegramTableSql.includes("'balance_reported'")) {
     db.transaction(() => {
       db.exec(`
         ALTER TABLE telegram_notification_events RENAME TO telegram_notification_events_legacy;
         CREATE TABLE telegram_notification_events (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           registration_id INTEGER NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
-          event_type TEXT NOT NULL CHECK(event_type IN ('lead','pending','confirmed')),
+          event_type TEXT NOT NULL CHECK(event_type IN ('lead','pending','confirmed','balance_reported')),
           status TEXT NOT NULL DEFAULT 'queued'
             CHECK(status IN ('queued','dispatching','retry_wait','sent','uncertain','failed')),
           attempts INTEGER NOT NULL DEFAULT 0,
