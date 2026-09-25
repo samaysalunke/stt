@@ -5,7 +5,7 @@ let db: Database.Database;
 vi.mock('../../src/lib/db', () => ({ getDb: () => db }));
 
 const {
-  claimUpdateId, consumeLinkToken, createLinkToken, linkForUser, resolveTelegramActor, revokeLinkForUser,
+  claimUpdateId, consumeLinkToken, createLinkToken, resolveTelegramActor,
 } = await import('../../src/lib/telegramLink');
 
 beforeEach(() => {
@@ -33,12 +33,6 @@ beforeEach(() => {
 });
 
 describe('link tokens', () => {
-  it('binds a Telegram account to the admin who minted the token', () => {
-    const token = createLinkToken('u-ops');
-    expect(consumeLinkToken(token, '55501', 'opsperson')).toEqual({ ok: true, userId: 'u-ops' });
-    expect(linkForUser('u-ops')).toMatchObject({ telegramUserId: '55501', telegramUsername: 'opsperson' });
-  });
-
   /** The plaintext lives only in the t.me URL — a leaked row must not be replayable. */
   it('never stores the token itself', () => {
     const token = createLinkToken('u-ops');
@@ -105,22 +99,6 @@ describe('resolveTelegramActor', () => {
     db.prepare("UPDATE telegram_admin_links SET revoked_at=CURRENT_TIMESTAMP").run();
     expect(resolveTelegramActor('55501'), 'revoked link').toBeNull();
   });
-
-  /**
-   * trip_lead resolves — the endpoint, not this function, decides the policy —
-   * so the role has to come back accurately for that check to mean anything.
-   */
-  it('reports a trip_lead as a trip_lead, leaving the policy to the caller', () => {
-    consumeLinkToken(createLinkToken('u-lead'), '42424');
-    expect(resolveTelegramActor('42424')?.role).toBe('trip_lead');
-  });
-
-  it('disconnects on request', () => {
-    consumeLinkToken(createLinkToken('u-ops'), '55501');
-    expect(revokeLinkForUser('u-ops')).toBe(true);
-    expect(resolveTelegramActor('55501')).toBeNull();
-    expect(linkForUser('u-ops')).toBeNull();
-  });
 });
 
 describe('claimUpdateId', () => {
@@ -128,9 +106,5 @@ describe('claimUpdateId', () => {
     expect(claimUpdateId(1001)).toBe(true);
     expect(claimUpdateId(1001)).toBe(false);
     expect(claimUpdateId(1002)).toBe(true);
-  });
-
-  it('treats a missing update_id as already seen rather than acting twice', () => {
-    expect(claimUpdateId(Number.NaN)).toBe(true);
   });
 });

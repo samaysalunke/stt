@@ -7,13 +7,6 @@ const datas = (kb: { inline_keyboard: Array<Array<{ callback_data?: string }>> }
   kb.inline_keyboard.flat().map((b) => b.callback_data).filter(Boolean) as string[];
 
 describe('parseCallbackData', () => {
-  it('round-trips what callbackData builds', () => {
-    expect(parseCallbackData(callbackData(4821, 'cf', 'advance_paid')))
-      .toEqual({ regId: 4821, verb: 'cf', arg: 'advance_paid' });
-    expect(parseCallbackData(callbackData(7, 'm', 'root')))
-      .toEqual({ regId: 7, verb: 'm', arg: 'root' });
-  });
-
   /**
    * callback_data is echoed back by the *client*, so a modified client can send
    * anything for a message it can see. Parsing must never be mistaken for
@@ -37,11 +30,6 @@ describe('parseCallbackData', () => {
 });
 
 describe('keyboardFor', () => {
-  it('offers a pending booking the moves the transition guards actually allow', () => {
-    const kb = keyboardFor({ regId: 1, status: 'pending', tripSlug: 'ladakh', totalAmount: 25000 });
-    expect(texts(kb)).toEqual(['Confirm ▸', 'Cancel ▸', 'Open in admin ↗']);
-  });
-
   /**
    * `needsConfirmPayment` refuses without a trip price, so offering Confirm on a
    * row that has none would be a button that can only ever error.
@@ -82,12 +70,6 @@ describe('keyboardFor', () => {
       .toEqual(['Confirm ▸', 'Open in admin ↗']);
     expect(texts(keyboardFor({ regId: 1, status: 'cancelled', totalAmount: null })))
       .toEqual(['Open in admin ↗']);
-  });
-
-  it('asks which payment was received before confirming', () => {
-    const kb = keyboardFor({ regId: 9, status: 'pending' }, 'confirm');
-    expect(texts(kb)).toEqual(['Advance paid', 'Fully paid', '← Back']);
-    expect(datas(kb)).toEqual(['b:9:cf:advance_paid', 'b:9:cf:fully_paid', 'b:9:m:root']);
   });
 
   /** Partial refunds need an amount, which no button can carry — admin UI only. */

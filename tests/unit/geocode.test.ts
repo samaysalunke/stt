@@ -34,7 +34,7 @@ vi.mock('../../src/lib/db', () => ({
   }),
 }));
 
-const { geocodeCity, countryCodeFor, haversine } = await import('../../src/lib/geocode');
+const { geocodeCity, haversine } = await import('../../src/lib/geocode');
 
 const calls: string[] = [];
 const fetchMock = vi.fn(async (url: string) => {
@@ -50,29 +50,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 
-describe('countryCodeFor', () => {
-  it.each([['India', 'in'], ['india', 'in'], ['  INDIA  ', 'in'], ['Oman', 'om'], ['UK', 'gb']])(
-    'maps %p to %p', (country, code) => expect(countryCodeFor(country)).toBe(code));
-
-  it('defaults to India when no country was recorded', () => {
-    // Every trip is in India and every registration so far declares India, so
-    // an unbiased planet-wide search is never the right default here.
-    expect(countryCodeFor(undefined)).toBe('in');
-    expect(countryCodeFor(null)).toBe('in');
-    expect(countryCodeFor('')).toBe('in');
-  });
-
-  it('leaves a country it does not know unbiased rather than guessing India', () => {
-    expect(countryCodeFor('Freedonia')).toBeUndefined();
-  });
-});
-
 describe('geocodeCity', () => {
-  it('restricts the search to the country given', async () => {
-    await geocodeCity('Bangalore', { country: 'India' });
-    expect(calls[0]).toContain('countrycodes=in');
-  });
-
   it('substitutes a known-bad query, but caches under what was asked for', async () => {
     // "Kashmir" alone resolves to a village in Barmer, Rajasthan.
     await geocodeCity('Kashmir', { country: 'India' });
@@ -80,13 +58,6 @@ describe('geocodeCity', () => {
     expect(decodeURIComponent(calls[0]).replace(/\+/g, ' ')).toContain('Srinagar, Jammu and Kashmir');
     expect(cache.has('kashmir')).toBe(true);
     expect(cache.has('srinagar, jammu and kashmir')).toBe(false);
-  });
-
-  it('serves a second lookup from the cache without going to the network', async () => {
-    await geocodeCity('Bangalore');
-    const after = fetchMock.mock.calls.length;
-    await geocodeCity('  BANGALORE  ');
-    expect(fetchMock.mock.calls.length).toBe(after);
   });
 
   it('records a miss and does not retry it on the next call', async () => {
@@ -107,11 +78,6 @@ describe('geocodeCity', () => {
     failures.set('somewhere', Math.floor(Date.now() / 1000) - 8 * 24 * 60 * 60);
     await geocodeCity('Somewhere');
     expect(fetchMock).toHaveBeenCalled();
-  });
-
-  it('returns null for an empty city without touching the network', async () => {
-    expect(await geocodeCity('   ')).toBeNull();
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

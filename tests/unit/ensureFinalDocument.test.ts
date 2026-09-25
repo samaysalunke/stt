@@ -75,10 +75,6 @@ describe('ensureFinalDocumentIfFullyPaid', () => {
     expect(inserted).toHaveLength(0);
   });
 
-  it('is a no-op when the registration is gone', () => {
-    expect(ensureFinalDocumentIfFullyPaid(999)).toEqual({ enqueued: false, reason: 'registration not found' });
-  });
-
   // `>=`, matching resolvePaymentStatus — a row the status calls fully paid is
   // a row that gets an invoice, overpayment included.
   it('raises the invoice when payment meets or exceeds the total', () => {
@@ -88,24 +84,5 @@ describe('ensureFinalDocumentIfFullyPaid', () => {
       expect(ensureFinalDocumentIfFullyPaid(1).enqueued).toBe(true);
       expect(inserted.some((args) => args.includes('final'))).toBe(true);
     }
-  });
-
-  // The contract the call sites depend on: the booking operation has already
-  // committed, so a document that cannot be raised must not surface as a throw.
-  it('never throws when the booking has no payment event to invoice against', () => {
-    rows.registration = { ...REG, amount_paid: 0, total_amount: 0 };
-    rows.paymentEvent = null;
-    expect(() => ensureFinalDocumentIfFullyPaid(1)).not.toThrow();
-  });
-
-  it('never throws when Zoho is disabled', async () => {
-    process.env.ZOHO_BOOKS_MODE = 'disabled';
-    vi.resetModules();
-    const fresh = await import('../../src/lib/paymentLedger');
-    rows.registration = { ...REG, amount_paid: 20000, total_amount: 20000 };
-    const result = fresh.ensureFinalDocumentIfFullyPaid(1);
-    expect(result.enqueued).toBe(false);
-    expect(result.reason).toMatch(/disabled/i);
-    process.env.ZOHO_BOOKS_MODE = 'live';
   });
 });

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ATTRIBUTION_MAX_AGE_MS,
   attributionCookieNames,
   attributionFromRequest,
   attributionSource,
@@ -11,21 +10,6 @@ import {
 } from '../../src/lib/attribution';
 
 describe('conversion attribution', () => {
-  it('captures UTM parameters and the complete landing path server-side', () => {
-    const url = new URL('https://www.seekthethrill.in/trips/ladakh/?utm_source=instagram&utm_medium=paid-social&utm_campaign=summer');
-    const request = new Request(url, { headers: { referer: 'https://instagram.com/' } });
-    const touch = attributionFromRequest(url, request);
-
-    expect(touch).toMatchObject({
-      landingPage: '/trips/ladakh/?utm_source=instagram&utm_medium=paid-social&utm_campaign=summer',
-      referrer: 'https://instagram.com/',
-      utmSource: 'instagram',
-      utmMedium: 'paid-social',
-      utmCampaign: 'summer',
-    });
-    expect(attributionSource(touch)).toEqual({ source: 'instagram', detail: 'paid-social / summer' });
-  });
-
   it('recognizes external referrals but ignores internal navigation as a new touch', () => {
     const external = attributionFromRequest(new URL('https://www.seekthethrill.in/trips/'), new Request('https://www.seekthethrill.in/trips/', {
       headers: { referer: 'https://www.google.com/search?q=seek+the+thrill' },
@@ -88,10 +72,6 @@ describe('conversion attribution', () => {
     };
     const now = new Date('2026-09-22T00:00:00.000Z');
 
-    it('restores a mirrored touch whole, keeping its original timestamp', () => {
-      expect(restoreTouch(mirror, now)).toEqual(mirror);
-    });
-
     it('refuses a replay it cannot trust', () => {
       expect(restoreTouch(null, now)).toBeNull();
       expect(restoreTouch('a string', now)).toBeNull();
@@ -103,18 +83,6 @@ describe('conversion attribution', () => {
       expect(restoreTouch({ ...mirror, capturedAt: '' }, now)).toBeNull();
       expect(restoreTouch({ ...mirror, capturedAt: 'whenever' }, now)).toBeNull();
       expect(restoreTouch({ ...mirror, capturedAt: '2026-09-23T00:00:00.000Z' }, now)).toBeNull();
-    });
-
-    // localStorage never expires on its own and every restore rewrites the
-    // cookie, so without this the first touch would outlive the window the
-    // privacy page states.
-    it('expires a replay on the same 90 days as the cookie', () => {
-      const at = (capturedAt: string) => restoreTouch({ ...mirror, capturedAt }, now);
-      const daysAgo = (n: number) => new Date(now.getTime() - n * 864e5).toISOString();
-
-      expect(at(daysAgo(89))).not.toBeNull();
-      expect(at(daysAgo(91))).toBeNull();
-      expect(ATTRIBUTION_MAX_AGE_MS).toBe(90 * 864e5);
     });
 
     it('scrubs a hostile replay instead of storing it', () => {

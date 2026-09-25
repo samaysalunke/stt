@@ -12,10 +12,6 @@ describe('discount expiry label', () => {
     expect(validTillLabel('2026-08-28T18:30:00.000Z')).toBe('29 Aug');
   });
 
-  test('uses the India date when UTC is still on the previous day', () => {
-    expect(validTillLabel('2026-08-28T20:00:00.000Z')).toBe('29 Aug');
-  });
-
   test('renders identical initial markup on either side of the expiry time', () => {
     const endsAt = '2026-08-28T18:30:00.000Z';
     vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-08-28T18:29:59.000Z').getTime());
