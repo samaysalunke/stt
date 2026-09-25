@@ -19,7 +19,7 @@ function database() {
   db.exec(`
     CREATE TABLE registrations (
       id INTEGER PRIMARY KEY, full_name TEXT, email TEXT, phone TEXT,
-      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, tier_id TEXT, payment_screenshot_url TEXT, amount_paid INTEGER,
+      age TEXT, gender TEXT, trip_name TEXT, trip_date TEXT, sharing_option TEXT, tier_id TEXT, payment_screenshot_url TEXT, balance_payment_screenshot_url TEXT, amount_paid INTEGER,
       status TEXT, payment_status TEXT, trip_slug TEXT, total_amount INTEGER
     );
     CREATE TABLE telegram_notification_events (
@@ -190,6 +190,52 @@ describe('Telegram outbox and delivery policy', () => {
     expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
     expect(fetchMock.mock.calls[0][0]).toContain('/sendDocument');
     db.close();
+  });
+
+  describe('balance payment reports', () => {
+    const advance = '123e4567-e89b-42d3-a456-426614174000.jpg';
+    const balance = '223e4567-e89b-42d3-a456-426614174001.png';
+    const reported = (db: Database.Database, balanceProof: string | null) => {
+      seed(db, `/api/uploads/${advance}`, 6000);
+      db.prepare(`UPDATE registrations SET status='confirmed', payment_status='advance_paid', total_amount=30000, balance_payment_screenshot_url=? WHERE id=1`)
+        .run(balanceProof ? `/api/uploads/${balanceProof}` : null);
+      enqueueTelegramEvent(db, 1, 'balance_reported');
+    };
+
+    it('sends the balance screenshot, not the advance one, with the amounts', async () => {
+      fs.writeFileSync(path.join(tempDir, 'uploads', advance), 'advance');
+      fs.writeFileSync(path.join(tempDir, 'uploads', balance), 'balance');
+      const db = database(); reported(db, balance);
+      const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 91 } }));
+      vi.stubGlobal('fetch', fetchMock);
+      expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
+      expect(fetchMock.mock.calls[0][0]).toContain('/sendPhoto');
+      const body = fetchMock.mock.calls[0][1].body as FormData;
+      expect((body.get('photo') as File).name).toBe(balance);
+      const caption = String(body.get('caption'));
+      expect(caption).toContain('BALANCE PAYMENT REPORTED');
+      expect(caption).toContain('Balance: ₹24,000');
+      expect(caption).toContain('Check the bank');
+      expect(caption).not.toContain('No screenshot');
+      db.close();
+    });
+
+    // The screenshot is optional on this path, so its absence is normal — it
+    // must not fall back to the advance proof or raise IMAGE UNAVAILABLE.
+    it('sends plain text when no screenshot came with the report', async () => {
+      fs.writeFileSync(path.join(tempDir, 'uploads', advance), 'advance');
+      const db = database(); reported(db, null);
+      const fetchMock = vi.fn().mockResolvedValue(response(200, { ok: true, result: { message_id: 92 } }));
+      vi.stubGlobal('fetch', fetchMock);
+      expect(await deliverClaimedTelegramEvent(db, claimTelegramEvents(db)[0])).toBe('sent');
+      expect(fetchMock.mock.calls[0][0]).toContain('/sendMessage');
+      const text = String((fetchMock.mock.calls[0][1].body as URLSearchParams).get('text'));
+      expect(text).toContain('BALANCE PAYMENT REPORTED');
+      expect(text).toContain('No screenshot attached.');
+      expect(text).not.toContain('IMAGE UNAVAILABLE');
+      expect(db.prepare(`SELECT status, last_error FROM telegram_notification_events`).get()).toEqual({ status: 'sent', last_error: 'no_screenshot' });
+      db.close();
+    });
   });
 
   it('sends IMAGE UNAVAILABLE and logs why when a proof cannot be read', async () => {

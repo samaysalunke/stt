@@ -5,7 +5,7 @@ import { getDb } from './db';
 import { findTripByName, readTrip } from './content';
 import { keyboardFor, type Menu } from './telegramKeyboard';
 
-export type TelegramEventType = 'lead' | 'pending' | 'confirmed';
+export type TelegramEventType = 'lead' | 'pending' | 'confirmed' | 'balance_reported';
 export type TelegramDeliveryState = 'queued' | 'dispatching' | 'retry_wait' | 'sent' | 'uncertain' | 'failed';
 
 type RegistrationSnapshot = {
@@ -20,6 +20,8 @@ type RegistrationSnapshot = {
   sharing_option: string | null;
   tier_id?: string | null;
   payment_screenshot_url: string | null;
+  /** The traveller's balance proof — separate so the advance proof survives. */
+  balance_payment_screenshot_url?: string | null;
   amount_paid: number | null;
   status?: string | null;
   payment_status?: string | null;
@@ -36,6 +38,8 @@ export type ClaimedTelegramEvent = {
 };
 
 const MAX_ATTEMPTS = 3;
+/** Recorded on a balance report sent as text because no screenshot came with it. */
+const NO_SCREENSHOT = 'no_screenshot';
 const API_ROOT = 'https://api.telegram.org';
 const DATA_DIR = () => process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
 const token = () => String((import.meta.env as any).TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '').trim();
@@ -121,6 +125,7 @@ export function formatTelegramMessage(
     lead: 'NEW BOOKING LEAD',
     pending: 'BOOKING PAYMENT PENDING',
     confirmed: 'BOOKING CONFIRMED',
+    balance_reported: 'BALANCE PAYMENT REPORTED',
   };
   const lines = [
     heading[eventType],
@@ -136,6 +141,18 @@ export function formatTelegramMessage(
   ];
   const paid = Number(registration.amount_paid) || 0;
   if (eventType === 'confirmed' && paid > 0) lines.push(`Amount paid: ₹${paid.toLocaleString('en-IN')}`);
+  if (eventType === 'balance_reported') {
+    const total = Number(registration.total_amount) || 0;
+    lines.push(
+      `Trip price: ₹${total.toLocaleString('en-IN')}`,
+      `Recorded paid: ₹${paid.toLocaleString('en-IN')}`,
+      `Balance: ₹${Math.max(0, total - paid).toLocaleString('en-IN')}`,
+      '',
+      // A claim, not money received — nothing has been recorded yet.
+      'Traveller says they paid. Check the bank, then record it in admin.',
+    );
+    if (!registration.balance_payment_screenshot_url) lines.push('No screenshot attached.');
+  }
   if (imageUnavailable) lines.push('', 'IMAGE UNAVAILABLE');
   // Telegram media captions are limited to 1024 characters. Preserve room for
   // all operational fields even if legacy customer data is unexpectedly long.
@@ -270,7 +287,7 @@ export function claimTelegramEvents(db: Database.Database, limit = 10): ClaimedT
 export async function deliverClaimedTelegramEvent(db: Database.Database, event: ClaimedTelegramEvent): Promise<TelegramDeliveryState> {
   const registration = db.prepare(`
     SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, tier_id,
-           payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
+           payment_screenshot_url, balance_payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
     FROM registrations WHERE id=?
   `).get(event.registration_id) as RegistrationSnapshot | undefined;
   if (!registration) {
@@ -292,10 +309,18 @@ export async function deliverClaimedTelegramEvent(db: Database.Database, event: 
     : undefined;
   try {
     let messageId: string;
+    const proof = event.event_type === 'balance_reported'
+      ? registration.balance_payment_screenshot_url
+      : registration.payment_screenshot_url;
     if (event.event_type === 'lead') {
       messageId = await sendText(formatTelegramMessage('lead', registration), keyboard);
+    } else if (event.event_type === 'balance_reported' && !proof) {
+      // The screenshot is optional here, so its absence is expected — plain
+      // text, not the IMAGE UNAVAILABLE warning a missing booking proof gets.
+      warning = NO_SCREENSHOT;
+      messageId = await sendText(formatTelegramMessage(event.event_type, registration), keyboard);
     } else {
-      const upload = resolveLocalPaymentUpload(registration.payment_screenshot_url);
+      const upload = resolveLocalPaymentUpload(proof);
       if (!upload.ok) {
         warning = `image_unavailable: ${upload.reason}`;
         messageId = await sendText(formatTelegramMessage(event.event_type, registration, true), keyboard);
@@ -408,7 +433,7 @@ export async function refreshRegistrationMessages(registrationId: number, footer
   const db = getDb();
   const registration = db.prepare(`
     SELECT id, full_name, email, phone, age, gender, trip_name, trip_date, sharing_option, tier_id,
-           payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
+           payment_screenshot_url, balance_payment_screenshot_url, amount_paid, status, payment_status, trip_slug, total_amount
     FROM registrations WHERE id=?
   `).get(registrationId) as RegistrationSnapshot | undefined;
   if (!registration) return;
@@ -430,7 +455,7 @@ export async function refreshRegistrationMessages(registrationId: number, footer
     const imageUnavailable = Boolean(event.last_error?.startsWith('image_unavailable'));
     // A caption exists only where a file was actually attached; everything else
     // went out as plain text.
-    const hasCaption = event.event_type !== 'lead' && !imageUnavailable;
+    const hasCaption = event.event_type !== 'lead' && !imageUnavailable && event.last_error !== NO_SCREENSHOT;
     const body = formatTelegramMessage(event.event_type, registration, imageUnavailable);
     const text = footer ? `${body}\n\n${footer}` : body;
     try {

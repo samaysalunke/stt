@@ -25,6 +25,10 @@ const { departures, orphanCosts, unallocated } = buildFinanceRollup(db);
 // still owed today, so year-scoping the one section about uncollected money
 // would be exactly backwards.
 const receivables = buildReceivables(db);
+// A traveller who says they have paid is the first thing to check, not the
+// next one to chase: reported balances go to the top, everything else keeps
+// the worst-first bucket order (Array#sort is stable).
+const collectionQueue = [...receivables.rows].sort((a, b) => Number(Boolean(b.balanceReportedAt)) - Number(Boolean(a.balanceReportedAt)));
 
 // Financial year, keyed off the DEPARTURE date so this page and /admin/ bucket
 // money the same way. Same cookie + ?fy= convention as the dashboard.
@@ -329,7 +333,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
               </tr>
             </thead>
             <tbody>
-              {receivables.rows.slice(0, 100).map((row) => (
+              {collectionQueue.slice(0, 100).map((row) => (
                 <tr class="border-b border-peach/30 last:border-0">
                   <td class="px-4 py-2 text-navy">
                     <a href={`/admin/registrations/${row.tripSlug ?? ''}`} class="hover:underline">{row.fullName || '—'}</a>
@@ -355,7 +359,7 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
           </table>
           {receivables.rows.length > 100 && (
             <p class="px-4 py-2 text-xs text-gray-text border-t border-peach/50">
-              Showing the 100 largest of {receivables.rows.length}.
+              Showing the first 100 of {receivables.rows.length}.
             </p>
           )}
         </div>
