@@ -1,5 +1,6 @@
-import { isTripPublic, readTrip } from './content';
+import { isTripPublic, readTrip, resolveBalanceDueRule } from './content';
 import { derivePaymentStatus, paymentStatusLabel, PAYMENT_STATUSES } from './registrationStatus';
+import { balanceDueDate, overdueDays } from './balanceDue';
 
 export const PROFILE_STATUSES = ['wishlist', 'lead', 'pending', 'confirmed', 'cancelled', 'rejected'] as const;
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
@@ -58,6 +59,13 @@ export interface ProfileTripRecord {
     totalAmount: number | null;
     amountPaid: number;
     balance: number | null;
+    /** Null when the rule does not parse or no departure matched — never invented. */
+    balanceDueDate: string | null;
+    balanceDueRule: string;
+    /** Positive = days late; zero or negative = not yet due. Null without a due date. */
+    daysOverdue: number | null;
+    /** Whether the traveller should be asked to pay the balance from their profile. */
+    balanceActionable: boolean;
     amountRefunded: number;
     traveller: {
       name: string | null;
@@ -161,6 +169,13 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
   const total = Number.isFinite(Number(row.total_amount)) && Number(row.total_amount) > 0 ? Number(row.total_amount) : null;
   const paid = Math.max(0, Number(row.amount_paid) || 0);
   const refunded = Math.max(0, Number(row.amount_refunded) || 0);
+  const balance = total == null ? null : Math.max(0, total - paid);
+  // The matched batch's own start date only. `startDate` above falls back to
+  // trip_date and then created_at, and a due date derived from the booking date
+  // would be overdue the moment it was made. Receivables files an unmatched
+  // booking as "unlinked" with no date; this must agree.
+  const balanceDueRule = resolveBalanceDueRule(trip);
+  const dueDate = balanceDueDate(indiaDateOnly(batch?.startDate), balanceDueRule);
   const cityState = [row.city, row.state].map((v) => v?.trim()).filter(Boolean).join(', ') || null;
   const emergency = [row.emergency_name, row.emergency_phone, row.emergency_relationship]
     .map((v) => v?.trim()).filter(Boolean).join(' · ') || null;
@@ -188,7 +203,15 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
       occupancy: row.sharing_option?.trim() || row.tier_id?.trim() || null,
       totalAmount: total,
       amountPaid: paid,
-      balance: total == null ? null : Math.max(0, total - paid),
+      balance,
+      balanceDueDate: dueDate,
+      balanceDueRule,
+      daysOverdue: overdueDays({ dueDate, todayKey: today, createdAt: row.created_at }),
+      // Leads go through "Continue booking"; pending is already under review (a
+      // pay button invites a double payment); cancelled/rejected settle through
+      // refunds; a completed trip's balance is far more often a missing payment
+      // record than a real debt (see receivables.ts).
+      balanceActionable: rawStatus === 'confirmed' && balance != null && balance > 0 && period !== 'completed',
       amountRefunded: refunded,
       traveller: {
         name: row.full_name?.trim() || null,
