@@ -180,6 +180,13 @@ function initializeSchema(db: Database.Database) {
   // has none today. `payment_events` reuses event_type='reversal' for refunds.
   try { db.exec("ALTER TABLE registrations ADD COLUMN payment_status TEXT DEFAULT 'unpaid'"); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN amount_refunded INTEGER DEFAULT 0'); } catch {}
+  // A traveller's CLAIM to have paid the balance — never a payment. amount_paid
+  // and payment_status stay driven by payment_events alone; admin confirms the
+  // money through the ledger, which is what actually settles the balance. A
+  // separate screenshot column so the advance proof in payment_screenshot_url
+  // is never overwritten.
+  try { db.exec('ALTER TABLE registrations ADD COLUMN balance_reported_at TEXT'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN balance_payment_screenshot_url TEXT'); } catch {}
   try {
     db.exec(`
       UPDATE registrations

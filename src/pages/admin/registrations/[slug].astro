@@ -636,6 +636,19 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       reloadWithFilters();
       return;
     }
+    if (btn.dataset.action === 'clear-balance-report') {
+      if (!confirm(`Clear the balance payment report on #${id}? This does not change any recorded payment.`)) return;
+      btn.disabled = true;
+      const res = await fetch('/api/admin/registrations/balance-report', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(id) }),
+      });
+      const data = await res.json().catch(() => null);
+      btn.disabled = false;
+      if (!res.ok || !data?.success) { alert(data?.error || 'Could not clear the report.'); return; }
+      reloadWithFilters();
+      return;
+    }
     if (btn.dataset.action === 'patch-state') {
       const state = document.getElementById('state-fix-' + id)?.value?.trim() || '';
       if (!state) { alert('Select the traveller’s state.'); return; }

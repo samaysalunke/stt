@@ -7,7 +7,7 @@ import {
   indianFinancialYearFromStart,
   isDateInIndianFinancialYear,
 } from '../../lib/adminDashboard';
-import { formatINR } from '../../lib/utils';
+import { formatDateIN, formatINR } from '../../lib/utils';
 import { formatDepartureRange } from '../../lib/departureSummary';
 import { buildReceivables } from '../../lib/receivables';
 export const prerender = false;
@@ -343,6 +343,11 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
                         : row.daysOverdue !== null && row.daysOverdue > 0 ? `${row.daysOverdue} day${row.daysOverdue === 1 ? '' : 's'} overdue`
                         : row.daysOverdue !== null ? `in ${-row.daysOverdue} days` : '—'}
                     </span>
+                    {row.balanceReportedAt && (
+                      <span class="ml-1 inline-block rounded-full px-2 py-0.5 font-semibold" style="background:var(--color-warning-surface);color:var(--color-warning-ink)" title="The traveller reported paying this balance. Check the bank, then record it or clear the report.">
+                        Reported paid {formatDateIN(row.balanceReportedAt)}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

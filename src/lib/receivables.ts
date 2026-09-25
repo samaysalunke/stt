@@ -72,6 +72,8 @@ export interface ReceivableRow {
   daysOverdue: number | null;
   balance: number;
   bucket: ReceivableBucketId;
+  /** The traveller says they paid the balance — check the bank before chasing. */
+  balanceReportedAt: string | null;
 }
 
 export interface ReceivablesView {
@@ -117,6 +119,7 @@ export interface ReceivableInput {
   totalAmount: number | null;
   amountPaid: number;
   createdAt: string | null;
+  balanceReportedAt?: string | null;
 }
 
 /**
@@ -138,6 +141,7 @@ export function bucketReceivable(
     batchId: input.batchId,
     startDate: departure?.startDate ?? null,
     balance,
+    balanceReportedAt: input.balanceReportedAt ?? null,
   };
 
   // A NULL/zero trip price makes the balance 0, which would read as "fully paid"
@@ -211,7 +215,7 @@ export function buildReceivables(db: Database.Database = getDb(), now = new Date
 
   const placeholders = COMMITTED_STATUSES.map(() => '?').join(',');
   const rows = db.prepare(`
-    SELECT id, full_name, trip_name, trip_slug, batch_id, total_amount, amount_paid, created_at
+    SELECT id, full_name, trip_name, trip_slug, batch_id, total_amount, amount_paid, created_at, balance_reported_at
     FROM registrations
     WHERE status IN (${placeholders})
   `).all(...COMMITTED_STATUSES) as Array<Record<string, any>>;
@@ -228,6 +232,7 @@ export function buildReceivables(db: Database.Database = getDb(), now = new Date
         totalAmount: row.total_amount === null || row.total_amount === undefined ? null : Number(row.total_amount),
         amountPaid: Number(row.amount_paid) || 0,
         createdAt: row.created_at ?? null,
+        balanceReportedAt: row.balance_reported_at ?? null,
       },
       key ? byKey.get(key) ?? null : null,
       todayKey,

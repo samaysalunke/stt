@@ -143,6 +143,12 @@ describe('profile trip view model', () => {
       expect(record.details.balanceActionable).toBe(false);
     });
 
+    it('carries a balance payment report onto the record', () => {
+      const [record] = canonicalizeProfileTrips([booked({ balance_reported_at: '2026-09-20 10:00:00' })], today);
+      expect(record.details.balanceReportedAt).toBe('2026-09-20 10:00:00');
+      expect(record.details.balanceActionable).toBe(true);
+    });
+
     it('keeps the new fields off the public shape', () => {
       const publicRow = shapePublicTrips(canonicalizeProfileTrips([booked()], today))[0];
       expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
