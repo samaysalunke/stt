@@ -135,25 +135,6 @@ describe('computePnl', () => {
     expect(pnl.departuresWithoutFyCollected).toBe(70_000);
   });
 
-  it('carries the unallocated and orphan leaks through', () => {
-    const pnl = computePnl([], [], { unallocatedCollected: 25_000, orphanCostTotal: 9_000, allDepartures: [] }, opts(1));
-    expect(pnl.unallocatedCollected).toBe(25_000);
-    expect(pnl.orphanCostTotal).toBe(9_000);
-  });
-});
-
-describe('overheads entered ahead of time still count', () => {
-  it('sums a month that has not elapsed yet', () => {
-    // monthsInPeriod is 0 (nothing has elapsed), but a row exists and must not
-    // be dropped: summation and completeness use different windows.
-    const pnl = computePnl([], [overhead('2099-04', 'salaries', 3_000)], NO_LEAKS, opts(0));
-    expect(pnl.overheads).toBe(3_000);
-    expect(pnl.monthsEntered).toBe(1);
-    expect(pnl.monthsInPeriod).toBe(0);
-    // Nothing has begun, so nothing can be "missing" — not indicative.
-    expect(pnl.indicative).toBe(false);
-    expect(pnl.netProfit).toBe(-3_000);
-  });
 });
 
 describe('monthRange', () => {

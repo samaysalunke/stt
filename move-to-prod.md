@@ -204,8 +204,7 @@ block (`src/lib/db.ts` uses `better-sqlite3`) and the Gmail-SMTP option
 ## Verification
 
 **Local**
-1. `npm run test:unit` — note `tests/unit/seo.test.ts:56-58` asserts apex IndexNow URLs
-   and **must be updated to www** as part of the change.
+1. `npm run test:unit`.
 2. `npm run test:api` (`tests/run.mjs`), then `npm run test:e2e`.
 3. `npm run build && npm start`, then confirm the middleware fix does not fire locally:
    `curl -sI localhost:4321/about -o /dev/null -w "%{http_code} %{redirect_url}\n"`

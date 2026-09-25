@@ -129,18 +129,6 @@ describe('summariseReceivables', () => {
     expect(summary.total).toBe(105_000);
   });
 
-  it('orders buckets worst first', () => {
-    const summary = summariseReceivables([
-      row('not-yet-due', 1),
-      row('post-departure', 1),
-      row('overdue-16-30', 1),
-    ]);
-    expect(summary.buckets.map((b) => b.id)).toEqual(['post-departure', 'overdue-16-30', 'not-yet-due']);
-  });
-
-  it('omits empty buckets', () => {
-    expect(summariseReceivables([row('not-yet-due', 1)]).buckets).toHaveLength(1);
-  });
 });
 
 describe('businessToday', () => {

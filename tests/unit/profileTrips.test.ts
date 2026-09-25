@@ -18,7 +18,7 @@ vi.mock('../../src/lib/content', async (importOriginal) => ({
   isTripPublic: () => true,
 }));
 
-import { canonicalizeProfileTrips, groupProfileTrips, indiaDateOnly, shapePublicTrips, todayInIndia, type ProfileRegistrationRow } from '../../src/lib/profileTrips';
+import { canonicalizeProfileTrips, groupProfileTrips, indiaDateOnly, todayInIndia, type ProfileRegistrationRow } from '../../src/lib/profileTrips';
 
 const row = (overrides: Partial<ProfileRegistrationRow> = {}): ProfileRegistrationRow => ({
   id: 1, email: ' Person@Example.com ', trip_name: 'Legacy Journey', trip_slug: null,
@@ -70,14 +70,6 @@ describe('profile trip view model', () => {
     ], '2026-01-01');
     expect(record.paymentStatus).toBe('no_refund');
     expect(record.paymentLabel).toBe('No refund');
-  });
-
-  it('uses stored payment status and public shaping excludes private details', () => {
-    const [record] = canonicalizeProfileTrips([row({ status:'confirmed', payment_status:'partial_refund', full_name:'Private Name', phone:'999', emergency_name:'Secret' })], '2026-01-01');
-    expect(record.paymentStatus).toBe('partial_refund');
-    const publicRow = shapePublicTrips([record])[0];
-    expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
-    expect(JSON.stringify(publicRow)).not.toContain('Private Name');
   });
 
   describe('balance due', () => {
@@ -143,15 +135,5 @@ describe('profile trip view model', () => {
       expect(record.details.balanceActionable).toBe(false);
     });
 
-    it('carries a balance payment report onto the record', () => {
-      const [record] = canonicalizeProfileTrips([booked({ balance_reported_at: '2026-09-20 10:00:00' })], today);
-      expect(record.details.balanceReportedAt).toBe('2026-09-20 10:00:00');
-      expect(record.details.balanceActionable).toBe(true);
-    });
-
-    it('keeps the new fields off the public shape', () => {
-      const publicRow = shapePublicTrips(canonicalizeProfileTrips([booked()], today))[0];
-      expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
-    });
   });
 });

@@ -156,8 +156,8 @@ put in place, the open fixes it left behind, and the conventions to keep followi
 ### Process
 - Keep SEO changes scoped. Don't bundle unrelated pipeline/infra changes into an "SEO" commit —
   it blocks clean review, bisect, and revert.
-- Any change touching visibility, canonical shape, or structured data ⇒ add/extend
-  `tests/unit/seo.test.ts` (leak guards, robots, noindex header).
+- Any change touching visibility, canonical shape, or structured data ⇒ cover it with an
+  E2E/API test (see `AGENTS.md`); `tests/unit/seo.test.ts` keeps only the publication-rule leak guards.
 
 ---
 

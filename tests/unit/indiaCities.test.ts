@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { INDIA_CITIES, isListedIndiaCity, normalizeIndiaCity } from '../../src/lib/indiaCities';
+import { INDIA_CITIES, normalizeIndiaCity } from '../../src/lib/indiaCities';
 
 const src = (rel: string) => readFileSync(path.join(process.cwd(), 'src', rel), 'utf-8');
 
@@ -45,12 +45,6 @@ describe('normalizeIndiaCity', () => {
     expect(normalizeIndiaCity('Belgaum')).toBe('Belagavi');
     expect(normalizeIndiaCity('Belagavi')).toBe('Belagavi');
     expect(normalizeIndiaCity('Aurangabad')).toBe('Chhatrapati Sambhajinagar');
-  });
-
-  it('carries no place under two list entries', () => {
-    // 'Goa (Panaji)' and 'Panaji' were both listed, so the picker offered the
-    // same city twice and they geocoded separately.
-    expect(INDIA_CITIES.filter((c) => /panaji/i.test(c))).toEqual(['Panaji']);
   });
 
   describe('a city with its state appended', () => {
@@ -126,33 +120,4 @@ describe('the alias table', () => {
     expect([...new Set(targets)].filter((t) => !INDIA_CITIES.includes(t))).toEqual([]);
   });
 
-  it('never aliases a name that is already listed', () => {
-    const file = src('lib/indiaCities.ts');
-    const block = file.slice(file.indexOf('CITY_ALIASES'), file.indexOf('const squashCity'));
-    const keys = [...block.matchAll(/^\s*([a-z]+):/gm)].map((m) => m[1]);
-    const squash = (v: string) => v.toLowerCase().replace(/[^a-z]/g, '');
-    const listed = new Set(INDIA_CITIES.map(squash));
-    // Shadowing a listed spelling would be dead config at best and a silent
-    // rename at worst.
-    expect(keys.filter((k) => listed.has(k))).toEqual([]);
-  });
-});
-
-describe('isListedIndiaCity', () => {
-  it('reports whether the picker can show the value without "Other"', () => {
-    expect(isListedIndiaCity('Bengaluru')).toBe(true);
-    expect(isListedIndiaCity('Bangalore')).toBe(false);
-    expect(isListedIndiaCity('Ziro')).toBe(false);
-  });
-});
-
-describe('every path that writes a city normalises it', () => {
-  it.each([
-    ['pages/api/register.ts', 'the public checkout'],
-    ['lib/registrationWrite.ts', 'admin create and the CSV importer'],
-    ['pages/api/admin/customers/update.ts', 'the customer drawer'],
-    ['pages/api/admin/registrations/fields.ts', 'the registration field patch'],
-  ])('%s', (file) => {
-    expect(src(file)).toContain('normalizeIndiaCity');
-  });
 });

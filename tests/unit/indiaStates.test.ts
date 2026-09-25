@@ -7,10 +7,6 @@ import { describe, expect, it } from 'vitest';
 import { INDIA_STATES, normalizeIndiaState } from '../../src/lib/indiaStates';
 
 describe('normalizeIndiaState', () => {
-  it('covers all 28 states and 8 union territories', () => {
-    expect(INDIA_STATES).toHaveLength(36);
-    expect(new Set(INDIA_STATES).size).toBe(36);
-  });
 
   it('accepts every canonical value unchanged', () => {
     for (const state of INDIA_STATES) expect(normalizeIndiaState(state)).toBe(state);

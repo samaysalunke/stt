@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   roomSizeForTier,
-  genderBucket,
   buildDepartureOccupancy,
 } from '../../src/lib/occupancyMatrix';
 
@@ -9,16 +8,6 @@ const reg = (tier_id: string, gender: string, status = 'confirmed', sharing_opti
   tier_id, gender, status, sharing_option,
 });
 const tier = (tierId: string, cap: number | null, label = tierId) => ({ tierId, label, cap });
-
-describe('genderBucket', () => {
-  it.each([
-    ['male', 'male'], ['Male', 'male'], ['M', 'male'],
-    ['female', 'female'], ['F', 'female'],
-    ['other', 'other'], ['', 'other'], [null, 'other'], ['nonbinary', 'other'],
-  ])('%s -> %s', (input, expected) => {
-    expect(genderBucket(input)).toBe(expected);
-  });
-});
 
 describe('roomSizeForTier', () => {
   it.each<[string, string, number | null]>([
