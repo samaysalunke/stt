@@ -2,11 +2,14 @@
 import type { ProfileTripRecord } from '../lib/profileTrips';
 import { paymentStatusStyle } from '../lib/registrationStatus';
 import { formatDateIN, formatINR } from '../lib/utils';
+import { imageSrcset } from '../lib/imageVariants';
 interface Props { record: ProfileTripRecord; supportHref: string }
 const { record, supportHref } = Astro.props;
 const money = (value: number | null) => value == null ? 'Not recorded' : formatINR(value);
 const statusClass = `status-${record.status}`;
 const { balance, balanceDueDate, balanceDueRule, daysOverdue, balanceActionable, balanceReportedAt } = record.details;
+// Cancelled and rejected bookings keep their dates but have nothing to count down to.
+const timing = ['cancelled', 'rejected'].includes(record.status) ? null : record.timingLabel;
 const tripPage = record.tripExists && record.tripSlug ? `/trips/${record.tripSlug}/` : null;
 
 const payHref = balanceActionable ? `/profile/pay/${record.id}` : null;
@@ -41,8 +44,14 @@ const travellerFields = [
 <article class="trip-card" data-card-skeleton data-skeleton-ready>
   <div class="trip-card-summary">
     <div class="trip-card-copy">
-      <h3>{record.tripName}</h3>
-      <p>{record.dateLabel}</p>
+      <div class="trip-card-head">
+        {record.coverImage && <img class="thumb" src={record.coverImage} srcset={imageSrcset(record.coverImage)} sizes="64px" alt="" width="64" height="64" loading="lazy" decoding="async" />}
+        <div class="trip-card-title">
+          <h3>{record.tripName}</h3>
+          <p>{record.dateLabel}</p>
+          {timing && <p class={`timing${record.period === 'ongoing' ? ' timing-live' : ''}`}>{timing}</p>}
+        </div>
+      </div>
       <div class="badges">
         <span class={`badge ${statusClass}`}>{record.statusLabel}</span>
         <span class="badge payment" style={paymentStatusStyle(record.paymentStatus)}>{record.paymentLabel}</span>
@@ -67,7 +76,6 @@ const travellerFields = [
       <div><span>Total price</span><strong>{money(record.details.totalAmount)}</strong></div>
       <div><span>Amount paid</span><strong>{money(record.details.amountPaid)}</strong></div>
       <div><span>Remaining balance</span><strong>{money(record.details.balance)}</strong></div>
-      <div><span>Payment status</span><strong>{record.paymentLabel}</strong></div>
       {/* Substring-matching "refund" also caught `no_refund`, showing a
           traveller a "Refund ₹0 · No refund" row for money we kept. Match the
           states that mean a refund actually happened. */}
@@ -90,7 +98,8 @@ const travellerFields = [
 <style>
   .trip-card{background:#fff;border:1px solid var(--color-peach);border-radius:1.15rem;overflow:hidden;min-width:0}
   .trip-card-summary{padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-  .trip-card-copy{min-width:0}.trip-card h3{font-size:.96rem;font-weight:700;overflow-wrap:anywhere}.trip-card p{margin-top:.18rem;color:var(--color-gray-text);font-size:.78rem}
+  .trip-card-copy{min-width:0}.trip-card-head{display:flex;align-items:center;gap:.8rem;min-width:0}.trip-card-title{min-width:0}.thumb{width:64px;height:64px;flex:0 0 auto;border-radius:.8rem;object-fit:cover;background:var(--color-blush)}
+  .trip-card p.timing{margin-top:.3rem;color:var(--color-coral-ink);font-size:.74rem;font-weight:700}.trip-card p.timing-live::before{content:'';display:inline-block;width:.45rem;height:.45rem;margin-right:.35rem;border-radius:50%;background:var(--color-success-ink);vertical-align:.05rem}.trip-card h3{font-size:.96rem;font-weight:700;overflow-wrap:anywhere}.trip-card p{margin-top:.18rem;color:var(--color-gray-text);font-size:.78rem}
   .badges{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.7rem}.badge{padding:.28rem .55rem;border-radius:999px;font-size:.68rem;font-weight:700;background:var(--color-muted-surface);color:var(--color-muted-ink)}
   .status-confirmed{background:var(--color-success-surface);color:var(--color-success-surface-ink)}.status-pending{background:var(--color-warning-surface);color:var(--color-warning-ink)}.status-lead{background:var(--color-caution-surface);color:var(--color-caution-ink)}.status-wishlist{background:var(--color-interest-surface);color:var(--color-interest-ink)}.status-cancelled,.status-rejected{background:var(--color-neutral-surface);color:var(--color-neutral-ink)}
   .balance{margin-top:.7rem;padding:.55rem .7rem;border-radius:.7rem;display:flex;flex-direction:column;gap:.1rem;background:var(--color-muted-surface);color:var(--color-muted-ink)}.balance strong{font-size:.9rem;font-weight:700}.balance span{font-size:.74rem}

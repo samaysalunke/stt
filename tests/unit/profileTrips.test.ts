@@ -18,7 +18,7 @@ vi.mock('../../src/lib/content', async (importOriginal) => ({
   isTripPublic: () => true,
 }));
 
-import { canonicalizeProfileTrips, groupProfileTrips, indiaDateOnly, shapePublicTrips, todayInIndia, type ProfileRegistrationRow } from '../../src/lib/profileTrips';
+import { canonicalizeProfileTrips, groupProfileTrips, indiaDateOnly, shapePublicTrips, todayInIndia, tripTimingLabel, type ProfileRegistrationRow } from '../../src/lib/profileTrips';
 
 const row = (overrides: Partial<ProfileRegistrationRow> = {}): ProfileRegistrationRow => ({
   id: 1, email: ' Person@Example.com ', trip_name: 'Legacy Journey', trip_slug: null,
@@ -153,5 +153,21 @@ describe('profile trip view model', () => {
       const publicRow = shapePublicTrips(canonicalizeProfileTrips([booked()], today))[0];
       expect(Object.keys(publicRow).sort()).toEqual(['location','startDate','status','tripName','tripSlug'].sort());
     });
+  });
+
+  it('labels where a departure is relative to today', () => {
+    expect(tripTimingLabel('upcoming', '2026-10-10', '2026-10-16', '2026-09-26')).toBe('Starts in 14 days');
+    expect(tripTimingLabel('upcoming', '2026-09-27', '2026-10-02', '2026-09-26')).toBe('Starts tomorrow');
+    expect(tripTimingLabel('ongoing', '2026-09-20', '2026-09-26', '2026-09-22')).toBe('Day 3 of 7');
+    expect(tripTimingLabel('ongoing', '2026-09-20', '2026-09-26', '2026-09-26')).toBe('Ends today');
+    expect(tripTimingLabel('completed', '2026-09-01', '2026-09-05', '2026-09-26')).toBeNull();
+  });
+
+  it('never counts down to a date borrowed from created_at', () => {
+    const [undated] = canonicalizeProfileTrips([row({ trip_date: null, created_at: '2026-10-01 10:00:00' })], '2026-09-26');
+    expect(undated.startDate).toBe('2026-10-01');
+    expect(undated.timingLabel).toBeNull();
+    const [dated] = canonicalizeProfileTrips([row({ trip_slug: 'ladakh', batch_id: 'oct' })], '2026-09-26');
+    expect(dated.timingLabel).toBe('Starts in 14 days');
   });
 });

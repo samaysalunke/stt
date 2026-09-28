@@ -4,6 +4,7 @@ import { formatDepartureRange, getDepartureSummary } from '../lib/departureSumma
 import { FALLBACK_HERO } from '../lib/images';
 import { imageSrcset, TRIP_GRID_SIZES } from '../lib/imageVariants';
 import DiscountCountdown from './DiscountCountdown';
+import { lowStockSpots, spotsLeftLabel } from '../lib/urgency';
 
 interface Props {
   slug: string;
@@ -79,6 +80,9 @@ const cardImageAlt = `${tripName} group trip${location && !tripName.toLowerCase(
 
 const formattedPrice = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')}` : null;
 const isSoldOut = soldOut;
+// One capacity signal, only when stock is low. `spotsLeft` is live (confirmed
+// registrations against the cap) for the soonest bookable departure.
+const lowStock = lowStockSpots({ liveSpotsLeft: spotsLeft, soldOut: isSoldOut });
 const departureSummary = getDepartureSummary(departures);
 
 // Card footer order matters: the coming-soon caption renders ABOVE the CTA.
@@ -202,7 +206,9 @@ const departureSummary = getDepartureSummary(departures);
       </span>
     ) : (
       <div class="mt-auto flex flex-col gap-2">
-        {hasComingSoon ? (
+        {lowStock != null ? (
+          <p data-testid="trip-card-spots-left" class="text-center text-xs font-semibold text-coral-ink">{spotsLeftLabel(lowStock)}</p>
+        ) : hasComingSoon ? (
           <p class="text-center text-xs text-coral-ink">New dates — wishlist inside</p>
         ) : null}
         <a

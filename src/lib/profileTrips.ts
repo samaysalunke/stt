@@ -47,6 +47,10 @@ export interface ProfileTripRecord {
   startDate: string | null;
   endDate: string | null;
   dateLabel: string;
+  /** "Starts in 12 days", "Day 3 of 7", "Ends today"; null once the trip is over or undated. */
+  timingLabel: string | null;
+  /** The trip's own cover, never the site fallback: a shared stock photo on every card says nothing. */
+  coverImage: string | null;
   period: TripPeriod;
   status: ProfileStatus;
   statusLabel: string;
@@ -143,6 +147,22 @@ function formatDateRange(start: string | null, end: string | null, fallback: str
   return end && end !== start ? `${fmt(start)} – ${fmt(end)}` : fmt(start);
 }
 
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+export function tripTimingLabel(period: TripPeriod, start: string | null, end: string | null, today: string): string | null {
+  if (!start || !end) return null;
+  if (period === 'upcoming') {
+    const days = daysBetween(today, start);
+    return days === 1 ? 'Starts tomorrow' : `Starts in ${days} days`;
+  }
+  if (period !== 'ongoing') return null;
+  if (end === today) return 'Ends today';
+  if (start === end) return 'Today';
+  return `Day ${daysBetween(start, today) + 1} of ${daysBetween(start, end) + 1}`;
+}
+
 function safeTrip(slug: string | null): Record<string, any> | null {
   if (!slug) return null;
   try { return readTrip(slug); } catch { return null; }
@@ -194,6 +214,9 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
     tripExists: Boolean(trip && isTripPublic({ ...trip, slug: row.trip_slug })),
     startDate, endDate,
     dateLabel: formatDateRange(startDate, endDate, row.trip_date),
+    // Not from the created_at fallback: a countdown to the booking date is invented.
+    timingLabel: (indiaDateOnly(batch?.startDate) ?? storedDate) ? tripTimingLabel(period, startDate, endDate, today) : null,
+    coverImage: [trip?.coverImage, trip?.featuredImage].find((v) => typeof v === 'string' && v.trim())?.trim() ?? null,
     period,
     status: rawStatus,
     statusLabel: travellerStatusLabel[rawStatus],
