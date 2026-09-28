@@ -108,6 +108,25 @@ test('spotsLeft from soonest non-sold-out departure', () => {
   expect(tripCardSummary(trip).spotsLeft).toBe(3);
 });
 
+test('nextOpen points at the soonest bookable departure', () => {
+  const trip = makeTrip([
+    { id: 'full', startDate: FAR, endDate: FAR_END, status: 'booking-open', offers: [{ tierId: 'dorm', price: 5000, cap: 4, booked: 4 }] },
+    { id: 'open', startDate: '2099-02-01', endDate: '2099-02-05', status: 'booking-open', offers: [{ tierId: 'dorm', price: 5000, cap: 12, booked: 1 }] },
+  ]);
+  const card = tripCardSummary(trip);
+  expect(card.nextOpenBatchId).toBe('open');
+  expect(card.nextOpenTotalCap).toBe(12);
+});
+
+test('nextOpen is null when every sellable departure is sold out', () => {
+  const trip = makeTrip([
+    { id: 'full', startDate: FAR, endDate: FAR_END, status: 'sold-out', offers: [{ tierId: 'dorm', price: 5000, cap: 10, booked: 2 }] },
+  ]);
+  const card = tripCardSummary(trip);
+  expect(card.nextOpenBatchId).toBeNull();
+  expect(card.nextOpenTotalCap).toBeNull();
+});
+
 test('spotsLeft is null when cap is null (unmetered)', () => {
   const trip = makeTrip([
     {

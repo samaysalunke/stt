@@ -14,6 +14,8 @@ import { FALLBACK_HERO } from '../../lib/images';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
 import { generateTripSeo, markdownToPlainText } from '../../lib/tripSeo';
 import { getDb } from '../../lib/db';
+import { confirmedCountsByBatch, departureKey } from '../../lib/departureCounts';
+import { liveSpotsLeft } from '../../lib/urgency';
 import { todayInIndia } from '../../lib/profileTrips';
 import { balanceDueDate } from '../../lib/balanceDue';
 import { derivePaymentStatus, paymentStatusLabel, paymentStatusStyle, PAYMENT_STATUSES, regStatusStyle } from '../../lib/registrationStatus';
@@ -135,16 +137,27 @@ const groupSizeAtAGlance = allComingSoon
     : 'To be announced';
 const priceAtAGlance = fromPrice != null ? `₹${fromPrice.toLocaleString('en-IN')} / person` : 'To be announced';
 
+// Live confirmed counts feed the "Only N spots left" and "N women already
+// booked" lines — the YAML booked counter is hand-maintained and can drift.
+const liveCounts = confirmedCountsByBatch(bookableDepartures.map((d) => ({ slug: slug!, batchId: d.id })));
+
 // Strip all pricing from coming-soon departures before they cross to the island.
-const departuresForPanel = departures.map((d) =>
-  d.comingSoon
-    ? {
-        id: d.id, startDate: d.startDate, endDate: d.endDate, status: d.status,
-        comingSoon: true, fillingFast: false, priceConcealed: true,
-        offers: [], totalCap: null, spotsLeft: null, soldOut: false,
-      }
-    : d,
-);
+const departuresForPanel = departures.map((d) => {
+  if (d.comingSoon) {
+    return {
+      id: d.id, startDate: d.startDate, endDate: d.endDate, status: d.status,
+      comingSoon: true, fillingFast: false, priceConcealed: true,
+      offers: [], totalCap: null, spotsLeft: null, soldOut: false,
+      liveSpotsLeft: null, womenBooked: null,
+    };
+  }
+  const counts = liveCounts.get(departureKey(slug!, d.id));
+  return {
+    ...d,
+    liveSpotsLeft: liveSpotsLeft(d.totalCap, counts?.confirmed ?? 0),
+    womenBooked: counts?.women ?? 0,
+  };
+});
 const wishlistUser = Astro.locals.user
   ? { name: Astro.locals.user.displayName ?? '', email: Astro.locals.user.email, phone: Astro.locals.user.phone ?? '' }
   : null;

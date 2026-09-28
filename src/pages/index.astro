@@ -7,6 +7,7 @@ import Button from '../components/ui/Button.astro';
 import Section from '../components/ui/Section.astro';
 import Stat from '../components/ui/Stat.astro';
 import Icon from '../components/ui/Icon.astro';
+import { cardLiveSpots } from '../lib/departureCounts';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
 
 const allTrips = listTrips();
@@ -20,6 +21,7 @@ const featuredTrips = sortTripsByPriority(
   contentSeededRandom(),
 );
 const showCarouselArrows = featuredTrips.length > 3;
+const liveSpots = cardLiveSpots(featuredTrips.map((t) => ({ slug: t.slug, ...tripCardSummary(t) })));
 
 const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());
 
@@ -143,7 +145,7 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
                   originalFromPrice={card.originalFromPrice}
                   discountEndsAt={card.discountEndsAt}
                   multiPrice={card.multiPrice}
-                  spotsLeft={card.spotsLeft}
+                  spotsLeft={liveSpots.get(trip.slug) ?? null}
                   soldOut={card.soldOut}
                   hasComingSoon={card.hasComingSoon}
                   allComingSoon={card.allComingSoon}

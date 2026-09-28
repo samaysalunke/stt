@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
+import { lowStockSpots, spotsLeftLabel, womenBookedLabel } from '../lib/urgency';
 
 // Mirrors the ResolvedBooking shape from src/lib/content.ts. Re-declared here
 // (not imported) so this client island never pulls node `fs` into the bundle.
@@ -31,6 +32,10 @@ interface Departure {
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
+  /** Seats left against confirmed registrations (not the YAML counter). */
+  liveSpotsLeft?: number | null;
+  /** Confirmed female travellers on this departure. */
+  womenBooked?: number | null;
 }
 interface Props {
   departures: Departure[];
@@ -217,6 +222,7 @@ export default function BookingPanel({
             {departures.map((dep) => {
               const isSelected = dep.id === departureId;
               const isSoldOut = dep.soldOut;
+              const lowStock = lowStockSpots(dep);
               return (
                 <button
                   key={dep.id}
@@ -255,12 +261,27 @@ export default function BookingPanel({
                     <div className="text-xs mt-1 font-semibold" style={{ color: C.coralInk }}>Coming soon · wishlist to hear first</div>
                   ) : isSoldOut ? (
                     <div className="text-xs mt-1" style={{ color: C.gray }}>Sold out</div>
+                  ) : lowStock != null ? (
+                    <div data-testid={`spots-left-${dep.id}`} className="text-xs mt-1 font-semibold" style={{ color: C.coralInk }}>
+                      {spotsLeftLabel(lowStock)}
+                    </div>
                   ) : null}
                 </button>
               );
             })}
           </div>
         </div>
+      )}
+
+      {/* ── Women already on the selected date (hidden below 2) ─ */}
+      {selectedDeparture && !selectedComingSoon && womenBookedLabel(selectedDeparture.womenBooked) && (
+        <p data-testid="women-booked" className="-mt-2 mb-5 flex items-center gap-1.5 text-xs font-medium" style={{ color: C.navy }}>
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          {womenBookedLabel(selectedDeparture.womenBooked)} on these dates
+        </p>
       )}
 
       {/* ── Occupancy (reactive to the selected date; hidden for coming-soon) ─ */}

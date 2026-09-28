@@ -545,6 +545,9 @@ export function tripCardSummary(trip: Record<string, any>): {
   discountEndsAt: string | null;
   multiPrice: boolean;
   spotsLeft: number | null;
+  /** The soonest bookable departure, for the live spots-left line; null if none. */
+  nextOpenBatchId: string | null;
+  nextOpenTotalCap: number | null;
   soldOut: boolean;
   /** At least one upcoming departure is coming-soon. */
   hasComingSoon: boolean;
@@ -592,6 +595,8 @@ export function tripCardSummary(trip: Record<string, any>): {
     discountEndsAt: lead?.originalPrice != null ? lead.discountEndsAt : null,
     multiPrice: prices.size > 1,
     spotsLeft: soonest?.spotsLeft ?? null,
+    nextOpenBatchId: soonest && !soonest.soldOut ? soonest.id : null,
+    nextOpenTotalCap: soonest && !soonest.soldOut ? soonest.totalCap : null,
     soldOut: allSoldOut,
     hasComingSoon: comingSoonCount > 0,
     allComingSoon: booking.departures.length > 0 && comingSoonCount === booking.departures.length,
