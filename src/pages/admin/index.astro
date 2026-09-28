@@ -10,7 +10,9 @@ import {
   indianFinancialYear,
   indianFinancialYearFromStart,
   isDateInIndianFinancialYear,
+  summarizeRevenue,
 } from '../../lib/adminDashboard';
+import { NON_REVENUE_STATUSES } from '../../lib/registrationsView';
 import { regStatusStyle } from '../../lib/registrationStatus';
 export const prerender = false;
 
@@ -60,11 +62,9 @@ const regs = regsAll.filter((registration) => inSelectedFy(registrationDeparture
 const confirmedRegs = regs.filter(r => r.status === 'confirmed');
 const totalBookings = confirmedRegs.length;
 const pendingCount = regs.filter(r => r.status === 'pending').length;
-// Match the registrations page definition: payments collected = all non-rejected,
-// non-cancelled (cancelled is excluded from revenue from the moment of cancellation).
-const paidRegs = regs.filter(r => r.status !== 'rejected' && r.status !== 'cancelled');
-const revenue = paidRegs.reduce((sum, r) => sum + Number(r.amount_paid ?? 0), 0);
-const revenueTripCount = new Set(paidRegs.map(r => r.trip_name).filter(Boolean)).size;
+// Same rule as the registrations page: cash on any row that isn't rejected,
+// wishlisted or cancelled — a lead that has paid an advance still counts.
+const { revenue, payingCount, tripCount: revenueTripCount } = summarizeRevenue(regs, NON_REVENUE_STATUSES);
 
 const recent = [...regs].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 5);
 
@@ -76,11 +76,16 @@ for (const registration of confirmedRegs) {
 const week = buildBookingGrowthWeek([...weekCounts].map(([d, c]) => ({ d, c })));
 const maxCount = Math.max(1, ...week.map(d => d.count));
 
-// Trip-level status removed — derive these from departures. "Active" counts every
-// individual departure date that's upcoming and not sold out, not parent trips —
-// one trip with 3 open departures counts as 3.
+// Trip-level status removed — derive these from departures. "Open departures"
+// counts every individual departure date that's upcoming and not sold out, not
+// parent trips — one trip with 3 open departures counts as 3. resolveBooking only
+// returns upcoming departures, so a trip whose dates have all passed adds nothing.
 const allDepartures = trips.flatMap(t => resolveBooking(t).departures).filter(d => inSelectedFy(d.startDate));
 const activeTrips = allDepartures.filter(d => !d.soldOut).length;
+// Trips with a real (non-draft) departure in the period, past or upcoming.
+const periodTripCount = trips.filter(t =>
+  editableBooking(t).editorDepartures.some(d => d.status !== 'draft' && inSelectedFy(d.startDate)),
+).length;
 const soldOut = trips.filter(t => {
   const departures = resolveBooking(t).departures.filter(d => inSelectedFy(d.startDate));
   return departures.length > 0 && departures.every(d => d.soldOut);
@@ -97,10 +102,10 @@ function inr(n: number) {
 const statusStyle = regStatusStyle;
 
 const kpis = [
-  { label: 'Payments collected', value: inr(revenue), hint: `${totalBookings} confirmed seat${totalBookings === 1 ? '' : 's'} · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
+  { label: 'Payments collected', value: inr(revenue), hint: `${payingCount} paying booking${payingCount === 1 ? '' : 's'} · ${revenueTripCount} ${revenueTripCount === 1 ? 'trip' : 'trips'}` },
   { label: 'Total bookings', value: String(totalBookings), hint: `${pendingCount} pending signup${pendingCount === 1 ? '' : 's'}` },
   { label: 'Pending review', value: String(pendingCount), hint: 'Awaiting confirmation' },
-  { label: 'Active trips', value: String(activeTrips), hint: `${allDepartures.length} departures · ${trips.length} trips` },
+  { label: 'Open departures', value: String(activeTrips), hint: `${allDepartures.length} upcoming · ${periodTripCount} ${periodTripCount === 1 ? 'trip' : 'trips'} this period` },
 ];
 
 const quickActions = [

@@ -41,13 +41,36 @@ export function indianFinancialYearFromStart(startYear: number): IndianFinancial
   };
 }
 
+export interface RevenueSummary {
+  revenue: number;
+  /** Rows that actually carry money, whatever their status. */
+  payingCount: number;
+  /** Distinct trips by slug — names drift when a trip is renamed or copied. */
+  tripCount: number;
+}
+
+/** Collected money for the dashboard KPI. `excluded` is the registrations page's
+ *  NON_REVENUE_STATUSES, passed in so both screens share one rule. */
+export function summarizeRevenue(
+  rows: Array<{ status: string; amount_paid?: unknown; trip_slug?: unknown; trip_name?: unknown }>,
+  excluded: readonly string[],
+): RevenueSummary {
+  const counted = rows.filter((r) => !excluded.includes(r.status));
+  const paying = counted.filter((r) => Number(r.amount_paid) > 0);
+  return {
+    revenue: counted.reduce((sum, r) => sum + (Number(r.amount_paid) || 0), 0),
+    payingCount: paying.length,
+    tripCount: new Set(paying.map((r) => String(r.trip_slug || r.trip_name || '')).filter(Boolean)).size,
+  };
+}
+
 /** Extract the departure's first day from current ISO values and legacy display labels. */
 export function departureDateKey(value: unknown): string | null {
   const text = String(value ?? '').trim();
   const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
-  const display = text.match(/\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/i);
+  const display = text.match(/\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/i);
   if (!display) return null;
   const months: Record<string, string> = {
     jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
