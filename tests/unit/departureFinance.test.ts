@@ -65,6 +65,41 @@ describe('costBreakdown', () => {
   });
 });
 
+describe('host cost', () => {
+  const base = { base_amount: 90_000, note: null, updated_at: null, updated_by_email: null };
+  const items = [{ id: 1, label: 'jeep', amount: 10_000 }];
+
+  it('adds to the total on top of the cost price when enabled', () => {
+    const cost = costBreakdown(base, items, { amount: 20_000, enabled: 1 });
+    expect(cost.operatingTotal).toBe(100_000);
+    expect(cost.hostApplied).toBe(20_000);
+    expect(cost.total).toBe(120_000);
+    const f = computeDepartureFinance(meta(), TEN_SEATS, cost);
+    expect(f.margin).toBe(30_000);
+    expect(f.breakEvenSeats).toBe(6); // 120,000 / 20,000
+  });
+
+  it('keeps the amount but adds nothing when toggled off', () => {
+    const cost = costBreakdown(base, items, { amount: 20_000, enabled: 0 });
+    expect(cost.host).toEqual({ amount: 20_000, enabled: false, hasRow: true });
+    expect(cost.hostApplied).toBe(0);
+    expect(cost.total).toBe(100_000);
+  });
+
+  it('never makes a departure costed on its own', () => {
+    const cost = costBreakdown(null, [], { amount: 20_000, enabled: 1 });
+    expect(cost.costed).toBe(false);
+    expect(computeDepartureFinance(meta(), TEN_SEATS, cost).margin).toBeNull();
+    expect(rollUp([computeDepartureFinance(meta(), TEN_SEATS, cost)]).cost).toBe(0);
+  });
+
+  it('is absent and zero when no host row is passed', () => {
+    const cost = costBreakdown(base, items);
+    expect(cost.host).toEqual({ amount: 0, enabled: false, hasRow: false });
+    expect(cost.total).toBe(cost.operatingTotal);
+  });
+});
+
 describe('margin', () => {
   it('computes margin, percentage and outstanding balance', () => {
     const f = finance(TEN_SEATS, 90_000, [15_000, -5_000]);

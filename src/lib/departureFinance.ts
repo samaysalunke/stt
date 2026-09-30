@@ -53,6 +53,13 @@ export interface DepartureCostBreakdown {
   base: number;
   items: DepartureCostItem[];
   itemsTotal: number;
+  /** The cost price proper: base + itemsTotal, before any host fee. */
+  operatingTotal: number;
+  /** The host fee as stored. `amount` is kept when `enabled` is off. */
+  host: { amount: number; enabled: boolean; hasRow: boolean };
+  /** What the host fee adds to `total`: `host.amount` when enabled, else 0. */
+  hostApplied: number;
+  /** operatingTotal + hostApplied. Everything downstream reads this. */
   total: number;
   note: string | null;
   updatedAt: string | null;
@@ -201,6 +208,13 @@ export interface BaseCostRow {
   updated_by_email: string | null;
 }
 
+export interface HostCostRow {
+  amount: number;
+  enabled: number | boolean;
+  updated_at?: string | null;
+  updated_by_email?: string | null;
+}
+
 export interface CostItemRow {
   id: number;
   label: string;
@@ -208,21 +222,37 @@ export interface CostItemRow {
   sort_order?: number;
 }
 
-export function costBreakdown(base: BaseCostRow | null, itemRows: CostItemRow[] = []): DepartureCostBreakdown {
+export function costBreakdown(
+  base: BaseCostRow | null,
+  itemRows: CostItemRow[] = [],
+  hostRow: HostCostRow | null = null,
+): DepartureCostBreakdown {
   const items = [...itemRows]
     .sort((a, b) => (Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0)) || (Number(a.id) - Number(b.id)))
     .map((row) => ({ id: Number(row.id), label: String(row.label), amount: Number(row.amount) || 0 }));
   const itemsTotal = items.reduce((sum, item) => sum + item.amount, 0);
   const baseAmount = base ? Number(base.base_amount) || 0 : 0;
+  const operatingTotal = baseAmount + itemsTotal;
+  const host = {
+    amount: hostRow ? Number(hostRow.amount) || 0 : 0,
+    enabled: !!hostRow && !!Number(hostRow.enabled),
+    hasRow: !!hostRow,
+  };
+  const hostApplied = host.enabled ? host.amount : 0;
   return {
     // Row existence, not `total > 0`: a comped departure costed at an explicit
     // zero is a real state and earns a real 100% margin. "No row" is not that.
+    // The host fee deliberately does not count: host-only would be a margin
+    // missing the whole vendor cost.
     costed: !!base || items.length > 0,
     hasBaseRow: !!base,
     base: baseAmount,
     items,
     itemsTotal,
-    total: baseAmount + itemsTotal,
+    operatingTotal,
+    host,
+    hostApplied,
+    total: operatingTotal + hostApplied,
     note: base?.note ?? null,
     updatedAt: base?.updated_at ?? null,
     updatedByEmail: base?.updated_by_email ?? null,
@@ -410,6 +440,9 @@ export function readCostRows(db: Database.Database = getDb()) {
   const items = db.prepare(
     'SELECT id, trip_slug, batch_id, label, amount, sort_order FROM departure_cost_items',
   ).all() as Array<CostItemRow & { trip_slug: string; batch_id: string }>;
+  const hosts = db.prepare(
+    'SELECT trip_slug, batch_id, amount, enabled, updated_at, updated_by_email FROM departure_host_costs',
+  ).all() as Array<HostCostRow & { trip_slug: string; batch_id: string }>;
 
   const baseByKey = new Map<string, BaseCostRow>();
   for (const row of base) baseByKey.set(departureKey(row.trip_slug, row.batch_id), row);
@@ -420,7 +453,9 @@ export function readCostRows(db: Database.Database = getDb()) {
     list.push(row);
     itemsByKey.set(key, list);
   }
-  return { baseByKey, itemsByKey };
+  const hostByKey = new Map<string, HostCostRow>();
+  for (const row of hosts) hostByKey.set(departureKey(row.trip_slug, row.batch_id), row);
+  return { baseByKey, itemsByKey, hostByKey };
 }
 
 /** Cost breakdown for a single departure. */
@@ -435,7 +470,10 @@ export function readDepartureCost(
   const items = db.prepare(
     'SELECT id, label, amount, sort_order FROM departure_cost_items WHERE trip_slug = ? AND batch_id = ? ORDER BY sort_order, id',
   ).all(tripSlug, batchId) as CostItemRow[];
-  return costBreakdown(base ?? null, items);
+  const host = db.prepare(
+    'SELECT amount, enabled, updated_at, updated_by_email FROM departure_host_costs WHERE trip_slug = ? AND batch_id = ?',
+  ).get(tripSlug, batchId) as HostCostRow | undefined;
+  return costBreakdown(base ?? null, items, host ?? null);
 }
 
 /** Index of the canonical departure list, for {@link resolveDepartureKey}. */
@@ -483,7 +521,7 @@ export function resolveDepartureKey(
   return candidates.length === 1 ? candidates[0] : null;
 }
 
-/** Full finance view. One registration aggregate, one content read, two cost reads. */
+/** Full finance view. One registration aggregate, one content read, three cost reads. */
 export function buildFinanceRollup(db: Database.Database = getDb(), today = new Date()): FinanceRollup {
   const { sql, params } = buildRegAggregateSql();
   const rows = db.prepare(sql).all(...params) as Array<RegAggregate & { trip_slug: string | null; batch_id: string | null }>;
@@ -510,26 +548,26 @@ export function buildFinanceRollup(db: Database.Database = getDb(), today = new 
     else collectUnallocated(unallocated, row);
   }
 
-  const { baseByKey, itemsByKey } = readCostRows(db);
+  const { baseByKey, itemsByKey, hostByKey } = readCostRows(db);
 
   const departures = meta.map((m) => {
     const key = departureKey(m.tripSlug, m.batchId);
     return computeDepartureFinance(
       m,
       aggByKey.get(key) ?? EMPTY_AGGREGATE,
-      costBreakdown(baseByKey.get(key) ?? null, itemsByKey.get(key) ?? []),
+      costBreakdown(baseByKey.get(key) ?? null, itemsByKey.get(key) ?? [], hostByKey.get(key) ?? null),
       today,
     );
   });
 
   const orphanCosts: OrphanCost[] = [];
-  const orphanKeys = new Set<string>([...baseByKey.keys(), ...itemsByKey.keys()].filter((k) => !knownKeys.has(k)));
+  const orphanKeys = new Set<string>([...baseByKey.keys(), ...itemsByKey.keys(), ...hostByKey.keys()].filter((k) => !knownKeys.has(k)));
   for (const key of orphanKeys) {
     const [tripSlug, batchId] = key.split(' ');
     orphanCosts.push({
       tripSlug,
       batchId,
-      cost: costBreakdown(baseByKey.get(key) ?? null, itemsByKey.get(key) ?? []),
+      cost: costBreakdown(baseByKey.get(key) ?? null, itemsByKey.get(key) ?? [], hostByKey.get(key) ?? null),
       // A soft-deleted trip is hidden from listTrips() but may be restored, so
       // its costs are kept deliberately and must not offer a purge button.
       reason: isTripDeleted(tripSlug) ? 'trip-deleted' : 'batch-missing',

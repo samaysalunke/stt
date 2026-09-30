@@ -1,4 +1,4 @@
-// TC-400 to TC-414 — Departure finance: RBAC, cost upsert, line items, audit, orphans
+// TC-400 to TC-414, TC-425 to TC-429 — Departure finance: RBAC, cost upsert, line items, host cost, audit, orphans
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -63,6 +63,7 @@ function resetFixture() {
   const conn = db();
   conn.prepare('DELETE FROM departure_costs WHERE trip_slug = ?').run(TRIP);
   conn.prepare('DELETE FROM departure_cost_items WHERE trip_slug = ?').run(TRIP);
+  conn.prepare('DELETE FROM departure_host_costs WHERE trip_slug = ?').run(TRIP);
   conn.close();
 }
 
@@ -441,6 +442,85 @@ test('TC-423 receivables exclude leads and appear on the ops-visible page', asyn
       assert.match(body, /committed to no seat/);
     }
   }
+});
+
+// ── Host cost ────────────────────────────────────────────────────────────────
+
+const host = (body, cookie = OWNER.cookie, method = 'PUT') =>
+  call(method, '/api/admin/finance/host', { tripSlug: TRIP, batchId: BATCH, ...body }, cookie);
+
+test('TC-425 only an owner may set or clear the host cost', async () => {
+  resetFixture();
+  assert.equal((await host({ amount: 20000, enabled: true }, OPS.cookie)).status, 403);
+  assert.equal((await host({ amount: 20000, enabled: true }, LEAD.cookie)).status, 403);
+  assert.equal((await host({}, OPS.cookie, 'DELETE')).status, 403);
+  const conn = db();
+  assert.equal(conn.prepare('SELECT COUNT(*) n FROM departure_host_costs WHERE trip_slug = ?').get(TRIP).n, 0);
+  conn.close();
+});
+
+test('TC-426 host cost validation', async () => {
+  assert.equal((await host({ amount: -1, enabled: true })).status, 400);
+  assert.equal((await host({ amount: 'abc', enabled: true })).status, 400);
+  assert.equal((await host({ amount: 20000, enabled: 'yes' })).status, 400);
+  assert.equal((await host({ amount: 20000 })).status, 400);
+  const missing = await call('PUT', '/api/admin/finance/host',
+    { tripSlug: TRIP, batchId: 'no-such-batch', amount: 1, enabled: true }, OWNER.cookie);
+  assert.equal(missing.status, 404);
+});
+
+test('TC-427 a host cost alone does not make a departure costed', async () => {
+  resetFixture();
+  const res = await host({ amount: 20000, enabled: true });
+  assert.equal(res.status, 200);
+  assert.equal(res.data.cost.costed, false);
+  assert.equal(res.data.cost.hasBaseRow, false, 'must not mint an implicit base row');
+  assert.deepEqual(res.data.cost.host, { amount: 20000, enabled: true, hasRow: true });
+});
+
+test('TC-428 the toggle adds the host cost over the cost price and keeps the amount', async () => {
+  resetFixture();
+  await call('PUT', '/api/admin/finance/cost', { tripSlug: TRIP, batchId: BATCH, baseAmount: 100000 }, OWNER.cookie);
+
+  const on = await host({ amount: 20000.4, enabled: true });
+  assert.equal(on.data.cost.host.amount, 20000, 'rounded and echoed');
+  assert.equal(on.data.cost.operatingTotal, 100000);
+  assert.equal(on.data.cost.total, 120000);
+
+  const off = await host({ amount: 20000, enabled: false });
+  assert.equal(off.data.cost.total, 100000);
+  assert.deepEqual(off.data.cost.host, { amount: 20000, enabled: false, hasRow: true });
+
+  const conn = db();
+  const rows = conn.prepare('SELECT COUNT(*) n FROM departure_host_costs WHERE trip_slug=? AND batch_id=?').get(TRIP, BATCH);
+  const audits = conn.prepare("SELECT COUNT(*) n FROM audit_log WHERE targetId = ? AND action = 'departure_cost.host_set'").get(`${TRIP}:${BATCH}`);
+  conn.close();
+  assert.equal(rows.n, 1, 'upsert must not duplicate the row');
+  assert.ok(audits.n >= 2);
+
+  // Ops sees the figure, read-only. `all`: the fixture departs 2099-01-01, i.e. FY 2098.
+  const res = await fetch(`${BASE}/admin/finance?fy=all`, { headers: { cookie: OPS.cookie }, redirect: 'manual' });
+  const body = await res.text();
+  assert.equal(res.status, 200);
+  assert.doesNotMatch(body, /data-host-amount/);
+  assert.match(body, /₹20,000 \(not included\)/);
+});
+
+test('TC-429 clearing and purging remove the host row', async () => {
+  resetFixture();
+  await host({ amount: 20000, enabled: true });
+  const cleared = await host({}, OWNER.cookie, 'DELETE');
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.data.cost.host.hasRow, false);
+  assert.equal((await host({}, OWNER.cookie, 'DELETE')).status, 404);
+
+  // A host-only departure is still purgeable through the orphan/purge path.
+  await host({ amount: 20000, enabled: true });
+  const purged = await call('DELETE', '/api/admin/finance/cost',
+    { tripSlug: TRIP, batchId: BATCH, purgeItems: true }, OWNER.cookie);
+  assert.equal(purged.status, 200);
+  assert.equal(purged.data.cost.host.hasRow, false);
+  resetFixture();
 });
 
 test('TC-424 teardown', async () => {

@@ -45,6 +45,13 @@ export function recordTripSlugAlias(oldSlug: string, newSlug: string): void {
     `).run(newSlug, oldSlug);
     db.prepare('DELETE FROM departure_costs WHERE trip_slug = ?').run(oldSlug);
     db.prepare('UPDATE departure_cost_items SET trip_slug = ? WHERE trip_slug = ?').run(newSlug, oldSlug);
+    db.prepare(`
+      INSERT INTO departure_host_costs (trip_slug, batch_id, amount, enabled, created_at, updated_at, updated_by_email)
+        SELECT ?, batch_id, amount, enabled, created_at, updated_at, updated_by_email
+          FROM departure_host_costs WHERE trip_slug = ?
+      ON CONFLICT(trip_slug, batch_id) DO NOTHING
+    `).run(newSlug, oldSlug);
+    db.prepare('DELETE FROM departure_host_costs WHERE trip_slug = ?').run(oldSlug);
   });
   tx();
 }

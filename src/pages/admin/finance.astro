@@ -229,6 +229,30 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
             )}
           </div>
 
+          <div class="flex flex-wrap items-end gap-3 mb-3">
+            <label class="text-xs text-gray-text">
+              Host cost
+              {canEdit ? (
+                <input type="number" step="1" min="0" data-host-amount value={d.cost.host.hasRow ? d.cost.host.amount : ''}
+                       placeholder="No host"
+                       class="mt-1 block w-40 rounded-xl border border-peach bg-white px-3 py-2 text-sm tabular-nums text-navy" />
+              ) : (
+                <span class="mt-1 block text-sm font-semibold text-navy tabular-nums">
+                  {d.cost.host.hasRow ? `${formatINR(d.cost.host.amount)} (${d.cost.host.enabled ? 'included' : 'not included'})` : '—'}
+                </span>
+              )}
+            </label>
+            {canEdit && (
+              <label class="flex items-center gap-2 py-2 text-xs text-navy">
+                <input type="checkbox" data-host-enabled checked={d.cost.host.enabled} />
+                Include host cost
+              </label>
+            )}
+            <p class="py-2 text-xs text-gray-text tabular-nums" data-cost-split>
+              {d.cost.hostApplied > 0 ? `Cost price ${formatINR(d.cost.operatingTotal)} + host ${formatINR(d.cost.hostApplied)}` : ''}
+            </p>
+          </div>
+
           <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-text mb-1">Miscellaneous expenditure</p>
           <div data-items class="flex flex-col gap-2">
             {d.cost.items.map((item) => (
@@ -421,6 +445,10 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
       const marginCell = row.querySelector<HTMLElement>('[data-field="margin"]');
       const pctCell = row.querySelector('[data-field="marginPct"]');
       if (costCell) costCell.textContent = cost.costed ? inr(cost.total) : '—';
+      const split = row.querySelector('[data-cost-split]');
+      if (split) {
+        split.textContent = cost.hostApplied > 0 ? `Cost price ${inr(cost.operatingTotal)} + host ${inr(cost.hostApplied)}` : '';
+      }
       const margin = cost.costed ? collected - cost.total : null;
       if (marginCell) {
         marginCell.textContent = margin === null ? 'Not costed' : inr(margin);
@@ -452,6 +480,19 @@ const pct = (d: DepartureFinance) => (d.margin === null ? 0 : (Math.abs(d.margin
             baseAmount: base.value, note: note.value,
           });
           base.value = String(data.cost.base); // echo what was actually stored
+          paint(row, data.cost);
+        } else if (target.matches('[data-host-amount], [data-host-enabled]')) {
+          const amount = row.querySelector<HTMLInputElement>('[data-host-amount]')!;
+          const enabled = row.querySelector<HTMLInputElement>('[data-host-enabled]')!;
+          if (amount.value.trim() === '') {
+            if (enabled.checked) showError(row, 'Enter the host cost first.');
+            return;
+          }
+          const data = await send('/api/admin/finance/host', 'PUT', {
+            tripSlug: row.dataset.tripSlug, batchId: row.dataset.batchId,
+            amount: amount.value, enabled: enabled.checked,
+          });
+          amount.value = String(data.cost.host.amount); // echo what was actually stored
           paint(row, data.cost);
         } else if (target.matches('[data-item-label], [data-item-amount]')) {
           const item = target.closest<HTMLElement>('[data-item]')!;

@@ -612,6 +612,27 @@ function initializeSchema(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS departure_cost_items_departure
       ON departure_cost_items(trip_slug, batch_id);
+
+    -- The trip host's fee: a flat per-departure amount ON TOP of the cost price
+    -- (base + items). Not every departure has a host, so it is a toggle —
+    -- \`enabled\` decides whether it counts, and turning it off keeps the amount.
+    --
+    -- Its own table rather than columns on departure_costs for the same reason
+    -- items are: a host fee saved before any base cost would otherwise mint an
+    -- implicit base row at zero, and the departure would read as costed with a
+    -- margin missing its whole vendor cost. A host fee alone never makes a
+    -- departure "costed".
+    CREATE TABLE IF NOT EXISTS departure_host_costs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trip_slug TEXT NOT NULL,
+      batch_id TEXT NOT NULL,
+      amount INTEGER NOT NULL DEFAULT 0,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_by_email TEXT,
+      UNIQUE(trip_slug, batch_id)
+    );
   `);
 
   // Monthly company overheads — salaries, marketing, software, office. The

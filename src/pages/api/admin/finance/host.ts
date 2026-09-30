@@ -10,15 +10,12 @@ import {
   readDepartureCost,
 } from '../../../../lib/departureFinance';
 
-// The base operating cost of one departure. Owner-only: vendor rates and margins
-// are a different sensitivity class from the booking payments ops already
-// handles. Middleware gates the whole /api/admin/finance prefix to owner too —
-// this is the second layer, per the convention in requireRole.ts.
+// The trip host's fee for one departure: a flat amount on top of the cost price
+// (base + items), counted only while `enabled` is on. Owner-only, same as
+// cost.ts — middleware gates the /api/admin/finance prefix too.
 //
-// PUT upserts, DELETE clears. DELETE matters more than it looks: a departure
-// with no base row and no items reads as "not costed", while a row holding an
-// explicit 0 reads as costed at zero (a comped departure, 100% margin). Those
-// are different states, so there has to be a way back to the first one.
+// PUT upserts amount + toggle together. Turning the toggle off keeps the amount,
+// so it can be switched back on without re-entry. DELETE removes the row.
 
 function departureExists(tripSlug: string, batchId: string): boolean {
   return listDepartureMeta().some((d) => d.tripSlug === tripSlug && d.batchId === batchId);
@@ -40,45 +37,46 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const id = identify(body);
     if (!id) return jsonFail('A trip and departure are required.');
 
-    // Refuse to write against a departure that does not exist, so a typo cannot
-    // mint an orphan cost row that nothing will ever reconcile.
     if (!departureExists(id.tripSlug, id.batchId)) {
       return jsonFail('That departure no longer exists.', 404);
     }
 
-    const baseAmount = parseRupees(body.baseAmount, { min: 0 });
-    if (baseAmount === null) {
-      return jsonFail('Enter the operating cost as a whole rupee amount of zero or more.');
+    const amount = parseRupees(body.amount, { min: 0 });
+    if (amount === null) {
+      return jsonFail('Enter the host cost as a whole rupee amount of zero or more.');
     }
-    const note = sanitizeInput(body.note).slice(0, 500) || null;
+    if (typeof body.enabled !== 'boolean') {
+      return jsonFail('Say whether the host cost is included.');
+    }
+    const enabled = body.enabled;
 
     const db = getDb();
     const before = readDepartureCost(id.tripSlug, id.batchId, db);
     db.prepare(`
-      INSERT INTO departure_costs (trip_slug, batch_id, base_amount, note, updated_by_email)
+      INSERT INTO departure_host_costs (trip_slug, batch_id, amount, enabled, updated_by_email)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(trip_slug, batch_id) DO UPDATE SET
-        base_amount = excluded.base_amount,
-        note = excluded.note,
+        amount = excluded.amount,
+        enabled = excluded.enabled,
         updated_at = CURRENT_TIMESTAMP,
         updated_by_email = excluded.updated_by_email
-    `).run(id.tripSlug, id.batchId, baseAmount, note, locals.adminUser?.email ?? null);
+    `).run(id.tripSlug, id.batchId, amount, enabled ? 1 : 0, locals.adminUser?.email ?? null);
 
     logAction({
       actorUserId: locals.adminUser?.userId,
       actorEmail: locals.adminUser?.email,
       actorRole: locals.adminUser?.role,
-      action: 'departure_cost.set',
+      action: 'departure_cost.host_set',
       targetType: 'departure',
       targetId: `${id.tripSlug}:${id.batchId}`,
-      previousValue: { base: before.base, hasBaseRow: before.hasBaseRow, note: before.note },
-      newValue: { base: baseAmount, note },
+      previousValue: before.host,
+      newValue: { amount, enabled },
     });
 
     // Echo the stored (rounded) value so the input shows what was actually saved.
     return jsonOk({ success: true, cost: readDepartureCost(id.tripSlug, id.batchId, db) });
   } catch {
-    return jsonFail('Could not save the operating cost.', 500);
+    return jsonFail('Could not save the host cost.', 500);
   }
 };
 
@@ -90,39 +88,27 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const id = identify(body);
     if (!id) return jsonFail('A trip and departure are required.');
-    // Deliberately no existence check: an orphan is precisely a cost row whose
-    // departure is gone, and it must stay purgeable.
-    const purgeItems = body.purgeItems === true;
+    // No existence check: an orphaned host row must stay removable.
 
     const db = getDb();
     const before = readDepartureCost(id.tripSlug, id.batchId, db);
-    // A host-only row is not "costed" but is still something to purge.
-    if (!before.costed && !(purgeItems && before.host.hasRow)) {
-      return jsonFail('There is nothing recorded for that departure.', 404);
-    }
+    if (!before.host.hasRow) return jsonFail('There is no host cost recorded for that departure.', 404);
 
-    db.transaction(() => {
-      db.prepare('DELETE FROM departure_costs WHERE trip_slug = ? AND batch_id = ?').run(id.tripSlug, id.batchId);
-      if (purgeItems) {
-        db.prepare('DELETE FROM departure_cost_items WHERE trip_slug = ? AND batch_id = ?').run(id.tripSlug, id.batchId);
-        db.prepare('DELETE FROM departure_host_costs WHERE trip_slug = ? AND batch_id = ?').run(id.tripSlug, id.batchId);
-      }
-    })();
+    db.prepare('DELETE FROM departure_host_costs WHERE trip_slug = ? AND batch_id = ?').run(id.tripSlug, id.batchId);
 
     logAction({
       actorUserId: locals.adminUser?.userId,
       actorEmail: locals.adminUser?.email,
       actorRole: locals.adminUser?.role,
-      action: purgeItems ? 'departure_cost.purged' : 'departure_cost.cleared',
+      action: 'departure_cost.host_cleared',
       targetType: 'departure',
       targetId: `${id.tripSlug}:${id.batchId}`,
-      // The whole prior state, so the audit log doubles as the undo record.
-      previousValue: { base: before.base, note: before.note, items: before.items, ...(purgeItems ? { host: before.host } : {}) },
+      previousValue: before.host,
       newValue: null,
     });
 
     return jsonOk({ success: true, cost: readDepartureCost(id.tripSlug, id.batchId, db) });
   } catch {
-    return jsonFail('Could not clear the operating cost.', 500);
+    return jsonFail('Could not clear the host cost.', 500);
   }
 };
