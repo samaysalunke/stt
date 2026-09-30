@@ -2,6 +2,17 @@ import { getDb } from './db';
 import { geocodeCity, haversine } from './geocode';
 import { findTripByName, readTrip } from './content';
 
+// Who can be ranked on the public leaderboard: travellers who haven't opted out.
+// Staff (anyone with a user_roles row — owner, ops, trip_lead) are left off, since
+// trip leads rack up km on every trip. Filtered at read time so granting or
+// revoking a role takes effect without a recalc. Expects the cache aliased as `c`.
+export const LEADERBOARD_ELIGIBLE_JOIN = `JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0
+  AND NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.userId = c.userId)`;
+
+export function isStaff(userId: string): boolean {
+  return !!getDb().prepare('SELECT 1 FROM user_roles WHERE userId = ? LIMIT 1').get(userId);
+}
+
 interface RegRow {
   city: string;
   country: string | null;

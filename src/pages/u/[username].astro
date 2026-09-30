@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ProfileChrome from '../../components/ProfileChrome.astro';
 import MapIndia from '../../components/MapIndia.astro';
 import { getDb } from '../../lib/db';
+import { LEADERBOARD_ELIGIBLE_JOIN, isStaff } from '../../lib/stats';
 import { canonicalizeProfileTrips, shapePublicTrips, type ProfileRegistrationRow } from '../../lib/profileTrips';
 
 export const prerender = false;
@@ -23,8 +24,8 @@ if (!profileUser) {
 const owner = db.prepare('SELECT email FROM users WHERE id = ?').get(profileUser.id) as { email: string };
 const stats = db.prepare('SELECT kmsFromHome, daysOutdoors, destinationsCount, tripsCount FROM leaderboard_cache WHERE userId = ?').get(profileUser.id) as { kmsFromHome:number; daysOutdoors:number; destinationsCount:number; tripsCount:number } | undefined;
 let kmRank: number | null = null;
-if (!profileUser.leaderboardOptOut && stats) {
-  kmRank = (db.prepare(`SELECT COUNT(*) + 1 rank FROM leaderboard_cache c JOIN users u ON u.id=c.userId AND u.leaderboardOptOut=0 WHERE c.kmsFromHome > ?`).get(stats.kmsFromHome) as { rank:number }).rank;
+if (!profileUser.leaderboardOptOut && stats && !isStaff(profileUser.id)) {
+  kmRank = (db.prepare(`SELECT COUNT(*) + 1 rank FROM leaderboard_cache c ${LEADERBOARD_ELIGIBLE_JOIN} WHERE c.kmsFromHome > ?`).get(stats.kmsFromHome) as { rank:number }).rank;
 }
 let publicTrips: ReturnType<typeof shapePublicTrips> = [];
 if (profileUser.showTripsPublicly) {

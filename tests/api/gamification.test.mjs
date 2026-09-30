@@ -1,4 +1,4 @@
-// TC-210 to TC-220 — Gamification: usernames, leaderboard, profile settings
+// TC-210 to TC-222 — Gamification: usernames, leaderboard, profile settings
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -256,4 +256,45 @@ test('TC-220 leaderboard shows seeded user when leaderboard_cache has data', asy
   const html = await res.text();
   // The leaderboard page should contain the km stat somewhere
   assert.ok(html.includes('1,234') || html.includes('1234'), 'Page should show kmsFromHome value');
+});
+
+// ── TC-221: staff (any user_roles row) are left off the leaderboard ──────────
+function setRole(userId, role) {
+  const Database = require('better-sqlite3');
+  const db = new Database(DB_PATH);
+  if (role) db.prepare("INSERT OR IGNORE INTO user_roles (userId, role) VALUES (?, ?)").run(userId, role);
+  else db.prepare('DELETE FROM user_roles WHERE userId = ?').run(userId);
+  db.close();
+}
+
+test('TC-221 staff are excluded from /leaderboard; removing the role brings them back', async () => {
+  const { userId, email } = seedUserWithSession();
+  // Large enough to land in the top 20 regardless of other seeded data.
+  seedLeaderboardEntry({ userId, email, kmsFromHome: 9876543 });
+  setRole(userId, 'trip_lead');
+  try {
+    const hidden = await (await fetch(`${BASE}/leaderboard`)).text();
+    assert.ok(!hidden.includes('98,76,543') && !hidden.includes('9876543'), 'staff km should not be listed');
+
+    setRole(userId, null);
+    const shown = await (await fetch(`${BASE}/leaderboard`)).text();
+    assert.ok(shown.includes('98,76,543') || shown.includes('9876543'), 'non-staff km should be listed');
+  } finally {
+    setRole(userId, null);
+  }
+});
+
+// ── TC-222: a staff public profile shows no leaderboard rank ─────────────────
+test('TC-222 staff public profile omits the km rank', async () => {
+  const username = `staff${crypto.randomUUID().slice(0, 8)}`;
+  const { userId, email } = seedUserWithSession({ username });
+  seedLeaderboardEntry({ userId, email, kmsFromHome: 4321 });
+  setRole(userId, 'ops');
+  try {
+    const res = await fetch(`${BASE}/u/${username}`);
+    assert.equal(res.status, 200);
+    assert.ok(!(await res.text()).includes('on the km from home board'), 'staff profile should not show a rank');
+  } finally {
+    setRole(userId, null);
+  }
 });

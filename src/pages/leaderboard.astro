@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getDb } from '../lib/db';
+import { LEADERBOARD_ELIGIBLE_JOIN } from '../lib/stats';
 
 export const prerender = false;
 
@@ -37,7 +38,7 @@ const rows = db.prepare(`
          c.kmsFromHome, c.daysOutdoors, c.destinationsCount, c.tripsCount,
          ROW_NUMBER() OVER (ORDER BY c.${orderCol} DESC, c.userId ASC) as rank
   FROM leaderboard_cache c
-  JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0
+  ${LEADERBOARD_ELIGIBLE_JOIN}
   ORDER BY c.${orderCol} DESC, c.userId ASC
   LIMIT 20
 `).all() as LeaderRow[];
@@ -46,7 +47,7 @@ const rows = db.prepare(`
 let myEntry: (LeaderRow & { rank: number }) | null = null;
 if (user) {
   const myCache = db.prepare(
-    'SELECT c.userId, c.displayName, c.username, c.avatarUrl, c.homeCityLatLng, c.kmsFromHome, c.daysOutdoors, c.destinationsCount, c.tripsCount FROM leaderboard_cache c JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0 WHERE c.userId = ?'
+    `SELECT c.userId, c.displayName, c.username, c.avatarUrl, c.homeCityLatLng, c.kmsFromHome, c.daysOutdoors, c.destinationsCount, c.tripsCount FROM leaderboard_cache c ${LEADERBOARD_ELIGIBLE_JOIN} WHERE c.userId = ?`
   ).get(user.id) as Omit<LeaderRow, 'rank'> | undefined;
 
   if (myCache) {
@@ -57,7 +58,7 @@ if (user) {
     const myValue = (myCache as Record<string, unknown>)[orderCol] as number;
     const myRankRow = db.prepare(`
       SELECT COUNT(*) + 1 as rank FROM leaderboard_cache c
-      JOIN users u ON u.id = c.userId AND u.leaderboardOptOut = 0
+      ${LEADERBOARD_ELIGIBLE_JOIN}
       WHERE c.${orderCol} > ? OR (c.${orderCol} = ? AND c.userId < ?)
     `).get(myValue, myValue, user.id) as { rank: number };
 
