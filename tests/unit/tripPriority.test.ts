@@ -56,4 +56,25 @@ describe('trip priority', () => {
     const sorted = sortTripsByPriority(trips.filter((trip) => trip.visible), () => 0.999);
     expect(sorted.map((trip) => trip.slug)).toEqual(['visible-medium', 'visible-low']);
   });
+
+  it('sinks a trip whose every departure is sold out below all bookable trips', () => {
+    const departure = (id: string, status: string) => ({
+      id, startDate: '2099-01-10', endDate: '2099-01-15', status,
+      offers: [{ tierId: 'standard', price: 20000, cap: 10, booked: 0 }],
+    });
+    const trip = (slug: string, priority: string, statuses: string[]) => ({
+      slug, priority,
+      pricingTiers: [{ id: 'standard', name: 'Standard' }],
+      batches: statuses.map((s, i) => departure(`${slug}-${i}`, s)),
+    });
+    const trips = [
+      trip('low-open', 'low', ['booking-open']),
+      trip('high-full', 'high', ['sold-out']),
+      trip('medium-full', 'medium', ['sold-out', 'sold-out']),
+      // One full departure is not enough — another is still bookable.
+      trip('high-one-left', 'high', ['sold-out', 'booking-open']),
+    ];
+    const sorted = sortTripsByPriority(trips, () => 0.999);
+    expect(sorted.map((t) => t.slug)).toEqual(['high-one-left', 'low-open', 'high-full', 'medium-full']);
+  });
 });

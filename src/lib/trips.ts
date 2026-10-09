@@ -57,6 +57,9 @@ export function tripPriority(value: unknown): TripPriority {
 
 /**
  * Group trips by manually managed priority and independently shuffle each group.
+ * Sold-out trips (every upcoming departure full, nothing coming soon) sink below
+ * all bookable ones whatever their priority, still grouped by priority among
+ * themselves — a high-priority trip nobody can book must not lead the listing.
  * Call this after a page's visibility filters; listTrips() retains its workflow-safe order.
  */
 export function sortTripsByPriority<T extends Record<string, any>>(
@@ -64,7 +67,10 @@ export function sortTripsByPriority<T extends Record<string, any>>(
   random: () => number = Math.random,
 ): T[] {
   const buckets: Record<TripPriority, T[]> = { high: [], medium: [], low: [] };
-  for (const trip of trips) buckets[tripPriority(trip?.priority)].push(trip);
+  const soldOut: Record<TripPriority, T[]> = { high: [], medium: [], low: [] };
+  for (const trip of trips) {
+    (tripCardSummary(trip).soldOut ? soldOut : buckets)[tripPriority(trip?.priority)].push(trip);
+  }
 
   const shuffle = (items: T[]) => {
     for (let i = items.length - 1; i > 0; i--) {
@@ -74,7 +80,10 @@ export function sortTripsByPriority<T extends Record<string, any>>(
     return items;
   };
 
-  return [...shuffle(buckets.high), ...shuffle(buckets.medium), ...shuffle(buckets.low)];
+  return [
+    ...shuffle(buckets.high), ...shuffle(buckets.medium), ...shuffle(buckets.low),
+    ...shuffle(soldOut.high), ...shuffle(soldOut.medium), ...shuffle(soldOut.low),
+  ];
 }
 
 /**
