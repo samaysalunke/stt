@@ -179,6 +179,23 @@ describe('analytics safety and helpers', () => {
     expect(row?.[revenueIndex]).toBe(1000); // rejected + cancelled excluded
   });
 
+  it('pending payments count only what the receivables page counts', () => {
+    const db = getDb();
+    const marker = `analytics-pending-${Date.now()}`;
+    const insert = db.prepare(
+      `INSERT INTO registrations (trip_name, trip_slug, full_name, email, phone, emergency_name, emergency_phone, total_amount, amount_paid, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    for (const status of ['confirmed', 'pending', 'lead', 'wishlist', 'rejected', 'cancelled']) {
+      insert.run(marker, marker, `Test ${status}`, `${marker}-${status}@example.invalid`, '9999999999', 'Emergency', '9999999998', 10000, 4000, status);
+    }
+
+    const result = analyticsTools.find((t) => t.name === 'getPendingPayments')!.execute({});
+    const row = result.rows.find((r) => r[result.columns.indexOf('trip_slug')] === marker);
+    expect(row?.[result.columns.indexOf('pending_amount')]).toBe(12000); // confirmed + pending only
+    expect(row?.[result.columns.indexOf('registrations')]).toBe(2);
+  });
+
   it('cleans sessions older than 24 hours', () => {
     const db = getDb();
     const id = `old-${Date.now()}`;
