@@ -20,7 +20,7 @@
 
 import type Database from 'better-sqlite3';
 import { getDb } from './db';
-import { listTrips } from './trips';
+import { listTrips, tripPublicationStatus, type PublicationStatus } from './trips';
 import { editableBooking } from './tripEditor';
 import { resolveTripSlugAlias } from './tripSlugAliases';
 import { isTripDeleted } from './tripDeletions';
@@ -100,6 +100,8 @@ export interface DepartureMeta {
    * whose balances matter most.
    */
   balanceDueRule: string;
+  /** The trip's publication status. Absent reads as published. */
+  publicationStatus?: PublicationStatus;
 }
 
 export interface DepartureFinance extends DepartureMeta {
@@ -332,6 +334,22 @@ export function computeDepartureFinance(
   };
 }
 
+/**
+ * A departure with nothing on it — no bookings, no money in or out, no cost
+ * entered — that nobody needs to see on the margin list: it belongs to an
+ * unpublished trip (a duplicate, draft or test copy carrying the original's
+ * dates), is itself a draft, or is already over. An empty upcoming departure of
+ * a live trip is NOT noise; it is the one you cost ahead of time.
+ */
+export function isEmptyDepartureNoise(d: DepartureFinance): boolean {
+  const empty = d.seats === 0 && d.leadSeats === 0 && d.cancelledSeats === 0
+    && d.collected === 0 && d.retained === 0 && d.refundedGross === 0
+    && !d.cost.costed && !d.cost.host.hasRow;
+  if (!empty) return false;
+  const published = (d.publicationStatus ?? 'published') === 'published';
+  return !published || d.status === 'draft' || d.historical;
+}
+
 export function rollUp(
   departures: DepartureFinance[],
   unallocated: FinanceRollup['unallocated'] = { rows: 0, seats: 0, collected: 0 },
@@ -427,6 +445,7 @@ export function listDepartureMeta(): DepartureMeta[] {
         lowestOfferPrice: prices.length ? Math.min(...prices) : null,
         capacity: metered ? offers.reduce((sum, o) => sum + Number(o.cap || 0), 0) : null,
         balanceDueRule,
+        publicationStatus: tripPublicationStatus(trip),
       });
     }
   }

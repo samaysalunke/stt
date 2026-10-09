@@ -3,6 +3,7 @@ import {
   buildRegAggregateSql,
   computeDepartureFinance,
   costBreakdown,
+  isEmptyDepartureNoise,
   parseItemLabel,
   parseRupees,
   rollUp,
@@ -289,4 +290,34 @@ describe('parseItemLabel', () => {
       expect(parseItemLabel(input)).toBe(expected);
     },
   );
+});
+
+describe('isEmptyDepartureNoise', () => {
+  const future = new Date('2025-01-01');
+  const past = new Date('2026-01-01');
+  const empty = (m: Partial<DepartureMeta>, today = future) =>
+    computeDepartureFinance(meta({ status: 'booking-open', ...m }), agg(), costBreakdown(null), today);
+
+  it('keeps an empty upcoming departure of a published trip, so it can be costed', () => {
+    expect(isEmptyDepartureNoise(empty({ publicationStatus: 'published' }))).toBe(false);
+    expect(isEmptyDepartureNoise(empty({}))).toBe(false);
+  });
+
+  it.each(['draft', 'test', 'archived'] as const)('hides an empty departure of a %s trip', (publicationStatus) => {
+    expect(isEmptyDepartureNoise(empty({ publicationStatus }))).toBe(true);
+  });
+
+  it('hides an empty draft departure and an empty past one', () => {
+    expect(isEmptyDepartureNoise(empty({ status: 'draft' }))).toBe(true);
+    expect(isEmptyDepartureNoise(empty({}, past))).toBe(true);
+  });
+
+  it('never hides a departure with bookings, money or a cost on it, whatever its trip', () => {
+    const m = meta({ publicationStatus: 'draft', status: 'draft' });
+    expect(isEmptyDepartureNoise(computeDepartureFinance(m, TEN_SEATS, costBreakdown(null), past))).toBe(false);
+    expect(isEmptyDepartureNoise(computeDepartureFinance(m, agg({ leadSeats: 1 }), costBreakdown(null), past))).toBe(false);
+    expect(isEmptyDepartureNoise(computeDepartureFinance(m, agg({ cancelledSeats: 1, retained: 5_000 }), costBreakdown(null), past))).toBe(false);
+    expect(isEmptyDepartureNoise(computeDepartureFinance(m, agg(), costBreakdown({ base_amount: 0, note: null, updated_at: null, updated_by_email: null }), past))).toBe(false);
+    expect(isEmptyDepartureNoise(computeDepartureFinance(m, agg(), costBreakdown(null, [], { amount: 5_000, enabled: 0 }), past))).toBe(false);
+  });
 });

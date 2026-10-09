@@ -54,8 +54,8 @@ async function call(method, path, body, cookie) {
   return { status: res.status, data: ct.includes('json') ? await res.json() : await res.text() };
 }
 
-const getPage = async (cookie) => {
-  const res = await fetch(`${BASE}/admin/finance`, { headers: cookie ? { cookie } : {}, redirect: 'manual' });
+const getPage = async (cookie, query = '') => {
+  const res = await fetch(`${BASE}/admin/finance${query}`, { headers: cookie ? { cookie } : {}, redirect: 'manual' });
   return { status: res.status, body: await res.text() };
 };
 
@@ -174,8 +174,12 @@ test('TC-407 line item create, update and delete round-trip', async () => {
   assert.equal(created.data.cost.costed, true);
   assert.equal(created.data.cost.hasBaseRow, false);
 
-  const page = await getPage(OWNER.cookie);
-  assert.match(page.body, /Extra vehicle day/);
+  // The fixture departure is in 2099, outside the default financial year, and
+  // the input placeholder also reads "e.g. Extra vehicle day" — so look for the
+  // saved item's own row on the all-time view, not the bare text.
+  const page = await getPage(OWNER.cookie, '?fy=all');
+  assert.match(page.body, new RegExp(`data-item-id="${created.data.id}"`));
+  assert.match(page.body, /value="Extra vehicle day"/);
 
   const patched = await call('PATCH', '/api/admin/finance/item',
     { id: created.data.id, label: 'Extra vehicle days', amount: 18000 }, OWNER.cookie);
