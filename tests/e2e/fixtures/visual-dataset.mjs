@@ -6,7 +6,7 @@
  * `test:api` run — which writes registrations — silently changed which rows
  * survived `capAdminLists` and what status each one carried. `stubText` hides
  * the characters but not the badge class, so the baselines drifted on colour
- * alone. See "Admin badge baselines drift on data" in docs/ui-refresh-handoff.md.
+ * alone. See "Admin badge baselines drift on data" in docs/archive/ui-refresh-handoff.md.
  *
  * Chosen to exercise the status palette rather than to look realistic: every
  * `REG_STATUS` appears at least once, both confirmed payment states appear, and
