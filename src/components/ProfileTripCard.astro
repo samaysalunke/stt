@@ -3,6 +3,7 @@ import type { ProfileTripRecord } from '../lib/profileTrips';
 import { paymentStatusStyle } from '../lib/registrationStatus';
 import { formatDateIN, formatINR } from '../lib/utils';
 import { imageSrcset } from '../lib/imageVariants';
+import { tripPrimaryAction } from '../lib/userTrips';
 interface Props { record: ProfileTripRecord; supportHref: string }
 const { record, supportHref } = Astro.props;
 const money = (value: number | null) => value == null ? 'Not recorded' : formatINR(value);
@@ -14,14 +15,11 @@ const tripPage = record.tripExists && record.tripSlug ? `/trips/${record.tripSlu
 
 const payHref = balanceActionable ? `/profile/pay/${record.id}` : null;
 // Once they have told us they paid, a filled "Pay balance" would invite a
-// second payment — the same reason `pending` never gets one.
+// second payment — tripPrimaryAction leaves it out, and `reported` says why.
 const reported = Boolean(payHref && balanceReportedAt);
 
 // One filled action per card, and when money is owed it is the money action.
-let primary: { href: string; label: string } | null = null;
-if (payHref && !reported) primary = { href: payHref, label: 'Pay balance' };
-else if (record.status === 'lead' && record.bookable && record.tripSlug) primary = { href: `/trips/${record.tripSlug}/book${record.batchId ? `?batch=${encodeURIComponent(record.batchId)}` : ''}`, label: 'Continue booking' };
-else if (record.status === 'wishlist' && tripPage) primary = { href: tripPage, label: 'View trip' };
+const primary = tripPrimaryAction(record);
 const quiet = primary?.href === tripPage ? null
   : tripPage ? { href: tripPage, label: 'View trip page' }
   : { href: supportHref, label: 'Contact support' };

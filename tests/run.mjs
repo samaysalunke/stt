@@ -49,6 +49,7 @@ function purgeTestArtifacts() {
       db.prepare("DELETE FROM telegram_notification_events WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
       db.prepare("DELETE FROM registrations WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM user_sessions WHERE userId IN (SELECT id FROM users WHERE email LIKE '%@example.invalid')").run();
+      db.prepare("DELETE FROM saved_trips WHERE userId IN (SELECT id FROM users WHERE email LIKE '%@example.invalid')").run();
       db.prepare("DELETE FROM leaderboard_cache WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM users WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM email_delivery_log WHERE recipient LIKE '%@example.invalid'").run();
@@ -98,6 +99,7 @@ const TEST_FILES = [
   'tests/api/admin-faqs.test.mjs',
   'tests/api/finance.test.mjs',
   'tests/api/balance-report.test.mjs',
+  'tests/api/saved-trips.test.mjs',
   ...(includeRateLimits ? ['tests/api/rate-limits.test.mjs'] : []),
 ];
 

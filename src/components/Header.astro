@@ -1,4 +1,7 @@
 ---
+import { balanceDue, getUserTrips } from '../lib/userTrips';
+import { formatINR } from '../lib/utils';
+
 interface Props {
   hidden?: boolean;
   logoOnly?: boolean;
@@ -34,6 +37,9 @@ const navGroups = [
 const pathname = Astro.url.pathname;
 const firstName = user?.displayName?.split(' ')[0] ?? null;
 const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
+// A balance the traveller should pay now: a dot on the avatar and the menu
+// button, and the first row of the drawer. Same rule as the profile's Pay button.
+const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
 ---
 
 <header
@@ -60,6 +66,7 @@ const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
                 <span class="avatar-fallback">{initial}</span>
               )}
               <span>{firstName ?? 'Profile'}</span>
+              {owing && <span class="attention-dot" data-testid="header-balance-dot"><span class="sr-only">Payment due</span></span>}
             </a>
           ) : (
             <a href="/login" class="desktop-sign-in">
@@ -70,7 +77,8 @@ const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
             </a>
           )}
 
-          <button id="menu-btn" class="menu-trigger" aria-label="Open menu" aria-expanded="false" aria-controls="menu-panel">
+          <button id="menu-btn" class="menu-trigger" aria-label={owing ? 'Open menu, payment due' : 'Open menu'} aria-expanded="false" aria-controls="menu-panel">
+            {owing && <span class="attention-dot menu-dot" aria-hidden="true"></span>}
             <span class="menu-trigger-label">Menu</span>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path stroke-linecap="round" stroke-width="2" d="M5 7h14M5 12h14M5 17h14" />
@@ -123,6 +131,16 @@ const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
           </span>
           <span><strong>Sign in</strong><small>View bookings and your profile</small></span>
           <span class="drawer-arrow" aria-hidden="true">→</span>
+        </a>
+      )}
+
+      {owing && (
+        <a href={`/profile/pay/${owing.id}`} class="drawer-balance" data-testid="drawer-balance">
+          <span class="drawer-balance-copy">
+            <small>Balance due{owing.details.daysOverdue != null && owing.details.daysOverdue > 0 ? ' · overdue' : ''}</small>
+            <strong>{owing.details.balance != null ? `${formatINR(owing.details.balance)} · ` : ''}{owing.tripName}</strong>
+          </span>
+          <span class="drawer-balance-cta">Pay now</span>
         </a>
       )}
 
@@ -290,8 +308,18 @@ const initial = (firstName ?? user?.email ?? 'U')[0].toUpperCase();
   .drawer-trip-cta { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 3rem; border-radius: 999px; background: var(--color-navy); color: white; font-size: 0.82rem; font-weight: 700; }
   .drawer-trip-cta:hover { background: var(--color-navy-deep); }
   .drawer-sign-out { width: 100%; margin-top: 0.4rem; padding: 0.7rem; color: var(--color-coral-ink); font-size: 0.72rem; font-weight: 650; }
+  .desktop-profile, .menu-trigger { position: relative; }
+  .attention-dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; background: var(--color-coral); box-shadow: 0 0 0 2px var(--color-navy); }
+  .desktop-profile .attention-dot { position: absolute; left: 1.2rem; top: -0.1rem; }
+  .menu-dot { position: absolute; right: 0.35rem; top: 0.35rem; display: none; }
+  .drawer-balance { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 0.25rem; padding: 0.75rem 0.85rem; border-radius: 1rem; background: var(--color-blush); color: var(--color-navy); }
+  .drawer-balance-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+  .drawer-balance-copy small { color: var(--color-coral-ink); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .drawer-balance-copy strong { overflow: hidden; font-size: 0.82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .drawer-balance-cta { flex: 0 0 auto; border-radius: 999px; background: var(--color-cta); color: white; padding: 0.45rem 0.85rem; font-size: 0.72rem; font-weight: 700; }
   @media (max-width: 639px) {
     .desktop-sign-in, .desktop-profile { display: none; }
+    .menu-dot { display: block; }
   }
   @media (prefers-reduced-motion: reduce) {
     .menu-panel, .menu-backdrop { transition-duration: 0.01ms; }

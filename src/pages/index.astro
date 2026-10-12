@@ -9,6 +9,11 @@ import Stat from '../components/ui/Stat.astro';
 import Icon from '../components/ui/Icon.astro';
 import { cardLiveSpots } from '../lib/departureCounts';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
+import { formatDateIN, formatINR } from '../lib/utils';
+import {
+  getUserTrips, upcomingTrips, unfinishedBooking, tripPrimaryAction, tripStates,
+  savedTripSlugs, userTravelStats, isNewsletterSubscriber,
+} from '../lib/userTrips';
 
 const allTrips = listTrips();
 // Visibility derives from departures: feature every trip that has an upcoming,
@@ -29,6 +34,37 @@ let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
 const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
+
+// ── Signed-in personalisation ──────────────────────────────────────────────
+// Only ever rendered for a request carrying a session: those are `private,
+// no-cache` and bypass the edge (middleware.ts), so the shared cached homepage
+// that logged-out visitors get is untouched.
+const user = Astro.locals.user;
+const firstName = user ? (user.displayName?.trim().split(/\s+/)[0] || null) : null;
+const myTrips = user ? getUserTrips(Astro.locals) : [];
+const upcoming = upcomingTrips(myTrips);
+// When a seat is held on more than one trip, the one owing money leads.
+const heroTrip = upcoming.find((r) => tripPrimaryAction(r)?.kind === 'pay') ?? upcoming[0] ?? null;
+const heroLead = heroTrip ? null : unfinishedBooking(myTrips);
+const myStats = user && !heroTrip && !heroLead ? userTravelStats(user.id) : null;
+type HeroVariant = 'trip' | 'lead' | 'returning' | 'new';
+const heroVariant: HeroVariant | null = !user ? null
+  : heroTrip ? 'trip' : heroLead ? 'lead' : myStats ? 'returning' : 'new';
+const heroAction = heroTrip ? tripPrimaryAction(heroTrip) : null;
+const heroTripHref = heroTrip?.tripExists && heroTrip.tripSlug ? `/trips/${heroTrip.tripSlug}/` : '/profile?tab=trips';
+const heroBalance = heroAction?.kind === 'pay' ? heroTrip!.details : null;
+const otherUpcoming = Math.max(0, upcoming.length - 1);
+
+const savedSlugs = user ? savedTripSlugs(user.id) : [];
+const savedSet = new Set(savedSlugs);
+const userStates = user ? tripStates(myTrips, savedSlugs) : new Map();
+// Saved trips still on sale, bookable ones first, in the order they were saved.
+const savedTrips = savedSlugs
+  .map((slug) => allTrips.find((t) => t.slug === slug))
+  .filter((t): t is (typeof allTrips)[number] => Boolean(t && isTripListable(t)))
+  .sort((a, b) => Number(tripCardSummary(a).soldOut || tripCardSummary(a).allComingSoon) - Number(tripCardSummary(b).soldOut || tripCardSummary(b).allComingSoon));
+const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => ({ slug: t.slug, ...tripCardSummary(t) }))) : new Map();
+const subscribed = isNewsletterSubscriber(Astro.locals);
 ---
 
 <BaseLayout
@@ -71,27 +107,146 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
         Group trips for travellers. Offbeat spots, zero fluff.
       </p>
 
-      <!-- Stats card -->
-      <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
-        <Stat value="12–16" label="Group Size" tone="light" class="py-1" />
-        <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
-      </div>
+      {heroVariant && heroVariant !== 'new' ? (
+        <div
+          data-testid="hero-personal"
+          data-variant={heroVariant}
+          class="anim-fade-up anim-delay-2 w-full rounded-2xl p-4 mb-4 sm:p-5 sm:mb-6 text-left bg-[rgba(15,20,35,0.7)] backdrop-blur-md"
+        >
+          <p class="text-sm text-white/75">Welcome back{firstName && <>, <strong class="font-semibold text-white">{firstName}</strong></>}</p>
 
-      <!-- CTA -->
-      <Button
-        href="/trips/"
-        variant="cta"
-        size="lg"
-        class="anim-fade-up anim-delay-3 w-full sm:w-auto mb-4 sm:mb-6"
-      >
-        <Icon name="users" /> Join a Trip
-      </Button>
+          {heroVariant === 'trip' && heroTrip && (
+            <>
+              <a href={heroTripHref} class="mt-3 flex items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                {heroTrip.coverImage && (
+                  <img src={heroTrip.coverImage} alt="" width="56" height="56" loading="lazy" decoding="async" class="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                )}
+                <span class="min-w-0">
+                  <span class="block truncate font-display text-lg font-semibold text-white">{heroTrip.tripName}</span>
+                  <span class="block text-sm text-white/75">
+                    {heroTrip.dateLabel}
+                    {heroTrip.timingLabel && <> · <span data-testid="hero-timing" class="font-semibold text-peach">{heroTrip.timingLabel}</span></>}
+                  </span>
+                </span>
+              </a>
+              {heroTrip.status === 'pending' && (
+                <p class="mt-3 text-sm text-white/80">We've got your booking and are confirming your seat.</p>
+              )}
+              {heroBalance && heroBalance.balance != null && (
+                <p data-testid="hero-balance" class="mt-3 text-sm text-white/85">
+                  Balance <strong class="text-white">{formatINR(heroBalance.balance)}</strong>
+                  {heroBalance.balanceDueDate && (heroBalance.daysOverdue != null && heroBalance.daysOverdue > 0
+                    ? <span class="font-semibold text-peach"> · overdue since {formatDateIN(heroBalance.balanceDueDate)}</span>
+                    : <> · due {formatDateIN(heroBalance.balanceDueDate)}</>)}
+                </p>
+              )}
+              <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <Button href={heroAction?.href ?? heroTripHref} variant="cta" size="md" class="w-full sm:w-auto">
+                  {heroAction?.kind === 'pay' && heroBalance?.balance != null ? `Pay ${formatINR(heroBalance.balance)}` : heroAction?.label ?? 'View trip'}
+                </Button>
+                <a href="/profile?tab=trips" class="text-center text-sm font-semibold text-white underline-offset-4 hover:underline">
+                  My trips{otherUpcoming > 0 && ` · +${otherUpcoming} more upcoming`}
+                </a>
+              </div>
+            </>
+          )}
 
-      <!-- Social proof -->
-      <p class="anim-fade-up anim-delay-4 text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
+          {heroVariant === 'lead' && heroLead && (
+            <>
+              <p class="mt-2 font-display text-lg font-semibold text-white">You were booking {heroLead.tripName}</p>
+              <p class="text-sm text-white/75">{heroLead.dateLabel} · your details are saved</p>
+              <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <Button href={tripPrimaryAction(heroLead)?.href ?? '/trips/'} variant="cta" size="md" class="w-full sm:w-auto">Continue booking</Button>
+                <a href="/trips/" class="text-center text-sm font-semibold text-white underline-offset-4 hover:underline">Browse other trips</a>
+              </div>
+            </>
+          )}
+
+          {heroVariant === 'returning' && myStats && (
+            <>
+              <p class="mt-2 font-display text-lg font-semibold text-white">Where to next?</p>
+              <a href="/leaderboard" data-testid="hero-stats" class="mt-1 inline-block text-sm text-white/80 underline-offset-4 hover:underline">
+                {Math.round(myStats.kmsFromHome).toLocaleString('en-IN')} km travelled · {myStats.tripsCount} {myStats.tripsCount === 1 ? 'trip' : 'trips'}{myStats.rank != null && ` · #${myStats.rank} on the leaderboard`}
+              </a>
+              <div class="mt-4">
+                <Button href="/trips/" variant="cta" size="md" class="w-full sm:w-auto"><Icon name="users" /> Find your next trip</Button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          {heroVariant === 'new' && (
+            <p data-testid="hero-personal" data-variant="new" class="anim-fade-up anim-delay-2 w-full text-left text-sm text-white/80 mb-3">
+              Hi{firstName && <> <strong class="font-semibold text-white">{firstName}</strong></>}, tap the ♡ on any trip to save it for later.
+            </p>
+          )}
+        <!-- Stats card -->
+        <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
+          <Stat value="12–16" label="Group Size" tone="light" class="py-1" />
+          <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
+        </div>
+
+        <!-- CTA -->
+        <Button
+          href="/trips/"
+          variant="cta"
+          size="lg"
+          class="anim-fade-up anim-delay-3 w-full sm:w-auto mb-4 sm:mb-6"
+        >
+          <Icon name="users" /> Join a Trip
+        </Button>
+
+        <!-- Social proof -->
+        <p class="anim-fade-up anim-delay-4 text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
+        </>
+      )}
 
     </div>
   </section>
+
+  {savedTrips.length > 0 && (
+    <section data-testid="saved-trips" aria-labelledby="saved-trips-heading" class="pt-14 lg:pt-16 bg-gray-soft">
+      <div class="container-app">
+        <div class="mb-6 flex items-end justify-between gap-6">
+          <h2 id="saved-trips-heading" class="font-display text-2xl text-navy">Your saved trips</h2>
+          <a href="/profile?tab=trips" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">Manage <Icon name="arrow-right" class="h-4 w-4" /></a>
+        </div>
+        <div class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {savedTrips.map((trip) => {
+            const card = tripCardSummary(trip);
+            return (
+              <div class="flex w-[86%] shrink-0 snap-start sm:w-[46%] lg:w-[31%]">
+                <TripCard
+                  sizes={CAROUSEL_SIZES}
+                  slug={trip.slug}
+                  title={trip.title}
+                  name={trip.name}
+                  coverImage={trip.coverImage}
+                  featuredImage={trip.featuredImage}
+                  description={trip.description}
+                  shortDescription={trip.shortDescription}
+                  location={trip.location}
+                  duration={trip.duration}
+                  fromPrice={card.fromPrice}
+                  originalFromPrice={card.originalFromPrice}
+                  discountEndsAt={card.discountEndsAt}
+                  multiPrice={card.multiPrice}
+                  spotsLeft={savedLiveSpots.get(trip.slug) ?? null}
+                  soldOut={card.soldOut}
+                  hasComingSoon={card.hasComingSoon}
+                  allComingSoon={card.allComingSoon}
+                  departures={card.departures}
+                  userState={userStates.get(trip.slug) ?? null}
+                  saved={true}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  )}
 
   <!-- ── UPCOMING TRIPS ────────────────────────────────────── -->
   <section class="py-16 lg:py-20 bg-gray-soft">
@@ -150,6 +305,8 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
                   hasComingSoon={card.hasComingSoon}
                   allComingSoon={card.allComingSoon}
                   departures={card.departures}
+                  userState={userStates.get(trip.slug) ?? null}
+                  saved={savedSet.has(trip.slug)}
                 />
               </div>
             );
@@ -236,26 +393,33 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
         <p class="text-base mb-8 leading-relaxed text-white/75">
           New trips, new batches, things worth knowing. No spam.
         </p>
-        <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-          <label for="home-newsletter-email" class="sr-only">Your email address</label>
-          <input
-            id="home-newsletter-email"
-            type="email"
-            name="email"
-            placeholder="Your email address"
-            required
-            class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 border-white/25 bg-white/10 outline-none text-white placeholder:text-white/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          />
-          <button
-            type="submit"
-            class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
-          >
-            Keep me posted
-          </button>
-        </form>
-        <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
-          You're in. We'll be in touch when something good is coming.
-        </p>
+        {subscribed ? (
+          <p data-testid="home-nl-subscribed" class="text-base font-medium text-white">You're on the list. We'll email {user!.email} when something good is coming.</p>
+        ) : (
+          <>
+            <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <label for="home-newsletter-email" class="sr-only">Your email address</label>
+              <input
+                id="home-newsletter-email"
+                type="email"
+                name="email"
+                placeholder="Your email address"
+                value={user?.email}
+                required
+                class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 border-white/25 bg-white/10 outline-none text-white placeholder:text-white/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              />
+              <button
+                type="submit"
+                class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
+              >
+                Keep me posted
+              </button>
+            </form>
+            <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
+              You're in. We'll be in touch when something good is coming.
+            </p>
+          </>
+        )}
       </div>
     </div>
   </section>

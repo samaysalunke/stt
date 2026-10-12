@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getDb } from '../lib/db';
 import { LEADERBOARD_ELIGIBLE_JOIN } from '../lib/stats';
+import { leaderboardRank, type RankColumn } from '../lib/userTrips';
 
 export const prerender = false;
 
@@ -51,18 +52,8 @@ if (user) {
   ).get(user.id) as Omit<LeaderRow, 'rank'> | undefined;
 
   if (myCache) {
-    // Same tie-break as the ROW_NUMBER() above (value DESC, userId ASC).
-    // Counting only strictly-greater values gave everyone tied on a value the
-    // same rank — five travellers on 3 destinations each read "rank 1" in their
-    // pinned card while the list placed them 1 through 5.
-    const myValue = (myCache as Record<string, unknown>)[orderCol] as number;
-    const myRankRow = db.prepare(`
-      SELECT COUNT(*) + 1 as rank FROM leaderboard_cache c
-      ${LEADERBOARD_ELIGIBLE_JOIN}
-      WHERE c.${orderCol} > ? OR (c.${orderCol} = ? AND c.userId < ?)
-    `).get(myValue, myValue, user.id) as { rank: number };
-
-    myEntry = { ...myCache, rank: myRankRow.rank };
+    const rank = leaderboardRank(user.id, orderCol as RankColumn);
+    if (rank != null) myEntry = { ...myCache, rank };
   }
 }
 
