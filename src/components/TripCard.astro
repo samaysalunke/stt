@@ -46,6 +46,10 @@ interface Props {
    * observer in BaseLayout.astro.
    */
   defer?: boolean;
+  /** This signed-in traveller's relationship to the trip, shown as a pill on the cover. */
+  userState?: 'going' | 'went' | 'saved' | null;
+  /** Whether the heart starts filled. Only meaningful for a signed-in viewer. */
+  saved?: boolean;
 }
 
 const {
@@ -70,7 +74,15 @@ const {
   sizes = TRIP_GRID_SIZES,
   priority = false,
   defer = false,
+  userState = null,
+  saved = false,
 } = Astro.props;
+
+// Signed-out visitors get the heart as a link through sign-in, identical for
+// all of them, so the edge-cached listing stays one shared page.
+const signedIn = Boolean(Astro.locals.user);
+const saveHref = `/login?next=${encodeURIComponent(`/trips/?save=${slug}`)}`;
+const userStateLabel = { going: "You're going", went: 'You went', saved: 'Saved' } as const;
 
 const tripName = title || name || slug;
 const img = coverImage || featuredImage || FALLBACK_HERO;
@@ -130,12 +142,42 @@ const departureSummary = getDepartureSummary(departures);
         </noscript>
       )}
     </a>
-    {duration && (
-      <span
-        class="pointer-events-none absolute left-3 top-3 rounded-[var(--radius-pill)] bg-black/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-[4px]"
+    {(duration || userState) && (
+      <div class="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5">
+        {duration && (
+          <span class="rounded-[var(--radius-pill)] bg-black/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-[4px]">
+            {duration}
+          </span>
+        )}
+        {userState && (
+          <span
+            data-testid="trip-card-user-state"
+            data-state={userState}
+            class:list={[
+              'rounded-[var(--radius-pill)] px-3 py-1 text-[11px] font-semibold text-white shadow-md',
+              userState === 'going' ? 'bg-cta' : 'bg-navy/85 backdrop-blur-[4px]',
+            ]}
+          >
+            {userStateLabel[userState]}
+          </span>
+        )}
+      </div>
+    )}
+    {signedIn ? (
+      <button
+        type="button"
+        class="save-heart"
+        data-save-trip={slug}
+        data-trip-name={tripName}
+        aria-pressed={saved ? 'true' : 'false'}
+        aria-label={saved ? `Remove ${tripName} from saved trips` : `Save ${tripName}`}
       >
-        {duration}
-      </span>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 3.6 0 5.5 3.7 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2Z" /></svg>
+      </button>
+    ) : (
+      <a href={saveHref} class="save-heart" aria-label={`Save ${tripName} (sign in)`} rel="nofollow">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 4.5 7 4.5c2.1 0 3.7 1.2 5 3 1.3-1.8 2.9-3 5-3 3.6 0 5.5 3.7 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2Z" /></svg>
+      </a>
     )}
     {departureSummary.displayed.length > 0 && (
       <div data-testid="card-departure-summary" aria-label="Upcoming departures" class="pointer-events-none absolute inset-x-3 bottom-3 flex flex-col items-start gap-1.5">
@@ -223,6 +265,38 @@ const departureSummary = getDepartureSummary(departures);
 </article>
 
 <style>
+  .save-heart {
+    position: absolute;
+    right: 0.75rem;
+    top: 0.75rem;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    background: rgb(0 0 0 / 0.45);
+    color: #fff;
+    backdrop-filter: blur(4px);
+    transition: transform 150ms ease, background-color 150ms ease;
+  }
+  .save-heart:hover { background: rgb(0 0 0 / 0.6); }
+  .save-heart:active { transform: scale(0.92); }
+  .save-heart:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .save-heart svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linejoin: round;
+  }
+  .save-heart[aria-pressed='true'] svg { fill: var(--color-coral); stroke: var(--color-coral); }
+  .save-heart[aria-busy='true'] { opacity: 0.7; }
+  @media (prefers-reduced-motion: reduce) {
+    .save-heart { transition: none; }
+    .save-heart:active { transform: none; }
+  }
+
   .trip-card-shell {
     container-name: trip-card;
     container-type: inline-size;
@@ -248,3 +322,105 @@ const departureSummary = getDepartureSummary(departures);
     }
   }
 </style>
+
+
+<style is:global>
+  /* Created by the heart script below, outside any card, so it can't be scoped. */
+  .save-toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1.25rem + env(safe-area-inset-bottom));
+    z-index: 60;
+    max-width: calc(100vw - 2rem);
+    transform: translate(-50%, 0.5rem);
+    border-radius: 9999px;
+    background: var(--color-navy);
+    color: #fff;
+    padding: 0.7rem 1.2rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+  .save-toast[data-show='true'] { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .save-toast { transition: none; } }
+</style>
+
+<script>
+  // Hearts on trip cards. Optimistic: the heart fills at once and rolls back if
+  // the save fails. One delegated listener covers every card on the page.
+  const announce = (() => {
+    let region: HTMLElement | null = null;
+    let timer = 0;
+    return (message: string) => {
+      if (!region) {
+        region = document.createElement('div');
+        region.className = 'save-toast';
+        region.setAttribute('role', 'status');
+        document.body.append(region);
+      }
+      region.textContent = message;
+      region.dataset.show = 'true';
+      clearTimeout(timer);
+      timer = window.setTimeout(() => { if (region) region.dataset.show = 'false'; }, 2600);
+    };
+  })();
+
+  const paint = (slug: string, saved: boolean) => {
+    document.querySelectorAll<HTMLButtonElement>(`button[data-save-trip="${CSS.escape(slug)}"]`).forEach((btn) => {
+      const name = btn.dataset.tripName ?? 'this trip';
+      btn.setAttribute('aria-pressed', String(saved));
+      btn.setAttribute('aria-label', saved ? `Remove ${name} from saved trips` : `Save ${name}`);
+    });
+  };
+
+  const request = (slug: string, saved: boolean) =>
+    fetch('/api/saved-trips', {
+      method: saved ? 'POST' : 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug }),
+    }).then((res) => res.ok);
+
+  document.addEventListener('click', async (event) => {
+    const btn = (event.target as Element | null)?.closest<HTMLButtonElement>('button[data-save-trip]');
+    if (!btn || btn.getAttribute('aria-busy') === 'true') return;
+    const slug = btn.dataset.saveTrip!;
+    const name = btn.dataset.tripName ?? 'Trip';
+    const next = btn.getAttribute('aria-pressed') !== 'true';
+    paint(slug, next);
+    btn.setAttribute('aria-busy', 'true');
+    let ok = false;
+    try { ok = await request(slug, next); } catch {}
+    btn.removeAttribute('aria-busy');
+    if (!ok) {
+      paint(slug, !next);
+      announce("Couldn't update your saved trips. Please try again.");
+      return;
+    }
+    announce(next ? `Saved ${name}` : `Removed ${name} from saved trips`);
+  });
+
+  // Back from signing in via a heart (/trips/?save=slug): finish the save they
+  // asked for, then drop the parameter so a reload doesn't repeat it.
+  const params = new URLSearchParams(location.search);
+  const pending = params.get('save');
+  const pendingBtn = pending ? document.querySelector<HTMLButtonElement>(`button[data-save-trip="${CSS.escape(pending)}"]`) : null;
+  if (pending) {
+    params.delete('save');
+    history.replaceState(history.state, '', `${location.pathname}${params.size ? `?${params}` : ''}${location.hash}`);
+  }
+  if (pending && pendingBtn) {
+    const name = pendingBtn.dataset.tripName ?? 'Trip';
+    if (pendingBtn.getAttribute('aria-pressed') === 'true') {
+      announce(`${name} is in your saved trips`);
+    } else {
+      paint(pending, true);
+      request(pending, true).then((ok) => {
+        if (ok) announce(`Saved ${name}`);
+        else { paint(pending, false); announce("Couldn't save that trip. Please try again."); }
+      }).catch(() => { paint(pending, false); announce("Couldn't save that trip. Please try again."); });
+    }
+  }
+</script>

@@ -1,12 +1,18 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { safeProfileReturn } from '../lib/authReturn';
+import { readTrip } from '../lib/content';
 
 export const prerender = false;
 
-// Already logged in → go to profile
-if (Astro.locals.user) return Astro.redirect('/profile');
+const next = safeProfileReturn(Astro.url.searchParams.get('next') ?? '/profile');
+// Already logged in → straight to wherever sign-in would have taken them
+if (Astro.locals.user) return Astro.redirect(next);
 
-const next = Astro.url.searchParams.get('next') ?? '/profile';
+// Arrived from a heart on a trip card: say what signing in is for.
+const saveSlug = new URL(next, 'https://return.invalid').searchParams.get('save');
+const saveTrip = saveSlug ? readTrip(saveSlug) : null;
+const saveTripName = saveTrip ? String(saveTrip.title || saveTrip.name || saveSlug) : null;
 const loginUrl = `/api/auth/google?next=${encodeURIComponent(next)}`;
 
 const errorMessages: Record<string, string> = {
@@ -25,7 +31,9 @@ const errorMessage = errorMessages[Astro.url.searchParams.get('error') ?? ''] ??
         Sign in
       </h1>
       <p class="text-sm mb-10 text-gray-text">
-        Track your adventures, see your km from home, and join the leaderboard. New here? Signing in with Google sets you up automatically.
+        {saveTripName
+          ? <>Sign in to save <strong class="text-navy">{saveTripName}</strong> and keep your favourite trips in one place. New here? Signing in with Google sets you up automatically.</>
+          : 'Track your adventures, see your km from home, and join the leaderboard. New here? Signing in with Google sets you up automatically.'}
       </p>
 
       {errorMessage && (

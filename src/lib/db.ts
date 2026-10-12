@@ -258,6 +258,17 @@ function initializeSchema(db: Database.Database) {
   `);
   try { db.exec('CREATE INDEX IF NOT EXISTS username_aliases_user ON username_aliases(userId)'); } catch {}
 
+  // Trips a traveller hearted on a card. Not a wishlist entry: no departure, no
+  // lead for ops, just "remember this trip" for the traveller's own pages.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saved_trips (
+      userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_slug TEXT NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (userId, trip_slug)
+    );
+  `);
+
   // feature/rbac — roles, admin sessions, audit log
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_roles (

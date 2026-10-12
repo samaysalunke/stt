@@ -1,12 +1,15 @@
 ---
 import { readSiteSettings } from '../lib/content';
 import Button from './ui/Button.astro';
+import { isNewsletterSubscriber } from '../lib/userTrips';
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
 
 const instagram = settings.instagram ?? 'https://www.instagram.com/seekthethrill_/';
 const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
+const user = Astro.locals.user;
+const subscribed = isNewsletterSubscriber(Astro.locals);
 ---
 
 <footer class="bg-navy text-white">
@@ -71,21 +74,28 @@ const whatsapp = settings.whatsappLink ?? 'https://wa.me/917975027491';
     <!-- Newsletter signup -->
     <div class="mt-10 pt-8 border-t border-white/10">
       <p class="text-white/60 text-xs uppercase tracking-widest font-semibold mb-3">Stay in the loop</p>
-      <form id="footer-newsletter" class="flex gap-2 max-w-sm">
-        <label for="footer-newsletter-email" class="sr-only">Your email address</label>
-        <input
-          id="footer-newsletter-email"
-          type="email"
-          name="email"
-          placeholder="Your email"
-          required
-          class="min-w-0 flex-1 rounded-[var(--radius-pill)] border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        />
-        <Button type="submit" variant="cta" size="md" class="flex-shrink-0">Keep me posted</Button>
-      </form>
-      <p id="footer-nl-success" class="hidden text-white/60 text-sm mt-2">
-        You're in. We'll be in touch when something good is coming.
-      </p>
+      {subscribed ? (
+        <p class="text-white/70 text-sm">You're on the list as {user!.email}.</p>
+      ) : (
+        <>
+          <form id="footer-newsletter" class="flex gap-2 max-w-sm">
+            <label for="footer-newsletter-email" class="sr-only">Your email address</label>
+            <input
+              id="footer-newsletter-email"
+              type="email"
+              name="email"
+              placeholder="Your email"
+              value={user?.email}
+              required
+              class="min-w-0 flex-1 rounded-[var(--radius-pill)] border border-white/15 bg-white/10 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            />
+            <Button type="submit" variant="cta" size="md" class="flex-shrink-0">Keep me posted</Button>
+          </form>
+          <p id="footer-nl-success" class="hidden text-white/60 text-sm mt-2">
+            You're in. We'll be in touch when something good is coming.
+          </p>
+        </>
+      )}
     </div>
 
     <div class="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
