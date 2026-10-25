@@ -36,9 +36,11 @@ const VERSION_KEY = 'content_version';
 const PERF_TIMING = process.env.PERF_TIMING === '1';
 
 /**
- * `import.meta.env` is a Vite construct. Some tests import this module directly
+ * `import.meta.env.DEV` is a Vite construct. Some tests import this module directly
  * under plain Node (the Playwright specs do), where it is undefined — so read
- * it defensively rather than assuming a bundler is present.
+ * it defensively rather than assuming a bundler is present. (Name it with the
+ * key, as here: see tests/unit/envReads.test.ts for why a bare mention, even in
+ * a comment, changes the build.)
  */
 const IS_DEV = (() => {
   try {
