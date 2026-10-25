@@ -42,11 +42,11 @@ const MAX_ATTEMPTS = 3;
 const NO_SCREENSHOT = 'no_screenshot';
 const API_ROOT = 'https://api.telegram.org';
 const DATA_DIR = () => process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
-const token = () => String((import.meta.env as any).TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const chatId = () => String((import.meta.env as any).TELEGRAM_ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
+const token = () => String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const chatId = () => String(process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
 
-const webhookSecretValue = () => String((import.meta.env as any).TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
-const botUsernameValue = () => String((import.meta.env as any).TELEGRAM_BOT_USERNAME || process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '');
+const webhookSecretValue = () => String(process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
+const botUsernameValue = () => String(process.env.TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '');
 
 export function telegramConfigured(): boolean {
   return Boolean(token() && chatId());

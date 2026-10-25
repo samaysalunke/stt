@@ -18,29 +18,3 @@ declare namespace App {
     } | null;
   }
 }
-
-interface ImportMetaEnv {
-  readonly RESEND_API_KEY?: string;
-  readonly EMAIL_FROM?: string;
-  readonly ADMIN_EMAIL?: string;
-  readonly ZOHO_BOOKS_MODE?: 'disabled' | 'draft' | 'live';
-  readonly ZOHO_DATA_CENTER?: 'com' | 'eu' | 'in' | 'com.au' | 'jp' | 'ca' | 'sa';
-  readonly ZOHO_BOOKS_ORGANIZATION_ID?: string;
-  readonly ZOHO_CLIENT_ID?: string;
-  readonly ZOHO_CLIENT_SECRET?: string;
-  readonly ZOHO_REFRESH_TOKEN?: string;
-  readonly ZOHO_BOOKS_ITEM_ID?: string;
-  readonly ZOHO_RETAINER_TEMPLATE_ID?: string;
-  readonly ZOHO_INVOICE_TEMPLATE_ID?: string;
-  readonly ZOHO_JOB_SECRET?: string;
-  /** "on" runs the Zoho + Telegram workers in-process, once a minute. Off otherwise. */
-  readonly JOBS_SCHEDULER?: 'on' | 'off';
-  readonly TELEGRAM_BOT_TOKEN?: string;
-  readonly TELEGRAM_ADMIN_CHAT_ID?: string;
-  readonly TELEGRAM_WEBHOOK_SECRET?: string;
-  readonly TELEGRAM_BOT_USERNAME?: string;
-  readonly ANALYTICS_LLM_PROVIDER?: 'anthropic' | 'openai' | 'test';
-  readonly ANALYTICS_LLM_MODEL?: string;
-  readonly ANALYTICS_LLM_API_KEY?: string;
-  readonly ANALYTICS_LLM_FAKE_RESPONSE?: string;
-}

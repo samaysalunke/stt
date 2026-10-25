@@ -2,7 +2,7 @@ import { sendRegistrationPaymentConfirmed } from './email';
 import { getDb } from './db';
 import { billingProblems, billingSnapshot } from './paymentLedger';
 
-const env = (key: string) => (import.meta.env as any)[key] || process.env[key];
+const env = (key: string) => process.env[key];
 const dc = () => {
   const value = String(env('ZOHO_DATA_CENTER') || 'in').toLowerCase();
   return ['com', 'eu', 'in', 'com.au', 'jp', 'ca', 'sa'].includes(value) ? value : 'in';

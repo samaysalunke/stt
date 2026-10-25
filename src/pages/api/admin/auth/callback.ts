@@ -24,10 +24,9 @@ export const GET: APIRoute = async ({ url, cookies, redirect, clientAddress }) =
     return redirect('/admin/login?error=oauth');
   }
 
-  const clientId     = import.meta.env.GOOGLE_CLIENT_ID     ?? process.env.GOOGLE_CLIENT_ID     ?? '';
-  const clientSecret = import.meta.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET ?? '';
-  const redirectUri  = import.meta.env.ADMIN_OAUTH_REDIRECT_URI
-    ?? process.env.ADMIN_OAUTH_REDIRECT_URI
+  const clientId     = process.env.GOOGLE_CLIENT_ID     ?? '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? '';
+  const redirectUri  = process.env.ADMIN_OAUTH_REDIRECT_URI
     ?? siteUrl('/api/admin/auth/callback');
 
   // Exchange code for tokens
@@ -66,7 +65,7 @@ export const GET: APIRoute = async ({ url, cookies, redirect, clientAddress }) =
   });
 
   // Auto-grant owner to ADMIN_OWNER_EMAIL on first login if no owners exist
-  const ownerEmail = import.meta.env.ADMIN_OWNER_EMAIL ?? process.env.ADMIN_OWNER_EMAIL ?? '';
+  const ownerEmail = process.env.ADMIN_OWNER_EMAIL ?? '';
   if (ownerEmail && profile.email === ownerEmail && countOwners() === 0) {
     assignRole({ userId, role: 'owner' });
   }

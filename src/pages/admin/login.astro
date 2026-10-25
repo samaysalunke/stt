@@ -9,7 +9,7 @@ const hasNoRoleError   = errorCode === 'no_role';
 const hasOAuthError    = errorCode === 'oauth';
 
 // Password fallback only available when ADMIN_PASSWORD is configured
-const hasPasswordFallback = !!(import.meta.env.ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD);
+const hasPasswordFallback = !!process.env.ADMIN_PASSWORD;
 ---
 
 <!doctype html>
