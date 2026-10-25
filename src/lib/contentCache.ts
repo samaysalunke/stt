@@ -42,7 +42,7 @@ const PERF_TIMING = process.env.PERF_TIMING === '1';
  */
 const IS_DEV = (() => {
   try {
-    return !!(import.meta as any).env?.DEV;
+    return !!import.meta.env.DEV;
   } catch {
     return false;
   }
