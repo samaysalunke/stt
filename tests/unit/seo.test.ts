@@ -141,14 +141,17 @@ describe('SEO publication controls', () => {
   });
 
   it('canonicalizes host, protocol, case, and trailing slash in one hop', () => {
+    // Behaviour is pinned in canonicalRedirect.test.ts; this keeps the wiring.
     const middleware = fs.readFileSync('src/middleware.ts', 'utf8');
+    const canonical = fs.readFileSync('src/lib/canonicalRedirect.ts', 'utf8');
     // Only GET/HEAD navigations get the path-shape redirect (never form posts).
-    expect(middleware).toContain("request.method === 'GET' || request.method === 'HEAD'");
-    expect(middleware).toContain('toLowerCase()');
+    expect(canonical).toContain("request.method === 'GET' || request.method === 'HEAD'");
+    expect(canonical).toContain('toLowerCase()');
     // Single redirect emitted only when the normalized target actually differs
     // from the browser-facing URL (built from x-forwarded-* behind the proxy).
-    expect(middleware).toContain('x-forwarded-host');
-    expect(middleware).toContain('if (target.href !== publicHref) return redirect(target.toString(), 308)');
+    expect(canonical).toContain('x-forwarded-host');
+    expect(canonical).toContain('return target.href !== publicHref ? target.toString() : null');
+    expect(middleware).toContain('if (canonical) return redirect(canonical, 308)');
   });
 
   it('emits valid absolute JSON-LD on trip pages', () => {
