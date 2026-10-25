@@ -31,17 +31,43 @@ export default defineConfig({
   // too. Uncached, but admin HTML is `private, no-cache` anyway and the audience
   // is a handful of people.
   build: { inlineStylesheets: 'always' },
-  // CSRF origin checks run in src/middleware.ts so forwarded host/proto headers
-  // from Railway are respected. Astro's built-in check sees the internal proxy
-  // URL and rejects legitimate same-origin multipart uploads in production.
-  security: { checkOrigin: false },
+  // Astro 6+ default is 'jsx' whitespace handling, which can run inline links,
+  // badges and prices together. Keep the 5.x behaviour; moving is its own change.
+  compressHTML: true,
+  security: {
+    // CSRF origin checks run in src/middleware.ts so forwarded host/proto headers
+    // from Railway are respected. Astro's built-in check sees the internal proxy
+    // URL and rejects legitimate same-origin multipart uploads in production.
+    checkOrigin: false,
+    // Astro 7 trusts X-Forwarded-For — and so `clientAddress`, which every rate
+    // limit keys on — only when Host or X-Forwarded-Host matches one of these.
+    // Miss one and every visitor shares the proxy's address: five leads an hour
+    // for the whole site, and admin login locks out.
+    //
+    // Hostname only, no `protocol`: Astro checks the pattern's protocol against
+    // X-Forwarded-Proto, falling back to the socket's `http`, so pinning https
+    // would make the rate limits depend on Railway always sending that header.
+    // TLS ends at the edge either way, and the middleware canonicalises to
+    // https itself.
+    //
+    // RAILWAY_PUBLIC_DOMAIN is set per Railway environment, which covers the
+    // service domain here and any preview environment's own domain.
+    allowedDomains: [
+      'www.seekthethrill.in',
+      'seekthethrill.in',
+      'stt-production-4ae5.up.railway.app',
+      process.env.RAILWAY_PUBLIC_DOMAIN,
+    ]
+      .filter((hostname, i, all) => hostname && all.indexOf(hostname) === i)
+      .map((hostname) => ({ hostname })),
+  },
   vite: {
     plugins: [tailwindcss()],
     optimizeDeps: {
       exclude: ['better-sqlite3'],
     },
     build: {
-      rollupOptions: {
+      rolldownOptions: {
         external: ['better-sqlite3'],
       },
     },
