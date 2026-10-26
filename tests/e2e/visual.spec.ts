@@ -92,6 +92,26 @@ async function freezePage(page: Page) {
       img.removeAttribute('data-defer-src');
     });
   });
+  // Promoting the src is not enough: the image is still `loading="lazy"`, and a
+  // fullPage shot never scrolls, so a card far enough below the fold is never
+  // fetched and `networkidle` arrives with nothing in flight. Whether the last
+  // card on trips-index @ mobile painted came down to Chrome's lazy margin —
+  // one run in three captured it blank. Make every image eager and wait for
+  // each one to load and decode, rather than for the network to go quiet.
+  await page.evaluate(() =>
+    Promise.all(
+      Array.from(document.images).map((img) => {
+        img.loading = 'eager';
+        const loaded = img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              img.addEventListener('load', () => resolve(), { once: true });
+              img.addEventListener('error', () => resolve(), { once: true });
+            });
+        return loaded.then(() => img.decode().catch(() => {}));
+      }),
+    ),
+  );
   await page.waitForLoadState('networkidle').catch(() => {});
   await page.evaluate(() => (document as any).fonts?.ready).catch(() => {});
 }
