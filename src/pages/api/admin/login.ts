@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, redirect, cookies, clientAddress
   const body = await request.formData();
   const password = (body.get('password') ?? '').toString();
 
-  const expected = (import.meta.env.ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '');
+  const expected = (process.env.ADMIN_PASSWORD ?? '');
   // No password configured ⇒ fallback login disabled (use Google OAuth in prod).
   if (!expected || !safeEqual(password, expected)) {
     return redirect('/admin/login?error=1');

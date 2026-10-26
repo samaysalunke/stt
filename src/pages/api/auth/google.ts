@@ -6,9 +6,8 @@ import { safeProfileReturn } from '../../../lib/authReturn';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ cookies, redirect, url }) => {
-  const clientId = import.meta.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '';
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
   const redirectUri =
-    import.meta.env.USER_AUTH_REDIRECT_URI ??
     process.env.USER_AUTH_REDIRECT_URI ??
     siteUrl('/api/auth/callback');
 

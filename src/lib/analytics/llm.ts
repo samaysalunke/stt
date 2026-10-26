@@ -56,7 +56,7 @@ export function createLLMAdapter(): LLMAdapter {
 }
 
 function env(name: string): string {
-  return String((import.meta as any).env?.[name] ?? process.env[name] ?? '').trim();
+  return String(process.env[name] ?? '').trim();
 }
 
 function lastUserText(messages: LLMMessage[]): string {

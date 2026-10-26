@@ -23,10 +23,9 @@ export const GET: APIRoute = async ({ url, cookies, redirect }) => {
     return redirect('/login?error=oauth_state');
   }
 
-  const clientId = import.meta.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '';
-  const clientSecret = import.meta.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET ?? '';
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? '';
   const redirectUri =
-    import.meta.env.USER_AUTH_REDIRECT_URI ??
     process.env.USER_AUTH_REDIRECT_URI ??
     siteUrl('/api/auth/callback');
 

@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import type { APIRoute } from 'astro';
 import { claimZohoDocuments, processZohoDocument } from '../../../lib/zohoBooks';
 
-const configuredSecret = () => String((import.meta.env as any).ZOHO_JOB_SECRET || process.env.ZOHO_JOB_SECRET || '');
+const configuredSecret = () => String(process.env.ZOHO_JOB_SECRET || '');
 const authorized = (request: Request) => {
   const expected = configuredSecret();
   const supplied = String(request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');

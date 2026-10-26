@@ -13,7 +13,7 @@
 import { finishEmailLog, startEmailLog, type EmailLogMeta } from './emailLogs';
 import { BLUSH, CTA, GRAY_TEXT, PEACH } from './emailPalette';
 
-const env = (k: string) => (import.meta.env as any)[k] || process.env[k];
+const env = (k: string) => process.env[k];
 
 export const RESEND_API_KEY = env('RESEND_API_KEY');
 export const EMAIL_FROM = env('EMAIL_FROM') || 'Seek the Thrill <onboarding@resend.dev>';

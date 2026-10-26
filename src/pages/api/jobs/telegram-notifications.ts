@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { claimTelegramEvents, processClaimedTelegramEvent } from '../../../lib/telegram';
 
-const configuredToken = () => String((import.meta.env as any).TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || '');
+const configuredToken = () => String(process.env.TELEGRAM_BOT_TOKEN || '');
 
 function authorized(request: Request): boolean {
   const expected = configuredToken();

@@ -35,7 +35,7 @@ const BATCH = 10;
  * deploy.
  */
 export function schedulerEnabled(): boolean {
-  const value = (import.meta.env as any).JOBS_SCHEDULER || process.env.JOBS_SCHEDULER;
+  const value = process.env.JOBS_SCHEDULER;
   return String(value || '').toLowerCase() === 'on';
 }
 

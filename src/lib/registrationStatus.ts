@@ -236,7 +236,7 @@ export function assertPaymentStatusConsistent(reg: {
   payment_status?: string;
 }): void {
   try {
-    if (!(import.meta as any).env?.DEV) return;
+    if (!import.meta.env.DEV) return;
   } catch {
     return;
   }

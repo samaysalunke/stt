@@ -27,7 +27,7 @@ export interface PaymentInput {
 }
 
 export const zohoMode = (): ZohoMode => {
-  const value = String((import.meta.env as any).ZOHO_BOOKS_MODE || process.env.ZOHO_BOOKS_MODE || 'disabled');
+  const value = String(process.env.ZOHO_BOOKS_MODE || 'disabled');
   return value === 'draft' || value === 'live' ? value : 'disabled';
 };
 

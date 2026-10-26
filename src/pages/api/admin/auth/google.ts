@@ -5,9 +5,8 @@ import { siteUrl } from '../../../../lib/siteUrl';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ cookies, redirect }) => {
-  const clientId = import.meta.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? '';
-  const redirectUri = import.meta.env.ADMIN_OAUTH_REDIRECT_URI
-    ?? process.env.ADMIN_OAUTH_REDIRECT_URI
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
+  const redirectUri = process.env.ADMIN_OAUTH_REDIRECT_URI
     ?? siteUrl('/api/admin/auth/callback');
 
   if (!clientId) {
