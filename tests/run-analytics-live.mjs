@@ -29,7 +29,8 @@ async function waitForServer(url, timeoutMs) {
 
 process.env.TEST_BASE_URL = BASE;
 
-const server = spawn('node_modules/.bin/astro', ['dev', '--port', String(PORT)], {
+// --ignore-lock: keep the server in the foreground; see tests/run.mjs.
+const server = spawn('node_modules/.bin/astro', ['dev', '--port', String(PORT), '--ignore-lock'], {
   env: {
     ...process.env,
     DISABLE_RATE_LIMIT: 'true',

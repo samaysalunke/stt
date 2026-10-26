@@ -118,7 +118,12 @@ async function waitForServer(url, timeoutMs) {
 // Inject the test port into helpers so tests use the right server
 process.env.TEST_BASE_URL = BASE;
 
-const server = spawn('node_modules/.bin/astro', ['dev', '--port', String(PORT)], {
+// --ignore-lock: Astro 7's `astro dev` detaches itself into a background daemon
+// when it detects an AI agent (CLAUDECODE, AI_AGENT, …), so killing this child
+// left the real server running on the port — and its .astro/dev.json lock then
+// stopped Playwright's dev servers from starting. The flag keeps the server in
+// the foreground and out of the lock, wherever the suite runs.
+const server = spawn('node_modules/.bin/astro', ['dev', '--port', String(PORT), '--ignore-lock'], {
   env: {
     ...process.env,
     DISABLE_RATE_LIMIT: 'true',

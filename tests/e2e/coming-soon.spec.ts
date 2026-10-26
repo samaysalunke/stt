@@ -9,7 +9,9 @@ test('coming-soon date has no real price in the page HTML', async ({ page }) => 
   await page.goto(TRIP_URL);
   const html = await page.content();
   // The coming-soon offer price is 9000 — it must never be serialised anywhere.
-  expect(html).not.toContain('9000');
+  // Matched as a whole number: Astro 7's dev server stamps each island with a
+  // `server-render-time` float, and "0.467959000001" contains the digits too.
+  expect(html).not.toMatch(/(?<![\d.])9000(?!\d)/);
   // JSON-LD Event for the coming-soon departure carries no offers block.
   // (BaseLayout emits an org-schema <script> first; the trip schema is separate.)
   const blocks = await page.locator('script[type="application/ld+json"]').allInnerTexts();

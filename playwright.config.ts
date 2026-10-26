@@ -57,14 +57,16 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run dev',
+      // --ignore-lock: two dev servers for one project, and no agent-triggered
+      // backgrounding that Playwright couldn't stop; see tests/run.mjs.
+      command: 'npm run dev -- --ignore-lock',
       url: 'http://localhost:4321',
       reuseExistingServer: true,
       timeout: 60_000,
       env: sharedEnv,
     },
     {
-      command: `npx astro dev --port ${VISUAL_PORT}`,
+      command: `npx astro dev --port ${VISUAL_PORT} --ignore-lock`,
       url: `http://localhost:${VISUAL_PORT}`,
       // Not reused: a server left over from a previous run may be pointed at a
       // different DATA_DIR, and the whole point here is knowing which database
