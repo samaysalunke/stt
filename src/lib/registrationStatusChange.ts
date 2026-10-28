@@ -17,6 +17,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { getDb } from './db';
+import { claimGroupLink } from './tripGroup';
 import { findTripByName, readTrip } from './content';
 import {
   sendRegistrationPaymentConfirmed,
@@ -317,6 +318,7 @@ export async function applyStatusChange(
         amountPaid: freshPaid,
         totalAmount: total,
         balanceDue: Math.max(0, total - freshPaid),
+        groupLink: claimGroupLink(reg),
       }).catch((err) => console.error('[Email confirmed]', err));
     }
   } else if (newStatus === 'cancelled') {

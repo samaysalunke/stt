@@ -864,6 +864,15 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       discount.querySelector('.dep-discount-end').addEventListener('input', (e) => { dep.discountEndsAt = e.target.value ? new Date(e.target.value).toISOString() : ''; });
       card.appendChild(discount);
 
+      const group = document.createElement('div');
+      group.style.cssText = 'margin-top:0.5rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-surface-soft);';
+      group.innerHTML =
+        '<span class="fhint">WhatsApp group invite link (optional)</span>' +
+          '<input type="url" class="finput dep-group-link" value="' + esc(dep.whatsappGroupLink || '') + '" placeholder="https://chat.whatsapp.com/…" />' +
+        '<span class="fhint">Confirmed travellers get this link by email and on their booking. In WhatsApp: group info → Invite via link → Copy link.</span>';
+      group.querySelector('.dep-group-link').addEventListener('input', (e) => { dep.whatsappGroupLink = e.target.value.trim(); });
+      card.appendChild(group);
+
       // Offer grid — one row per catalog tier.
       const grid = document.createElement('div');
       grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
@@ -916,7 +925,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
   document.getElementById('add-departure-btn').addEventListener('click', () => {
-    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', offers: [] });
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', whatsappGroupLink: '', offers: [] });
     renderDepartures();
   });
 

@@ -225,3 +225,56 @@ test('TC-207 trip_lead with no assigned trips sees empty registrations page', as
     `Expected 200 or redirect, got ${res.status}`);
   assert.notEqual(res.status, 403, 'trip_lead should be allowed on registrations page');
 });
+
+// ── WhatsApp group invite link: owner/ops only, needs a link, confirmed only ──
+function seedRegistration({ batchId, status, email }) {
+  const Database = require('better-sqlite3');
+  const db = new Database(DB_PATH);
+  const { lastInsertRowid } = db.prepare(`
+    INSERT INTO registrations (trip_name, trip_slug, batch_id, trip_date, full_name, email, phone, emergency_name, emergency_phone, status)
+    VALUES ('QA Coming Soon', 'qa-test-coming-soon', ?, '1 Feb 2099', 'QA Group', ?, '+91 90000 00009', 'QA Contact', '+91 90000 00010', ?)
+  `).run(batchId, email, status);
+  db.close();
+  return Number(lastInsertRowid);
+}
+
+test('group-invite: trip_lead → 403', async () => {
+  const { cookie } = seedAdminSession({ role: 'trip_lead', tripIds: ['qa-cs-open-2099'] });
+  const res = await fetch(`${BASE}/api/admin/registrations/group-invite`, {
+    method: 'POST', headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tripSlug: 'qa-test-coming-soon', batchId: 'qa-cs-open-2099' }),
+  });
+  assert.equal(res.status, 403);
+});
+
+test('group-invite: departure without a link → 409', async () => {
+  const { cookie } = seedAdminSession({ role: 'owner' });
+  const res = await fetch(`${BASE}/api/admin/registrations/group-invite`, {
+    method: 'POST', headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tripSlug: 'qa-test-coming-soon', batchId: 'qa-cs-soon-2099' }),
+  });
+  assert.equal(res.status, 409);
+});
+
+test('group-invite: emails only unsent confirmed travellers on that departure', async () => {
+  const Database = require('better-sqlite3');
+  const tag = crypto.randomUUID().slice(0, 8);
+  // Start from a clean slate for this departure so earlier runs can't skew the count.
+  const pre = new Database(DB_PATH);
+  pre.prepare("UPDATE registrations SET whatsapp_group_sent_at = CURRENT_TIMESTAMP WHERE batch_id = 'qa-cs-open-2099' AND status = 'confirmed'").run();
+  pre.close();
+  seedRegistration({ batchId: 'qa-cs-open-2099', status: 'confirmed', email: `qa-group-a-${tag}@example.invalid` });
+  seedRegistration({ batchId: 'qa-cs-open-2099', status: 'confirmed', email: `qa-group-b-${tag}@example.invalid` });
+  seedRegistration({ batchId: 'qa-cs-open-2099', status: 'pending', email: `qa-group-c-${tag}@example.invalid` });
+  seedRegistration({ batchId: 'qa-cs-soon-2099', status: 'confirmed', email: `qa-group-d-${tag}@example.invalid` });
+
+  const { cookie } = seedAdminSession({ role: 'owner' });
+  const res = await fetch(`${BASE}/api/admin/registrations/group-invite`, {
+    method: 'POST', headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tripSlug: 'qa-test-coming-soon', batchId: 'qa-cs-open-2099' }),
+  });
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  // Delivery depends on the environment's email key; who was attempted does not.
+  assert.equal(data.sent + data.failed, 2);
+});

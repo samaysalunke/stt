@@ -1,6 +1,7 @@
 import { isTripPublic, readTrip, resolveBalanceDueRule } from './content';
 import { derivePaymentStatus, paymentStatusLabel, PAYMENT_STATUSES } from './registrationStatus';
 import { balanceDueDate, overdueDays } from './balanceDue';
+import { WHATSAPP_GROUP_LINK } from './utils';
 
 export const PROFILE_STATUSES = ['wishlist', 'lead', 'pending', 'confirmed', 'cancelled', 'rejected'] as const;
 export type ProfileStatus = (typeof PROFILE_STATUSES)[number];
@@ -59,6 +60,8 @@ export interface ProfileTripRecord {
   bookable: boolean;
   location: string | null;
   changedAt: number;
+  /** The departure's WhatsApp group invite link — confirmed, not-yet-finished trips only. */
+  groupLink: string | null;
   details: {
     occupancy: string | null;
     totalAmount: number | null;
@@ -225,6 +228,8 @@ function resolved(row: ProfileRegistrationRow, today: string): ProfileTripRecord
     bookable,
     location: typeof trip?.location === 'string' && trip.location.trim() ? trip.location.trim() : null,
     changedAt: timestamp(row),
+    groupLink: rawStatus === 'confirmed' && period !== 'completed' && WHATSAPP_GROUP_LINK.test(String(batch?.whatsappGroupLink ?? ''))
+      ? String(batch.whatsappGroupLink) : null,
     details: {
       occupancy: row.sharing_option?.trim() || row.tier_id?.trim() || null,
       totalAmount: total,

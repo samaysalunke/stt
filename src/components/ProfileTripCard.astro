@@ -87,6 +87,7 @@ const travellerFields = [
       <dl>{travellerFields.map(([label, value]) => <div><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
     </>}
     <div class="detail-actions">
+      {record.groupLink && <a href={record.groupLink} target="_blank" rel="noopener noreferrer">Join the trip WhatsApp group</a>}
       {record.status === 'confirmed' && <a href="/cancellation/">Read cancellation policy</a>}
       <a href={supportHref}>Get booking support</a>
     </div>

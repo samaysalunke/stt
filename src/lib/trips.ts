@@ -3,6 +3,7 @@ import { DEFAULT_BALANCE_RULE } from './balanceDue';
 import { listDeletedSlugs } from './tripDeletions';
 import { cachedRead, bumpContentVersion, getContentVersion } from './contentCache';
 import { now as clockNow, todayStart } from './clock';
+import { WHATSAPP_GROUP_LINK } from './utils';
 
 /** Raw, unfiltered slugs of every trip file on disk (includes soft-deleted). */
 export function listTripSlugs(): string[] {
@@ -636,4 +637,20 @@ export function tripCardSummaryAnyBatch(trip: Record<string, any>): {
 
 export function findTripByName(tripName: string) {
   return listTrips().find((t: any) => (t.title || t.name) === tripName) ?? null;
+}
+
+/**
+ * The WhatsApp group invite link set on a registration's departure, or null.
+ * Looks the trip up by slug, falling back to its name for rows that predate
+ * trip_slug.
+ */
+export function departureGroupLink(reg: { trip_slug?: string | null; trip_name?: string | null; batch_id?: string | null }): string | null {
+  if (!reg?.batch_id) return null;
+  const trip = (reg.trip_slug && listTrips().find((t: any) => t.slug === reg.trip_slug))
+    || (reg.trip_name ? findTripByName(reg.trip_name) : null);
+  const batch = Array.isArray(trip?.batches)
+    ? trip.batches.find((b: any) => String(b?.id) === String(reg.batch_id))
+    : null;
+  const link = String(batch?.whatsappGroupLink ?? '');
+  return WHATSAPP_GROUP_LINK.test(link) ? link : null;
 }

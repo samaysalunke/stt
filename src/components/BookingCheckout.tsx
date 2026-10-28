@@ -46,6 +46,8 @@ interface Props {
     whyJoin?: string | null;
     amountPaid?: number | null;
     totalAmount?: number | null;
+    /** The departure's WhatsApp group invite link, set once the booking is confirmed. */
+    groupLink?: string | null;
   } | null;
 }
 
@@ -948,8 +950,8 @@ export default function BookingCheckout({
           <p className="mt-3 font-semibold" style={{ color: 'var(--color-success-ink)' }}>Paid — {formatINR(advanceDue)} advance ✓</p>
           <p className="mt-1" style={{ color: C.gray }}>Balance {formatINR(balance)} — due {balanceDueRule}</p>
         </div>
-        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: 'var(--color-whatsapp)' }}>
-          Join the trip WhatsApp group
+        <a href={initialRegistration?.groupLink || whatsappLink} target="_blank" rel="noopener noreferrer" className="block w-full text-center font-semibold text-white py-3.5 rounded-full text-sm" style={{ background: 'var(--color-whatsapp)' }}>
+          {initialRegistration?.groupLink ? 'Join the trip WhatsApp group' : 'Message the team on WhatsApp'}
         </a>
       </div>
     </div>

@@ -15,7 +15,8 @@ import {
   type RegDeparture,
 } from '../../../lib/registrationsView';
 import { buildDepartureOccupancy } from '../../../lib/occupancyMatrix';
-import { formatINR } from '../../../lib/utils';
+import { formatINR, toWhatsappNumber } from '../../../lib/utils';
+import { departureGroupLink } from '../../../lib/trips';
 import {
   ADMIN_SETTABLE_STATUSES,
   PAYMENT_OPTIONS,
@@ -57,6 +58,24 @@ const historyCount = trip.departures.filter((d) => d.historical).length;
 const BOOKABLE_STATUSES = ['booking-open', 'booking_open', 'filling-fast', 'filling_fast'];
 const unnotifiedWishlist = (dep: RegDeparture) =>
   dep.regs.filter((r: any) => r.status === 'wishlist' && !r.wishlist_notified_at).length;
+
+// WhatsApp group helpers: the confirmed travellers' numbers ready to paste,
+// plus who couldn't be read so a typo'd phone is never dropped silently.
+const groupContacts = (dep: RegDeparture) => {
+  const phones = new Set<string>();
+  const unreadable: string[] = [];
+  for (const r of dep.regs as any[]) {
+    if (r.status !== 'confirmed') continue;
+    const n = toWhatsappNumber(r.phone);
+    if (n) phones.add(n);
+    else unreadable.push(r.full_name || `#${r.id}`);
+  }
+  return { phones: [...phones], unreadable };
+};
+const groupLinkFor = (dep: RegDeparture) =>
+  dep.id && trip!.slug !== '__legacy' ? departureGroupLink({ trip_slug: trip!.slug, batch_id: dep.id }) : null;
+const unsentGroupLink = (dep: RegDeparture) =>
+  dep.regs.filter((r: any) => r.status === 'confirmed' && !r.whatsapp_group_sent_at).length;
 
 const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 const exportHref = trip.slug === '__legacy'
@@ -216,6 +235,8 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       const ds = regStats(dep.regs);
       const occ = buildDepartureOccupancy(dep.regs, dep.tierOptions);
       const heldTotal = occ.heldMale + occ.heldFemale + occ.heldOther;
+      const contacts = groupContacts(dep);
+      const groupLink = groupLinkFor(dep);
       return (
         <article class={`departure ${dep.historical ? 'history-item' : ''}`} data-departure-id={dep.id}>
           <div class="departure-head">
@@ -236,6 +257,13 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
               {ds.cancelled > 0 && <b style={REG_STATUS_COLORS.cancelled}>{ds.cancelled} cancelled</b>}
               {dep.cap !== null && <span>{dep.booked}/{dep.cap} occupied</span>}
               {heldTotal > 0 && <span>{occ.heldMale} M · {occ.heldFemale} F{occ.heldOther > 0 ? ` · ${occ.heldOther} other` : ''} held</span>}
+              {(contacts.phones.length > 0 || contacts.unreadable.length > 0) && (
+                <span class="dep-actions">
+                  <button type="button" class="copy-phones-btn" data-phones={contacts.phones.join('\n')} data-unreadable={contacts.unreadable.join(', ')} title="Confirmed travellers' WhatsApp numbers, one per line">
+                    Copy {contacts.phones.length} number{contacts.phones.length === 1 ? '' : 's'}
+                  </button>
+                </span>
+              )}
               {!isTripLead && dep.id && (
                 <span class="dep-actions">
                   <a href={`/admin/registrations/new?trip=${encodeURIComponent(trip.slug)}&departure=${encodeURIComponent(dep.id)}`}>+ Add</a>
@@ -292,6 +320,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
               <button type="button" class="notify-wishlist-btn" data-batch-id={dep.id}>Notify them</button>
             </div>
           )}
+          {contacts.unreadable.length > 0 && (
+            <p class="copy-phones-note" hidden>Couldn't read the number for {contacts.unreadable.join(', ')} — add them by hand.</p>
+          )}
+          {!isTripLead && groupLink && unsentGroupLink(dep) > 0 && (
+            <div class="wishlist-notify group-invite" data-batch-id={dep.id}>
+              <span>
+                <strong>{unsentGroupLink(dep)}</strong> confirmed traveller{unsentGroupLink(dep) === 1 ? '' : 's'} haven't been emailed the WhatsApp group link.
+              </span>
+              <button type="button" class="group-invite-btn" data-batch-id={dep.id}>Send link</button>
+            </div>
+          )}
           {dep.regs.length > 0 && <div class="registration-list">{dep.regs.map((r) => <RegistrationCard registration={r} readOnly={isTripLead} tierOptions={dep.tierOptions} />)}</div>}
         </article>
       );
@@ -319,6 +358,9 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   .history-toggle{white-space:nowrap;cursor:pointer}.history-count{color:var(--color-gray-text);font-weight:400}
   .departure{border:1px solid var(--color-border);border-radius:.75rem;background:#fff;margin-bottom:.65rem;overflow:hidden}.departure-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.75rem .9rem;background:var(--color-surface-soft)}.departure-title,.departure-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}.dep-status-chip{margin-left:.5rem;padding:.1rem .45rem;border-radius:999px;background:var(--color-gray-soft);color:var(--color-gray-text);font-size:.68rem;font-weight:700;text-transform:capitalize;white-space:nowrap}.departure-select-checkbox{width:1rem;height:1rem;accent-color:var(--color-coral)}.departure-summary>span{font-size:.74rem;color:var(--color-gray-text)}.departure-summary b{padding:.15rem .5rem;border-radius:999px;font-size:.7rem}.dep-actions a{padding:.2rem .45rem;font-size:.7rem;border:1px solid var(--color-peach);border-radius:.4rem;color:var(--color-navy);text-decoration:none;font-weight:700}
   .wishlist-notify{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap;background:var(--color-interest-surface);border-top:1px solid var(--color-interest-border);padding:.6rem .9rem;font-size:.8rem;color:var(--color-interest-ink)}.wishlist-notify button{padding:.4rem .8rem;border:0;border-radius:.5rem;background:var(--color-interest-fill);color:#fff;font-weight:700;font-size:.78rem;cursor:pointer}.wishlist-notify button:disabled{opacity:.6;cursor:default}.wishlist-notify.done{background:var(--color-success-surface);border-color:var(--color-success-surface);color:var(--color-success-surface-ink)}
+  .dep-actions button{padding:.2rem .45rem;font-size:.7rem;border:1px solid var(--color-whatsapp);border-radius:.4rem;background:#fff;color:var(--color-whatsapp-ink);font-weight:700;cursor:pointer}
+  .copy-phones-note{margin:0;padding:.5rem .9rem;border-top:1px solid var(--color-border);font-size:.78rem;color:var(--color-gray-text)}.copy-phones-note[hidden]{display:none}
+  .group-invite{background:var(--color-success-surface);border-color:var(--color-success-surface);color:var(--color-success-surface-ink)}.group-invite button{background:var(--color-whatsapp-ink)}
   .row-count{margin:.6rem 0 0;font-size:.8rem;font-weight:600;color:var(--color-gray-text);text-align:right}
   .attr-filter[open]{flex:1 1 100%}
   .attr-filter>summary{cursor:pointer;list-style:none;padding:.45rem .75rem;border:1px solid var(--color-border);border-radius:.5rem;background:#fff;font-size:.875rem;font-weight:700;color:var(--color-navy);white-space:nowrap}
@@ -1077,6 +1119,53 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
   });
   depSelect?.addEventListener('change', applyFilters);
   histCheckbox?.addEventListener('change', applyFilters);
+
+  // ── WhatsApp group: copy confirmed numbers, email the invite link ───────
+  document.querySelectorAll('.copy-phones-btn').forEach((btn) => {
+    const label = btn.textContent;
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.phones || '');
+        btn.textContent = 'Copied ✓';
+      } catch {
+        btn.textContent = 'Copy failed';
+      }
+      setTimeout(() => { btn.textContent = label; }, 2000);
+      if (btn.dataset.unreadable) {
+        const note = btn.closest('.departure')?.querySelector('.copy-phones-note');
+        if (note) note.hidden = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.group-invite-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const banner = btn.closest('.group-invite');
+      const batchId = btn.dataset.batchId;
+      if (!batchId || !confirm('Email the WhatsApp group link to every confirmed traveller on this departure who hasn\'t had it?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/admin/registrations/group-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tripSlug, batchId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          banner.innerHTML = `<span>Sent the group link to ${data.sent} traveller${data.sent === 1 ? '' : 's'}${data.failed ? ` · ${data.failed} failed` : ''}.</span>`;
+        } else {
+          alert(data.error || 'Failed to send.');
+          btn.disabled = false;
+          btn.textContent = 'Send link';
+        }
+      } catch {
+        alert('Network error.');
+        btn.disabled = false;
+        btn.textContent = 'Send link';
+      }
+    });
+  });
 
   // ── Notify wishlisters that a departure opened ──────────────────────────
   document.querySelectorAll('.notify-wishlist-btn').forEach((btn) => {

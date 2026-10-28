@@ -13,6 +13,7 @@
  * written to be shown to an admin.
  */
 import { getDb } from './db';
+import { claimGroupLink } from './tripGroup';
 import { logAction } from './audit';
 import { tripAdvanceAmountBySlug } from './registrationWrite';
 import { paymentState } from './payment';
@@ -161,6 +162,7 @@ export async function applyPaymentChange(
       amountPaid: nextAmount,
       totalAmount,
       balanceDue: Math.max(0, totalAmount - nextAmount),
+      groupLink: claimGroupLink(reg),
     }).catch((err) => console.error('[Email payment confirmed]', err));
   }
   const state = paymentState(nextAmount, total, advance);

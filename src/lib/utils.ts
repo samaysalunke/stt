@@ -42,6 +42,24 @@ export function isValidPhone(phone: string): boolean {
   return /^[+]?[\d\s\-()]{8,15}$/.test(phone.trim());
 }
 
+/**
+ * A stored phone in the `+<country><number>` form WhatsApp accepts, or null if
+ * it can't be read. Phones are stored as typed, so a bare 10-digit number is
+ * taken to be Indian.
+ */
+export function toWhatsappNumber(raw: string | null | undefined): string | null {
+  const trimmed = String(raw ?? '').trim();
+  const digits = trimmed.replace(/\D/g, '');
+  if (trimmed.startsWith('+')) return digits.length >= 8 && digits.length <= 15 ? `+${digits}` : null;
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) return `+91${digits.slice(1)}`;
+  if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+  return null;
+}
+
+/** Invite links WhatsApp hands out for a group — the only shape we store. */
+export const WHATSAPP_GROUP_LINK = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+$/;
+
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }

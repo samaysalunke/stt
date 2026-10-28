@@ -1,4 +1,4 @@
-import { slugify } from './utils';
+import { slugify, WHATSAPP_GROUP_LINK } from './utils';
 
 // Editor-facing view of a trip's occupancy catalog + departures-with-offers.
 // Mirrors resolveBooking's synthesis (src/lib/content.ts) BUT keeps every
@@ -16,6 +16,7 @@ export interface EditorDeparture {
   offers: EditorOffer[];
   discountAmount: number | null;
   discountEndsAt: string;
+  whatsappGroupLink: string;
 }
 
 export type EditorBookingErrorCode =
@@ -120,6 +121,7 @@ export function editableBooking(trip: Record<string, any>): {
       offers,
       discountAmount: numOrNull(b?.discountAmount),
       discountEndsAt: String(b?.discountEndsAt ?? ''),
+      whatsappGroupLink: String(b?.whatsappGroupLink ?? ''),
     };
   });
 
@@ -160,7 +162,7 @@ function numOrNull(v: unknown): number | null {
 // the create + update API routes so authoring and persistence stay in lockstep.
 export function parseEditorBooking(catalogJson: string, departuresJson: string): {
   occupancyCatalog: EditorTier[];
-  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; whatsappGroupLink: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
   errors: EditorBookingError[];
 } {
   let cat: any[] = [];
@@ -209,6 +211,7 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
     .map((d: any) => {
       const startDate = String(d?.startDate ?? '').trim();
       const discountEndsAt = String(d?.discountEndsAt ?? '').trim();
+      const whatsappGroupLink = String(d?.whatsappGroupLink ?? '').trim();
       const offers = (Array.isArray(d?.offers) ? d.offers : [])
         .filter((o: any) =>
           o &&
@@ -231,6 +234,8 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
         discountEndsAt: Number(d?.discountAmount) > 0 && discountEndsAt && Number.isFinite(new Date(discountEndsAt).getTime())
           ? new Date(discountEndsAt).toISOString()
           : null,
+        // Anything that isn't a group invite link is dropped rather than stored.
+        whatsappGroupLink: WHATSAPP_GROUP_LINK.test(whatsappGroupLink) ? whatsappGroupLink : null,
         offers,
       };
     })

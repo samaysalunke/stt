@@ -35,6 +35,8 @@ export const POST: APIRoute = async ({ request }) => {
       ...b,
       status: 'draft',
       bookedSpots: 0,
+      // A new date gets its own group; never invite its travellers into the old one.
+      whatsappGroupLink: null,
       ...(Array.isArray(b.offers) ? { offers: b.offers.map((o: any) => ({ ...o, booked: 0 })) } : {}),
     }));
 

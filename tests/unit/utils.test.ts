@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { isValidEmail, isValidPhone, sanitizeInput, slugify, formatCurrency } from '../../src/lib/utils';
+import { isValidEmail, isValidPhone, sanitizeInput, slugify, formatCurrency, toWhatsappNumber } from '../../src/lib/utils';
 
 // ── isValidEmail ──────────────────────────────────────────────────────────────
 
@@ -120,5 +120,23 @@ describe('formatCurrency', () => {
 
   test('zero returns formatted zero', () => {
     expect(formatCurrency(0)).toContain('0');
+  });
+});
+
+// ── toWhatsappNumber ──────────────────────────────────────────────────────────
+
+describe('toWhatsappNumber', () => {
+  test.each([
+    ['98765 43210', '+919876543210'],
+    ['+91-98765-43210', '+919876543210'],
+    ['09876543210', '+919876543210'],
+    ['919876543210', '+919876543210'],
+    ['+44 7700 900123', '+447700900123'],
+  ])('%s → %s', (raw, expected) => {
+    expect(toWhatsappNumber(raw)).toBe(expected);
+  });
+
+  test.each(['abc', '', null, '12345', '+12'])('unreadable %s → null', (raw) => {
+    expect(toWhatsappNumber(raw as any)).toBeNull();
   });
 });

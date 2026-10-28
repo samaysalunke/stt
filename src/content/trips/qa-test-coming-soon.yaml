@@ -13,6 +13,7 @@ batches:
     startDate: 2099-02-01
     endDate: 2099-02-04
     status: booking-open
+    whatsappGroupLink: https://chat.whatsapp.com/QaTestGroup2099
     offers:
       - { tierId: standard, price: 12000, cap: 15, booked: 0 }
   - id: qa-cs-soon-2099

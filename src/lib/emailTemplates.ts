@@ -4,6 +4,10 @@ import { readSiteSettings } from './settings';
 import { siteUrl } from './siteUrl';
 import { BLUSH, BORDER, CORAL_INK, CTA, GRAY_TEXT, NAVY, PEACH, SUCCESS_INK, WHATSAPP } from './emailPalette';
 
+function groupButton(groupLink: string): string {
+  return `<p style="margin:0 0 24px;"><a href="${escapeHtml(groupLink)}" style="display:inline-block;background:${WHATSAPP};color:white;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px;">Join the trip WhatsApp group</a></p>`;
+}
+
 function getWhatsappLink(): string {
   try {
     const s = readSiteSettings();
@@ -81,6 +85,8 @@ export async function sendRegistrationPaymentConfirmed(data: {
   totalAmount: number;
   balanceDue: number;
   whatsappLink?: string;
+  /** The departure's WhatsApp group invite link; replaces "you'll be added". */
+  groupLink?: string | null;
   attachment?: EmailAttachment;
 }) {
   const whatsappLink = data.whatsappLink || getWhatsappLink();
@@ -111,11 +117,12 @@ export async function sendRegistrationPaymentConfirmed(data: {
       <h3 style="color:${CORAL_INK};margin-top:0;font-size:15px;">What happens next:</h3>
       <ul style="color:${NAVY};padding-left:20px;margin:0;line-height:1.8;">
         <li>You'll receive a detailed trip preparation guide shortly</li>
-        <li>You'll be added to the trip WhatsApp group</li>
+        ${data.groupLink ? '' : "<li>You'll be added to the trip WhatsApp group</li>"}
         <li>Pre-trip briefing details will be shared a few days before departure</li>
         ${paidInFull ? '' : '<li>Ensure your remaining balance is paid before departure</li>'}
       </ul>
     </div>
+    ${data.groupLink ? groupButton(data.groupLink) : ''}
     ${data.attachment ? `<p style="margin:0 0 16px;font-size:14px;color:${NAVY};">Your invoice is attached to this email for your records.</p>` : ''}
     <p style="margin:0;font-size:14px;color:${GRAY_TEXT};">Questions? <a href="${escapeHtml(whatsappLink)}" style="color:${CORAL_INK};font-weight:600;">WhatsApp us.</a></p>
   `);
@@ -336,6 +343,27 @@ export async function sendWishlistOpened(data: {
   `);
 
   await sendEmail(data.email, `Now open: ${data.tripName} (${data.startDate})`, html, { template: 'wishlist-opened' });
+}
+
+/** The departure's WhatsApp group invite, for travellers confirmed before it existed. */
+export async function sendTripGroupInvite(data: {
+  full_name: string;
+  email: string;
+  trip_name: string;
+  trip_date?: string;
+  groupLink: string;
+}) {
+  const whatsappLink = getWhatsappLink();
+  const html = wrapEmail(`
+    <h2 style="color:${NAVY};margin-top:0;">Your trip WhatsApp group is ready</h2>
+    <p style="margin:0 0 16px;">Hi <strong>${escapeHtml(data.full_name)}</strong>,</p>
+    <p style="margin:0 0 16px;">We've set up the WhatsApp group for <strong>${escapeHtml(data.trip_name)}</strong>. Trip updates, the pre-trip briefing and introductions to your fellow travellers all happen there.</p>
+    ${data.trip_date ? `<p style="background:${BLUSH};padding:12px 16px;border-radius:8px;margin:0 0 24px;"><strong>Trip Date:</strong> ${escapeHtml(data.trip_date)}</p>` : ''}
+    ${groupButton(data.groupLink)}
+    <p style="margin:0;font-size:14px;color:${GRAY_TEXT};">Link not working? <a href="${escapeHtml(whatsappLink)}" style="color:${CORAL_INK};font-weight:600;">WhatsApp us.</a></p>
+  `);
+
+  await sendEmail(data.email, `Join the WhatsApp group — ${data.trip_name} | Seek the Thrill`, html, { template: 'trip-group-invite' });
 }
 
 export async function sendBroadcastToSubscriber(params: {

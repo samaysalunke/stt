@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { claimGroupLink } from './tripGroup';
 import { listTrips, readTrip, writeTrip, findTripByName } from './content';
 import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationPaymentConfirmed } from './email';
@@ -291,6 +292,7 @@ export function createRegistration(
           amountPaid: advance,
           totalAmount,
           balanceDue: Math.max(0, totalAmount - advance),
+          groupLink: claimGroupLink({ id: Number(id), trip_slug: input.trip_slug, trip_name: input.trip_name, batch_id: input.batch_id }),
         }).catch((e) => console.error('[Email confirmed]', e));
       }
     }

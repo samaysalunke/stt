@@ -1,3 +1,4 @@
+import { claimGroupLink } from './tripGroup';
 import { sendRegistrationPaymentConfirmed } from './email';
 import { getDb } from './db';
 import { billingProblems, billingSnapshot } from './paymentLedger';
@@ -221,6 +222,7 @@ export function confirmedEmailPayload(
     amountPaid: paid,
     totalAmount: total,
     balanceDue: Math.max(0, total - paid),
+    groupLink: claimGroupLink(reg),
     ...(attachment ? { attachment } : {}),
   };
 }

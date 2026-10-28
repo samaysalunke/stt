@@ -174,6 +174,9 @@ function initializeSchema(db: Database.Database) {
   try { db.exec('ALTER TABLE registrations ADD COLUMN wishlist_notified_at DATETIME'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN first_touch_json TEXT'); } catch {}
   try { db.exec('ALTER TABLE registrations ADD COLUMN latest_touch_json TEXT'); } catch {}
+  // Stamped when a confirmed traveller is emailed their departure's WhatsApp
+  // group invite link, so the bulk send never mails anyone twice.
+  try { db.exec('ALTER TABLE registrations ADD COLUMN whatsapp_group_sent_at DATETIME'); } catch {}
 
   // Stored payment status + refund ledger (admin registrations rework).
   // No CHECK constraint — SQLite cannot add one to `registrations`, and `status`

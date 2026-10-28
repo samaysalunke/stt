@@ -381,3 +381,31 @@ describe('parseEditorBooking — malformed input', () => {
     expect(errors).toContainEqual({ code: 'missing-start-date', departureIndex: 0 });
   });
 });
+
+describe('departure WhatsApp group link', () => {
+  const catalogJson = JSON.stringify([{ id: 'dorm', label: 'Dorm Bed' }]);
+  const departure = (whatsappGroupLink?: string) => JSON.stringify([{
+    id: 'dep-1', startDate: '2099-01-01', endDate: '2099-01-05', status: 'booking-open',
+    offers: [{ tierId: 'dorm', price: 5000, cap: 12, booked: 0 }],
+    ...(whatsappGroupLink === undefined ? {} : { whatsappGroupLink }),
+  }]);
+
+  test('an invite link survives editor → YAML → editor', () => {
+    const link = 'https://chat.whatsapp.com/AbC123xyz';
+    const { batches } = parseEditorBooking(catalogJson, departure(` ${link} `));
+    expect(batches[0].whatsappGroupLink).toBe(link);
+    const { editorDepartures } = editableBooking({ occupancyCatalog: [{ id: 'dorm', label: 'Dorm Bed' }], batches });
+    expect(editorDepartures[0].whatsappGroupLink).toBe(link);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['a wa.me chat link', 'https://wa.me/917975027491'],
+    ['a lookalike host', 'https://chat.whatsapp.com.evil.test/AbC'],
+    ['plain http', 'http://chat.whatsapp.com/AbC123'],
+  ])('%s is stored as null', (_label, link) => {
+    const { batches } = parseEditorBooking(catalogJson, departure(link));
+    expect(batches[0].whatsappGroupLink).toBeNull();
+  });
+});

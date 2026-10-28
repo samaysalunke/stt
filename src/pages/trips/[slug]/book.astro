@@ -4,6 +4,7 @@ import BookingCheckout from '../../../components/BookingCheckout';
 import { readTrip, readSiteSettings, resolveBooking, isTripPublic, isTripDeleted, resolveTripSlugAlias } from '../../../lib/content';
 import { FALLBACK_HERO } from '../../../lib/images';
 import { getDb } from '../../../lib/db';
+import { departureGroupLink } from '../../../lib/trips';
 
 export const prerender = false;
 
@@ -141,6 +142,11 @@ const heroImg = trip.coverImage || trip.featuredImage || FALLBACK_HERO;
           whyJoin: existingRegistration.why_join,
           amountPaid: existingRegistration.amount_paid,
           totalAmount: existingRegistration.total_amount,
+          // Only ever for the viewer's own confirmed booking — the invite link
+          // must not reach public HTML.
+          groupLink: existingRegistration.status === 'confirmed'
+            ? departureGroupLink({ trip_slug: slug, batch_id: selectedDeparture.id })
+            : null,
         } : null}
         client:load
       />
