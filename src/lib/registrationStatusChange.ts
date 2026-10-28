@@ -207,6 +207,21 @@ export async function applyStatusChange(
 
   let effectivePaymentStatus = reg.payment_status as string;
   let confirmQueuedDoc = false;
+  const sendConfirmedEmail = () => {
+    const freshPaid = Number((getDb().prepare('SELECT amount_paid FROM registrations WHERE id=?').get(id) as any)?.amount_paid) || 0;
+    const total = Number(reg.total_amount) || 0;
+    sendRegistrationPaymentConfirmed({
+      full_name: reg.full_name,
+      email: reg.email,
+      trip_name: tripName,
+      trip_date: reg.trip_date ?? '',
+      kind: effectivePaymentStatus === 'fully_paid' ? 'full' : 'advance',
+      amountPaid: freshPaid,
+      totalAmount: total,
+      balanceDue: Math.max(0, total - freshPaid),
+      groupLink: claimGroupLink(reg),
+    }).catch((err) => console.error('[Email confirmed]', err));
+  };
   let refundResult: { amountRefunded: number; paymentStatus: string } | null = null;
 
   if (newStatus === 'confirmed') {
@@ -254,15 +269,16 @@ export async function applyStatusChange(
       effectivePaymentStatus = requestedPaymentStatus as string;
 
       if (recorded.document?.status === 'queued') {
-        try {
-          // Await during the request: the worker sends the branded email + PDF.
-          await processZohoDocument(recorded.document.id);
-          confirmQueuedDoc = true;
-        } catch (err) {
+        // The worker sends the branded email + PDF. It runs after the
+        // response, not inside it — an invoice is 6–9 sequential Zoho/email
+        // round-trips. If it throws, the inline confirmation goes instead.
+        confirmQueuedDoc = true;
+        const documentId = recorded.document.id;
+        void processZohoDocument(documentId).catch((err) => {
           // Safety net — closes the "silent until the 3rd Zoho failure" gap.
           console.error('[Zoho document]', err);
-          confirmQueuedDoc = false;
-        }
+          sendConfirmedEmail();
+        });
       }
     }
 
@@ -306,21 +322,7 @@ export async function applyStatusChange(
 
   // ── Email notifications ──────────────────────────────────────────────
   if (newStatus === 'confirmed') {
-    if (!confirmQueuedDoc) {
-      const freshPaid = Number((getDb().prepare('SELECT amount_paid FROM registrations WHERE id=?').get(id) as any)?.amount_paid) || 0;
-      const total = Number(reg.total_amount) || 0;
-      sendRegistrationPaymentConfirmed({
-        full_name: reg.full_name,
-        email: reg.email,
-        trip_name: tripName,
-        trip_date: reg.trip_date ?? '',
-        kind: effectivePaymentStatus === 'fully_paid' ? 'full' : 'advance',
-        amountPaid: freshPaid,
-        totalAmount: total,
-        balanceDue: Math.max(0, total - freshPaid),
-        groupLink: claimGroupLink(reg),
-      }).catch((err) => console.error('[Email confirmed]', err));
-    }
+    if (!confirmQueuedDoc) sendConfirmedEmail();
   } else if (newStatus === 'cancelled') {
     // `rejected` is retired as a *status*, but the two situations still read
     // very differently to the traveller. Declining someone who never had a

@@ -132,28 +132,15 @@ export async function applyPaymentChange(
     documentType: isFull ? 'final' : undefined,
     setPaymentStatus: nextPaymentStatus,
   });
-  // Single-row admin action: await the Zoho worker so we know whether it
-  // emailed the customer (branded mail, + PDF on live). Bulk stays
-  // fire-and-forget to avoid N synchronous Zoho round-trips.
-  let docHandled = false;
-  if (recorded.document?.status === 'queued') {
-    if (!input.bulk) {
-      try {
-        const done = await processZohoDocument(recorded.document.id) as any;
-        docHandled = done?.status === 'emailed' || done?.status === 'draft';
-      } catch (err) {
-        console.error('[Zoho document]', err);
-      }
-    } else {
-      void processZohoDocument(recorded.document.id).catch((err) => console.error('[Zoho document]', err));
-    }
-  }
-  // Send an inline confirmation when the Zoho worker didn't email the
-  // customer — it failed, or Zoho is disabled. Skipped for bulk in
-  // draft/live (there the worker/retry cron is the only sender).
-  if (amount > 0 && !recorded.duplicate && !docHandled && (!input.bulk || zohoMode() === 'disabled')) {
+  // The Zoho worker runs after the response, never inside it: one invoice is
+  // 6–9 sequential Zoho/email round-trips, which held every fully-paid click
+  // for several seconds. Single-row still falls back to the inline
+  // confirmation when the worker didn't email the customer — it failed, or
+  // Zoho is disabled. Bulk in draft/live leaves that to the worker/retry cron.
+  const sendInline = amount > 0 && !recorded.duplicate && (!input.bulk || zohoMode() === 'disabled');
+  const sendConfirmation = () => {
     const totalAmount = Number(total) || 0;
-    void sendRegistrationPaymentConfirmed({
+    return sendRegistrationPaymentConfirmed({
       full_name: reg.full_name,
       email: reg.email,
       trip_name: reg.trip_name,
@@ -164,6 +151,21 @@ export async function applyPaymentChange(
       balanceDue: Math.max(0, totalAmount - nextAmount),
       groupLink: claimGroupLink(reg),
     }).catch((err) => console.error('[Email payment confirmed]', err));
+  };
+  if (recorded.document?.status === 'queued') {
+    const documentId = recorded.document.id;
+    void (async () => {
+      let docHandled = false;
+      try {
+        const done = await processZohoDocument(documentId) as any;
+        docHandled = done?.status === 'emailed' || done?.status === 'draft';
+      } catch (err) {
+        console.error('[Zoho document]', err);
+      }
+      if (sendInline && !docHandled) await sendConfirmation();
+    })();
+  } else if (sendInline) {
+    void sendConfirmation();
   }
   const state = paymentState(nextAmount, total, advance);
   logAction({
