@@ -1001,6 +1001,11 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
 
     const failures = [];
     let changed = 0;
+    // Payment-only plans that differ only by row are merged into one request
+    // per shape. One `ids: [n]` call per row made the server treat each as a
+    // single-row action and await the full Zoho invoice round-trip, serially.
+    const rid = crypto.randomUUID();
+    const paymentBatches = new Map();
     for (const b of selected) {
       const id = Number(b.dataset.registrationId);
       const cur = b.dataset.status || '';
@@ -1017,9 +1022,17 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
         // Bulk refunds the whole paid amount; every other action takes the
         // trip's own figures.
         amount: isRefund ? paid : null,
-        rid: crypto.randomUUID(),
+        rid,
       });
       if (plan.error) { failures.push(`#${id}: ${plan.error}`); continue; }
+      if (plan.url === '/api/admin/registrations/payment') {
+        const { ids, ...shape } = plan.body;
+        const key = JSON.stringify(shape);
+        const batch = paymentBatches.get(key) || { body: shape, ids: [] };
+        batch.ids.push(...ids);
+        paymentBatches.set(key, batch);
+        continue;
+      }
       const res = await fetch(plan.url, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(plan.body),
@@ -1028,6 +1041,21 @@ const allDepStats = { count: trip.regCount, wishlist: s.wishlist, lead: s.lead, 
       const rowFailure = data?.results?.find((r) => !r.success);
       if (!res.ok || !data?.success || rowFailure) failures.push(`#${id}: ${data?.error || rowFailure?.error || 'failed'}`);
       else changed++;
+    }
+    for (const { body, ids } of paymentBatches.values()) {
+      const res = await fetch('/api/admin/registrations/payment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, ids }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        for (const id of ids) failures.push(`#${id}: ${data?.error || 'failed'}`);
+        continue;
+      }
+      for (const r of data.results || []) {
+        if (r.success) changed++;
+        else failures.push(`#${r.id}: ${r.error || 'failed'}`);
+      }
     }
     if (failures.length) alert(failures.join('\n'));
     if (changed || !failures.length) reloadWithFilters();
