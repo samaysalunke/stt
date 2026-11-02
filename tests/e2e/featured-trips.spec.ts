@@ -66,3 +66,24 @@ test('mobile featured trip cards share one height', async ({ page }) => {
   );
   expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1);
 });
+
+test('mobile featured cards snap to the page gutter, not the screen edge', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const row = page.locator('#featured-carousel');
+  const slots = page.locator('#featured-carousel > div');
+  expect(await slots.count()).toBeGreaterThan(1);
+
+  // Swipe roughly onto the second card and let scroll-snap settle it.
+  await row.evaluate((el) => {
+    el.style.scrollBehavior = 'auto';
+    const second = el.children[1] as HTMLElement;
+    el.scrollLeft = second.offsetLeft - el.offsetLeft - 40;
+  });
+  await page.waitForTimeout(500);
+
+  const heading = await page.getByRole('heading', { name: 'Featured Trips' }).boundingBox();
+  const second = await slots.nth(1).boundingBox();
+  expect(Math.abs((second?.x ?? 0) - (heading?.x ?? 0))).toBeLessThan(2);
+});

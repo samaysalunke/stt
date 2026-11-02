@@ -212,7 +212,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
           <h2 id="saved-trips-heading" class="font-display text-2xl text-navy">Your saved trips</h2>
           <a href="/profile?tab=trips" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">Manage <Icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
-        <div class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div class="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-6 overflow-x-auto px-5 pb-2 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:-mx-12 lg:scroll-px-12 lg:px-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {savedTrips.map((trip) => {
             const card = tripCardSummary(trip);
             return (
@@ -280,7 +280,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
           id="featured-carousel"
           tabindex="0"
           aria-label="Featured trips"
-          class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-6 overflow-x-auto scroll-smooth px-5 pb-2 sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:-mx-12 lg:scroll-px-12 lg:px-12 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {featuredTrips.map((trip) => {
             const card = tripCardSummary(trip);
