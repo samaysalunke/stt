@@ -125,10 +125,12 @@ describe('departure-wide discounts', () => {
         ...makeMultiTierTrip().batches[0],
         discountAmount: 1200,
         discountEndsAt: '2026-07-02T00:00:00.000Z',
+        discountLabel: 'Early bird',
       }],
     });
     const dep = resolveBooking(trip).departures[0];
     expect(dep.discountActive).toBe(true);
+    expect(dep.discountLabel).toBe('Early bird');
     expect(dep.discountAmount).toBe(1200);
     expect(dep.offers.map((offer) => offer.price)).toEqual([3800, 5800]);
     expect(dep.offers.map((offer) => offer.originalPrice)).toEqual([5000, 7000]);
@@ -141,10 +143,12 @@ describe('departure-wide discounts', () => {
         ...makeMultiTierTrip().batches[0],
         discountAmount: 1200,
         discountEndsAt: '2026-06-30T23:59:59.000Z',
+        discountLabel: 'Early bird',
       }],
     });
     const dep = resolveBooking(trip).departures[0];
     expect(dep.discountActive).toBe(false);
+    expect(dep.discountLabel).toBeNull();
     expect(dep.offers.map((offer) => offer.price)).toEqual([5000, 7000]);
     expect(dep.offers.every((offer) => offer.originalPrice === null)).toBe(true);
   });

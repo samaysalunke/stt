@@ -23,6 +23,7 @@ const VALID_DEPARTURES = JSON.stringify([
     status: 'booking-open',
     discountAmount: 1250,
     discountEndsAt: '2098-12-20T18:30:00+05:30',
+    discountLabel: 'New trip launch price',
     offers: [
       { tierId: 'economy', price: 5000, cap: 20, booked: 0 },
       { tierId: 'premium', price: 8000, cap: 5,  booked: 0 },
@@ -81,6 +82,7 @@ test('TC-100 authenticated update with valid catalog+departures JSON → redirec
   assert.equal(saved.description.replace(/\r\n/g, '\n'), RICH_DESCRIPTION, 'Markdown description should round-trip unchanged');
   assert.equal(saved.batches[0].discountAmount, 1250);
   assert.equal(saved.batches[0].discountEndsAt, '2098-12-20T13:00:00.000Z');
+  assert.equal(saved.batches[0].discountLabel, 'New trip launch price');
 });
 
 test('TC-101 malformed departures_json → rejected without a false success redirect', async () => {

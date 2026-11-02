@@ -19,6 +19,7 @@ interface Props {
   fromPrice?: number | null;
   originalFromPrice?: number | null;
   discountEndsAt?: string | null;
+  discountLabel?: string | null;
   multiPrice?: boolean;
   spotsLeft?: number | null;
   soldOut?: boolean;
@@ -65,6 +66,7 @@ const {
   fromPrice = null,
   originalFromPrice = null,
   discountEndsAt = null,
+  discountLabel = null,
   multiPrice = false,
   spotsLeft = null,
   soldOut = false,
@@ -229,6 +231,9 @@ const departureSummary = getDepartureSummary(departures);
           <p class="font-display text-display-sm leading-none text-gray-text">Coming soon</p>
         ) : (
           <>
+            {originalFromPrice != null && discountLabel && (
+              <p data-testid="trip-card-discount-label" class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-coral-ink">{discountLabel}</p>
+            )}
             {originalFromPrice != null && (
               <p class="text-sm leading-none line-through text-gray-text">₹{originalFromPrice.toLocaleString('en-IN')}</p>
             )}

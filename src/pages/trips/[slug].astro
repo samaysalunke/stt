@@ -404,6 +404,7 @@ const tripSchema: Record<string, any> = {
         <div class="mt-2 flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {fromPrice != null ? (
             <span class="flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-cta px-2.5 py-1 text-xs font-bold text-white sm:px-3 sm:py-1.5 sm:text-sm">
+              {priceSummary.originalFromPrice != null && priceSummary.discountLabel && <span data-testid="hero-discount-label">{priceSummary.discountLabel} ·</span>}
               {priceSummary.originalFromPrice != null && <span class="line-through opacity-80">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
               from {formattedLead} / person
               {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="ml-1" client:load />}
@@ -723,6 +724,7 @@ const tripSchema: Record<string, any> = {
                 fromPrice={fromPrice}
                 originalFromPrice={priceSummary.originalFromPrice}
                 fromDiscountEndsAt={priceSummary.discountEndsAt}
+                fromDiscountLabel={priceSummary.discountLabel}
                 whatsappLink={whatsappLink}
                 slug={slug!}
                 wishlistUser={wishlistUser}
@@ -732,6 +734,7 @@ const tripSchema: Record<string, any> = {
               <>
                 {fromPrice != null && (
                   <div class="mb-5">
+                    {priceSummary.originalFromPrice != null && priceSummary.discountLabel && <span class="mb-1.5 block w-fit rounded-full bg-blush px-2.5 py-0.5 text-xs font-semibold text-coral-ink">{priceSummary.discountLabel}</span>}
                     {priceSummary.originalFromPrice != null && <span class="mr-2 text-sm line-through text-gray-text">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
                     <span class="text-sm mr-1 text-gray-text">from</span>
                     <span class="text-3xl font-bold font-display text-coral-ink">{formattedLead}</span>
