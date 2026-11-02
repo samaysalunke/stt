@@ -8,6 +8,9 @@ import { slugify, WHATSAPP_GROUP_LINK } from './utils';
 
 export interface EditorTier { id: string; label: string; helperText: string }
 export interface EditorOffer { tierId: string; price: number | null; cap: number | null; booked: number }
+/** Longest discount label (e.g. "New trip launch price") the editor keeps. */
+export const DISCOUNT_LABEL_MAX = 40;
+
 export interface EditorDeparture {
   id: string;
   startDate: string;
@@ -16,6 +19,7 @@ export interface EditorDeparture {
   offers: EditorOffer[];
   discountAmount: number | null;
   discountEndsAt: string;
+  discountLabel: string;
   whatsappGroupLink: string;
 }
 
@@ -121,6 +125,7 @@ export function editableBooking(trip: Record<string, any>): {
       offers,
       discountAmount: numOrNull(b?.discountAmount),
       discountEndsAt: String(b?.discountEndsAt ?? ''),
+      discountLabel: String(b?.discountLabel ?? ''),
       whatsappGroupLink: String(b?.whatsappGroupLink ?? ''),
     };
   });
@@ -162,7 +167,7 @@ function numOrNull(v: unknown): number | null {
 // the create + update API routes so authoring and persistence stay in lockstep.
 export function parseEditorBooking(catalogJson: string, departuresJson: string): {
   occupancyCatalog: EditorTier[];
-  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; whatsappGroupLink: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; discountLabel: string | null; whatsappGroupLink: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
   errors: EditorBookingError[];
 } {
   let cat: any[] = [];
@@ -211,6 +216,7 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
     .map((d: any) => {
       const startDate = String(d?.startDate ?? '').trim();
       const discountEndsAt = String(d?.discountEndsAt ?? '').trim();
+      const discountLabel = String(d?.discountLabel ?? '').replace(/\s+/g, ' ').trim().slice(0, DISCOUNT_LABEL_MAX);
       const whatsappGroupLink = String(d?.whatsappGroupLink ?? '').trim();
       const offers = (Array.isArray(d?.offers) ? d.offers : [])
         .filter((o: any) =>
@@ -234,6 +240,8 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
         discountEndsAt: Number(d?.discountAmount) > 0 && discountEndsAt && Number.isFinite(new Date(discountEndsAt).getTime())
           ? new Date(discountEndsAt).toISOString()
           : null,
+        // A label only means something next to a discount, so it goes with it.
+        discountLabel: Number(d?.discountAmount) > 0 && discountLabel ? discountLabel : null,
         // Anything that isn't a group invite link is dropped rather than stored.
         whatsappGroupLink: WHATSAPP_GROUP_LINK.test(whatsappGroupLink) ? whatsappGroupLink : null,
         offers,

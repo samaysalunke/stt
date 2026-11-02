@@ -339,6 +339,8 @@ export interface ResolvedDeparture {
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
+  /** Admin wording shown with an active discount, e.g. "New trip launch price". */
+  discountLabel?: string | null;
 }
 
 export interface ResolvedBooking {
@@ -515,6 +517,7 @@ function resolveBookingUncached(trip: Record<string, any>): ResolvedBooking {
       discountAmount,
       discountEndsAt: discountAmount > 0 && b.discountEndsAt ? String(b.discountEndsAt) : null,
       discountActive: discountAmount > 0,
+      discountLabel: discountAmount > 0 && String(b.discountLabel ?? '').trim() ? String(b.discountLabel).trim() : null,
     };
   });
 
@@ -553,6 +556,8 @@ export function tripCardSummary(trip: Record<string, any>): {
   fromPrice: number | null;
   originalFromPrice: number | null;
   discountEndsAt: string | null;
+  /** The lead price's discount label, when that price is discounted. */
+  discountLabel: string | null;
   multiPrice: boolean;
   spotsLeft: number | null;
   /** The soonest bookable departure, for the live spots-left line; null if none. */
@@ -576,7 +581,7 @@ export function tripCardSummary(trip: Record<string, any>): {
   // must not reveal a number sourced from a not-yet-open date.
   const sellable = booking.departures.filter((d) => !d.comingSoon);
   const prices = new Set<number>();
-  const candidates: Array<{ price: number; originalPrice: number | null; discountEndsAt: string | null }> = [];
+  const candidates: Array<{ price: number; originalPrice: number | null; discountEndsAt: string | null; discountLabel: string | null }> = [];
   for (const d of sellable) for (const o of d.offers) prices.add(o.price);
   for (const d of sellable) {
     if (d.soldOut) continue;
@@ -584,6 +589,7 @@ export function tripCardSummary(trip: Record<string, any>): {
       price: o.price,
       originalPrice: o.originalPrice,
       discountEndsAt: d.discountEndsAt ?? null,
+      discountLabel: d.discountLabel ?? null,
     });
   }
   if (candidates.length === 0) {
@@ -591,6 +597,7 @@ export function tripCardSummary(trip: Record<string, any>): {
       price: o.price,
       originalPrice: o.originalPrice,
       discountEndsAt: d.discountEndsAt ?? null,
+      discountLabel: d.discountLabel ?? null,
     });
   }
   const lead = candidates.sort((a, b) => a.price - b.price)[0] ?? null;
@@ -603,6 +610,7 @@ export function tripCardSummary(trip: Record<string, any>): {
     fromPrice: booking.fromPrice,
     originalFromPrice: lead?.originalPrice ?? null,
     discountEndsAt: lead?.originalPrice != null ? lead.discountEndsAt : null,
+    discountLabel: lead?.originalPrice != null ? lead.discountLabel : null,
     multiPrice: prices.size > 1,
     spotsLeft: soonest?.spotsLeft ?? null,
     nextOpenBatchId: soonest && !soonest.soldOut ? soonest.id : null,

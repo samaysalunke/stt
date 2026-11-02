@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { editableBooking, parseEditorBooking, parseGallery, matchTierFromStay, normalizeTierText } from '../../src/lib/tripEditor';
+import { editableBooking, parseEditorBooking, parseGallery, matchTierFromStay, normalizeTierText, DISCOUNT_LABEL_MAX } from '../../src/lib/tripEditor';
 
 describe('parseGallery', () => {
   test('normalizes valid image metadata', () => {
@@ -280,6 +280,24 @@ describe('parseEditorBooking — valid round-trip', () => {
     const { batches } = parseEditorBooking(catJson, depJson);
     expect(batches[0].discountAmount).toBe(500);
     expect(batches[0].discountEndsAt).toBeNull();
+  });
+
+  test('discount label is trimmed, capped, and kept only alongside a discount', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const base = { startDate: '2099-01-01', endDate: '2099-01-05', offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }] };
+    const depJson = JSON.stringify([
+      { ...base, id: 'labelled', discountAmount: 2000, discountLabel: '  New   trip launch price  ' },
+      { ...base, id: 'too-long', discountAmount: 2000, discountLabel: 'x'.repeat(DISCOUNT_LABEL_MAX + 10) },
+      { ...base, id: 'no-discount', discountAmount: 0, discountLabel: 'Orphan label' },
+      { ...base, id: 'blank', discountAmount: 2000, discountLabel: '   ' },
+    ]);
+    const { batches } = parseEditorBooking(catJson, depJson);
+    expect(batches.map((b) => b.discountLabel)).toEqual([
+      'New trip launch price',
+      'x'.repeat(DISCOUNT_LABEL_MAX),
+      null,
+      null,
+    ]);
   });
 
   test('zero is accepted as an intentional price', () => {

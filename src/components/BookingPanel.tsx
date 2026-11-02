@@ -32,6 +32,7 @@ interface Departure {
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
+  discountLabel?: string | null;
   /** Seats left against confirmed registrations (not the YAML counter). */
   liveSpotsLeft?: number | null;
   /** Confirmed female travellers on this departure. */
@@ -44,6 +45,7 @@ interface Props {
   fromPrice: number | null;
   originalFromPrice?: number | null;
   fromDiscountEndsAt?: string | null;
+  fromDiscountLabel?: string | null;
   whatsappLink: string;
   slug: string;
   /** Present when a signed-in traveller is viewing — prefills the wishlist form. */
@@ -78,6 +80,7 @@ export default function BookingPanel({
   fromPrice,
   originalFromPrice = null,
   fromDiscountEndsAt = null,
+  fromDiscountLabel = null,
   whatsappLink,
   slug,
   wishlistUser = null,
@@ -198,6 +201,11 @@ export default function BookingPanel({
         </div>
       ) : fromPrice != null ? (
         <div className="mb-5">
+          {originalFromPrice != null && fromDiscountLabel && (
+            <span data-testid="discount-label" className="block w-fit mb-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold" style={{ color: C.coralInk, background: C.blush }}>
+              {fromDiscountLabel}
+            </span>
+          )}
           {originalFromPrice != null && (
             <span className="text-sm mr-2 line-through" style={{ color: C.gray }}>{formatINR(originalFromPrice)}</span>
           )}
@@ -253,7 +261,7 @@ export default function BookingPanel({
                   </div>
                   {dep.discountActive && !dep.comingSoon && (
                     <div className="text-xs mt-1 font-semibold" style={{ color: C.coralInk }}>
-                      Save {formatINR(dep.discountAmount ?? 0)} on every stay
+                      {dep.discountLabel ? `${dep.discountLabel} · ` : ''}Save {formatINR(dep.discountAmount ?? 0)} on every stay
                       {dep.discountEndsAt && <DiscountCountdown endsAt={dep.discountEndsAt} reloadOnExpire className="block mt-0.5" />}
                     </div>
                   )}

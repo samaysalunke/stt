@@ -713,9 +713,12 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
           '<input type="number" min="0" step="1" class="finput dep-discount" value="' + (dep.discountAmount != null ? dep.discountAmount : '') + '" placeholder="e.g. 2000" /></div>' +
         '<div class="flex-[2] min-w-[220px]"><span class="fhint">Valid until (optional)</span>' +
           '<input type="datetime-local" class="finput dep-discount-end" value="' + esc(localDateTime(dep.discountEndsAt)) + '" /></div>' +
-        '<span class="fhint basis-full">This amount is deducted from every selected occupancy price. Leave the validity empty for a discount with no expiry.</span>';
+        '<div class="basis-full"><span class="fhint">Discount label (optional)</span>' +
+          '<input type="text" maxlength="40" class="finput dep-discount-label" value="' + esc(dep.discountLabel || '') + '" placeholder="e.g. New trip launch price" /></div>' +
+        '<span class="fhint basis-full">This amount is deducted from every selected occupancy price. Leave the validity empty for a discount with no expiry. The label shows next to the discounted price.</span>';
       discount.querySelector('.dep-discount').addEventListener('input', (e) => { dep.discountAmount = e.target.value === '' ? null : Number(e.target.value); });
       discount.querySelector('.dep-discount-end').addEventListener('input', (e) => { dep.discountEndsAt = e.target.value ? new Date(e.target.value).toISOString() : ''; });
+      discount.querySelector('.dep-discount-label').addEventListener('input', (e) => { dep.discountLabel = e.target.value; });
       card.appendChild(discount);
 
       const group = document.createElement('div');
@@ -778,7 +781,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
   document.getElementById('add-departure-btn').addEventListener('click', () => {
-    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', whatsappGroupLink: '', offers: [] });
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', discountLabel: '', whatsappGroupLink: '', offers: [] });
     renderDepartures();
   });
 

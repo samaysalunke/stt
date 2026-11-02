@@ -90,6 +90,26 @@ test('discounted lead price exposes its slashed base price and expiry', () => {
   });
 });
 
+test('discounted lead price carries its departure label; undiscounted does not', () => {
+  const labelled = makeTrip([{
+    id: 'dep-launch', startDate: FAR, endDate: FAR_END, status: 'booking-open',
+    discountAmount: 2000, discountLabel: 'New trip launch price',
+    offers: [{ tierId: 'dorm', price: 39499, cap: 15, booked: 0 }],
+  }]);
+  expect(tripCardSummary(labelled)).toMatchObject({
+    fromPrice: 37499,
+    originalFromPrice: 39499,
+    discountLabel: 'New trip launch price',
+  });
+
+  const plain = makeTrip([{
+    id: 'dep-plain', startDate: FAR, endDate: FAR_END, status: 'booking-open',
+    discountLabel: 'Ignored without a discount',
+    offers: [{ tierId: 'dorm', price: 39499, cap: 15, booked: 0 }],
+  }]);
+  expect(tripCardSummary(plain).discountLabel).toBeNull();
+});
+
 test('fromPrice is null when no departures', () => {
   const trip = makeTrip([]);
   expect(tripCardSummary(trip).fromPrice).toBeNull();

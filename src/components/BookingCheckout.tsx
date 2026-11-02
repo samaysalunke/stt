@@ -19,6 +19,7 @@ interface Departure {
   discountAmount?: number;
   discountEndsAt?: string | null;
   discountActive?: boolean;
+  discountLabel?: string | null;
 }
 interface Props {
   slug: string;
@@ -666,7 +667,7 @@ export default function BookingCheckout({
           <div className="font-medium text-sm" style={{ color: C.navy }}>{dateStr}</div>
           {discountActive && (departure.discountAmount ?? 0) > 0 && (
             <div className="text-xs font-semibold mt-1" style={{ color: C.coralInk }}>
-              Save {formatINR(departure.discountAmount ?? 0)} on this departure
+              {departure.discountLabel ? `${departure.discountLabel} · ` : ''}Save {formatINR(departure.discountAmount ?? 0)} on this departure
               {departure.discountEndsAt && <DiscountCountdown endsAt={departure.discountEndsAt} className="block mt-0.5" />}
             </div>
           )}
