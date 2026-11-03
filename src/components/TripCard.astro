@@ -234,17 +234,20 @@ const departureSummary = getDepartureSummary(departures);
             {originalFromPrice != null && discountLabel && (
               <p data-testid="trip-card-discount-label" class="trip-card-discount-label mb-1.5 text-[10px] font-semibold uppercase leading-snug tracking-wide text-coral-ink">{discountLabel}</p>
             )}
-            {/* Struck price and price share one line, so they read as one figure;
-                they only split if the card is too narrow for both. */}
-            <p class="trip-card-price-row flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1 leading-none">
+            {/* Struck price, price and "per person" share one line, so they read
+                as one figure. The price and "per person" never part; on a card
+                too narrow for all three, the struck price moves up a line. */}
+            <p class="trip-card-price-row flex flex-wrap items-baseline justify-end gap-x-1.5 gap-y-1 leading-none">
               {originalFromPrice != null && (
                 <span class="whitespace-nowrap text-sm line-through text-gray-text">₹{originalFromPrice.toLocaleString('en-IN')}</span>
               )}
-              <span class="whitespace-nowrap font-display text-display-sm text-navy">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle text-gray-text">from </span> : null}{formattedPrice ?? '—'}</span>
+              <span class="inline-flex items-baseline gap-x-1.5 whitespace-nowrap">
+                <span class="font-display text-display-sm text-navy">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle text-gray-text">from </span> : null}{formattedPrice ?? '—'}</span>
+                <span class="text-xs text-gray-text">per person</span>
+              </span>
             </p>
-            <p class="mt-1.5 text-xs text-gray-text">per person</p>
             {originalFromPrice != null && discountEndsAt && (
-              <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1 block text-[10px] font-semibold" client:load />
+              <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1.5 block text-[10px] font-semibold" client:load />
             )}
           </>
         )}
@@ -311,7 +314,7 @@ const departureSummary = getDepartureSummary(departures);
     container-type: inline-size;
   }
 
-  @container trip-card (max-width: 420px) {
+  @container trip-card (max-width: 480px) {
     .trip-card-summary {
       flex-direction: column;
       align-items: stretch;
@@ -336,7 +339,7 @@ const departureSummary = getDepartureSummary(departures);
     overflow-wrap: anywhere;
   }
 
-  @container trip-card (max-width: 420px) {
+  @container trip-card (max-width: 480px) {
     .trip-card-discount-label {
       max-width: none;
       margin-left: 0;
