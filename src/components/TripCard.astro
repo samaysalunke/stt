@@ -232,12 +232,16 @@ const departureSummary = getDepartureSummary(departures);
         ) : (
           <>
             {originalFromPrice != null && discountLabel && (
-              <p data-testid="trip-card-discount-label" class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-coral-ink">{discountLabel}</p>
+              <p data-testid="trip-card-discount-label" class="trip-card-discount-label mb-1.5 text-[10px] font-semibold uppercase leading-snug tracking-wide text-coral-ink">{discountLabel}</p>
             )}
-            {originalFromPrice != null && (
-              <p class="text-sm leading-none line-through text-gray-text">₹{originalFromPrice.toLocaleString('en-IN')}</p>
-            )}
-            <p class="font-display text-display-sm leading-none text-navy">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle text-gray-text">from </span> : null}{formattedPrice ?? '—'}</p>
+            {/* Struck price and price share one line, so they read as one figure;
+                they only split if the card is too narrow for both. */}
+            <p class="trip-card-price-row flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1 leading-none">
+              {originalFromPrice != null && (
+                <span class="whitespace-nowrap text-sm line-through text-gray-text">₹{originalFromPrice.toLocaleString('en-IN')}</span>
+              )}
+              <span class="whitespace-nowrap font-display text-display-sm text-navy">{multiPrice && formattedPrice ? <span class="text-xs font-sans align-middle text-gray-text">from </span> : null}{formattedPrice ?? '—'}</span>
+            </p>
             <p class="mt-1.5 text-xs text-gray-text">per person</p>
             {originalFromPrice != null && discountEndsAt && (
               <DiscountCountdown endsAt={discountEndsAt} reloadOnExpire={true} className="mt-1 block text-[10px] font-semibold" client:load />
@@ -314,16 +318,28 @@ const departureSummary = getDepartureSummary(departures);
     }
 
     .trip-card-price {
-      display: flex;
       width: 100%;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.375rem 0.5rem;
       text-align: left;
     }
 
-    .trip-card-price > :global(*) {
-      margin-top: 0;
+    .trip-card-price-row {
+      justify-content: flex-start;
+    }
+  }
+
+  /* An admin-written label (up to 40 chars): wrap it inside the price column,
+     breaking a single over-long word if it has to, rather than letting it widen
+     the column and squeeze the trip name. */
+  .trip-card-discount-label {
+    max-width: 14rem;
+    margin-left: auto;
+    overflow-wrap: anywhere;
+  }
+
+  @container trip-card (max-width: 420px) {
+    .trip-card-discount-label {
+      max-width: none;
+      margin-left: 0;
     }
   }
 </style>
