@@ -127,9 +127,19 @@ export function keyboardFor(ctx: KeyboardContext, menu: Menu = 'root'): { inline
   }
 
   // A lead is still a conversation and a confirmed booking is already settled;
-  // the ops group wants no one-tap move on either, so those messages keep just
-  // the link out. Every other status is offered whatever the guards allow.
-  if (NO_ACTION_STATUSES.has(status)) return { inline_keyboard: [[openButton(ctx)]] };
+  // the ops group wants no one-tap status move on either, so those messages
+  // keep just the link out — except a confirmed booking still owing money
+  // (e.g. the traveller just reported their balance payment) also gets
+  // "Mark fully paid", the one payment move a button can express.
+  if (NO_ACTION_STATUSES.has(status)) {
+    const total = Number(ctx.totalAmount);
+    const paid = Number(ctx.amountPaid) || 0;
+    if (status === 'confirmed' && Number.isFinite(total) && total > 0 && paid < total) {
+      rows.push([{ text: 'Mark fully paid', callback_data: callbackData(regId, 'pay', 'full') }]);
+    }
+    rows.push([openButton(ctx)]);
+    return { inline_keyboard: rows };
+  }
 
   const primary: Button[] = [];
   if (canMoveTo(ctx, 'pending')) {

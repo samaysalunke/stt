@@ -66,11 +66,17 @@ describe('keyboardFor', () => {
     }
   });
 
-  it('gives a confirmed booking nothing but the way out to the admin UI', () => {
-    // Including the outstanding balance: recording it is an admin-UI move now.
-    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', totalAmount: 25000, amountPaid: 5000 })))
-      .toEqual(['Open in admin ↗']);
+  it('offers a confirmed booking still owing money a one-tap "Mark fully paid"', () => {
+    const kb = keyboardFor({ regId: 1, status: 'confirmed', totalAmount: 25000, amountPaid: 5000 });
+    expect(texts(kb)).toEqual(['Mark fully paid', 'Open in admin ↗']);
+    expect(datas(kb)).toEqual(['b:1:pay:full']);
+  });
+
+  it('gives an already fully-paid confirmed booking nothing but the way out to the admin UI', () => {
     expect(texts(keyboardFor({ regId: 1, status: 'confirmed', totalAmount: 25000, amountPaid: 25000 })))
+      .toEqual(['Open in admin ↗']);
+    // No trip price at all — "full" is undefined without one, so withhold it.
+    expect(texts(keyboardFor({ regId: 1, status: 'confirmed', totalAmount: null, amountPaid: 5000 })))
       .toEqual(['Open in admin ↗']);
   });
 
