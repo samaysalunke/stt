@@ -64,7 +64,8 @@ const uploadId = `${editorId}-upload`;
     <span>Selected (<span data-gallery-count>0</span>)</span>
     <span class="fhint" data-gallery-limit-count></span>
   </p>
-  <div class="gallery-grid" data-gallery-selected></div>
+  <span class="fhint">Drag photos, or use ◀ ▶, to set the order they appear on the trip page.</span>
+  <div class="gallery-grid gallery-grid--ordered" data-gallery-selected></div>
 
   <input type="hidden" name={fieldName} id={fieldName} data-gallery-json />
 </div>
@@ -124,16 +125,79 @@ const uploadId = `${editorId}-upload`;
       return tileEl;
     }
 
+    let dragIndex: number | null = null;
+
+    function move(from: number, to: number) {
+      if (from === to || to < 0 || to >= gallery.length) return;
+      const [item] = gallery.splice(from, 1);
+      gallery.splice(to, 0, item);
+      renderSelected();
+    }
+
+    function moveButton(label: string, text: string, disabled: boolean, onClick: () => void) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'gallery-move-btn';
+      button.textContent = text;
+      button.title = label;
+      button.setAttribute('aria-label', label);
+      button.disabled = disabled;
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
     function renderSelected() {
       selectedWrap.replaceChildren();
-      gallery.forEach((photo) => selectedWrap.appendChild(tile(photo, {
-        removable: true,
-        selected: true,
-        onClick: () => {
-          gallery = gallery.filter((item) => item.image !== photo.image);
-          sync();
-        },
-      })));
+      gallery.forEach((photo, index) => {
+        const tileEl = tile(photo, {
+          removable: true,
+          selected: true,
+          onClick: () => {
+            gallery = gallery.filter((item) => item.image !== photo.image);
+            sync();
+          },
+        });
+        tileEl.draggable = true;
+        tileEl.title = 'Drag to reorder';
+
+        const position = document.createElement('span');
+        position.className = 'gallery-thumb-pos';
+        position.textContent = String(index + 1);
+
+        const controls = document.createElement('div');
+        controls.className = 'gallery-move';
+        controls.append(
+          moveButton(`Move photo ${index + 1} earlier`, '◀', index === 0, () => move(index, index - 1)),
+          moveButton(`Move photo ${index + 1} later`, '▶', index === gallery.length - 1, () => move(index, index + 1)),
+        );
+        tileEl.append(position, controls);
+
+        tileEl.addEventListener('dragstart', (event) => {
+          dragIndex = index;
+          tileEl.classList.add('is-dragging');
+          event.dataTransfer?.setData('text/plain', String(index));
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        });
+        tileEl.addEventListener('dragend', () => {
+          dragIndex = null;
+          tileEl.classList.remove('is-dragging');
+          selectedWrap.querySelectorAll('.is-drop-target').forEach((el) => el.classList.remove('is-drop-target'));
+        });
+        tileEl.addEventListener('dragover', (event) => {
+          if (dragIndex === null) return;
+          event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+          tileEl.classList.toggle('is-drop-target', dragIndex !== index);
+        });
+        tileEl.addEventListener('dragleave', () => tileEl.classList.remove('is-drop-target'));
+        tileEl.addEventListener('drop', (event) => {
+          event.preventDefault();
+          if (dragIndex !== null) move(dragIndex, index);
+          dragIndex = null;
+        });
+
+        selectedWrap.appendChild(tileEl);
+      });
       countEl.textContent = String(gallery.length);
       if (totalLimit !== null) {
         limitCountEl.textContent = `· ${gallery.length}/${totalLimit} total`;
