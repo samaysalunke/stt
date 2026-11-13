@@ -56,6 +56,8 @@ const saved = Astro.url.searchParams.get('saved') === '1';
 // looked identical to just opening the editor.
 const created = Astro.url.searchParams.get('created') === '1';
 const bookingError = Astro.url.searchParams.get('error') === 'incomplete-departure';
+// update.ts refuses a rename onto a slug another trip file holds.
+const takenSlug = Astro.url.searchParams.get('error') === 'slug-exists' ? Astro.url.searchParams.get('slug') : null;
 const globalFaqs = listFaqs();
 ---
 
@@ -68,6 +70,18 @@ const globalFaqs = listFaqs();
         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
       </svg>
       {created ? 'Trip created.' : 'Changes saved.'}
+    </div>
+  )}
+
+  {takenSlug && (
+    <div role="alert" class="rounded-2xl px-4 py-3 mb-6 text-sm flex items-start gap-2 bg-danger/10 text-danger">
+      <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0z" />
+      </svg>
+      <span>
+        The trip was not saved. Another trip already uses the slug “{takenSlug}”, including deleted trips. Pick a different slug, or rename that trip first.
+        <a href={`/admin/trips/${takenSlug}`} class="underline">Open “{takenSlug}”</a>.
+      </span>
     </div>
   )}
 

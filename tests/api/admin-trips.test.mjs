@@ -283,6 +283,25 @@ test('TC-106 create with a slug that normalizes to empty is refused', async () =
   assert.match(res.headers.get('location') ?? '', /error=slug/, 'An empty slug must be reported as an error');
 });
 
+test('TC-107 renaming onto another trip\'s slug is refused and leaves both trips untouched', async () => {
+  const { cookie } = await adminLogin();
+  const HOLDER_PATH = 'src/content/trips/qa-test-coming-soon.yaml';
+  const beforeHolder = readFileSync(HOLDER_PATH, 'utf8');
+  const beforeSelf = readFileSync(QA_TRIP_PATH, 'utf8');
+  const fd = new FormData();
+  fd.append('slug', 'qa-test-v2');
+  fd.append('newSlug', 'qa-test-coming-soon');
+  fd.append('name', 'Clobbering Rename');
+  fd.append('occupancyCatalog_json', VALID_CATALOG);
+  fd.append('departures_json', VALID_DEPARTURES);
+  fd.append('itinerary_json', '[]');
+  const res = await fetch(`${BASE}/api/admin/trips/update`, { method: 'POST', body: fd, headers: { cookie }, redirect: 'manual' });
+  assert.ok(res.status >= 300 && res.status < 400, `Expected redirect, got ${res.status}`);
+  assert.match(res.headers.get('location') ?? '', /\/admin\/trips\/qa-test-v2\?error=slug-exists&slug=qa-test-coming-soon/);
+  assert.equal(readFileSync(HOLDER_PATH, 'utf8'), beforeHolder, 'The trip holding the slug must not be overwritten');
+  assert.equal(readFileSync(QA_TRIP_PATH, 'utf8'), beforeSelf, 'The trip being renamed must not be touched');
+});
+
 // Restore the qa-test-v2 fixture after admin tests so register-v2 tests remain stable.
 // This test runs last in the file and re-saves the original data.
 test('TC-104 restore qa-test-v2 fixture after admin tests', async () => {

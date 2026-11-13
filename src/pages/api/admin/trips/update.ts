@@ -6,6 +6,7 @@ import { sanitizeInput, slugify } from '../../../../lib/utils';
 import { parseEditorBooking, parseGallery, parseTripFaqs } from '../../../../lib/tripEditor';
 import { withAdminTripUpdate } from '../../../../lib/tripAdminMetadata';
 import { generateTripSeo } from '../../../../lib/tripSeo';
+import { departureIdsInUse, uniqueDepartureIds } from '../../../../lib/departureIds';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
   const body = await request.formData();
@@ -18,21 +19,34 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const rawNewSlug = sanitizeInput(body.get('newSlug'));
   const newSlug = rawNewSlug ? slugify(rawNewSlug) : oldSlug;
+  // Renaming onto a slug another trip file holds (soft-deleted ones included)
+  // would overwrite that trip's YAML, and a soft-deleted holder would 404 the
+  // renamed trip. A slug that is only a redirect is fine to take over.
+  if (newSlug !== oldSlug && readTrip(newSlug)) {
+    return redirect(`/admin/trips/${oldSlug}?error=slug-exists&slug=${encodeURIComponent(newSlug)}`);
+  }
 
   // Occupancy catalog + departures-with-offers come in as serialized JSON from
   // the editor (nested data; parallel form arrays don't fit). parseEditorBooking
   // validates + normalizes both into trip YAML shape.
-  const { occupancyCatalog, batches, errors: bookingErrors } = parseEditorBooking(
+  const { occupancyCatalog, batches: parsedBatches, errors: bookingErrors } = parseEditorBooking(
     sanitizeInput(body.get('occupancyCatalog_json')),
     sanitizeInput(body.get('departures_json')),
   );
   if (bookingErrors.length > 0) {
     return redirect(`/admin/trips/${oldSlug}?error=incomplete-departure`);
   }
-  // Backfill any blank departure id from the (possibly new) slug + start date.
-  for (const b of batches) {
-    if (!b.id && b.startDate) b.id = `${newSlug}-${b.startDate}`;
-  }
+  // Departure ids must be unique across trips. Ids this trip already had stay
+  // put (registrations reference them); a new or blank id that clashes with
+  // another trip's is re-keyed from the slug + start date.
+  const ownIds = new Set<string>(
+    (Array.isArray(existing.batches) ? existing.batches : []).map((b: any) => String(b?.id ?? '')).filter(Boolean),
+  );
+  const batches = uniqueDepartureIds(parsedBatches, {
+    slug: newSlug,
+    taken: departureIdsInUse(oldSlug),
+    keep: ownIds,
+  });
 
   const highlights = body.getAll('highlights[]').map(h => sanitizeInput(h)).filter(Boolean);
   const included = body.getAll('included[]').map(h => sanitizeInput(h)).filter(Boolean);

@@ -27,11 +27,21 @@ export function recordTripSlugAlias(oldSlug: string, newSlug: string): void {
       ON CONFLICT(alias) DO UPDATE SET target = excluded.target, createdAt = unixepoch()
     `).run(oldSlug, newSlug);
 
-    // Carry per-departure costs across the rename. Registrations are NOT
-    // migrated (they keep the old trip_slug forever, and the finance read path
-    // resolves them through this alias table), but cost rows are keyed by slug
-    // and would otherwise be stranded — the departure would silently read as
-    // "not costed" the moment its trip was renamed.
+    // Registrations and saved trips move with the trip. Nothing reads them
+    // through this alias table: duplicate-registration checks, the "you're
+    // booked" panel, WhatsApp group invites, wishlist notifications and
+    // analytics all match on the trip's current slug, so rows left on the old
+    // slug silently drop out of every one of them.
+    db.prepare('UPDATE registrations SET trip_slug = ? WHERE trip_slug = ?').run(newSlug, oldSlug);
+    // saved_trips is keyed (userId, trip_slug): keep one row per user.
+    db.prepare(`
+      INSERT OR IGNORE INTO saved_trips (userId, trip_slug, created_at)
+        SELECT userId, ?, created_at FROM saved_trips WHERE trip_slug = ?
+    `).run(newSlug, oldSlug);
+    db.prepare('DELETE FROM saved_trips WHERE trip_slug = ?').run(oldSlug);
+
+    // Per-departure costs are keyed by slug too and would otherwise be stranded:
+    // the departure would silently read as "not costed" after a rename.
     //
     // Insert-then-delete rather than `UPDATE ... SET trip_slug = ?`: a slug
     // reused after an earlier rename would collide with UNIQUE(trip_slug,
