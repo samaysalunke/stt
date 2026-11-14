@@ -10,13 +10,13 @@ const quoteId = `testimonial-quote-${cardId}`;
 const surfaceClass = surface === 'white' ? 'bg-white' : 'bg-blush';
 ---
 
-<expandable-testimonial class="block h-56 shrink-0 basis-[85%] snap-start sm:basis-[60%] md:basis-[45%] lg:basis-[32%]">
+<expandable-testimonial class="block h-60 shrink-0 basis-[85%] snap-start sm:basis-[60%] md:basis-[45%] lg:basis-[32%]">
   <figure data-card-skeleton data-skeleton-ready={!t.photo ? '' : undefined} class:list={['testimonial-card relative flex h-full flex-col rounded-2xl p-5 shadow-card', surfaceClass]}>
     <span aria-hidden="true" class="absolute right-4 top-3 font-display text-3xl text-navy opacity-20">&ldquo;</span>
     <blockquote id={quoteId} class="testimonial-quote pr-6 text-sm leading-relaxed text-navy">
       {t.quote}
     </blockquote>
-    <button type="button" class="testimonial-toggle mt-2 hidden self-start text-xs font-semibold text-coral-ink hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" aria-expanded="false" aria-controls={quoteId}>Read more</button>
+    <button type="button" class="testimonial-toggle -mt-1.5 -mb-3.5 hidden self-start py-3.5 text-xs font-semibold text-coral-ink hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" aria-expanded="false" aria-controls={quoteId}>Read more</button>
     <figcaption class="mt-auto flex items-center gap-3 pt-4">
       {t.photo ? (
         <img data-skeleton-image src={t.photo} alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-full object-cover" />
@@ -66,7 +66,7 @@ const surfaceClass = surface === 'white' ? 'bg-white' : 'bg-blush';
 
   expandable-testimonial[expanded] {
     height: auto;
-    min-height: 14rem;
+    min-height: 15rem;
   }
 
   expandable-testimonial[expanded] .testimonial-quote {

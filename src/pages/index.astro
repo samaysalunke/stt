@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TripCard from '../components/TripCard.astro';
-import { CAROUSEL_SIZES } from '../lib/imageVariants';
+import { CAROUSEL_SIZES, imageSrcset } from '../lib/imageVariants';
 import TestimonialCard from '../components/TestimonialCard.astro';
 import Button from '../components/ui/Button.astro';
 import Section from '../components/ui/Section.astro';
@@ -12,7 +12,7 @@ import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettin
 import { formatDateIN, formatINR } from '../lib/utils';
 import {
   getUserTrips, upcomingTrips, unfinishedBooking, tripPrimaryAction, tripStates,
-  savedTripSlugs, userTravelStats, isNewsletterSubscriber,
+  savedTripSlugs, userTravelStats,
 } from '../lib/userTrips';
 
 const allTrips = listTrips();
@@ -29,6 +29,24 @@ const showCarouselArrows = featuredTrips.length > 3;
 const liveSpots = cardLiveSpots(featuredTrips.map((t) => ({ slug: t.slug, ...tripCardSummary(t) })));
 
 const featuredTestimonials = selectFeaturedTestimonials(listTestimonials());
+
+// Real trip photography instead of one stock photo: the hero shows the top
+// featured trip's cover and the closing band the next one. The featured order
+// is seeded and stable, so the edge-cached page shows the same pair to everyone.
+const coveredTrips = featuredTrips
+  .map((t) => ({ trip: t, src: t.coverImage || t.featuredImage || null }))
+  .filter((c): c is { trip: (typeof featuredTrips)[number]; src: string } => Boolean(c.src));
+const heroCover = coveredTrips[0] ?? null;
+const closingCover = coveredTrips[1] ?? null;
+const coverName = (t: (typeof featuredTrips)[number]) => t.title || t.name || t.slug;
+const STOCK_HERO = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4';
+const heroImg = heroCover
+  ? { src: heroCover.src, srcset: imageSrcset(heroCover.src), alt: `${coverName(heroCover.trip)}, an offbeat group trip in India` }
+  : {
+      src: `${STOCK_HERO}?w=1280&auto=format&fit=crop&q=80`,
+      srcset: [640, 960, 1280, 1920].map((w) => `${STOCK_HERO}?w=${w}&auto=format&fit=crop&q=80 ${w}w`).join(', '),
+      alt: 'Mountain landscape on an offbeat group trip in India',
+    };
 
 let settings: any = {};
 try { settings = readSiteSettings(); } catch (e) {}
@@ -64,7 +82,6 @@ const savedTrips = savedSlugs
   .filter((t): t is (typeof allTrips)[number] => Boolean(t && isTripListable(t)))
   .sort((a, b) => Number(tripCardSummary(a).soldOut || tripCardSummary(a).allComingSoon) - Number(tripCardSummary(b).soldOut || tripCardSummary(b).allComingSoon));
 const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => ({ slug: t.slug, ...tripCardSummary(t) }))) : new Map();
-const subscribed = isNewsletterSubscriber(Astro.locals);
 ---
 
 <BaseLayout
@@ -76,13 +93,13 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
   <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
     id="homepage-hero"
-    class="relative min-h-screen flex flex-col items-center justify-start sm:justify-center overflow-hidden"
+    class="relative min-h-[88svh] flex flex-col items-center justify-start sm:justify-center overflow-hidden bg-navy-deep"
   >
     <img
-      src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1280&auto=format&fit=crop&q=80"
-      srcset="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=640&auto=format&fit=crop&q=80 640w, https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=960&auto=format&fit=crop&q=80 960w, https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1280&auto=format&fit=crop&q=80 1280w, https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&auto=format&fit=crop&q=80 1920w"
+      src={heroImg.src}
+      srcset={heroImg.srcset}
       sizes="100vw"
-      alt="Mountain landscape on an offbeat group trip in India"
+      alt={heroImg.alt}
       width="1920" height="1280"
       fetchpriority="high" decoding="async"
       class="absolute inset-0 h-full w-full object-cover"
@@ -103,7 +120,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       </h1>
 
       <!-- Subtext -->
-      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-4 sm:mb-7 leading-relaxed">
+      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left text-pretty w-full mb-4 sm:mb-7 leading-relaxed">
         Group trips for travellers. Offbeat spots, zero fluff.
       </p>
 
@@ -183,7 +200,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
           )}
         <!-- Stats card -->
         <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
-          <Stat value="12–16" label="Group Size" tone="light" class="py-1" />
+          <Stat value="Small" label="Groups" tone="light" class="py-1" />
           <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
         </div>
 
@@ -263,15 +280,15 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <div class="flex items-center gap-3">
           {showCarouselArrows && (
             <div class="hidden gap-2 lg:flex">
-              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-11 w-11 place-items-center rounded-full border border-peach text-navy transition-[opacity,background-color] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent">
                 <Icon name="chevron-right" class="h-4 w-4 rotate-180" />
               </button>
-              <button id="featured-next" type="button" aria-label="More trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+              <button id="featured-next" type="button" aria-label="More trips" class="grid h-11 w-11 place-items-center rounded-full border border-peach text-navy transition-[opacity,background-color] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent">
                 <Icon name="chevron-right" class="h-4 w-4" />
               </button>
             </div>
           )}
-          <a href="/trips/" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
+          <a href="/trips/" class="-my-3 inline-flex min-h-11 items-center gap-1 py-3 text-sm font-medium text-coral-ink hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
       </div>
 
@@ -279,6 +296,8 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <div
           id="featured-carousel"
           tabindex="0"
+          role="region"
+          aria-roledescription="carousel"
           aria-label="Featured trips"
           class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
@@ -354,16 +373,37 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
       {[
         { num: '01', title: 'Pick a trip', desc: 'Browse upcoming destinations, find one that pulls you.' },
-        { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
+        { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.', links: [
+          { href: '/faq/', label: 'How the advance works' },
+          { href: '/cancellation/', label: 'Cancellation policy' },
+        ] },
         { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
       ].map((step) => (
         <div class="reveal pt-6 border-t border-white/15">
           <div class="font-display text-6xl font-bold mb-4 text-peach/70">{step.num}</div>
           <h3 class="font-display text-xl font-bold text-white mb-3">{step.title}</h3>
-          <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
+          <p class="text-white/65 text-sm leading-relaxed text-pretty">{step.desc}</p>
+          {step.links && (
+            <p class="mt-1 flex flex-wrap gap-x-5">
+              {step.links.map((l) => (
+                <a href={l.href} class="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-peach underline-offset-4 hover:underline">{l.label} <Icon name="arrow-right" class="h-4 w-4" /></a>
+              ))}
+            </p>
+          )}
         </div>
       ))}
     </div>
+    {/* Facts from the published FAQ, kept to its wording: the questions a
+        first-time solo traveller has before paying an advance. */}
+    <ul class="mt-14 grid gap-x-10 gap-y-4 border-t border-white/15 pt-8 text-sm text-white/80 md:grid-cols-3">
+      {[
+        'Usually solo travellers between 22–35, friend groups too.',
+        'Many are on their first solo or first group trip.',
+        'Confirmation email within 24 hours of verifying your payment.',
+      ].map((fact) => (
+        <li class="flex gap-3 text-pretty"><Icon name="check" class="mt-0.5 h-4 w-4 text-peach" />{fact}</li>
+      ))}
+    </ul>
   </Section>
 
   <!-- ── COMMUNITY ─────────────────────────────────────────── -->
@@ -381,48 +421,25 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     </Section>
   )}
 
-  <!-- ── NEWSLETTER ─────────────────────────────────────────── -->
-  <section
-    class="py-16 lg:py-20 relative bg-cover bg-center"
-    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1000&auto=format&fit=crop&q=70');"
-  >
-    <div class="u-overlay-scrim-flat absolute inset-0"></div>
-    <div class="container-app relative">
-      <div class="max-w-xl mx-auto text-center">
-        <h2 class="font-display font-bold text-display-md mb-3 text-white">
-          Be first to know
-        </h2>
-        <p class="text-base mb-8 leading-relaxed text-white/75">
-          New trips, new batches, things worth knowing. No spam.
-        </p>
-        {subscribed ? (
-          <p data-testid="home-nl-subscribed" class="text-base font-medium text-white">You're on the list. We'll email {user!.email} when something good is coming.</p>
-        ) : (
-          <>
-            <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <label for="home-newsletter-email" class="sr-only">Your email address</label>
-              <input
-                id="home-newsletter-email"
-                type="email"
-                name="email"
-                placeholder="Your email address"
-                value={user?.email}
-                required
-                class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 border-white/25 bg-white/10 outline-none text-white placeholder:text-white/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              />
-              <button
-                type="submit"
-                class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
-              >
-                Keep me posted
-              </button>
-            </form>
-            <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
-              You're in. We'll be in touch when something good is coming.
-            </p>
-          </>
-        )}
-      </div>
+  <!-- ── CLOSING ────────────────────────────────────────────── -->
+  <section class="relative overflow-hidden bg-navy-deep py-20 lg:py-28" data-testid="home-closing">
+    {closingCover && (
+      <>
+        <img
+          src={closingCover.src}
+          srcset={imageSrcset(closingCover.src)}
+          sizes="100vw"
+          alt=""
+          width="1920" height="1280"
+          loading="lazy" decoding="async"
+          class="absolute inset-0 h-full w-full object-cover"
+        />
+        <div class="u-overlay-scrim-flat absolute inset-0"></div>
+      </>
+    )}
+    <div class="container-app relative text-center">
+      <h2 class="font-display font-bold text-display-lg text-white">Find your trip</h2>
+      <Button href="/trips/" variant="cta" size="lg" class="mt-8">Explore upcoming trips <Icon name="arrow-right" /></Button>
     </div>
   </section>
 
@@ -433,28 +450,14 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
   const header = document.getElementById('site-header');
   if (hero && header) {
     new IntersectionObserver(
-      ([entry]) => header.classList.toggle('header-visible', !entry.isIntersecting),
+      ([entry]) => {
+        // Off-screen, the header must also be out of the Tab order: otherwise
+        // the first Tab stops land on links parked above the viewport.
+        header.classList.toggle('header-visible', !entry.isIntersecting);
+        header.inert = entry.isIntersecting;
+      },
       { threshold: 0 }
     ).observe(hero);
   }
 </script>
 
-<script>
-  document.getElementById('home-newsletter')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const email = form.querySelector<HTMLInputElement>('input[name="email"]')?.value ?? '';
-    try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source: 'homepage' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        form.style.display = 'none';
-        document.getElementById('home-nl-success')?.classList.remove('hidden');
-      }
-    } catch {}
-  });
-</script>
