@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import DayAccordion from './DayAccordion';
+
+// The booking details form, loaded only when a visitor opens it.
+const BookingCheckout = lazy(() => import('./BookingCheckout'));
+type CheckoutProps = ComponentProps<typeof BookingCheckout>;
 
 type Day = Parameters<typeof DayAccordion>[0]['itinerary'][number];
 
@@ -14,7 +18,15 @@ interface Props {
   unlockBatchId: string;
   /** Where to send a visitor who would rather book after reading the plan. */
   continueHref: string;
+  /**
+   * The registration form, shown inline in the lock (book mode). The same
+   * details form as checkout, so the visitor becomes the same `lead`.
+   */
+  form?: Pick<CheckoutProps, 'departure' | 'offer' | 'advanceAmount' | 'balanceDueRule' | 'isLoggedIn' | 'prefill' | 'prefilledFromHistory'> | null;
 }
+
+/** Link straight to the open form, e.g. from an ad or Instagram: /trips/<slug>/#see-itinerary */
+export const OPEN_FORM_HASH = '#see-itinerary';
 
 const ACCESS_COOKIE = 'stt_itinerary_access';
 
@@ -25,10 +37,25 @@ const ACCESS_COOKIE = 'stt_itinerary_access';
  * registered — on load when it holds an access cookie, and again when a
  * wishlist sign-up on this page completes.
  */
-export default function ItineraryGate({ slug, tripName, preview, totalDays, unlockMode, unlockBatchId, continueHref }: Props) {
+export default function ItineraryGate({ slug, tripName, preview, totalDays, unlockMode, unlockBatchId, continueHref, form = null }: Props) {
   const [full, setFull] = useState<Day[] | null>(null);
   const [checking, setChecking] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // The mobile sticky "Save my spot" bar would sit over the form being filled.
+  useEffect(() => {
+    const bar = document.getElementById('booking-sticky');
+    if (!bar) return;
+    bar.classList.toggle('hidden', formOpen && !full);
+    return () => bar.classList.remove('hidden');
+  }, [formOpen, full]);
+
+  const openForm = useCallback(() => {
+    setFormOpen(true);
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }, []);
 
   const tryUnlock = useCallback(async () => {
     setChecking(true);
@@ -57,18 +84,34 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
       const qs = params.toString();
       history.replaceState(history.state, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
     }
-    if (fromRegistration || document.cookie.split('; ').some((c) => c.startsWith(`${ACCESS_COOKIE}=`))) {
+    const wantsForm = window.location.hash === OPEN_FORM_HASH;
+    const hasCookie = document.cookie.split('; ').some((c) => c.startsWith(`${ACCESS_COOKIE}=`));
+    if (fromRegistration || hasCookie) {
       tryUnlock().then((ok) => {
-        if (ok && fromRegistration) {
-          setJustUnlocked(true);
+        if (ok && (fromRegistration || wantsForm)) {
+          setJustUnlocked(fromRegistration);
           requestAnimationFrame(() => document.getElementById('itinerary')?.scrollIntoView({ block: 'start' }));
+        } else if (!ok && wantsForm && form) {
+          openForm();
         }
       });
+    } else if (wantsForm && form) {
+      openForm();
     }
     const onAccess = () => { tryUnlock().then((ok) => ok && setJustUnlocked(true)); };
+    // The hero's "See the day-by-day plan" link lands here without a reload.
+    const onHash = () => {
+      if (window.location.hash !== OPEN_FORM_HASH) return;
+      if (form) openForm();
+      else document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
     window.addEventListener('stt:itinerary-access', onAccess);
-    return () => window.removeEventListener('stt:itinerary-access', onAccess);
-  }, [tryUnlock]);
+    window.addEventListener('hashchange', onHash);
+    return () => {
+      window.removeEventListener('stt:itinerary-access', onAccess);
+      window.removeEventListener('hashchange', onHash);
+    };
+  }, [tryUnlock, openForm, form]);
 
   if (full) {
     return (
@@ -108,7 +151,7 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
             </div>
           ))}
         </div>
-        <div className="mt-4 rounded-2xl border-2 border-dashed px-5 py-6 text-center" style={{ borderColor: 'var(--color-coral)', background: 'var(--color-blush)' }}>
+        <div id={OPEN_FORM_HASH.slice(1)} className="mt-4 scroll-mt-24 rounded-2xl border-2 border-dashed px-5 py-6 text-center" style={{ borderColor: 'var(--color-coral)', background: 'var(--color-blush)' }}>
           <svg className="mx-auto mb-2 h-6 w-6" style={{ color: 'var(--color-coral-ink)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
             <rect x="5" y="11" width="14" height="10" rx="2" />
             <path strokeLinecap="round" d="M8 11V7a4 4 0 118 0v4" />
@@ -122,8 +165,9 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
               : 'Join the wishlist for the upcoming date to see the full day-by-day itinerary.'}
           </p>
           {unlockMode === 'book' ? (
-            <a
+            !formOpen && <a
               href={`/trips/${slug}/book?batch=${encodeURIComponent(unlockBatchId)}&unlock=itinerary`}
+              onClick={(e) => { if (form) { e.preventDefault(); openForm(); } }}
               data-testid="itinerary-unlock-cta"
               className="mt-4 inline-block rounded-[var(--radius-pill)] px-6 py-3 text-sm font-semibold text-white"
               style={{ background: 'var(--color-cta)' }}
@@ -140,6 +184,29 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
             >
               Join the wishlist to see it →
             </button>
+          )}
+          {formOpen && form && (
+            <div ref={formRef} data-testid="itinerary-unlock-form" className="mx-auto mt-5 max-w-lg scroll-mt-24 text-left">
+              <Suspense fallback={<p className="py-6 text-center text-sm" style={{ color: 'var(--color-gray-text)' }}>Loading the form…</p>}>
+                <BookingCheckout
+                  {...form}
+                  slug={slug}
+                  tripName={tripName}
+                  upiId=""
+                  bankAccountName=""
+                  bankAccountNumber=""
+                  bankBranch=""
+                  bankIfsc=""
+                  embedded
+                  onRegistered={async () => {
+                    if (await tryUnlock()) {
+                      setJustUnlocked(true);
+                      requestAnimationFrame(() => document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                    }
+                  }}
+                />
+              </Suspense>
+            </div>
           )}
           <p className="mt-3 text-xs" style={{ color: 'var(--color-gray-text)' }}>
             {checking ? 'Checking your registration…' : (

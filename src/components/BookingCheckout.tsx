@@ -54,6 +54,12 @@ interface Props {
   itineraryLocked?: boolean;
   /** The visitor came from the itinerary lock: send them back to it once their details are saved. */
   returnToItinerary?: boolean;
+  /**
+   * Rendered inside the trip page's itinerary lock: the details form only — no
+   * step bar, no history entries — and `onRegistered` instead of navigating.
+   */
+  embedded?: boolean;
+  onRegistered?: () => void;
 }
 
 // Brand tokens from `src/styles/tokens.css`, not literals — see the matching
@@ -394,9 +400,11 @@ export default function BookingCheckout({
   initialRegistration = null,
   itineraryLocked = false,
   returnToItinerary = false,
+  embedded = false,
+  onRegistered,
 }: Props) {
   // Unlocking the itinerary only needs the details form, so skip the price review.
-  const firstStep = returnToItinerary ? 2 : 1;
+  const firstStep = returnToItinerary || embedded ? 2 : 1;
   const [step, setStep] = useState(firstStep);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', age: '', gender: '',
@@ -504,6 +512,8 @@ export default function BookingCheckout({
   }
 
   useEffect(() => {
+    // Embedded in the trip page: that page owns the history, not this form.
+    if (embedded) return;
     history.replaceState({ step: firstStep }, '');
     function onPopState(e: PopStateEvent) {
       const s = (e.state?.step as number) ?? 1;
@@ -543,6 +553,10 @@ export default function BookingCheckout({
       });
       const data = await res.json();
       if (data.success) {
+        if (embedded) {
+          onRegistered?.();
+          return;
+        }
         if (returnToItinerary) {
           // Registered — the access cookie is set; the trip page now unlocks.
           window.location.assign(`/trips/${slug}/?itinerary=unlocked#itinerary`);
@@ -727,7 +741,7 @@ export default function BookingCheckout({
   // ── Step 2: Details ───────────────────────────────────────────────────────────
   if (step === 2) return (
     <div>
-      <StepBar current={2} />
+      {!embedded && <StepBar current={2} />}
       <div className="space-y-5">
         {prefilledFromHistory && (
           <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm" style={{ background: C.blush, color: C.navy }}>
@@ -820,7 +834,7 @@ export default function BookingCheckout({
           className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
           style={{ background: C.cta }}
         >
-          {submitting === 'lead' ? 'Saving...' : returnToItinerary ? 'See the full itinerary →' : 'Continue to payment →'}
+          {submitting === 'lead' ? 'Saving...' : returnToItinerary || embedded ? 'See the full itinerary →' : 'Continue to payment →'}
         </button>
       </div>
     </div>

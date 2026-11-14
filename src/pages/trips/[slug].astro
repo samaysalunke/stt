@@ -225,6 +225,23 @@ const itineraryUnlocked = !gate.locked || isAdminViewer
   || (!!Astro.locals.user?.email && hasItineraryAccess([Astro.locals.user.email], slug!));
 // Only what this render shows: structured data must not describe hidden days.
 const visibleItinerary = itineraryUnlocked ? itinerary : itinerary.slice(0, gate.previewDays);
+// The lock's inline registration form: the checkout details form for the
+// departure the lock points at, so a visitor who signs up becomes the same lead
+// as one who started booking. Book mode only; wishlist mode uses the panel.
+const unlockDeparture = !itineraryUnlocked && gate.unlockMode === 'book'
+  ? departures.find((d) => d.id === gate.unlockBatchId) ?? null
+  : null;
+const unlockOffers = unlockDeparture?.offers.filter((o) => o.available) ?? [];
+const unlockForm = unlockDeparture && unlockOffers.length > 0 ? {
+  departure: unlockDeparture,
+  offer: unlockOffers.reduce((min, o) => (o.price < min.price ? o : min), unlockOffers[0]),
+  advanceAmount: paymentAmount,
+  balanceDueRule,
+  isLoggedIn: !!Astro.locals.user,
+  prefill: Astro.locals.user
+    ? { fullName: Astro.locals.user.displayName ?? '', email: Astro.locals.user.email, phone: Astro.locals.user.phone ?? '' }
+    : null,
+} : null;
 
 const included: string[] = trip.included ?? [];
 const excluded: string[] = trip.excluded ?? trip.notIncluded ?? [];
@@ -366,6 +383,12 @@ const tripSchema: Record<string, any> = {
               </svg>
               <span class="min-w-0 break-words">{trip.location}</span>
             </span>
+          )}
+          {gate.locked && (
+            <a href="#see-itinerary" data-testid="hero-itinerary-link" class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-navy sm:px-3 sm:py-1.5 sm:text-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path stroke-linecap="round" d="M8 11V7a4 4 0 118 0v4" /></svg>
+              <span class="min-w-0 break-words">See the day-by-day plan</span>
+            </a>
           )}
           {trip.duration && (
             <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
@@ -643,6 +666,7 @@ const tripSchema: Record<string, any> = {
                 unlockMode={gate.unlockMode!}
                 unlockBatchId={gate.unlockBatchId!}
                 continueHref={`/trips/${slug}/book?batch=${encodeURIComponent(gate.unlockBatchId!)}`}
+                form={unlockForm}
                 client:load
               />
             )}
