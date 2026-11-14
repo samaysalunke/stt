@@ -7,6 +7,7 @@ import { rateLimit } from '../../lib/rateLimit';
 import { assignAutoUsername } from '../../lib/usernames';
 import { jsonOk, jsonFail } from '../../lib/apiResponse';
 import { attributionSource, readAttribution } from '../../lib/attribution';
+import { grantItineraryAccess } from '../../lib/itineraryGate';
 
 export const prerender = false;
 
@@ -88,6 +89,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
     if (already) {
       // A wishlist (or any) row already exists for this identity+departure — do
       // not duplicate and never downgrade a lead/pending/confirmed row.
+      grantItineraryAccess(cookies, email);
       return jsonOk({ success: true, status: already.status });
     }
 
@@ -104,6 +106,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
       marketingSource.source, marketingSource.detail,
       JSON.stringify(attribution.firstTouch), JSON.stringify(attribution.latestTouch));
 
+    grantItineraryAccess(cookies, email);
     return jsonOk({ success: true, status: 'wishlist' });
   } catch (err) {
     console.error('[wishlist] failed', err);

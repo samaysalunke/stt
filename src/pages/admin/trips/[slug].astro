@@ -876,6 +876,18 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
       group.querySelector('.dep-group-link').addEventListener('input', (e) => { dep.whatsappGroupLink = e.target.value.trim(); });
       card.appendChild(group);
 
+      const gate = document.createElement('div');
+      gate.style.cssText = 'margin-top:0.5rem; padding:0.65rem; border-radius:0.4rem; background:var(--color-surface-soft);';
+      gate.innerHTML =
+        '<label class="flex items-center gap-2 text-sm font-medium cursor-pointer">' +
+          '<input type="checkbox" class="dep-itinerary-gated" data-testid="dep-itinerary-gated"' + (dep.itineraryGated ? ' checked' : '') + ' />' +
+          'Lock the full itinerary until the visitor registers</label>' +
+        '<span class="fhint">Visitors see Day 1, then fill in the booking details form (or join the wishlist for a coming-soon date) to see the rest. ' +
+          'A trip has one itinerary, so it is locked for every date while any upcoming date has this on. ' +
+          'Ignored once every upcoming date is sold out, since there would be nothing to register for.</span>';
+      gate.querySelector('.dep-itinerary-gated').addEventListener('change', (e) => { dep.itineraryGated = e.target.checked; });
+      card.appendChild(gate);
+
       // Offer grid — one row per catalog tier.
       const grid = document.createElement('div');
       grid.style.cssText = 'margin-top:0.6rem; display:flex; flex-direction:column; gap:0.4rem;';
@@ -928,7 +940,7 @@ document.querySelectorAll('.file-input[data-preview]').forEach(input => {
     renderDepartures();
   });
   document.getElementById('add-departure-btn').addEventListener('click', () => {
-    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', discountLabel: '', whatsappGroupLink: '', offers: [] });
+    departures.push({ id: '', startDate: '', endDate: '', status: 'booking-open', discountAmount: null, discountEndsAt: '', discountLabel: '', whatsappGroupLink: '', itineraryGated: false, offers: [] });
     renderDepartures();
   });
 

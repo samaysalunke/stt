@@ -165,10 +165,13 @@ describe('SEO publication controls', () => {
   it('describes the itinerary as a TouristTrip built from rendered days', () => {
     const tripPage = fs.readFileSync('src/pages/trips/[slug].astro', 'utf8');
     expect(tripPage).toContain("'@type': 'TouristTrip'");
-    // The ItemList must come from the same normalized array DayAccordion
-    // renders — schema for content that is not on the page is a violation.
-    expect(tripPage).toContain('itemListElement: itinerary.map(');
+    // The ItemList must come from the days this render shows — schema for
+    // content that is not on the page is a violation. That is the full plan,
+    // or only the preview days when the itinerary is locked (itineraryGate.ts).
+    expect(tripPage).toContain('itemListElement: visibleItinerary.map(');
+    expect(tripPage).toContain('const visibleItinerary = itineraryUnlocked ? itinerary : itinerary.slice(0, gate.previewDays);');
     expect(tripPage).toContain('<DayAccordion itinerary={itinerary}');
+    expect(tripPage).toContain('preview={visibleItinerary}');
     // Departures are referenced by @id, never restated with their own dates.
     expect(tripPage).toContain('subjectOf: eventSchemas.map(');
   });

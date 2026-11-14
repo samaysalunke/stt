@@ -8,6 +8,7 @@ import { geocodeCity } from '../../lib/geocode';
 import { attributionSource, readAttribution } from '../../lib/attribution';
 import { dispatchTelegramEvent, enqueueTelegramEvent } from '../../lib/telegram';
 import { normalizeIndiaCity } from '../../lib/indiaCities';
+import { grantItineraryAccess } from '../../lib/itineraryGate';
 
 const truthy = (v: any) => v === true || v === 'true' || v === 'on' || v === '1' || v === 1;
 
@@ -152,6 +153,11 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
     const detailsOnly = sanitizeInput(body.intent) === 'details';
     const db = getDb();
     const attribution = readAttribution(cookies);
+    // Any saved registration unlocks a gated itinerary on this browser.
+    const registered = (body: Record<string, any>) => {
+      grantItineraryAccess(cookies, required.email);
+      return json(body);
+    };
     const firstTouchJson = JSON.stringify(attribution.firstTouch);
     const latestTouchJson = JSON.stringify(attribution.latestTouch);
     const marketingSource = attributionSource(attribution.firstTouch);
@@ -181,10 +187,10 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
         required.age, required.city, required.state, instagram, required.emergencyName, required.emergencyPhone,
         required.whyJoin, existingPaid.id,
       );
-      return json({ success: true, status: existingPaid.status, registrationId: existingPaid.id });
+      return registered({ success: true, status: existingPaid.status, registrationId: existingPaid.id });
     }
     if (submittingPayment && existingPaid?.status === 'confirmed') {
-      return json({ success: true, status: 'confirmed', registrationId: existingPaid.id });
+      return registered({ success: true, status: 'confirmed', registrationId: existingPaid.id });
     }
 
     if (!submittingPayment && !detailsOnly && (!truthy(body.agreeTerms) || !truthy(body.agreeCancel))) {
@@ -230,7 +236,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
 
       if (telegramQueued) await dispatchTelegramEvent(leadId, 'lead').catch((err) => console.error('[Telegram lead]', err));
 
-      return json({ success: true, status: 'lead', registrationId: leadId });
+      return registered({ success: true, status: 'lead', registrationId: leadId });
     }
 
     if (!truthy(body.agreeTerms) || !truthy(body.agreeCancel)) {
@@ -302,7 +308,7 @@ export const POST: APIRoute = async ({ request, clientAddress, locals, cookies }
     if (required.city) geocodeCity(required.city).catch(() => {});
     if (leadResult.telegramQueued) await dispatchTelegramEvent(leadId, 'lead').catch((err) => console.error('[Telegram lead]', err));
     if (pendingQueued) await dispatchTelegramEvent(leadId, 'pending').catch((err) => console.error('[Telegram pending]', err));
-    return json({ success: true, status: 'pending', registrationId: leadId });
+    return registered({ success: true, status: 'pending', registrationId: leadId });
   } catch (err) {
     console.error('[Register API Error]', err);
     return json({ success: false, error: 'Server error. Please try again.' }, 500);

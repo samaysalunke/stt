@@ -138,6 +138,16 @@ function initializeSchema(db: Database.Database) {
     );
   `);
 
+  // Itinerary gate: a browser that registered without signing in carries one of
+  // these tokens, so the trip page can unlock for it. See src/lib/itineraryGate.ts.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS itinerary_access (
+      token TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+  `);
+
   // feature/public-profile — share tracking on registrations
   try { db.exec('ALTER TABLE registrations ADD COLUMN sharedAt TEXT'); } catch {}
 

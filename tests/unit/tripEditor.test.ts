@@ -300,6 +300,21 @@ describe('parseEditorBooking — valid round-trip', () => {
     ]);
   });
 
+  test('itinerary gate is kept only as a literal true', () => {
+    const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
+    const base = { startDate: '2099-01-01', endDate: '2099-01-05', offers: [{ tierId: 'std', price: 5000, cap: 10, booked: 0 }] };
+    const depJson = JSON.stringify([
+      { ...base, id: 'on', itineraryGated: true },
+      { ...base, id: 'off', itineraryGated: false },
+      { ...base, id: 'string', itineraryGated: 'true' },
+      { ...base, id: 'absent' },
+    ]);
+    const { batches } = parseEditorBooking(catJson, depJson);
+    expect(batches.map((b) => b.itineraryGated)).toEqual([true, false, false, false]);
+    expect(editableBooking({ batches: [{ id: 'x', startDate: '2099-01-01', itineraryGated: true, offers: [] }] })
+      .editorDepartures[0].itineraryGated).toBe(true);
+  });
+
   test('zero is accepted as an intentional price', () => {
     const catJson = JSON.stringify([{ id: 'std', label: 'Standard', helperText: '' }]);
     const depJson = JSON.stringify([

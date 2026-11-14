@@ -21,6 +21,8 @@ export interface EditorDeparture {
   discountEndsAt: string;
   discountLabel: string;
   whatsappGroupLink: string;
+  /** Hide the trip's itinerary (after a preview) until the visitor registers. See itineraryGate.ts. */
+  itineraryGated: boolean;
 }
 
 export type EditorBookingErrorCode =
@@ -127,6 +129,7 @@ export function editableBooking(trip: Record<string, any>): {
       discountEndsAt: String(b?.discountEndsAt ?? ''),
       discountLabel: String(b?.discountLabel ?? ''),
       whatsappGroupLink: String(b?.whatsappGroupLink ?? ''),
+      itineraryGated: b?.itineraryGated === true,
     };
   });
 
@@ -167,7 +170,7 @@ function numOrNull(v: unknown): number | null {
 // the create + update API routes so authoring and persistence stay in lockstep.
 export function parseEditorBooking(catalogJson: string, departuresJson: string): {
   occupancyCatalog: EditorTier[];
-  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; discountLabel: string | null; whatsappGroupLink: string | null; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
+  batches: Array<{ id: string; startDate: string; endDate: string; status: string; discountAmount: number | null; discountEndsAt: string | null; discountLabel: string | null; whatsappGroupLink: string | null; itineraryGated: boolean; offers: Array<{ tierId: string; price: number; cap: number | null; booked: number }> }>;
   errors: EditorBookingError[];
 } {
   let cat: any[] = [];
@@ -244,6 +247,7 @@ export function parseEditorBooking(catalogJson: string, departuresJson: string):
         discountLabel: Number(d?.discountAmount) > 0 && discountLabel ? discountLabel : null,
         // Anything that isn't a group invite link is dropped rather than stored.
         whatsappGroupLink: WHATSAPP_GROUP_LINK.test(whatsappGroupLink) ? whatsappGroupLink : null,
+        itineraryGated: d?.itineraryGated === true,
         offers,
       };
     })

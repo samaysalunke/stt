@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DayAccordion from '../../components/DayAccordion';
+import ItineraryGate from '../../components/ItineraryGate';
 import DeferredImage from '../../components/DeferredImage.astro';
 import { imageSrcset } from '../../lib/imageVariants';
 import BookingPanel from '../../components/BookingPanel';
@@ -20,6 +21,8 @@ import { todayInIndia } from '../../lib/profileTrips';
 import { balanceDueDate } from '../../lib/balanceDue';
 import { derivePaymentStatus, paymentStatusLabel, paymentStatusStyle, PAYMENT_STATUSES, regStatusStyle } from '../../lib/registrationStatus';
 import { formatDateIN, formatINR } from '../../lib/utils';
+import { itineraryGate, normalizeItinerary, hasItineraryAccess } from '../../lib/itineraryGate';
+import { getAdminBySession } from '../../lib/admin-session';
 
 export const prerender = false;
 
@@ -207,20 +210,21 @@ if (Astro.locals.user?.email) {
 const showBookedCard = existingBooking != null && !wantsAnotherDate;
 
 // Itinerary — support both new (day/title/description) and legacy (dayNumber/dayTitle/activities) schema
-const itinerary = (trip.itinerary ?? []).map((d: any) => ({
-  day: d.day ?? d.dayNumber ?? 1,
-  title: d.title ?? d.dayTitle ?? '',
-  description: d.description ?? d.activities ?? '',
-  stay: d.stay ?? d.accommodation ?? '',
-  meals: d.meals ?? [
-    ...(d.breakfast ? ['B'] : []),
-    ...(d.lunch ? ['L'] : []),
-    ...(d.dinner ? ['D'] : []),
-  ],
-  transport: d.transport ?? '',
-  note: d.note ?? d.specialNotes ?? '',
-  photos: Array.isArray(d.photos) ? d.photos.slice(0, 3) : [],
-}));
+const itinerary = normalizeItinerary(trip);
+
+// "Register to see the full plan" (src/lib/itineraryGate.ts). The server only
+// renders the full plan for a viewer it can recognise here — a signed-in
+// traveller who registered, or an admin previewing — and both renders are
+// private (middleware: session cookie ⇒ private, no-cache). An anonymous
+// visitor always gets the locked render, which is safe to edge-cache; if their
+// browser registered, ItineraryGate fetches the rest from a no-store API.
+const gate = itineraryGate(trip);
+const adminToken = Astro.cookies.get('admin_token')?.value;
+const isAdminViewer = gate.locked && !!adminToken && !!getAdminBySession(adminToken);
+const itineraryUnlocked = !gate.locked || isAdminViewer
+  || (!!Astro.locals.user?.email && hasItineraryAccess([Astro.locals.user.email], slug!));
+// Only what this render shows: structured data must not describe hidden days.
+const visibleItinerary = itineraryUnlocked ? itinerary : itinerary.slice(0, gate.previewDays);
 
 const included: string[] = trip.included ?? [];
 const excluded: string[] = trip.excluded ?? trip.notIncluded ?? [];
@@ -261,8 +265,9 @@ const eventSchemas = departures.map((departure) => {
 });
 // The departures are modelled as Events, but the product being sold is the
 // itinerary itself, and TouristTrip is the type that carries it. Built from the
-// same normalized `itinerary` array DayAccordion renders below, so every day
-// described here is visible on the page — no schema for hidden content.
+// days this render shows (`visibleItinerary`: the preview days when the plan is
+// locked), so every day described here is visible on the page — no schema for
+// hidden content.
 const touristTripSchema = {
   '@type': 'TouristTrip',
   '@id': `${canonicalUrl}#trip`,
@@ -272,11 +277,11 @@ const touristTripSchema = {
   image: [heroImgAbs],
   provider: { '@id': `${SITE_ORIGIN}/#organization` },
   ...(trip.location ? { touristType: 'Small-group traveller', arrivalLocation: { '@type': 'Place', name: String(trip.location) } } : {}),
-  ...(itinerary.length > 0 ? {
+  ...(visibleItinerary.length > 0 ? {
     itinerary: {
       '@type': 'ItemList',
-      numberOfItems: itinerary.length,
-      itemListElement: itinerary.map((day: any, index: number) => ({
+      numberOfItems: visibleItinerary.length,
+      itemListElement: visibleItinerary.map((day: any, index: number) => ({
         '@type': 'ListItem',
         position: index + 1,
         item: {
@@ -620,9 +625,27 @@ const tripSchema: Record<string, any> = {
 
         <!-- Itinerary -->
         {itinerary.length > 0 && (
-          <section>
+          <section id="itinerary" data-testid="itinerary-section" class="scroll-mt-24">
             <h2 class="text-2xl font-bold mb-6 font-display text-navy">The plan</h2>
-            <DayAccordion itinerary={itinerary} tripName={tripName} client:visible />
+            {isAdminViewer && (
+              <p data-testid="itinerary-admin-note" class="mb-4 rounded-lg bg-gray-soft px-4 py-2.5 text-xs text-gray-text">
+                Admin preview: visitors see Day 1 only until they register for this trip.
+              </p>
+            )}
+            {itineraryUnlocked ? (
+              <DayAccordion itinerary={itinerary} tripName={tripName} client:visible />
+            ) : (
+              <ItineraryGate
+                slug={slug!}
+                tripName={tripName}
+                preview={visibleItinerary}
+                totalDays={itinerary.length}
+                unlockMode={gate.unlockMode!}
+                unlockBatchId={gate.unlockBatchId!}
+                continueHref={`/trips/${slug}/book?batch=${encodeURIComponent(gate.unlockBatchId!)}`}
+                client:load
+              />
+            )}
           </section>
         )}
 

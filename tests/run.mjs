@@ -53,6 +53,7 @@ function purgeTestArtifacts() {
       db.prepare("DELETE FROM leaderboard_cache WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM users WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM email_delivery_log WHERE recipient LIKE '%@example.invalid'").run();
+      try { db.prepare("DELETE FROM itinerary_access WHERE email LIKE '%@example.invalid'").run(); } catch { /* table predates this DB */ }
       // `/api/test/cleanup` deletes registrations without their dependent rows,
       // so orphans have been accruing for as long as it has existed. Sweep any
       // row pointing at a registration that is gone, whoever deleted it.
@@ -83,6 +84,7 @@ const TEST_FILES = [
   'tests/api/registration-status.test.mjs',
   'tests/api/registration-refund.test.mjs',
   'tests/api/wishlist.test.mjs',
+  'tests/api/itinerary-gate.test.mjs',
   'tests/api/attribution.test.mjs',
   'tests/api/admin-registrations.test.mjs',
   'tests/api/occupancy-change.test.mjs',
