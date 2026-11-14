@@ -50,6 +50,16 @@ interface Props {
     /** The departure's WhatsApp group invite link, set once the booking is confirmed. */
     groupLink?: string | null;
   } | null;
+  /** The trip page hides its full itinerary until the visitor registers. */
+  itineraryLocked?: boolean;
+  /** The visitor came from the itinerary lock: send them back to it once their details are saved. */
+  returnToItinerary?: boolean;
+  /**
+   * Rendered inside the trip page's itinerary lock: the details form only — no
+   * step bar, no history entries — and `onRegistered` instead of navigating.
+   */
+  embedded?: boolean;
+  onRegistered?: () => void;
 }
 
 // Brand tokens from `src/styles/tokens.css`, not literals — see the matching
@@ -388,8 +398,14 @@ export default function BookingCheckout({
   prefill = null,
   prefilledFromHistory = false,
   initialRegistration = null,
+  itineraryLocked = false,
+  returnToItinerary = false,
+  embedded = false,
+  onRegistered,
 }: Props) {
-  const [step, setStep] = useState(1);
+  // Unlocking the itinerary only needs the details form, so skip the price review.
+  const firstStep = returnToItinerary || embedded ? 2 : 1;
+  const [step, setStep] = useState(firstStep);
   const [form, setForm] = useState({
     fullName: '', email: '', phone: '', age: '', gender: '',
     city: '', state: '', instagram: '', emergencyName: '', emergencyPhone: '', whyJoin: '',
@@ -496,7 +512,9 @@ export default function BookingCheckout({
   }
 
   useEffect(() => {
-    history.replaceState({ step: 1 }, '');
+    // Embedded in the trip page: that page owns the history, not this form.
+    if (embedded) return;
+    history.replaceState({ step: firstStep }, '');
     function onPopState(e: PopStateEvent) {
       const s = (e.state?.step as number) ?? 1;
       setStep(s);
@@ -535,6 +553,15 @@ export default function BookingCheckout({
       });
       const data = await res.json();
       if (data.success) {
+        if (embedded) {
+          onRegistered?.();
+          return;
+        }
+        if (returnToItinerary) {
+          // Registered — the access cookie is set; the trip page now unlocks.
+          window.location.assign(`/trips/${slug}/?itinerary=unlocked#itinerary`);
+          return;
+        }
         if (data.status === 'pending' || data.status === 'confirmed') {
           setSubmitted(data.status);
         } else {
@@ -714,7 +741,7 @@ export default function BookingCheckout({
   // ── Step 2: Details ───────────────────────────────────────────────────────────
   if (step === 2) return (
     <div>
-      <StepBar current={2} />
+      {!embedded && <StepBar current={2} />}
       <div className="space-y-5">
         {prefilledFromHistory && (
           <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm" style={{ background: C.blush, color: C.navy }}>
@@ -807,7 +834,7 @@ export default function BookingCheckout({
           className="w-full font-semibold text-white py-4 rounded-full text-base transition-all hover:opacity-90"
           style={{ background: C.cta }}
         >
-          {submitting === 'lead' ? 'Saving...' : 'Continue to payment →'}
+          {submitting === 'lead' ? 'Saving...' : returnToItinerary || embedded ? 'See the full itinerary →' : 'Continue to payment →'}
         </button>
       </div>
     </div>
@@ -969,6 +996,12 @@ export default function BookingCheckout({
         <p className="text-sm leading-relaxed mb-5" style={{ color: C.gray }}>
           You're registered for {tripName} — but the spot isn't confirmed until the advance lands. No rush from us, just know it's first paid, first in.
         </p>
+        {itineraryLocked && (
+          <a href={`/trips/${slug}/#itinerary`} data-testid="checkout-itinerary-link" className="mb-5 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'var(--color-success-surface)', color: 'var(--color-success-surface-ink)' }}>
+            <span>Your full itinerary is unlocked</span>
+            <span aria-hidden="true">View it →</span>
+          </a>
+        )}
         <div className="rounded-xl px-5 py-4 mb-5 text-sm" style={{ background: C.blush, border: `1px solid ${C.peach}` }}>
           <p className="font-semibold mb-1" style={{ color: C.navy }}>{tripName}</p>
           <p style={{ color: C.gray }}>{dateStr} · {offer.label}</p>
@@ -1007,6 +1040,12 @@ export default function BookingCheckout({
         <h2 className="text-xl font-bold mb-1" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>Confirm your spot</h2>
         <p className="text-sm" style={{ color: C.gray }}>You're registered. Pay the {formatINR(advanceDue)} advance to confirm your spot.</p>
       </div>
+      {itineraryLocked && (
+        <a href={`/trips/${slug}/#itinerary`} data-testid="checkout-itinerary-link" className="mb-5 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold" style={{ background: 'var(--color-success-surface)', color: 'var(--color-success-surface-ink)' }}>
+          <span>Your full itinerary is unlocked</span>
+          <span aria-hidden="true">View it →</span>
+        </a>
+      )}
       <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm mb-5" style={{ background: C.blush, color: C.navy, border: `1px solid ${C.peach}` }}>
         <svg className="w-4 h-4 mt-0.5 shrink-0" style={{ color: C.coral }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

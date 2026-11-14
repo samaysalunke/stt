@@ -1,0 +1,37 @@
+title: QA Test — Itinerary Gate Trip
+publicationStatus: test
+slug: qa-test-itinerary-gate
+status: booking-open
+duration: 3 Days, 2 Nights
+description: Automated QA fixture — the full itinerary is locked until the visitor registers (the March date asks for it; the April date does not, and is discounted). Do not delete.
+occupancyCatalog:
+  - id: standard
+    label: Standard
+    helperText: ""
+batches:
+  - id: qa-gate-2099
+    startDate: 2099-03-01
+    endDate: 2099-03-03
+    status: booking-open
+    itineraryGated: true
+    offers:
+      - { tierId: standard, price: 8000, cap: 15, booked: 0 }
+  - id: qa-gate-2099-apr
+    startDate: 2099-04-10
+    endDate: 2099-04-12
+    status: booking-open
+    discountAmount: 1500
+    discountLabel: QA launch price
+    offers:
+      - { tierId: standard, price: 9000, cap: 15, booked: 0 }
+itinerary:
+  - day: 1
+    title: QA gate preview day
+    description: This first day is the public preview.
+  - day: 2
+    title: QA gate hidden day two
+    description: QA-GATE-SECRET-DAY-TWO should never be in the locked page HTML.
+  - day: 3
+    title: QA gate hidden day three
+    description: QA-GATE-SECRET-DAY-THREE should never be in the locked page HTML.
+paymentAmount: 1000

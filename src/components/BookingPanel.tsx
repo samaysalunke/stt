@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { formatDateIN, formatINR } from '../lib/utils';
 import DiscountCountdown, { useDiscountActive } from './DiscountCountdown';
 import { lowStockSpots, spotsLeftLabel, womenBookedLabel } from '../lib/urgency';
@@ -99,6 +99,16 @@ export default function BookingPanel({
   const [departureId, setDepartureId] = useState<string>(initialDeparture);
   const [tierId, setTierId] = useState<string>('');
 
+  // The itinerary lock's "Join the wishlist" button picks its date here.
+  useEffect(() => {
+    const onSelect = (e: Event) => {
+      const id = String((e as CustomEvent).detail?.batchId ?? '');
+      if (departures.some((d) => d.id === id)) { setDepartureId(id); setTierId(''); }
+    };
+    window.addEventListener('stt:select-departure', onSelect);
+    return () => window.removeEventListener('stt:select-departure', onSelect);
+  }, [departures]);
+
   const selectedDeparture = departures.find((d) => d.id === departureId) ?? null;
   const selectedComingSoon = !!selectedDeparture?.comingSoon;
   const selectedOffer = selectedDeparture?.offers.find((o) => o.tierId === tierId && o.available) ?? null;
@@ -137,6 +147,8 @@ export default function BookingPanel({
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setWlState('done');
+        // A wishlist sign-up counts as registering: a locked itinerary re-checks.
+        window.dispatchEvent(new CustomEvent('stt:itinerary-access'));
         if (typeof (window as any).gtag === 'function') {
           (window as any).gtag('event', 'wishlist_join', { batch_id: selectedDeparture.id });
         }
