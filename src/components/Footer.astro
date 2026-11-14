@@ -91,6 +91,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
             />
             <Button type="submit" variant="cta" size="md" class="flex-shrink-0">Keep me posted</Button>
           </form>
+          <p id="footer-nl-error" role="alert" class="mt-2 text-sm text-peach empty:hidden"></p>
           <p id="footer-nl-success" class="hidden text-white/60 text-sm mt-2">
             You're in. We'll be in touch when something good is coming.
           </p>
@@ -112,6 +113,10 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
       var email = form.querySelector('input[name="email"]').value;
+      var button = form.querySelector('button[type="submit"]');
+      var error = document.getElementById('footer-nl-error');
+      if (error) error.textContent = '';
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
       try {
         var res = await fetch('/api/newsletter', {
           method: 'POST',
@@ -123,8 +128,16 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
           form.style.display = 'none';
           var msg = document.getElementById('footer-nl-success');
           if (msg) msg.classList.remove('hidden');
+        } else if (error) {
+          error.textContent = data.error && data.error !== 'Server error.'
+            ? data.error
+            : "We couldn't sign you up just now. Please try again in a minute.";
         }
-      } catch (err) {}
+      } catch (err) {
+        if (error) error.textContent = "Couldn't reach us. Check your connection and try again.";
+      } finally {
+        if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
+      }
     });
   })();
 </script>

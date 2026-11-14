@@ -103,7 +103,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       </h1>
 
       <!-- Subtext -->
-      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-4 sm:mb-7 leading-relaxed">
+      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left text-pretty w-full mb-4 sm:mb-7 leading-relaxed">
         Group trips for travellers. Offbeat spots, zero fluff.
       </p>
 
@@ -263,15 +263,15 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <div class="flex items-center gap-3">
           {showCarouselArrows && (
             <div class="hidden gap-2 lg:flex">
-              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+              <button id="featured-prev" type="button" aria-label="Previous trips" class="grid h-11 w-11 place-items-center rounded-full border border-peach text-navy transition-[opacity,background-color] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent">
                 <Icon name="chevron-right" class="h-4 w-4 rotate-180" />
               </button>
-              <button id="featured-next" type="button" aria-label="More trips" class="grid h-9 w-9 place-items-center rounded-full border border-peach text-navy transition-opacity disabled:opacity-30">
+              <button id="featured-next" type="button" aria-label="More trips" class="grid h-11 w-11 place-items-center rounded-full border border-peach text-navy transition-[opacity,background-color] hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent">
                 <Icon name="chevron-right" class="h-4 w-4" />
               </button>
             </div>
           )}
-          <a href="/trips/" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
+          <a href="/trips/" class="-my-3 inline-flex min-h-11 items-center gap-1 py-3 text-sm font-medium text-coral-ink hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
       </div>
 
@@ -279,6 +279,8 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <div
           id="featured-carousel"
           tabindex="0"
+          role="region"
+          aria-roledescription="carousel"
           aria-label="Featured trips"
           class="-mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
@@ -360,7 +362,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <div class="reveal pt-6 border-t border-white/15">
           <div class="font-display text-6xl font-bold mb-4 text-peach/70">{step.num}</div>
           <h3 class="font-display text-xl font-bold text-white mb-3">{step.title}</h3>
-          <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
+          <p class="text-white/65 text-sm leading-relaxed text-pretty">{step.desc}</p>
         </div>
       ))}
     </div>
@@ -392,7 +394,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
         <h2 class="font-display font-bold text-display-md mb-3 text-white">
           Be first to know
         </h2>
-        <p class="text-base mb-8 leading-relaxed text-white/75">
+        <p class="text-base mb-8 leading-relaxed text-white/75 text-pretty">
           New trips, new batches, things worth knowing. No spam.
         </p>
         {subscribed ? (
@@ -412,11 +414,12 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
               />
               <button
                 type="submit"
-                class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
+                class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0 disabled:pointer-events-none disabled:opacity-60"
               >
                 Keep me posted
               </button>
             </form>
+            <p id="home-nl-error" role="alert" class="mt-4 text-sm font-medium text-peach text-balance empty:hidden"></p>
             <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
               You're in. We'll be in touch when something good is coming.
             </p>
@@ -433,7 +436,12 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
   const header = document.getElementById('site-header');
   if (hero && header) {
     new IntersectionObserver(
-      ([entry]) => header.classList.toggle('header-visible', !entry.isIntersecting),
+      ([entry]) => {
+        // Off-screen, the header must also be out of the Tab order: otherwise
+        // the first Tab stops land on links parked above the viewport.
+        header.classList.toggle('header-visible', !entry.isIntersecting);
+        header.inert = entry.isIntersecting;
+      },
       { threshold: 0 }
     ).observe(hero);
   }
@@ -444,6 +452,10 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     e.preventDefault();
     const form = e.currentTarget as HTMLFormElement;
     const email = form.querySelector<HTMLInputElement>('input[name="email"]')?.value ?? '';
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const error = document.getElementById('home-nl-error');
+    if (error) error.textContent = '';
+    if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
     try {
       const res = await fetch('/api/newsletter', {
         method: 'POST',
@@ -454,7 +466,16 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       if (data.success) {
         form.style.display = 'none';
         document.getElementById('home-nl-success')?.classList.remove('hidden');
+      } else if (error) {
+        // The API's 400 and 429 messages are written for people; its 500 is not.
+        error.textContent = data.error && data.error !== 'Server error.'
+          ? data.error
+          : "We couldn't sign you up just now. Please try again in a minute.";
       }
-    } catch {}
+    } catch {
+      if (error) error.textContent = "Couldn't reach us. Check your connection and try again.";
+    } finally {
+      if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
+    }
   });
 </script>
