@@ -3,7 +3,7 @@ publicationStatus: test
 slug: qa-test-itinerary-gate
 status: booking-open
 duration: 3 Days, 2 Nights
-description: Automated QA fixture — the full itinerary is locked until the visitor registers. Do not delete.
+description: Automated QA fixture — the full itinerary is locked until the visitor registers (the March date asks for it; the April date does not, and is discounted). Do not delete.
 occupancyCatalog:
   - id: standard
     label: Standard
@@ -16,6 +16,14 @@ batches:
     itineraryGated: true
     offers:
       - { tierId: standard, price: 8000, cap: 15, booked: 0 }
+  - id: qa-gate-2099-apr
+    startDate: 2099-04-10
+    endDate: 2099-04-12
+    status: booking-open
+    discountAmount: 1500
+    discountLabel: QA launch price
+    offers:
+      - { tierId: standard, price: 9000, cap: 15, booked: 0 }
 itinerary:
   - day: 1
     title: QA gate preview day

@@ -15,6 +15,17 @@ test('ad landing link: opens the registration form in place, and registering unl
   await expect(plan.getByRole('button', { name: 'QA gate preview day' })).toBeVisible();
   expect(await page.content()).not.toContain(SECRET);
 
+  // Dates and prices are shown in the lock, and the visitor picks the date.
+  const dates = page.getByTestId('itinerary-unlock-dates');
+  await expect(dates.getByTestId('itinerary-unlock-date-qa-gate-2099')).toContainText('Mar 1 – 3');
+  await expect(dates.getByTestId('itinerary-unlock-date-qa-gate-2099')).toContainText('₹8,000');
+  const april = dates.getByTestId('itinerary-unlock-date-qa-gate-2099-apr');
+  await expect(april).toContainText('Apr 10 – 12');
+  await expect(april).toContainText('₹7,500');           // 9,000 − 1,500 discount
+  await expect(april).toContainText('₹9,000');           // struck-through original
+  await expect(april).toContainText('QA launch price');
+  await april.click();
+
   const form = page.getByTestId('itinerary-unlock-form');
   await expect(form.getByText('Full Name').first()).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveURL(new RegExp(`${TRIP}#see-itinerary$`)); // never left the trip page
@@ -29,7 +40,8 @@ test('ad landing link: opens the registration form in place, and registering unl
   await form.getByPlaceholder('Search state…').fill('Maharashtra');
   await form.getByRole('option', { name: 'Maharashtra', exact: true }).click();
   await text.nth(5).fill('QA Emergency');
-  await form.locator('input[type="email"]').fill(`qa-gate-e2e-${Date.now()}@example.invalid`);
+  const email = `qa-gate-e2e-${Date.now()}@example.invalid`;
+  await form.locator('input[type="email"]').fill(email);
   const tel = form.locator('input[type="tel"]');
   await tel.nth(0).fill('+91 9876543210');
   await tel.nth(1).fill('9123456789');
@@ -39,6 +51,11 @@ test('ad landing link: opens the registration form in place, and registering unl
   await expect(page.getByTestId('itinerary-unlocked-note')).toBeVisible({ timeout: 15_000 });
   await expect(plan.getByRole('button', { name: 'QA gate hidden day two' })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(TRIP)); // still on the trip page
+
+  // Registered on the date they picked, not the one the lock pointed at.
+  const reg = await (await page.request.get(`/api/test/reg-by-email?email=${encodeURIComponent(email)}`)).json();
+  expect(reg).toMatchObject({ status: 'lead', batch_id: 'qa-gate-2099-apr', total_amount: 7500 });
+  await expect(page.getByRole('link', { name: /Save your spot/ })).toHaveAttribute('href', /batch=qa-gate-2099-apr/);
 
   // A later visit on this browser opens straight away.
   await page.goto(TRIP);

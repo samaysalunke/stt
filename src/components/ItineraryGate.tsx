@@ -1,5 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentProps } from 'react';
 import DayAccordion from './DayAccordion';
+import { formatDepartureRange } from '../lib/departureSummary';
+import { formatINR } from '../lib/utils';
+import { lowStockSpots, spotsLeftLabel } from '../lib/urgency';
 
 // The booking details form, loaded only when a visitor opens it.
 const BookingCheckout = lazy(() => import('./BookingCheckout'));
@@ -16,13 +19,23 @@ interface Props {
   totalDays: number;
   unlockMode: 'book' | 'wishlist';
   unlockBatchId: string;
+  /** Wishlist mode: the coming-soon date it unlocks through, e.g. "Sep 12 – 20". */
+  unlockDateLabel?: string;
   /** Where to send a visitor who would rather book after reading the plan. */
   continueHref: string;
   /**
    * The registration form, shown inline in the lock (book mode). The same
    * details form as checkout, so the visitor becomes the same `lead`.
    */
-  form?: Pick<CheckoutProps, 'departure' | 'offer' | 'advanceAmount' | 'balanceDueRule' | 'isLoggedIn' | 'prefill' | 'prefilledFromHistory'> | null;
+  form?: {
+    /** Every bookable date, with its lowest available occupancy price. */
+    choices: Array<{
+      departure: CheckoutProps['departure'] & { liveSpotsLeft?: number | null; soldOut: boolean };
+      offer: CheckoutProps['offer'];
+      fromPrice: boolean;
+    }>;
+    defaultBatchId: string;
+  } & Pick<CheckoutProps, 'advanceAmount' | 'balanceDueRule' | 'isLoggedIn' | 'prefill'> | null;
 }
 
 /** Link straight to the open form, e.g. from an ad or Instagram: /trips/<slug>/#see-itinerary */
@@ -37,11 +50,14 @@ const ACCESS_COOKIE = 'stt_itinerary_access';
  * registered — on load when it holds an access cookie, and again when a
  * wishlist sign-up on this page completes.
  */
-export default function ItineraryGate({ slug, tripName, preview, totalDays, unlockMode, unlockBatchId, continueHref, form = null }: Props) {
+export default function ItineraryGate({ slug, tripName, preview, totalDays, unlockMode, unlockBatchId, unlockDateLabel, continueHref, form = null }: Props) {
   const [full, setFull] = useState<Day[] | null>(null);
   const [checking, setChecking] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [batchId, setBatchId] = useState(form?.defaultBatchId ?? unlockBatchId);
+  const choice = form?.choices.find((c) => c.departure.id === batchId) ?? form?.choices[0] ?? null;
+  const bookHref = `/trips/${slug}/book?batch=${encodeURIComponent(choice?.departure.id ?? unlockBatchId)}`;
   const formRef = useRef<HTMLDivElement>(null);
 
   // The mobile sticky "Save my spot" bar would sit over the form being filled.
@@ -120,7 +136,7 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
           <div data-testid="itinerary-unlocked-note" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--color-success-surface)', color: 'var(--color-success-surface-ink)' }}>
             <span className="font-semibold">The full plan is yours. Have a read.</span>
             {unlockMode === 'book' && (
-              <a href={continueHref} className="font-semibold underline underline-offset-2">Ready? Save your spot →</a>
+              <a href={choice ? bookHref : continueHref} className="font-semibold underline underline-offset-2">Ready? Save your spot →</a>
             )}
           </div>
         )}
@@ -162,11 +178,56 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
           <p className="mx-auto mt-1 max-w-sm text-sm" style={{ color: 'var(--color-gray-text)' }}>
             {unlockMode === 'book'
               ? 'Register for this trip to see the full day-by-day itinerary. It takes a minute, and no payment is needed to see it.'
-              : 'Join the wishlist for the upcoming date to see the full day-by-day itinerary.'}
+              : `Join the wishlist for ${unlockDateLabel || 'the upcoming date'} to see the full day-by-day itinerary. The price is announced when bookings open.`}
           </p>
+          {form && choice && (
+            <fieldset data-testid="itinerary-unlock-dates" className="mx-auto mt-4 max-w-lg text-left">
+              <legend className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-gray-text)' }}>
+                {form.choices.length > 1 ? 'Pick your date' : 'Your date'}
+              </legend>
+              <div className="space-y-2">
+                {form.choices.map(({ departure: d, offer: o, fromPrice }) => {
+                  const selected = d.id === choice.departure.id;
+                  const discounted = !!d.discountActive && o.originalPrice != null;
+                  const low = lowStockSpots(d);
+                  return (
+                    <label
+                      key={d.id}
+                      data-testid={`itinerary-unlock-date-${d.id}`}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border bg-white px-4 py-3"
+                      style={{ borderColor: selected ? 'var(--color-coral)' : 'var(--color-border)', boxShadow: selected ? '0 0 0 1px var(--color-coral)' : 'none' }}
+                    >
+                      {form.choices.length > 1 && (
+                        <input type="radio" name="itinerary-unlock-date" checked={selected} onChange={() => setBatchId(d.id)} className="accent-[var(--color-coral)]" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold" style={{ color: 'var(--color-navy)' }}>{formatDepartureRange(d.startDate, d.endDate)}</span>
+                        {(discounted && d.discountLabel) || low != null || d.fillingFast ? (
+                          <span className="block text-xs font-semibold" style={{ color: 'var(--color-coral-ink)' }}>
+                            {[discounted ? d.discountLabel : null, low != null ? spotsLeftLabel(low) : d.fillingFast ? 'Filling fast' : null].filter(Boolean).join(' · ')}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-right">
+                        {discounted && <span className="block text-xs line-through" style={{ color: 'var(--color-gray-text)' }}>{formatINR(o.originalPrice!)}</span>}
+                        <span className="text-sm font-bold" style={{ color: 'var(--color-navy)' }}>
+                          {fromPrice && <span className="mr-1 text-xs font-normal" style={{ color: 'var(--color-gray-text)' }}>from</span>}
+                          {formatINR(o.price)}
+                        </span>
+                        <span className="block text-[11px]" style={{ color: 'var(--color-gray-text)' }}>per person</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs" style={{ color: 'var(--color-gray-text)' }}>
+                Registering doesn't book or charge anything. To hold a spot, pay the {formatINR(Math.min(form.advanceAmount, choice.offer.price))} advance whenever you're ready.
+              </p>
+            </fieldset>
+          )}
           {unlockMode === 'book' ? (
             !formOpen && <a
-              href={`/trips/${slug}/book?batch=${encodeURIComponent(unlockBatchId)}&unlock=itinerary`}
+              href={`${bookHref}&unlock=itinerary`}
               onClick={(e) => { if (form) { e.preventDefault(); openForm(); } }}
               data-testid="itinerary-unlock-cta"
               className="mt-4 inline-block rounded-[var(--radius-pill)] px-6 py-3 text-sm font-semibold text-white"
@@ -189,7 +250,12 @@ export default function ItineraryGate({ slug, tripName, preview, totalDays, unlo
             <div ref={formRef} data-testid="itinerary-unlock-form" className="mx-auto mt-5 max-w-lg scroll-mt-24 text-left">
               <Suspense fallback={<p className="py-6 text-center text-sm" style={{ color: 'var(--color-gray-text)' }}>Loading the form…</p>}>
                 <BookingCheckout
-                  {...form}
+                  departure={choice!.departure}
+                  offer={choice!.offer}
+                  advanceAmount={form.advanceAmount}
+                  balanceDueRule={form.balanceDueRule}
+                  isLoggedIn={form.isLoggedIn}
+                  prefill={form.prefill}
                   slug={slug}
                   tripName={tripName}
                   upiId=""

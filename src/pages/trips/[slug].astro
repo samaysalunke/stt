@@ -225,16 +225,28 @@ const itineraryUnlocked = !gate.locked || isAdminViewer
   || (!!Astro.locals.user?.email && hasItineraryAccess([Astro.locals.user.email], slug!));
 // Only what this render shows: structured data must not describe hidden days.
 const visibleItinerary = itineraryUnlocked ? itinerary : itinerary.slice(0, gate.previewDays);
-// The lock's inline registration form: the checkout details form for the
-// departure the lock points at, so a visitor who signs up becomes the same lead
-// as one who started booking. Book mode only; wishlist mode uses the panel.
-const unlockDeparture = !itineraryUnlocked && gate.unlockMode === 'book'
-  ? departures.find((d) => d.id === gate.unlockBatchId) ?? null
-  : null;
-const unlockOffers = unlockDeparture?.offers.filter((o) => o.available) ?? [];
-const unlockForm = unlockDeparture && unlockOffers.length > 0 ? {
-  departure: unlockDeparture,
-  offer: unlockOffers.reduce((min, o) => (o.price < min.price ? o : min), unlockOffers[0]),
+// The lock's inline registration form: the checkout details form, so a visitor
+// who signs up becomes the same lead as one who started booking. It lists every
+// bookable date with its price — they pick the date they register for, exactly
+// as in the booking panel. Book mode only; wishlist mode uses the panel.
+const unlockChoices = !itineraryUnlocked && gate.unlockMode === 'book'
+  ? departuresForPanel
+      .filter((d: any) => !d.comingSoon && !d.soldOut)
+      .map((d: any) => {
+        const offers = (d.offers as typeof departures[number]['offers']).filter((o) => o.available);
+        if (offers.length === 0) return null;
+        return {
+          departure: d,
+          offer: offers.reduce((min, o) => (o.price < min.price ? o : min), offers[0]),
+          // Several occupancies: the price shown is the lowest, so say "from".
+          fromPrice: new Set(offers.map((o) => o.price)).size > 1,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c != null)
+  : [];
+const unlockForm = unlockChoices.length > 0 ? {
+  choices: unlockChoices,
+  defaultBatchId: unlockChoices.some((c) => c.departure.id === gate.unlockBatchId) ? gate.unlockBatchId! : unlockChoices[0].departure.id,
   advanceAmount: paymentAmount,
   balanceDueRule,
   isLoggedIn: !!Astro.locals.user,
@@ -667,6 +679,7 @@ const tripSchema: Record<string, any> = {
                 unlockBatchId={gate.unlockBatchId!}
                 continueHref={`/trips/${slug}/book?batch=${encodeURIComponent(gate.unlockBatchId!)}`}
                 form={unlockForm}
+                unlockDateLabel={(() => { const d = departures.find((x) => x.id === gate.unlockBatchId); return d ? formatDepartureRange(d.startDate, d.endDate) : undefined; })()}
                 client:load
               />
             )}
