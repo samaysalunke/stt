@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-14T11:01:27.798Z",
+  "generatedAt": "2026-11-14T11:59:15.196Z",
   "title": "Design System: Seek the Thrill",
   "extensions": {
     "colorMeta": {
@@ -776,7 +776,7 @@
   ],
   "narrative": {
     "northStar": "The Offbeat Escape",
-    "overview": "The Offbeat Escape is expressive and adventurous: travel imagery, warm accents, and characterful serif headings make the public experience feel personal. Its confirmed character is warm, editorial, and approachable, with quieter, practical booking and admin screens.\n\nControls are friendly and confident. Rounded shapes and layered surfaces make the interface welcoming; clear labels, stable hierarchy, and restrained operational layouts keep it usable. Depth is layered, with gentle lift for interactive elements.",
+    "overview": "The Offbeat Escape is expressive and adventurous: travel imagery, warm accents, and characterful serif headings make the public experience feel personal. Its confirmed character is warm, editorial, and approachable, with quieter, practical booking and admin screens.\n\nControls are friendly and confident. Rounded shapes and layered surfaces make the interface welcoming; clear labels, stable hierarchy, and restrained operational layouts keep it usable. Depth is layered, with gentle lift for interactive elements.\n\nThis record describes `main` as of 2026-11-14 (`42ed1a4`). Primary sources are `src/styles/tokens.css`, `src/styles/fonts.css`, `src/components/ui/`, `src/components/TripCard.astro`, `src/components/Header.astro`, `src/pages/index.astro`, and the public/admin layouts. The committed desktop and mobile regression captures match this homepage and header and corroborate the broad visual language. The screenshot harness substitutes the logo for remote photography and masks some content, so those captures do not establish imagery or copy rules. No new visual anti-reference was specified.",
     "keyCharacteristics": [
       "Travel imagery paired with expressive Fraunces headings.",
       "Warm Coral, Deep Navy, and Soft Blush across light surfaces and dark bands.",

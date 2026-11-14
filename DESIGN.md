@@ -154,7 +154,7 @@ Controls are friendly and confident. Rounded shapes and layered surfaces make th
 - Rounded cards, pill actions, and gentle interactive lift.
 - Shared brand tokens with denser, quieter booking and admin layouts.
 
-This record describes the current working-tree implementation, including uncommitted UI changes. Primary sources are `src/styles/tokens.css`, `src/styles/fonts.css`, `src/components/ui/`, `src/components/TripCard.astro`, `src/components/Header.astro`, and the public/admin layouts. Existing desktop and mobile regression captures corroborate the broad visual language; their homepage composition predates the current hero and header. The screenshot harness substitutes the logo for remote photography and masks some content, so those captures do not establish imagery or copy rules. No new visual anti-reference was specified.
+This record describes `main` as of 2026-11-14 (`42ed1a4`). Primary sources are `src/styles/tokens.css`, `src/styles/fonts.css`, `src/components/ui/`, `src/components/TripCard.astro`, `src/components/Header.astro`, `src/pages/index.astro`, and the public/admin layouts. The committed desktop and mobile regression captures match this homepage and header and corroborate the broad visual language. The screenshot harness substitutes the logo for remote photography and masks some content, so those captures do not establish imagery or copy rules. No new visual anti-reference was specified.
 
 ## Colors
 
@@ -207,7 +207,7 @@ Shared sections offer 3rem vertical padding for small spacing; medium spacing gr
 
 Layouts respond to their task: trip listings move from one column to two at 640px; trip detail uses a flexible content column and a 360px booking column from 1024px, with a 3rem gap. Its booking panel becomes sticky on desktop, while mobile has a separate bottom booking action. These are existing route patterns, not mandatory templates for every screen.
 
-Public discovery accommodates full-bleed imagery, horizontal trip collections, and alternating light/blush/navy bands. Admin layouts use compact navigation, filters, tables, and bordered panels. Both consume shared brand tokens through separate public and admin CSS bundles.
+Public discovery accommodates full-bleed imagery, horizontal trip collections, and alternating light/blush/navy bands. The homepage hero fills the first viewport with one photograph: a centred brand block (logo tile, Fraunces wordmark, italic byline) sits above a left-aligned display headline, subline, and call to action, in a column capped at 24rem on phones, 36rem from 640px, and 42rem from 1024px. Copy starts near the top on phones and centres vertically from 640px. Admin layouts use compact navigation, filters, tables, and bordered panels. Both consume shared brand tokens through separate public and admin CSS bundles.
 
 ## Elevation & Depth
 
@@ -221,7 +221,7 @@ Layered, with gentle lift for interactive elements. White surfaces sit above off
 
 **The Gentle Lift Rule.** Keep shared interactive lift small: buttons and hover-enabled cards rise 2px. Reserve the strongest separation for overlays and elevated panels.
 
-Dark image scrims are functional contrast layers. The current homepage slide scrim follows bottom-positioned mobile copy and left-positioned desktop copy; do not replace it with the weaker generic scrim. The header uses a translucent navy background and blur when visible over content; the navigation drawer uses a dimmed, blurred backdrop.
+Dark image scrims are functional contrast layers. The homepage hero scrim is full-bleed and vertical, never lighter than 0.76 navy-black, so the coral headline accent holds 3:1 over any photograph swapped in and does not drift as the copy column re-centres between breakpoints. Do not replace it with the lighter generic scrim. Bottom-anchored scrims serve copy pinned to the lower edge of an image. The header uses a translucent navy background and blur; the navigation drawer uses a dimmed, blurred backdrop and casts its own shadow only while open.
 
 ## Shapes
 
@@ -245,7 +245,7 @@ White inputs use peach borders, xl corners, small Manrope text, full width, and 
 
 ### Cards and trip media
 
-The base card is a white flex column with clipped card-radius corners and the media shadow. Hover lift is opt-in on the primitive. CardBody supplies padding and spacing; CardFooter pins actions to the bottom. TripCard adds 4:3 photography, departure overlays, saved-trip controls, a display-face title/price, and booking-state messaging. Sold-out content renders a subdued status in place of its action.
+The base card is a white flex column with clipped card-radius corners and the media shadow. Hover lift is opt-in on the primitive. CardBody supplies padding and spacing; CardFooter pins actions to the bottom. TripCard adds 4:3 photography, departure overlays, saved-trip controls, a display-face title/price, and booking-state messaging. The struck original price, the display-face price, and "per person" share one line so they read as one figure; a discounted departure can add a short label above it, set as a small bold uppercase coral line (an observed exception below the badge size). Sold-out content renders a subdued status in place of its action.
 
 ### Status and category badges
 
@@ -253,7 +253,7 @@ Compact uppercase pills use semantic surface/ink pairs. Booking Open is success;
 
 ### Navigation
 
-The current public header is a 64px row with branding, account access, and a menu trigger. It can overlay hero imagery transparently before switching to translucent navy. Navigation opens as a right-side drawer capped at 25rem or 92vw, with grouped links, account context, and a footer action. Active links use blush/coral-ink. The drawer supplies dialog semantics and keyboard behavior; a static preview represents its appearance only. Mobile hides desktop account controls below 640px.
+The current public header is a 64px row with branding, account access, and a menu trigger. On most routes it is sticky. On the homepage it starts hidden above the viewport and slides down once the hero scrolls out of view, over 350ms; the hero carries its own brand block instead. Navigation opens as a right-side drawer capped at 25rem or 92vw, with grouped links, account context, and a footer action. Active links use blush/coral-ink. The drawer supplies dialog semantics and keyboard behavior; a static preview represents its appearance only. Mobile hides desktop account controls below 640px.
 
 ### Operational tables
 
