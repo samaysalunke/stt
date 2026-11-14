@@ -32,6 +32,10 @@ describe('tripPrimaryAction', () => {
     expect(tripPrimaryAction(record({ status: 'wishlist' }))?.href).toBe('/trips/spiti/');
     expect(tripPrimaryAction(record({ status: 'wishlist', tripExists: false }))).toBeNull();
   });
+  it('asks a traveller to review a trip they finished, and only then', () => {
+    expect(tripPrimaryAction(record({ period: 'completed' }))).toEqual({ href: '/profile/review/1', label: 'Review this trip', kind: 'review' });
+    expect(tripPrimaryAction(record({ period: 'completed', status: 'cancelled' }))).toBeNull();
+  });
   it('gives a confirmed booking with nothing owed no filled action', () => {
     expect(tripPrimaryAction(record())).toBeNull();
   });

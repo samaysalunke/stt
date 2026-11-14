@@ -23,6 +23,8 @@ import { getDb } from './db';
 import { claimZohoDocuments, processZohoDocument } from './zohoBooks';
 import { zohoMode } from './paymentLedger';
 import { claimTelegramEvents, processClaimedTelegramEvent, telegramConfigured } from './telegram';
+import { runReviewRequests } from './tripReviews';
+import { isEmailConfigured } from './emailTransport';
 
 const TICK_MS = 60_000;
 /** Matches the cap both job endpoints already use. */
@@ -57,23 +59,34 @@ async function runTelegramNotifications(): Promise<number> {
   return jobs.length;
 }
 
+/**
+ * Post-trip review emails. Cheap to check every tick — it returns at once
+ * before 10am India time and when no departure ended in the last week — and
+ * each row is claimed before it is sent, so a tick can't email anyone twice.
+ */
+async function runTripReviews(): Promise<number> {
+  if (!isEmailConfigured()) return 0;
+  return runReviewRequests();
+}
+
 let running = false;
 
 /**
  * One pass over both queues. Exported for tests; never throws, so a bad tick
  * can't take the timer — or the server — down with it.
  */
-export async function runScheduledJobs(): Promise<{ zoho: number; telegram: number; skipped?: true }> {
+export async function runScheduledJobs(): Promise<{ zoho: number; telegram: number; reviews: number; skipped?: true }> {
   // A tick that overruns its interval must not be joined by the next one:
   // the claim queries would hand both passes the same rows.
-  if (running) return { zoho: 0, telegram: 0, skipped: true };
+  if (running) return { zoho: 0, telegram: 0, reviews: 0, skipped: true };
   running = true;
   try {
-    const [zoho, telegram] = await Promise.all([
+    const [zoho, telegram, reviews] = await Promise.all([
       runZohoDocuments().catch((error) => { console.error('[jobScheduler] zoho', error); return 0; }),
       runTelegramNotifications().catch((error) => { console.error('[jobScheduler] telegram', error); return 0; }),
+      runTripReviews().catch((error) => { console.error('[jobScheduler] reviews', error); return 0; }),
     ]);
-    return { zoho, telegram };
+    return { zoho, telegram, reviews };
   } finally {
     running = false;
   }

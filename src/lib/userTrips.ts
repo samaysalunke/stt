@@ -29,7 +29,7 @@ export function getUserTrips(locals: App.Locals): ProfileTripRecord[] {
   return records;
 }
 
-export interface TripAction { href: string; label: string; kind: 'pay' | 'continue' | 'view' }
+export interface TripAction { href: string; label: string; kind: 'pay' | 'continue' | 'view' | 'review' }
 
 /**
  * The one thing a traveller should do next about a trip. When money is owed it
@@ -47,6 +47,10 @@ export function tripPrimaryAction(record: ProfileTripRecord): TripAction | null 
     return { href: `/trips/${record.tripSlug}/book${batch}`, label: 'Continue booking', kind: 'continue' };
   }
   if (record.status === 'wishlist' && tripPage) return { href: tripPage, label: 'View trip', kind: 'view' };
+  // A trip they went on: the post-trip review form (src/lib/tripReviews.ts).
+  if (record.status === 'confirmed' && record.period === 'completed') {
+    return { href: `/profile/review/${record.id}`, label: 'Review this trip', kind: 'review' };
+  }
   return null;
 }
 

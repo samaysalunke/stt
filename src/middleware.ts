@@ -262,6 +262,8 @@ export const onRequest = defineMiddleware(async ({ url, request, cookies, locals
       '/api/admin/registrations',
       '/admin/email-logs',
       '/admin/finance',
+      // Sending review emails; reading /admin/reviews stays open to trip leads (scoped).
+      '/api/admin/reviews',
     ];
 
     if (ownerOnly.some(p => path.startsWith(p)) && adminUser.role !== 'owner') {

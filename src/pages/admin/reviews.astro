@@ -1,0 +1,172 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import AdminCard from '../../components/admin/AdminCard.astro';
+import AdminTable from '../../components/admin/AdminTable.astro';
+import { departureReviewSummaries, departureReviews, npsScore, REVIEW_RATINGS } from '../../lib/tripReviews';
+import { formatDepartureRange } from '../../lib/departureSummary';
+import { formatDateIN } from '../../lib/utils';
+export const prerender = false;
+
+// Post-trip reviews, departure by departure (src/lib/tripReviews.ts).
+// Every admin role can read them; a trip lead only sees their own departures.
+const adminUser = Astro.locals.adminUser;
+const isTripLead = adminUser?.role === 'trip_lead';
+const allowedBatchIds: string[] | null = isTripLead ? (adminUser?.tripIds ?? []) : null;
+const canSend = !isTripLead;
+
+const summaries = departureReviewSummaries(allowedBatchIds);
+const tripFilter = Astro.url.searchParams.get('trip') ?? '';
+const batchParam = Astro.url.searchParams.get('batch') ?? '';
+const sentParam = Astro.url.searchParams.get('sent');
+const trips = [...new Map(summaries.map((s) => [s.slug, s.tripName])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+
+// Detail view: one departure's reviews. Same scoping as the list.
+const selected = tripFilter && batchParam && (!allowedBatchIds || allowedBatchIds.includes(batchParam))
+  ? summaries.find((s) => s.slug === tripFilter && s.batchId === batchParam) ?? null
+  : null;
+const rows = selected ? departureReviews(selected.slug, selected.batchId) : [];
+const reviewed = rows.filter((r) => r.review_id != null);
+const waiting = rows.filter((r) => r.review_id == null);
+const notEmailed = waiting.filter((r) => !r.review_requested_at).length;
+const averages = selected ? REVIEW_RATINGS.map((r) => {
+  const values = reviewed.map((row) => row[r.column]).filter((v): v is number => Number.isInteger(v));
+  return { label: r.label.replace('Overall, how was the trip?', 'Overall'), value: values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '—', count: values.length };
+}) : [];
+const nps = selected ? npsScore(reviewed.map((r) => r.recommend_score)) : null;
+
+const listed = tripFilter && !selected ? summaries.filter((s) => s.slug === tripFilter) : summaries;
+const dates = (s: { startDate: string | null; endDate: string | null }) => s.startDate ? formatDepartureRange(s.startDate, s.endDate ?? undefined) : '—';
+const stars = (n: number | null | undefined) => (Number.isInteger(n) ? '★'.repeat(n as number) + '☆'.repeat(5 - (n as number)) : '—');
+const when = (v: string | null) => (v ? formatDateIN(String(v).slice(0, 10)) : '—');
+const npsTone = (v: number | null) => v == null ? '' : v >= 50 ? 'color:var(--color-success-ink)' : v >= 0 ? 'color:var(--color-navy)' : 'color:var(--color-danger-ink)';
+---
+
+<AdminLayout title="Reviews" page="reviews">
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <h1 class="font-display text-2xl font-extrabold text-navy-deep mt-0 mx-0 mb-1">Trip reviews</h1>
+      <p class="text-gray-text text-sm m-0">Confirmed travellers get a review link by email the day after their trip ends. Reviews are signed in, so each one is from someone who went.</p>
+    </div>
+    {!selected && trips.length > 1 && (
+      <form method="GET" class="flex items-center gap-2">
+        <select name="trip" class="rounded-lg border border-border bg-white px-3 py-2 text-sm" onchange="this.form.submit()">
+          <option value="">All trips</option>
+          {trips.map(([slug, name]) => <option value={slug} selected={slug === tripFilter}>{name}</option>)}
+        </select>
+        <noscript><button class="rounded-lg border border-border px-3 py-2 text-sm">Filter</button></noscript>
+      </form>
+    )}
+  </div>
+
+  {selected ? (
+    <div class="flex flex-col gap-5" data-testid="reviews-departure">
+      <a href="/admin/reviews" class="text-sm font-semibold text-coral-ink">← All departures</a>
+      <AdminCard>
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 class="m-0 font-display text-xl font-bold text-navy">{selected.tripName}</h2>
+            <p class="m-0 mt-1 text-sm text-gray-text">{dates(selected)} · {selected.travellers} confirmed travellers</p>
+          </div>
+          {canSend && notEmailed > 0 && (
+            <form method="POST" action="/api/admin/reviews/send">
+              <input type="hidden" name="trip" value={selected.slug} />
+              <input type="hidden" name="batch" value={selected.batchId} />
+              <button type="submit" data-testid="reviews-send" class="cursor-pointer rounded-full bg-cta px-4 py-2 text-sm font-semibold text-white">
+                Send review email to {notEmailed} {notEmailed === 1 ? 'traveller' : 'travellers'}
+              </button>
+            </form>
+          )}
+        </div>
+        {sentParam != null && (
+          <p class="mt-3 mb-0 rounded-lg px-3 py-2 text-sm font-semibold" style="background:var(--color-success-surface);color:var(--color-success-surface-ink)" role="status">
+            {Number(sentParam) > 0 ? `Sent ${sentParam} review ${Number(sentParam) === 1 ? 'email' : 'emails'}.` : 'No emails were sent. Check Email Logs if you expected some.'}
+          </p>
+        )}
+        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div><div class="text-xs text-gray-text">Reviews</div><div class="text-lg font-bold text-navy">{reviewed.length} / {selected.travellers}</div></div>
+          <div><div class="text-xs text-gray-text">Recommend score (NPS)</div><div class="text-lg font-bold" style={npsTone(nps)}>{nps ?? '—'}</div></div>
+          {averages.map((a) => (
+            <div><div class="text-xs text-gray-text">{a.label}</div><div class="text-lg font-bold text-navy">{a.value}{a.count > 0 && <span class="text-xs font-normal text-gray-text"> /5</span>}</div></div>
+          ))}
+        </div>
+      </AdminCard>
+
+      {reviewed.length === 0 && <p class="m-0 rounded-[var(--radius-card)] border border-peach/60 bg-white p-8 text-center text-gray-text">No reviews yet for this departure.</p>}
+      {reviewed.map((r) => (
+        <AdminCard as="article" data-testid="review-card">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div class="font-semibold text-navy">{r.full_name || r.email}{r.city && <span class="font-normal text-gray-text"> · {r.city}</span>}</div>
+              <div class="text-xs text-gray-text">{r.email}{r.phone ? ` · ${r.phone}` : ''} · reviewed {when(r.review_updated_at || r.reviewed_at)}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-lg leading-none text-coral" aria-label={`${r.overall_rating} of 5`}>{stars(r.overall_rating)}</div>
+              {r.recommend_score != null && <div class="mt-1 text-xs text-gray-text">Would recommend: <strong class="text-navy">{r.recommend_score}/10</strong></div>}
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs">
+            {REVIEW_RATINGS.filter((x) => x.key !== 'overall' && r[x.column] != null).map((x) => (
+              <span class="rounded-full bg-gray-soft px-2.5 py-1 text-navy">{x.label}: <strong>{r[x.column]}/5</strong></span>
+            ))}
+          </div>
+          {r.highlight && <div class="mt-3"><div class="text-xs font-semibold uppercase tracking-wide text-gray-text">Best part</div><p class="m-0 mt-1 whitespace-pre-line text-sm text-navy">{r.highlight}</p></div>}
+          {r.improve && <div class="mt-3"><div class="text-xs font-semibold uppercase tracking-wide text-gray-text">Do better</div><p class="m-0 mt-1 whitespace-pre-line text-sm text-navy">{r.improve}</p></div>}
+          {r.testimonial && (
+            <div class="mt-3 rounded-lg bg-blush px-3 py-2">
+              <div class="text-xs font-semibold uppercase tracking-wide text-gray-text">
+                Quote {r.can_feature ? <span class="text-success-ink">· OK to feature on the website</span> : <span>· not for publishing</span>}
+              </div>
+              <p class="m-0 mt-1 text-sm italic text-navy">“{r.testimonial}”</p>
+            </div>
+          )}
+        </AdminCard>
+      ))}
+
+      {waiting.length > 0 && (
+        <AdminCard tone="soft">
+          <h3 class="m-0 mb-3 text-sm font-bold text-navy">Not reviewed yet ({waiting.length})</h3>
+          <AdminTable>
+            <table>
+              <thead><tr><th>Traveller</th><th>Email</th><th>Review email</th></tr></thead>
+              <tbody>
+                {waiting.map((r) => (
+                  <tr>
+                    <td>{r.full_name || '—'}</td>
+                    <td>{r.email}</td>
+                    <td>{r.review_requested_at ? `Sent ${when(r.review_requested_at)}` : r.review_request_error ? <span class="text-danger-ink" title={r.review_request_error}>Failed, will retry</span> : 'Not sent'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </AdminTable>
+        </AdminCard>
+      )}
+    </div>
+  ) : listed.length === 0 ? (
+    <p class="m-0 rounded-[var(--radius-card)] border border-peach/60 bg-white p-12 text-center text-gray-text">No finished departures with confirmed travellers yet.</p>
+  ) : (
+    <AdminCard pad="none">
+      <AdminTable>
+        <table data-testid="reviews-departures">
+          <thead>
+            <tr><th>Trip</th><th>Dates</th><th>Travellers</th><th>Emailed</th><th>Reviews</th><th>Avg rating</th><th>NPS</th><th></th></tr>
+          </thead>
+          <tbody>
+            {listed.map((s) => (
+              <tr>
+                <td class="font-semibold text-navy">{s.tripName}</td>
+                <td>{dates(s)}</td>
+                <td>{s.travellers}</td>
+                <td>{s.emailed}</td>
+                <td>{s.reviews}{s.travellers > 0 && <span class="text-gray-text"> ({Math.round((s.reviews / s.travellers) * 100)}%)</span>}</td>
+                <td>{s.avgOverall != null ? <span><span class="text-coral">★</span> {s.avgOverall.toFixed(1)}</span> : '—'}</td>
+                <td style={npsTone(s.nps)}>{s.nps ?? '—'}</td>
+                <td><a class="font-semibold text-coral-ink" href={`/admin/reviews?trip=${encodeURIComponent(s.slug)}&batch=${encodeURIComponent(s.batchId)}`}>Open →</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </AdminTable>
+    </AdminCard>
+  )}
+</AdminLayout>

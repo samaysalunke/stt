@@ -8,6 +8,12 @@ describe('safeProfileReturn', () => {
     expect(safeProfileReturn('//evil.example/profile')).toBe('/profile');
     expect(safeProfileReturn('/admin')).toBe('/profile');
   });
+  it('returns to a review form, digits only', () => {
+    expect(safeProfileReturn('/profile/review/42')).toBe('/profile/review/42');
+    expect(safeProfileReturn('/profile/review/42?x=1')).toBe('/profile/review/42');
+    expect(safeProfileReturn('/profile/review/abc')).toBe('/profile');
+    expect(safeProfileReturn('/profile/review/42/extra')).toBe('/profile');
+  });
   it('returns to a trip page, and nowhere deeper', () => {
     expect(safeProfileReturn('/trips/spiti/')).toBe('/trips/spiti/');
     expect(safeProfileReturn('/trips/spiti/?x=1')).toBe('/trips/spiti/');

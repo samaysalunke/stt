@@ -383,3 +383,24 @@ export async function sendBroadcastToSubscriber(params: {
 
   await sendEmail(params.email, params.subject, html, { template: 'newsletter-broadcast' });
 }
+
+/** The day after a trip ends: a link straight to the traveller's review form. */
+export async function sendTripReviewRequest(data: {
+  email: string;
+  firstName: string;
+  tripName: string;
+  dates: string;
+  url: string;
+}) {
+  const html = wrapEmail(`
+    <h2 style="color:${NAVY};margin-top:0;">How was ${escapeHtml(data.tripName)}?</h2>
+    <p style="margin:0 0 16px;">Hi ${escapeHtml(data.firstName)},</p>
+    <p style="margin:0 0 16px;">Hope you're home safe and still a little bit on the trail. We'd love to hear how it went: what you loved, and what we should do better next time. It takes about two minutes.</p>
+    ${data.dates ? `<p style="background:${BLUSH};padding:12px 16px;border-radius:8px;margin:0 0 24px;"><strong>${escapeHtml(data.tripName)}</strong><br>${escapeHtml(data.dates)}</p>` : ''}
+    <p style="margin:0 0 24px;"><a href="${escapeHtml(data.url)}" style="display:inline-block;background:${CTA};color:white;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px;">Share your review →</a></p>
+    <p style="margin:0 0 8px;font-size:14px;color:${GRAY_TEXT};">You'll be asked to sign in with Google using this email address, so we know the review is really yours.</p>
+    <p style="margin:0;font-size:14px;color:${GRAY_TEXT};">Thank you for travelling with us. — Team Seek the Thrill</p>
+  `);
+
+  await sendEmail(data.email, `How was ${data.tripName}? | Seek the Thrill`, html, { template: 'trip-review-request' });
+}

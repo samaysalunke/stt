@@ -47,6 +47,7 @@ function purgeTestArtifacts() {
       db.prepare("DELETE FROM payment_events WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
       db.prepare("DELETE FROM invoice_documents WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
       db.prepare("DELETE FROM telegram_notification_events WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run();
+      try { db.prepare("DELETE FROM trip_reviews WHERE registration_id IN (SELECT id FROM registrations WHERE email LIKE '%@example.invalid')").run(); } catch { /* table predates this DB */ }
       db.prepare("DELETE FROM registrations WHERE email LIKE '%@example.invalid'").run();
       db.prepare("DELETE FROM user_sessions WHERE userId IN (SELECT id FROM users WHERE email LIKE '%@example.invalid')").run();
       db.prepare("DELETE FROM saved_trips WHERE userId IN (SELECT id FROM users WHERE email LIKE '%@example.invalid')").run();
@@ -85,6 +86,7 @@ const TEST_FILES = [
   'tests/api/registration-refund.test.mjs',
   'tests/api/wishlist.test.mjs',
   'tests/api/itinerary-gate.test.mjs',
+  'tests/api/trip-reviews.test.mjs',
   'tests/api/attribution.test.mjs',
   'tests/api/admin-registrations.test.mjs',
   'tests/api/occupancy-change.test.mjs',

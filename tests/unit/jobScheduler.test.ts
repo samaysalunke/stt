@@ -11,6 +11,7 @@ const claimZohoDocuments = vi.fn(() => [] as { id: string }[]);
 const processZohoDocument = vi.fn(async () => ({}));
 const claimTelegramEvents = vi.fn(() => [] as unknown[]);
 const processClaimedTelegramEvent = vi.fn(async () => 'sent');
+const runReviewRequests = vi.fn(async () => 0);
 
 vi.mock('../../src/lib/db', () => ({ getDb: () => ({}) }));
 vi.mock('../../src/lib/zohoBooks', () => ({
@@ -24,6 +25,9 @@ vi.mock('../../src/lib/telegram', () => ({
   processClaimedTelegramEvent: (...args: unknown[]) => processClaimedTelegramEvent(...(args as [])),
 }));
 
+vi.mock('../../src/lib/tripReviews', () => ({ runReviewRequests: () => runReviewRequests() }));
+vi.mock('../../src/lib/emailTransport', () => ({ isEmailConfigured: () => true }));
+
 const { runScheduledJobs, schedulerEnabled, startJobScheduler } = await import('../../src/lib/jobScheduler');
 
 describe('job scheduler', () => {
@@ -33,6 +37,7 @@ describe('job scheduler', () => {
     processZohoDocument.mockReset().mockResolvedValue({});
     claimTelegramEvents.mockReset().mockReturnValue([]);
     processClaimedTelegramEvent.mockReset().mockResolvedValue('sent');
+    runReviewRequests.mockReset().mockResolvedValue(0);
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -50,7 +55,7 @@ describe('job scheduler', () => {
   it('processes a claimed batch from both queues', async () => {
     claimZohoDocuments.mockReturnValue([{ id: 'doc-1' }, { id: 'doc-2' }]);
     claimTelegramEvents.mockReturnValue([{ id: 'ev-1' }]);
-    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 2, telegram: 1 });
+    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 2, telegram: 1, reviews: 0 });
     expect(processZohoDocument).toHaveBeenCalledTimes(2);
     expect(processClaimedTelegramEvent).toHaveBeenCalledTimes(1);
   });
@@ -76,12 +81,20 @@ describe('job scheduler', () => {
   it('survives a failing job without throwing, and still runs the other queue', async () => {
     claimZohoDocuments.mockImplementation(() => { throw new Error('db is locked'); });
     claimTelegramEvents.mockReturnValue([{ id: 'ev-1' }]);
-    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 0, telegram: 1 });
+    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 0, telegram: 1, reviews: 0 });
   });
 
   it('does not reject when a single document fails', async () => {
     claimZohoDocuments.mockReturnValue([{ id: 'a' }, { id: 'b' }]);
     processZohoDocument.mockRejectedValue(new Error('Zoho OAuth failed'));
-    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 2, telegram: 0 });
+    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 2, telegram: 0, reviews: 0 });
+  });
+
+  it('sends due review emails, and a failing review job does not stop the others', async () => {
+    runReviewRequests.mockResolvedValueOnce(3);
+    await expect(runScheduledJobs()).resolves.toMatchObject({ reviews: 3 });
+    runReviewRequests.mockRejectedValueOnce(new Error('smtp down'));
+    claimTelegramEvents.mockReturnValueOnce([{ id: 1 }]);
+    await expect(runScheduledJobs()).resolves.toEqual({ zoho: 0, telegram: 1, reviews: 0 });
   });
 });

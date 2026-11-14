@@ -1,0 +1,181 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import ProfileChrome from '../../../components/ProfileChrome.astro';
+import { reviewAccess, REVIEW_RATINGS, REVIEW_TEXT_MAX, TESTIMONIAL_MAX } from '../../../lib/tripReviews';
+import { formatDepartureRange } from '../../../lib/departureSummary';
+import { formatDateIN } from '../../../lib/utils';
+
+export const prerender = false;
+
+// Middleware sends signed-out visitors to /login?next=<this page>, so the
+// review email's link lands here after Google sign-in. This is the second layer.
+const user = Astro.locals.user;
+const id = Number(Astro.params.id);
+if (!user) return Astro.redirect(`/login?next=${encodeURIComponent(`/profile/review/${Astro.params.id}`)}`);
+
+const access = reviewAccess(id, user.email);
+const saved = Astro.url.searchParams.get('saved') === '1';
+const error = Astro.url.searchParams.get('error');
+if (!access.ok && access.reason === 'not-found') Astro.response.status = 404;
+
+// Show the booking email masked, so a traveller signed in with the wrong
+// Google account knows which one to use, without revealing it to anyone else.
+const maskEmail = (email: string) => {
+  const [local, domain] = String(email).split('@');
+  if (!domain) return '';
+  return `${local.slice(0, 2)}${'•'.repeat(Math.max(1, Math.min(6, local.length - 2)))}@${domain}`;
+};
+
+const review = access.ok ? access.review : null;
+const departure = access.ok ? access.departure : null;
+const dateLabel = departure?.startDate ? formatDepartureRange(departure.startDate, departure.endDate ?? undefined) : null;
+const firstName = access.ok ? String(access.registration.full_name ?? '').trim().split(/\s+/)[0] : '';
+const ratingValue = (column: string) => (review ? (review as any)[column] : null);
+const errorMessages: Record<string, string> = {
+  overall: 'Please give the trip an overall rating.',
+  invalid: 'Something in the form was not valid. Please check it and try again.',
+};
+---
+<BaseLayout title="Review your trip — Seek the Thrill" description="Tell us how your Seek the Thrill trip went." robots="noindex, nofollow" nav="none" hideWhatsApp={true}>
+  <ProfileChrome backLabel="Back to my trips">
+    <main class="profile-shell review-page">
+      <a class="back" href="/profile?tab=trips">← My trips</a>
+
+      {!access.ok && access.reason === 'wrong-account' ? (
+        <section class="panel" data-testid="review-wrong-account">
+          <h1>Sign in with the account you booked with</h1>
+          <p class="muted">This review is for the booking made with <strong>{maskEmail(access.registration?.email ?? '')}</strong>. You're signed in as {user.email}.</p>
+          <form method="POST" action="/api/auth/logout">
+            <input type="hidden" name="next" value={`/profile/review/${id}`} />
+            <button class="primary" type="submit">Switch Google account</button>
+          </form>
+        </section>
+      ) : !access.ok && access.reason === 'not-ended' ? (
+        <section class="panel" data-testid="review-not-ended">
+          <h1>Your trip isn't over yet</h1>
+          <p class="muted">Reviews open the day after your trip ends{access.endDate ? ` (${formatDateIN(access.endDate)})` : ''}. We'll email you the link then.</p>
+          <a class="primary" href="/profile?tab=trips">Go to my trips</a>
+        </section>
+      ) : !access.ok ? (
+        <section class="panel" data-testid="review-unavailable">
+          <h1>No review to write here</h1>
+          <p class="muted">Reviews are for confirmed bookings on your account, once the trip has ended.</p>
+          <a class="primary" href="/profile?tab=trips">Go to my trips</a>
+        </section>
+      ) : (
+        <section class="panel">
+          <p class="eyebrow">Your review</p>
+          <h1>{departure!.name}</h1>
+          {dateLabel && <p class="muted">{dateLabel}</p>}
+
+          {saved && (
+            <p class="notice notice-ok" role="status" data-testid="review-saved">
+              Thank you{firstName ? `, ${firstName}` : ''}! Your review is saved. You can update it any time.
+            </p>
+          )}
+          {error && <p class="notice notice-error" role="alert">{errorMessages[error] ?? errorMessages.invalid}</p>}
+          {!saved && !review && <p class="intro">Two minutes, honest answers. What you tell us shapes the next group's trip.</p>}
+
+          <form method="POST" action="/api/profile/review" data-testid="review-form">
+            <input type="hidden" name="registrationId" value={id} />
+
+            {REVIEW_RATINGS.map((r) => (
+              <fieldset class="rating" data-rating={r.key}>
+                <legend>{r.label}{r.required ? <span class="req" aria-hidden="true"> *</span> : <span class="opt"> (optional)</span>}</legend>
+                <div class="stars">
+                  {/* 5→1 in the markup, shown 1→5 by row-reverse (see the CSS). */}
+                  {[5, 4, 3, 2, 1].map((n) => (
+                    <label>
+                      <input type="radio" name={r.key} value={n} checked={ratingValue(r.column) === n} required={r.required} />
+                      <span aria-hidden="true">★</span>
+                      <span class="sr-only">{n} of 5</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+
+            <fieldset class="nps">
+              <legend>How likely are you to recommend us to a friend? <span class="opt">(optional)</span></legend>
+              <div class="scale">
+                {Array.from({ length: 11 }, (_, n) => (
+                  <label>
+                    <input type="radio" name="recommend" value={n} checked={review?.recommend_score === n} />
+                    <span>{n}</span>
+                  </label>
+                ))}
+              </div>
+              <div class="scale-ends"><span>Not likely</span><span>Very likely</span></div>
+            </fieldset>
+
+            <label class="field">
+              <span>What was the best part?</span>
+              <textarea name="highlight" rows="3" maxlength={REVIEW_TEXT_MAX} placeholder="A moment, a place, a person…">{review?.highlight ?? ''}</textarea>
+            </label>
+            <label class="field">
+              <span>What should we do better?</span>
+              <textarea name="improve" rows="3" maxlength={REVIEW_TEXT_MAX} placeholder="Anything at all — we read every word.">{review?.improve ?? ''}</textarea>
+            </label>
+
+            <div class="feature">
+              <label class="field">
+                <span>Your trip in a line or two <span class="opt">(optional)</span></span>
+                <textarea name="testimonial" rows="2" maxlength={TESTIMONIAL_MAX} placeholder="What would you tell a friend thinking of going?">{review?.testimonial ?? ''}</textarea>
+              </label>
+              <label class="check">
+                <input type="checkbox" name="canFeature" checked={review?.can_feature === 1} />
+                <span>You can feature this on the Seek the Thrill website with my first name and city.</span>
+              </label>
+            </div>
+
+            <button class="primary" type="submit">{review ? 'Update my review' : 'Submit my review'}</button>
+          </form>
+        </section>
+      )}
+    </main>
+  </ProfileChrome>
+</BaseLayout>
+
+<style>
+  .review-page{padding:1.5rem 0 3rem;max-width:38rem}
+  .back{display:inline-flex;min-height:44px;align-items:center;color:var(--color-coral-ink);font-size:.85rem;font-weight:700}
+  .panel{margin-top:.5rem;background:#fff;border:1px solid var(--color-peach);border-radius:1.15rem;padding:1.25rem}
+  .eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--color-coral-ink)}
+  h1{margin-top:.2rem;font-size:1.35rem;font-weight:700;overflow-wrap:anywhere}
+  .muted{margin-top:.25rem;color:var(--color-gray-text);font-size:.85rem}
+  .intro{margin-top:1rem;font-size:.9rem;color:var(--color-navy)}
+  .notice{margin-top:1rem;padding:.75rem .9rem;border-radius:.7rem;font-size:.85rem;font-weight:600}
+  .notice-ok{background:var(--color-success-surface);color:var(--color-success-surface-ink)}
+  .notice-error{background:var(--color-danger-surface);color:var(--color-danger-ink)}
+  fieldset{margin-top:1.25rem;border:0;padding:0;min-width:0}
+  legend{font-size:.9rem;font-weight:700;color:var(--color-navy)}
+  .req{color:var(--color-coral-ink)}.opt{font-weight:400;color:var(--color-gray-text);font-size:.8rem}
+  .stars{margin-top:.35rem;display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:.25rem}
+  .stars label{cursor:pointer}
+  .stars input{position:absolute;opacity:0;width:1px;height:1px}
+  .stars span[aria-hidden]{display:inline-flex;width:44px;height:44px;align-items:center;justify-content:center;font-size:1.9rem;line-height:1;color:var(--color-border);transition:color .12s}
+  /* row-reverse: a checked star lights itself and every star before it. */
+  .stars label:has(input:checked) span[aria-hidden],
+  .stars label:has(input:checked) ~ label span[aria-hidden],
+  .stars label:hover span[aria-hidden],
+  .stars label:hover ~ label span[aria-hidden]{color:var(--color-coral)}
+  .stars label:has(input:focus-visible) span[aria-hidden]{outline:3px solid var(--color-coral);outline-offset:-4px;border-radius:.5rem}
+  .scale{margin-top:.45rem;display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:.2rem}
+  .scale label{cursor:pointer}
+  .scale input{position:absolute;opacity:0;width:1px;height:1px}
+  .scale span{display:flex;min-height:40px;align-items:center;justify-content:center;border:1px solid var(--color-border);border-radius:.45rem;font-size:.85rem;font-weight:600;color:var(--color-navy);background:#fff}
+  .scale label:has(input:checked) span{background:var(--color-coral);border-color:var(--color-coral);color:#fff}
+  .scale label:has(input:focus-visible) span{outline:3px solid var(--color-coral);outline-offset:1px}
+  .scale-ends{margin-top:.25rem;display:flex;justify-content:space-between;font-size:.72rem;color:var(--color-gray-text)}
+  .field{display:block;margin-top:1.25rem}
+  .field > span{display:block;font-size:.9rem;font-weight:700;color:var(--color-navy)}
+  textarea{margin-top:.4rem;width:100%;border:1px solid var(--color-peach);border-radius:.75rem;padding:.7rem .8rem;font-size:.9rem;background:#fff;color:var(--color-navy)}
+  textarea:focus{outline:2px solid var(--color-coral);outline-offset:1px}
+  .feature{margin-top:1.5rem;padding:1rem;border-radius:.9rem;background:var(--color-blush)}
+  .feature .field{margin-top:0}
+  .check{margin-top:.75rem;display:flex;gap:.6rem;align-items:flex-start;font-size:.82rem;color:var(--color-navy);cursor:pointer}
+  .check input{margin-top:.15rem;width:18px;height:18px;flex:none;accent-color:var(--color-coral)}
+  .primary{margin-top:1.4rem;min-height:48px;width:100%;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-pill,999px);background:var(--color-cta);color:#fff;font-size:.95rem;font-weight:700;border:0;cursor:pointer}
+  a:focus-visible,button:focus-visible{outline:3px solid var(--color-coral);outline-offset:2px}
+  @media(max-width:420px){.scale{grid-template-columns:repeat(6,minmax(0,1fr))}}
+</style>

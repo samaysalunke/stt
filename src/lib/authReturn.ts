@@ -20,6 +20,9 @@ export function safeProfileReturn(value: unknown): string {
     // A trip page: "already registered? sign in" on a locked itinerary returns here.
     const trip = url.pathname.match(/^\/trips\/([^/]+)\/$/);
     if (trip && SLUG_RE.test(trip[1])) return `/trips/${trip[1]}/`;
+    // A post-trip review form: the review email's link signs in and lands here.
+    const review = url.pathname.match(/^\/profile\/review\/(\d{1,9})$/);
+    if (review) return `/profile/review/${review[1]}`;
     if (url.pathname !== '/profile') return '/profile';
     const clean = new URLSearchParams();
     const tab = url.searchParams.get('tab');

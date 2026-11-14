@@ -13,6 +13,8 @@ if (Astro.locals.user) return Astro.redirect(next);
 const saveSlug = new URL(next, 'https://return.invalid').searchParams.get('save');
 const saveTrip = saveSlug ? readTrip(saveSlug) : null;
 const saveTripName = saveTrip ? String(saveTrip.title || saveTrip.name || saveSlug) : null;
+// Arrived from a post-trip review email: say what signing in is for.
+const forReview = /^\/profile\/review\/\d+$/.test(next);
 const loginUrl = `/api/auth/google?next=${encodeURIComponent(next)}`;
 
 const errorMessages: Record<string, string> = {
@@ -31,7 +33,9 @@ const errorMessage = errorMessages[Astro.url.searchParams.get('error') ?? ''] ??
         Sign in
       </h1>
       <p class="text-sm mb-10 text-gray-text">
-        {saveTripName
+        {forReview
+          ? <span data-testid="login-review-note">Sign in to share your trip review. Use the Google account with the email address you booked with, so we know the review is really yours.</span>
+          : saveTripName
           ? <>Sign in to save <strong class="text-navy">{saveTripName}</strong> and keep your favourite trips in one place. New here? Signing in with Google sets you up automatically.</>
           : 'Track your adventures, see your km from home, and join the leaderboard. New here? Signing in with Google sets you up automatically.'}
       </p>

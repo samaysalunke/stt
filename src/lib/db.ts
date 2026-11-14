@@ -148,6 +148,34 @@ function initializeSchema(db: Database.Database) {
     );
   `);
 
+  // Post-trip reviews: one per confirmed booking, submitted by the signed-in
+  // traveller. See src/lib/tripReviews.ts.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS trip_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      registration_id INTEGER NOT NULL UNIQUE,
+      user_id TEXT,
+      trip_slug TEXT,
+      batch_id TEXT,
+      overall_rating INTEGER NOT NULL,
+      itinerary_rating INTEGER,
+      stay_rating INTEGER,
+      food_rating INTEGER,
+      host_rating INTEGER,
+      recommend_score INTEGER,
+      highlight TEXT,
+      improve TEXT,
+      testimonial TEXT,
+      can_feature INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_trip_reviews_departure ON trip_reviews (trip_slug, batch_id);
+  `);
+  try { db.exec('ALTER TABLE registrations ADD COLUMN review_requested_at TEXT'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN review_request_attempts INTEGER NOT NULL DEFAULT 0'); } catch {}
+  try { db.exec('ALTER TABLE registrations ADD COLUMN review_request_error TEXT'); } catch {}
+
   // feature/public-profile — share tracking on registrations
   try { db.exec('ALTER TABLE registrations ADD COLUMN sharedAt TEXT'); } catch {}
 
