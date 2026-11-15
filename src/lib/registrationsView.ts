@@ -1,6 +1,14 @@
 import { getDb } from './db';
 import { editableBooking } from './tripEditor';
-import { listTrips } from './content';
+import { listTrips, resolveTripSlugAlias } from './content';
+import {
+  buildDepartureIndex,
+  departureKey,
+  memoAlias,
+  placeDeparture,
+  type AliasResolver,
+  type DepartureIndex,
+} from './departureIndex';
 
 // Shared registrations view-model. Both the registrations listing (trip cards)
 // and the per-trip detail page derive their data from here so the "what counts
@@ -407,6 +415,28 @@ export function isHistoricalDeparture(
   return start < day || departure.status === 'completed' || departure.status === 'draft';
 }
 
+/**
+ * Bucket registrations by the departure they belong to. Rows that cannot be
+ * placed (no batch, a deleted trip, or an ambiguous shared batch id with no
+ * usable slug) come back as `unplaced` rather than being guessed onto a trip.
+ */
+export function placeRegistrations<T extends { trip_slug?: unknown; batch_id?: unknown }>(
+  registrations: T[],
+  index: DepartureIndex,
+  resolveAlias: AliasResolver,
+): { regsByDeparture: Map<string, T[]>; unplaced: T[] } {
+  const regsByDeparture = new Map<string, T[]>();
+  const unplaced: T[] = [];
+  for (const r of registrations) {
+    const key = placeDeparture(index, r.trip_slug, r.batch_id, resolveAlias);
+    if (!key) { unplaced.push(r); continue; }
+    const list = regsByDeparture.get(key) ?? [];
+    list.push(r);
+    regsByDeparture.set(key, list);
+  }
+  return { regsByDeparture, unplaced };
+}
+
 export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const isTripLead = adminUser?.role === 'trip_lead';
   const allowedBatchIds: string[] | null = isTripLead ? (adminUser?.tripIds ?? []) : null;
@@ -443,16 +473,20 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const knownBatchIds = new Set<string>();
-  const regsByBatch = new Map<string, Reg[]>();
-  for (const r of registrations)
-    if (r.batch_id) {
-      const a = regsByBatch.get(r.batch_id) ?? [];
-      a.push(r);
-      regsByBatch.set(r.batch_id, a);
-    }
+  // A batch id is not unique across trips (a duplicated trip used to keep its
+  // source's ids), so registrations are placed by (trip, batch) — never by
+  // batch id alone, which showed one trip's bookings under its copy.
+  const tripList = listTrips();
+  const index = buildDepartureIndex(
+    tripList.flatMap((trip: any) =>
+      editableBooking(trip).editorDepartures
+        .filter((d: any) => d.id)
+        .map((d: any) => ({ tripSlug: String(trip.slug), batchId: String(d.id) })),
+    ),
+  );
+  const { regsByDeparture, unplaced } = placeRegistrations(registrations, index, memoAlias(resolveTripSlugAlias));
 
-  const trips: RegTrip[] = listTrips()
+  const trips: RegTrip[] = tripList
     .map((trip: any) => {
       const name = String(trip.title || trip.name || trip.slug);
       const { editorCatalog, editorDepartures } = editableBooking(trip);
@@ -461,7 +495,6 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
         .filter((d: any) => d.id && (!isTripLead || allowedBatchIds!.includes(String(d.id))))
         .map((d: any) => {
           const id = String(d.id);
-          knownBatchIds.add(id);
           const rawBatch = (Array.isArray(trip.batches) ? trip.batches : []).find((b: any) => String(b?.id) === id);
           const perTierOffers = Array.isArray(rawBatch?.offers) && rawBatch.offers.length > 0;
           const offers = Array.isArray(d.offers) ? d.offers : [];
@@ -478,7 +511,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
             startDate: String(d.startDate || ''),
             endDate: String(d.endDate || d.startDate || ''),
             status: String(d.status || 'booking-open'),
-            regs: regsByBatch.get(id) ?? [],
+            regs: regsByDeparture.get(departureKey(String(trip.slug), id)) ?? [],
             cap,
             booked,
             soldOut,
@@ -520,7 +553,7 @@ export function buildRegistrationsView(adminUser: any): RegistrationsView {
         Number(b.active) - Number(a.active) || a.nextDate.localeCompare(b.nextDate) || a.name.localeCompare(b.name),
     );
 
-  const legacyRegs = registrations.filter((r) => !r.batch_id || !knownBatchIds.has(String(r.batch_id)));
+  const legacyRegs = unplaced;
   const total = registrations.length;
   const totals = regStats(registrations);
   const revenue = registrations

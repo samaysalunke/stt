@@ -65,9 +65,10 @@ function analyze(csv:string, tripSlug:string, batchId:string, fallbackTier:strin
   const tiers = [...new Set(candidates.map((p) => p.tierId))];
   const capacity = tiers.map((tierId) => {
     const sample = candidates.find((p) => p.tierId === tierId)!;
-    const existing = confirmedCountForTier(batchId, tierId);
+    const tripRef = { trip_slug: tripSlug, trip_name: sample.selection!.trip_name };
+    const existing = confirmedCountForTier(tripRef, batchId, tierId);
     const proposed = candidates.filter((p) => p.tierId === tierId && p.status === 'confirmed').length;
-    const cap = tierCapFor(sample.selection!.trip_name, batchId, tierId);
+    const cap = tierCapFor(tripRef, batchId, tierId);
     return { tierId, cap, existingConfirmed:existing, proposedConfirmed:proposed, totalConfirmed:existing + proposed,
       conflict: !sample.selection!.is_past && cap != null && existing + proposed > cap };
   });

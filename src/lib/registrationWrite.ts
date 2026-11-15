@@ -1,6 +1,10 @@
 import { getDb } from './db';
 import { claimGroupLink } from './tripGroup';
-import { listTrips, readTrip, writeTrip, findTripByName } from './content';
+import {
+  listTrips, readTrip, writeTrip, findTripByName, tripForRegistration, listDepartureRefs,
+  resolveTripSlugAlias, type TripRef,
+} from './content';
+import { buildDepartureIndex, holdsSeatOn, memoAlias } from './departureIndex';
 import { recalculateUserLeaderboard } from './stats';
 import { sendRegistrationPaymentConfirmed } from './email';
 import { recordPayment } from './paymentLedger';
@@ -41,13 +45,13 @@ export function tripAdvanceAmount(tripName: string): number {
  * introduce `await` here — doing so reopens the race.
  */
 export function adjustBookingCount(
-  tripName: string,
+  tripRef: TripRef,
   batchId: string | null,
   delta: 1 | -1,
   tierId?: string | null,
 ) {
   try {
-    const matched = findTripByName(tripName);
+    const matched = tripForRegistration(tripRef);
     if (!matched) return;
     const tripData = readTrip(matched.slug);
     if (!tripData) return;
@@ -78,17 +82,34 @@ export function adjustBookingCount(
   }
 }
 
-/** Count of confirmed registrations on a given batch + tier. */
-export function confirmedCountForTier(batchId: string, tierId: string): number {
-  return (getDb()
-    .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
-    .get(batchId, tierId, 'confirmed') as { n: number }).n;
+/**
+ * Confirmed registrations holding a seat on this trip's batch + tier.
+ *
+ * Scoped to the trip because a batch id is not unique across trips: counting by
+ * batch id alone charged a duplicated trip with its source's confirmed seats
+ * and closed the copy early. Rows are placed with the same ladder as the
+ * registrations view (departureIndex.ts); one that cannot be placed anywhere
+ * still counts, so the error is always toward refusing, never overselling.
+ */
+export function confirmedCountForTier(tripRef: TripRef, batchId: string, tierId: string): number {
+  const rows = getDb()
+    .prepare('SELECT trip_slug, COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=? GROUP BY trip_slug')
+    .all(batchId, tierId, 'confirmed') as Array<{ trip_slug: string | null; n: number }>;
+  const total = rows.reduce((sum, r) => sum + r.n, 0);
+  const trip = tripForRegistration(tripRef);
+  if (!trip || rows.length === 0) return total;
+  const index = buildDepartureIndex(listDepartureRefs());
+  const alias = memoAlias(resolveTripSlugAlias);
+  return rows.reduce(
+    (sum, r) => (holdsSeatOn(index, String(trip.slug), batchId, r.trip_slug, alias) ? sum + r.n : sum),
+    0,
+  );
 }
 
 /** Tier cap from the trip YAML (null = unmetered). */
-export function tierCapFor(tripName: string, batchId: string, tierId: string): number | null {
+export function tierCapFor(tripRef: TripRef, batchId: string, tierId: string): number | null {
   try {
-    const matched = findTripByName(tripName);
+    const matched = tripForRegistration(tripRef);
     if (!matched) return null;
     const trip = readTrip(matched.slug);
     const batch = (trip?.batches as any[])?.find((b: any) => b.id === batchId);
@@ -114,14 +135,14 @@ export function tierCapFor(tripName: string, batchId: string, tierId: string): n
  * `offers[]` array are a no-op (their counter is batch-level only).
  */
 export function moveBookingTier(
-  tripName: string,
+  tripRef: TripRef,
   batchId: string | null,
   fromTierId: string,
   toTierId: string,
 ) {
   if (!batchId || !fromTierId || !toTierId || fromTierId === toTierId) return;
   try {
-    const matched = findTripByName(tripName);
+    const matched = tripForRegistration(tripRef);
     if (!matched) return;
     const tripData = readTrip(matched.slug);
     if (!tripData) return;
@@ -216,9 +237,9 @@ export function createRegistration(
   // Capacity is enforced for live departures, but skipped for historical
   // back-fill (the trip already happened — we're recording who actually went).
   if (input.status === 'confirmed' && !opts.skipCapacity) {
-    const cap = tierCapFor(input.trip_name, input.batch_id, input.tier_id);
+    const cap = tierCapFor(input, input.batch_id, input.tier_id);
     if (cap != null) {
-      const count = confirmedCountForTier(input.batch_id, input.tier_id) + (opts.extraConfirmedInTier ?? 0);
+      const count = confirmedCountForTier(input, input.batch_id, input.tier_id) + (opts.extraConfirmedInTier ?? 0);
       if (count >= cap) {
         return { ok: false, error: 'capacity_full', message: `This tier is full (${count}/${cap} confirmed).` };
       }
@@ -276,7 +297,7 @@ export function createRegistration(
           documentType: undefined,
         });
       }
-      adjustBookingCount(input.trip_name, input.batch_id, 1, input.tier_id);
+      adjustBookingCount(input, input.batch_id, 1, input.tier_id);
       recalculateUserLeaderboard(input.email).catch((e) => console.error('[leaderboard recalc]', e));
       // No document is raised on create any more, so this is the only thing
       // that tells the customer their booking is confirmed. Send it inline,

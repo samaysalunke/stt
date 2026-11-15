@@ -80,7 +80,7 @@ const unsentGroupLink = (dep: RegDeparture) =>
 const fmt = (d: string) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
 const exportHref = trip.slug === '__legacy'
   ? '/api/admin/export?type=registrations'
-  : `/api/admin/export?type=registrations&trip_name=${encodeURIComponent(trip.name)}`;
+  : `/api/admin/export?type=registrations&trip_slug=${encodeURIComponent(trip.slug)}`;
 
 // Per-departure stats for client-side switching
 const depStatsMap = Object.fromEntries(

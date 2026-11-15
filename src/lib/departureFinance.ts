@@ -23,6 +23,9 @@ import { getDb } from './db';
 import { listTrips, tripPublicationStatus, type PublicationStatus } from './trips';
 import { editableBooking } from './tripEditor';
 import { resolveTripSlugAlias } from './tripSlugAliases';
+import { buildDepartureIndex, departureKey, placeDeparture, type DepartureIndex } from './departureIndex';
+
+export { buildDepartureIndex, departureKey, type DepartureIndex };
 import { isTripDeleted } from './tripDeletions';
 import { NON_REVENUE_STATUSES, isHistoricalDeparture } from './registrationsView';
 import { financialYearStartForDate } from './adminDashboard';
@@ -376,10 +379,6 @@ export function rollUp(
 
 // ── SQL ──────────────────────────────────────────────────────────────────────
 
-/** Composite lookup key. `batch_id` alone can collide across trips. */
-export function departureKey(tripSlug: string, batchId: string): string {
-  return `${tripSlug} ${batchId}`;
-}
 
 /**
  * Build the registration aggregate SQL. The non-revenue status list is expanded
@@ -495,49 +494,19 @@ export function readDepartureCost(
   return costBreakdown(base ?? null, items, host ?? null);
 }
 
-/** Index of the canonical departure list, for {@link resolveDepartureKey}. */
-export interface DepartureIndex {
-  knownKeys: Set<string>;
-  keyByBatch: Map<string, string[]>;
-}
-
-export function buildDepartureIndex(meta: DepartureMeta[]): DepartureIndex {
-  const knownKeys = new Set(meta.map((m) => departureKey(m.tripSlug, m.batchId)));
-  const keyByBatch = new Map<string, string[]>();
-  for (const m of meta) {
-    const list = keyByBatch.get(m.batchId) ?? [];
-    list.push(departureKey(m.tripSlug, m.batchId));
-    keyByBatch.set(m.batchId, list);
-  }
-  return { knownKeys, keyByBatch };
-}
-
 /**
  * Which departure a registration belongs to, or null when it cannot be placed.
  *
- * Extracted so the finance rollup and the receivables ageing resolve rows the
- * SAME way. A second copy of this ladder would let the two disagree about which
- * departure a legacy row belongs to, and that divergence is invisible until
- * someone reconciles by hand.
+ * The ladder itself lives in departureIndex.ts so the finance rollup, the
+ * receivables ageing, the registrations view and the capacity checks all
+ * resolve rows the SAME way.
  */
 export function resolveDepartureKey(
   index: DepartureIndex,
   tripSlug: unknown,
   batchId: unknown,
 ): string | null {
-  const batch = String(batchId ?? '').trim();
-  if (!batch) return null;
-  const rawSlug = String(tripSlug ?? '').trim();
-  // A renamed trip leaves its registrations on the old slug forever
-  // (api/admin/trips/update.ts records an alias but never rewrites them).
-  const slug = rawSlug ? (resolveTripSlugAlias(rawSlug) ?? rawSlug) : '';
-  const composite = slug ? departureKey(slug, batch) : '';
-  if (composite && index.knownKeys.has(composite)) return composite;
-  // No slug (legacy) or the slug no longer names a trip: fall back to the batch
-  // id, but only when it identifies exactly one departure — otherwise two trips
-  // sharing a generated batch id would pool each other's money.
-  const candidates = index.keyByBatch.get(batch) ?? [];
-  return candidates.length === 1 ? candidates[0] : null;
+  return placeDeparture(index, tripSlug, batchId, resolveTripSlugAlias);
 }
 
 /** Full finance view. One registration aggregate, one content read, three cost reads. */

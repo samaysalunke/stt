@@ -80,3 +80,16 @@ export function clearTripSlugAlias(slug: string): void {
   if (!slug) return;
   getDb().prepare('DELETE FROM trip_slug_aliases WHERE alias = ?').run(slug);
 }
+
+/**
+ * Every slug a trip's registrations may be stored under: its current slug plus
+ * each old slug that now redirects to it. Registrations keep the slug they were
+ * booked under, so "this trip's rows" is `trip_slug IN (...)` over this list.
+ */
+export function tripSlugWithAliases(slug: string): string[] {
+  if (!slug) return [];
+  const rows = getDb()
+    .prepare('SELECT alias FROM trip_slug_aliases')
+    .all() as Array<{ alias: string }>;
+  return [slug, ...rows.map((r) => r.alias).filter((a) => a !== slug && resolveTripSlugAlias(a) === slug)];
+}
