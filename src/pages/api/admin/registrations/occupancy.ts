@@ -65,8 +65,8 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     // Capacity pre-flight, before any write. Only meaningful for a confirmed
     // booking on a live departure — a pending row holds no seat yet.
     if (reg.status === 'confirmed' && !sel.is_past) {
-      const cap = tierCapFor(reg.trip_name, reg.batch_id, tierId);
-      if (cap != null && confirmedCountForTier(reg.batch_id, tierId) >= cap) {
+      const cap = tierCapFor(reg, reg.batch_id, tierId);
+      if (cap != null && confirmedCountForTier(reg, reg.batch_id, tierId) >= cap) {
         return jsonFail(`That occupancy option is full (${cap}/${cap} confirmed).`);
       }
     }
@@ -130,7 +130,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     // synchronous read-modify-write — same atomicity invariant as
     // adjustBookingCount.
     const seatMoved = reg.status === 'confirmed';
-    if (seatMoved) moveBookingTier(reg.trip_name, reg.batch_id, reg.tier_id, sel.tier_id);
+    if (seatMoved) moveBookingTier(reg, reg.batch_id, reg.tier_id, sel.tier_id);
 
     logAction({
       actorUserId: locals.adminUser?.userId,

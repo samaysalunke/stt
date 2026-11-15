@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../lib/db';
 import { likeTerm } from '../../../lib/utils';
+import { tripSlugWithAliases } from '../../../lib/tripSlugAliases';
 import {
   buildCustomerQuery, CUSTOMER_ORDER_BY, CUSTOMER_TYPES, EXPORT_COLUMNS,
 } from '../../../lib/customersView';
@@ -76,6 +77,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
   if (type === 'registrations') {
     const tripName = url.searchParams.get('trip_name');
+    const tripSlug = url.searchParams.get('trip_slug');
     const search = (url.searchParams.get('q') ?? '').trim().toLowerCase().slice(0, 200);
     const requestedStatus = url.searchParams.get('status') ?? '';
     const statuses = ['wishlist', 'lead', 'pending', 'confirmed', 'rejected', 'cancelled'];
@@ -94,7 +96,13 @@ export const GET: APIRoute = async ({ url, locals }) => {
         params.push(...allowedBatchIds);
       }
     }
-    if (tripName) {
+    if (tripSlug) {
+      // By slug, not name: names are shared by duplicated trips and go stale on
+      // a rename, so a name filter both leaks and drops rows.
+      const slugs = tripSlugWithAliases(tripSlug);
+      where.push(`trip_slug IN (${slugs.map(() => '?').join(',')})`);
+      params.push(...slugs);
+    } else if (tripName) {
       where.push('trip_name = ?');
       params.push(tripName);
     }

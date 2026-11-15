@@ -1,6 +1,7 @@
 import { YAML, fs, path, TRIPS_DIR, ensureDir, assertSafeSlug, deleteImageByUrl, collectImageUrls } from './_contentBase';
 import { DEFAULT_BALANCE_RULE } from './balanceDue';
 import { listDeletedSlugs } from './tripDeletions';
+import { resolveTripSlugAlias } from './tripSlugAliases';
 import { cachedRead, bumpContentVersion, getContentVersion } from './contentCache';
 import { now as clockNow, todayStart } from './clock';
 import { WHATSAPP_GROUP_LINK } from './utils';
@@ -645,6 +646,38 @@ export function tripCardSummaryAnyBatch(trip: Record<string, any>): {
 
 export function findTripByName(tripName: string) {
   return listTrips().find((t: any) => (t.title || t.name) === tripName) ?? null;
+}
+
+/** The two ways a registration row names its trip. */
+export type TripRef = { trip_slug?: string | null; trip_name?: string | null };
+
+/**
+ * The trip a registration belongs to: by slug (following renames), and by name
+ * only for rows that predate trip_slug.
+ *
+ * Name is the fallback, never the first choice. Names are not unique — a
+ * duplicated trip that is renamed back shares its source's title — and a
+ * renamed trip no longer matches the name frozen on its old registrations. A
+ * name-first lookup sent seat counters and capacity checks to the wrong trip,
+ * or skipped them entirely.
+ */
+export function tripForRegistration(ref: TripRef): Record<string, any> | null {
+  const raw = String(ref?.trip_slug ?? '').trim();
+  if (raw) {
+    const slug = resolveTripSlugAlias(raw) ?? raw;
+    const bySlug = listTrips().find((t: any) => t.slug === slug);
+    if (bySlug) return bySlug;
+  }
+  return ref?.trip_name ? findTripByName(ref.trip_name) : null;
+}
+
+/** Every live (trip, batch) pair — the input to buildDepartureIndex. */
+export function listDepartureRefs(): Array<{ tripSlug: string; batchId: string }> {
+  return listTrips().flatMap((t: any) =>
+    (Array.isArray(t.batches) ? t.batches : [])
+      .filter((b: any) => b?.id)
+      .map((b: any) => ({ tripSlug: String(t.slug), batchId: String(b.id) })),
+  );
 }
 
 /**

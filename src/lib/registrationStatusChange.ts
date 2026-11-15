@@ -18,7 +18,7 @@
 import { randomUUID } from 'node:crypto';
 import { getDb } from './db';
 import { claimGroupLink } from './tripGroup';
-import { findTripByName, readTrip } from './content';
+import { tripForRegistration } from './content';
 import {
   sendRegistrationPaymentConfirmed,
   sendRegistrationStatusRejected,
@@ -26,7 +26,7 @@ import {
 } from './email';
 import { logAction } from './audit';
 import { recalculateUserLeaderboard } from './stats';
-import { tripAdvanceAmountBySlug, adjustBookingCount } from './registrationWrite';
+import { tripAdvanceAmountBySlug, adjustBookingCount, confirmedCountForTier, tierCapFor } from './registrationWrite';
 import { purgeUrls, tripPaths, TRIP_LISTING_PATHS } from './cachePurge';
 import {
   ensureFinalDocumentIfFullyPaid,
@@ -111,17 +111,12 @@ export async function applyStatusChange(
 
   // ── Pre-flight: capacity (must run before the UPDATE) ──────────────────
   if (newStatus === 'confirmed' && prevStatus !== 'confirmed' && batchId && tierId) {
-    const confirmedCount = (getDb()
-      .prepare('SELECT COUNT(*) as n FROM registrations WHERE batch_id=? AND tier_id=? AND status=?')
-      .get(batchId, tierId, 'confirmed') as { n: number }).n;
     try {
-      const matched = findTripByName(tripName);
-      if (matched) {
-        const tripData = readTrip(matched.slug);
-        const batch = (tripData?.batches as any[])?.find((b: any) => b.id === batchId);
-        const offer = (batch?.offers as any[])?.find((o: any) => o.tierId === tierId);
-        if (offer?.cap != null && confirmedCount >= offer.cap) {
-          return fail(`This tier is now full (${confirmedCount}/${offer.cap} confirmed). Please confirm another departure or reject this booking.`);
+      const cap = tierCapFor(reg, batchId, tierId);
+      if (cap != null) {
+        const confirmedCount = confirmedCountForTier(reg, batchId, tierId);
+        if (confirmedCount >= cap) {
+          return fail(`This tier is now full (${confirmedCount}/${cap} confirmed). Please confirm another departure or reject this booking.`);
         }
       }
     } catch { /* non-fatal */ }
@@ -283,12 +278,12 @@ export async function applyStatusChange(
     }
 
     if (prevStatus !== 'confirmed') {
-      adjustBookingCount(tripName, batchId, 1, tierId);
+      adjustBookingCount(reg, batchId, 1, tierId);
       seatsChanged = true;
     }
   } else if (newStatus === 'cancelled') {
     if (prevStatus === 'confirmed') {
-      adjustBookingCount(tripName, batchId, -1, tierId);
+      adjustBookingCount(reg, batchId, -1, tierId);
       seatsChanged = true;
     }
     if (refundBody) {
@@ -393,7 +388,7 @@ export async function applyStatusChange(
   // call and off the synchronous read-modify-write, whose atomicity invariant
   // forbids an await anywhere near it.
   if (seatsChanged) {
-    const matchedTrip = findTripByName(tripName);
+    const matchedTrip = tripForRegistration(reg);
     await purgeUrls(matchedTrip ? tripPaths(matchedTrip.slug) : TRIP_LISTING_PATHS);
   }
 
