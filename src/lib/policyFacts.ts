@@ -24,5 +24,18 @@ export const REFUND_WINDOWS: readonly RefundWindow[] = [
   { period: 'Under 7 days', label: 'Before departure', refund: 'No refund', detail: 'The booking is non-refundable', tone: 'none' },
 ];
 
-/** Typical group size, as stated on the homepage. */
-export const GROUP_SIZE = '12–16';
+/**
+ * Typical group size. The homepage stat, llms.txt, the About description and
+ * the organization schema all read this; the group-size FAQ
+ * (`faqs/what-s-the-group-size.yaml`) states the same range in prose and has to
+ * be kept in step by hand, since FAQ copy is admin-editable content.
+ */
+export const GROUP_SIZE = '8–15';
+
+/**
+ * What the company is, in one sentence a reader with no context can use. The
+ * About page's own copy is a founder's letter and never says it; this is the
+ * line the organization schema and the About meta description carry instead.
+ */
+export const ORG_DESCRIPTION =
+  `Seek the Thrill is an India-based travel company founded by Zahra Shakir that runs small-group trips of ${GROUP_SIZE} travellers on offbeat routes across India.`;

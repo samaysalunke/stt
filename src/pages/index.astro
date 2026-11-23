@@ -10,6 +10,7 @@ import Icon from '../components/ui/Icon.astro';
 import { cardLiveSpots } from '../lib/departureCounts';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
 import { formatDateIN, formatINR } from '../lib/utils';
+import { GROUP_SIZE } from '../lib/policyFacts';
 import {
   getUserTrips, upcomingTrips, unfinishedBooking, tripPrimaryAction, tripStates,
   savedTripSlugs, userTravelStats, isNewsletterSubscriber,
@@ -183,7 +184,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
           )}
         <!-- Stats card -->
         <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
-          <Stat value="12–16" label="Group Size" tone="light" class="py-1" />
+          <Stat value={GROUP_SIZE} label="Group Size" tone="light" class="py-1" />
           <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
         </div>
 

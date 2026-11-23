@@ -62,3 +62,28 @@ export function generateTripSeo(trip: TripSeoSource) {
 
   return { seoTitle, seoDescription, imageAlt };
 }
+
+/**
+ * A short place name out of the admin's meeting-point field, for schema.org
+ * `Place.name`.
+ *
+ * The field is written for travellers — "Guwahati — departure sharp at 7:00 AM.
+ * Arrive in Guwahati a day prior." — and the whole sentence was being published
+ * as both the place's name and its street address. The place is the part before
+ * the first dash, comma, colon, bracket or full stop; the rest is instructions.
+ * When that leaves nothing usable (no meeting point, or one that opens with a
+ * sentence rather than a place), fall back to the trip's location.
+ */
+const MAX_PLACE_NAME = 40;
+
+export function meetingPlaceName(meetingPoint: unknown, location: unknown): string {
+  const fallback = typeof location === 'string' ? location.trim() : '';
+  if (typeof meetingPoint !== 'string') return fallback;
+  const head = meetingPoint
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(/\s[—–-]\s|[—–]|[,:;(]|\.(?:\s|$)/)[0]
+    .trim();
+  if (!head || head.length > MAX_PLACE_NAME) return fallback;
+  return head;
+}

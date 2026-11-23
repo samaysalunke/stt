@@ -8,6 +8,7 @@ import WebVitals from '../components/WebVitals.astro';
 import '../styles/global.css';
 import { readSiteSettings } from '../lib/content';
 import { SITE_ORIGIN, siteUrl } from '../lib/siteUrl';
+import { ORG_DESCRIPTION } from '../lib/policyFacts';
 
 interface Props {
   title: string;
@@ -59,6 +60,7 @@ const orgSchema = {
     {
       '@type': ['Organization', 'TravelAgency'], '@id': orgId, name: 'Seek the Thrill',
       alternateName: 'STT',
+      description: ORG_DESCRIPTION,
       url: siteUrl('/'), logo: siteUrl('/logo.jpg'),
       email: settings.email ?? 'zahra@seekthethrill.in',
       founder: { '@id': founderId },
@@ -79,7 +81,7 @@ const orgSchema = {
         settings.googleBusinessProfile,
       ].filter(Boolean),
     },
-    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', url: siteUrl('/about/'), worksFor: { '@id': orgId } },
+    { '@type': 'Person', '@id': founderId, name: 'Zahra Shakir', jobTitle: 'Founder', url: siteUrl('/about/'), worksFor: { '@id': orgId } },
   ],
 };
 ---
