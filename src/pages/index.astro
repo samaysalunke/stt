@@ -9,7 +9,6 @@ import Icon from '../components/ui/Icon.astro';
 import { cardLiveSpots } from '../lib/departureCounts';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
 import { formatDateIN, formatINR } from '../lib/utils';
-import { GROUP_SIZE } from '../lib/policyFacts';
 import {
   getUserTrips, upcomingTrips, unfinishedBooking, tripPrimaryAction, tripStates,
   savedTripSlugs, userTravelStats,
@@ -93,7 +92,7 @@ const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => (
   <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
     id="homepage-hero"
-    class="relative min-h-[78svh] flex flex-col justify-end sm:justify-center overflow-hidden bg-navy-deep"
+    class="relative min-h-[78svh] flex flex-col overflow-hidden bg-navy-deep"
   >
     <img
       src={heroImg.src}
@@ -106,13 +105,16 @@ const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => (
     />
     <div class="u-overlay-scrim-hero absolute inset-0"></div>
 
-    <div class="container-app relative z-10 w-full pt-24 pb-10 sm:py-0 flex flex-col items-start text-left"
-    ><div class="w-full max-w-xl lg:max-w-2xl">
-
-      <!-- Brand mark -->
+    <!-- Brand mark: centred at the top of the hero -->
+    <div class="container-app relative z-10 w-full pt-8 sm:pt-12 flex flex-col items-center text-center">
       <img src="/logo-192.webp" alt="Seek the Thrill" width="96" height="96" class="w-16 h-16 mb-3 sm:w-20 sm:h-20 sm:mb-4 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl" />
       <p class="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</p>
-      <p class="text-sm text-white/75 mb-5 sm:mb-8">by Zahra Shakir</p>
+      <p class="text-sm text-white/75">by Zahra Shakir</p>
+    </div>
+
+    <!-- Mobile: content sits at the bottom of the hero. sm+: centred in the space below the brand. -->
+    <div class="container-app relative z-10 w-full mt-auto pt-10 pb-10 sm:my-auto sm:py-12 flex flex-col items-start text-left"
+    ><div class="w-full max-w-xl lg:max-w-2xl">
 
       <!-- Headline -->
       <h1 class="font-display font-semibold text-display-xl mb-3 sm:mb-4 w-full text-white">
@@ -121,7 +123,7 @@ const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => (
 
       <!-- Subtext -->
       <p class="text-base lg:text-lg text-white/80 w-full mb-5 sm:mb-7 leading-relaxed">
-        Hosted by Zahra Shakir and her team. Come on your own or bring friends. Groups are {GROUP_SIZE} people.
+        Come on your own or bring friends.
       </p>
 
       {heroVariant && heroVariant !== 'new' ? (
