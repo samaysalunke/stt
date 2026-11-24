@@ -1,4 +1,5 @@
 import { getDb } from '../db';
+import { COMMITTED_STATUSES } from '../departureFinance';
 import { stripBlockedRows } from './schema';
 import { findDepartureById, findTripBySlug, findTripsByText } from './trips';
 
@@ -125,7 +126,7 @@ export const analyticsTools: ToolDefinition[] = [
   },
   {
     name: 'getPendingPayments',
-    description: 'Outstanding balances by trip using total_amount minus amount_paid.',
+    description: 'Outstanding balances by trip using total_amount minus amount_paid for pending and confirmed registrations.',
     parameters: objectParams({}),
     execute() {
       const rows = withTripTitles(all(
@@ -133,11 +134,12 @@ export const analyticsTools: ToolDefinition[] = [
                 SUM(MAX(COALESCE(total_amount, 0) - COALESCE(amount_paid, 0), 0)) AS pending_amount,
                 COUNT(*) AS registrations
          FROM registrations
-         WHERE status NOT IN ('rejected', 'cancelled') AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
+         WHERE status IN (${COMMITTED_STATUSES.map(() => '?').join(',')}) AND COALESCE(total_amount, 0) > COALESCE(amount_paid, 0)
          GROUP BY COALESCE(trip_slug, trip_name), trip_name
          ORDER BY pending_amount DESC`,
+        [...COMMITTED_STATUSES],
       ));
-      return shape(rows, 'Pending payments are total amount minus amount paid for non-rejected registrations.');
+      return shape(rows, 'Pending payments are total amount minus amount paid for pending and confirmed registrations — the same set the receivables page counts.');
     },
   },
   {

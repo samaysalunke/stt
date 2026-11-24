@@ -7,7 +7,7 @@
  * reachable only by constructing an HTTP request with an admin session cookie.
  *
  * The actor is a parameter rather than `locals.adminUser` so a non-HTTP caller
- * (the Telegram webhook in docs/telegram-two-way-actions-plan.md) can run the
+ * (the Telegram webhook in docs/archive/telegram-two-way-actions-plan.md) can run the
  * same path with the same guards instead of reimplementing a second copy of it.
  *
  * Failures come back as values, not exceptions: `{ ok: false, status, error }`
