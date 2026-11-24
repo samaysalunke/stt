@@ -12,7 +12,8 @@ interface Props {
 
 const { value, label, tone = 'dark', class: className, ...rest } = Astro.props;
 const valueColor = tone === 'dark' ? 'text-navy' : 'text-white';
-const labelColor = tone === 'dark' ? 'text-gray-text' : 'text-white/45';
+// 45% white measured ~4.3:1 on the homepage stats tile; 70% clears AA.
+const labelColor = tone === 'dark' ? 'text-gray-text' : 'text-white/70';
 ---
 
 <div class:list={['text-center', className]} {...rest}>

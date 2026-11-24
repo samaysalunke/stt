@@ -1,6 +1,7 @@
 ---
 import { balanceDue, getUserTrips } from '../lib/userTrips';
 import { formatINR } from '../lib/utils';
+import Icon from './ui/Icon.astro';
 
 interface Props {
   hidden?: boolean;
@@ -45,6 +46,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
 <header
   id="site-header"
   class:list={[hidden ? ['fixed', 'is-hideable'] : 'sticky', 'top-0', 'left-0', 'right-0', 'z-50']}
+  inert={hidden ? true : undefined}
 >
   <div class="container-app">
     <div class="header-row">
@@ -120,7 +122,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
             <small>Signed in as</small>
             <strong>{firstName ?? user.email}</strong>
           </span>
-          <span class="drawer-arrow" aria-hidden="true">→</span>
+          <Icon name="arrow-right" size={18} class="drawer-arrow" />
         </a>
       ) : (
         <a href="/login" class="drawer-sign-in">
@@ -130,7 +132,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
             </svg>
           </span>
           <span><strong>Sign in</strong><small>View bookings and your profile</small></span>
-          <span class="drawer-arrow" aria-hidden="true">→</span>
+          <Icon name="arrow-right" size={18} class="drawer-arrow" />
         </a>
       )}
 
@@ -166,7 +168,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
       </nav>
 
       <div class="drawer-footer">
-        <a href="/trips/" class="drawer-trip-cta">Explore upcoming trips <span aria-hidden="true">→</span></a>
+        <a href="/trips/" class="drawer-trip-cta">Explore upcoming trips <Icon name="arrow-right" size={16} /></a>
         {user && (
           <form method="POST" action="/api/auth/logout">
             <button type="submit" class="drawer-sign-out">Sign out</button>
@@ -265,7 +267,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
   .desktop-profile:hover { opacity: 0.8; }
   .desktop-profile img, .avatar-fallback { width: 1.75rem; height: 1.75rem; border-radius: 999px; object-fit: cover; }
   .avatar-fallback { display: grid; place-items: center; background: var(--color-cta); color: white; font-size: 0.75rem; font-weight: 700; }
-  .menu-trigger { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; padding: 0.5rem; border-radius: 0.5rem; color: white; transition: background-color 150ms ease; }
+  .menu-trigger { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0.625rem; border-radius: 0.75rem; color: white; transition: background-color 150ms ease; }
   .menu-trigger:hover { background: rgba(255,255,255,0.1); }
   .menu-trigger-label { display: none; }
   .menu-trigger svg { width: 1.5rem; height: 1.5rem; }
@@ -279,8 +281,8 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
   .drawer-brand { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
   .drawer-brand img { width: 3.25rem; height: 3.25rem; border-radius: 0.9rem; object-fit: cover; box-shadow: var(--shadow-card); }
   .drawer-brand div { display: flex; min-width: 0; flex-direction: column; }
-  .drawer-brand strong { color: var(--color-navy); font-family: var(--font-display); font-size: 1.3rem; line-height: 1.1; }
-  .drawer-brand span { margin-top: 0.28rem; color: var(--color-gray-text); font-size: 0.65rem; }
+  .drawer-brand strong { color: var(--color-navy); font-family: var(--font-display); font-size: var(--text-display-xs); line-height: 1.1; }
+  .drawer-brand span { margin-top: 0.25rem; color: var(--color-gray-text); font-size: 0.75rem; }
   .menu-close { display: grid; place-items: center; flex: 0 0 auto; width: 2.6rem; height: 2.6rem; border: 1px solid var(--color-border); border-radius: 999px; background: white; color: var(--color-navy); transition: transform 160ms ease, background 160ms ease; }
   .menu-close:hover { transform: rotate(5deg); background: var(--color-blush); }
   .menu-close svg { width: 1.1rem; height: 1.1rem; }
@@ -291,35 +293,35 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
   .drawer-sign-in-icon { background: rgba(255,255,255,0.16); }
   .drawer-sign-in-icon svg { width: 1.25rem; height: 1.25rem; }
   .drawer-sign-in > span:nth-child(2), .drawer-profile-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-  .drawer-sign-in strong, .drawer-profile strong { font-size: 0.86rem; font-weight: 700; }
-  .drawer-sign-in small { margin-top: 0.15rem; color: rgba(255,255,255,0.85); font-size: 0.62rem; }
-  .drawer-arrow { flex: 0 0 auto; font-size: 1rem; }
+  .drawer-sign-in strong, .drawer-profile strong { font-size: 0.875rem; font-weight: 700; }
+  .drawer-sign-in small { margin-top: 0.125rem; color: rgba(255,255,255,0.85); font-size: 0.75rem; }
+  .drawer-arrow { flex: 0 0 auto; }
   .drawer-profile { border: 1px solid var(--color-peach); background: white; color: var(--color-navy); }
   .drawer-profile img { object-fit: cover; }
   .drawer-avatar { background: var(--color-navy); color: white; font-size: 0.75rem; font-weight: 700; }
-  .drawer-profile small { margin-bottom: 0.18rem; color: var(--color-gray-text); font-size: 0.6rem; }
+  .drawer-profile small { margin-bottom: 0.125rem; color: var(--color-gray-text); font-size: 0.75rem; }
   .drawer-profile .drawer-arrow { color: var(--color-coral-ink); }
   .drawer-nav { padding: 1.1rem 0; }
   .drawer-group + .drawer-group { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
-  .drawer-group h2 { margin: 0 0 0.3rem 0.75rem; color: var(--color-gray-text); font-family: var(--font-sans); font-size: 0.6rem; font-weight: 750; letter-spacing: 0.16em; text-transform: uppercase; }
-  .drawer-link { display: flex; align-items: center; justify-content: space-between; min-height: 2.65rem; padding: 0.55rem 0.75rem; border-radius: 0.75rem; color: rgba(27,43,58,0.8); font-size: 0.88rem; font-weight: 600; transition: background 140ms ease, color 140ms ease; }
+  .drawer-group h2 { margin: 0 0 0.3rem 0.75rem; color: var(--color-gray-text); font-family: var(--font-sans); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .drawer-link { display: flex; align-items: center; justify-content: space-between; min-height: 2.65rem; padding: 0.55rem 0.75rem; border-radius: 0.75rem; color: rgba(27,43,58,0.8); font-size: 0.875rem; font-weight: 600; transition: background 140ms ease, color 140ms ease; }
   .drawer-link:hover { background: white; color: var(--color-navy); }
   .drawer-link.active { background: var(--color-blush); color: var(--color-coral-ink); }
   .drawer-link svg { width: 0.95rem; height: 0.95rem; opacity: 0.42; }
   .drawer-link.active svg { opacity: 0.9; }
   .drawer-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--color-peach); }
-  .drawer-trip-cta { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 3rem; border-radius: 999px; background: var(--color-navy); color: white; font-size: 0.82rem; font-weight: 700; }
+  .drawer-trip-cta { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; min-height: 3rem; border-radius: 999px; background: var(--color-navy); color: white; font-size: 0.875rem; font-weight: 700; }
   .drawer-trip-cta:hover { background: var(--color-navy-deep); }
-  .drawer-sign-out { width: 100%; margin-top: 0.4rem; padding: 0.7rem; color: var(--color-coral-ink); font-size: 0.72rem; font-weight: 650; }
+  .drawer-sign-out { width: 100%; margin-top: 0.4rem; padding: 0.75rem; color: var(--color-coral-ink); font-size: 0.875rem; font-weight: 600; }
   .desktop-profile, .menu-trigger { position: relative; }
   .attention-dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; background: var(--color-coral); box-shadow: 0 0 0 2px var(--color-navy); }
   .desktop-profile .attention-dot { position: absolute; left: 1.2rem; top: -0.1rem; }
   .menu-dot { position: absolute; right: 0.35rem; top: 0.35rem; display: none; }
   .drawer-balance { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0 0.25rem; padding: 0.75rem 0.85rem; border-radius: 1rem; background: var(--color-blush); color: var(--color-navy); }
   .drawer-balance-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-  .drawer-balance-copy small { color: var(--color-coral-ink); font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-  .drawer-balance-copy strong { overflow: hidden; font-size: 0.82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-  .drawer-balance-cta { flex: 0 0 auto; border-radius: 999px; background: var(--color-cta); color: white; padding: 0.45rem 0.85rem; font-size: 0.72rem; font-weight: 700; }
+  .drawer-balance-copy small { color: var(--color-coral-ink); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+  .drawer-balance-copy strong { overflow: hidden; font-size: 0.875rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+  .drawer-balance-cta { flex: 0 0 auto; border-radius: 999px; background: var(--color-cta); color: white; padding: 0.375rem 1rem; font-size: 0.875rem; font-weight: 700; }
   @media (max-width: 639px) {
     .desktop-sign-in, .desktop-profile { display: none; }
     .menu-dot { display: block; }
