@@ -13,7 +13,7 @@ import { buildBreadcrumb } from '../../lib/breadcrumbs';
 import { formatDepartureRange, getDepartureSummary } from '../../lib/departureSummary';
 import { FALLBACK_HERO } from '../../lib/images';
 import { SITE_ORIGIN, siteUrl } from '../../lib/siteUrl';
-import { generateTripSeo, markdownToPlainText } from '../../lib/tripSeo';
+import { generateTripSeo, markdownToPlainText, meetingPlaceName } from '../../lib/tripSeo';
 import { getDb } from '../../lib/db';
 import { confirmedCountsByBatch, departureKey } from '../../lib/departureCounts';
 import { liveSpotsLeft } from '../../lib/urgency';
@@ -285,8 +285,11 @@ const eventSchemas = departures.map((departure) => {
     organizer: { '@id': `${SITE_ORIGIN}/#organization` },
     ...(trip.meetingPoint || trip.location ? {
       location: {
-        '@type': 'Place', name: trip.meetingPoint || trip.location,
-        address: { '@type': 'PostalAddress', ...(trip.meetingPoint ? { streetAddress: trip.meetingPoint } : {}), ...(trip.location ? { addressRegion: trip.location } : {}), addressCountry: 'IN' },
+        // name is the place alone; the meeting instructions are a description of
+        // it, not a street address. See meetingPlaceName.
+        '@type': 'Place', name: meetingPlaceName(trip.meetingPoint, trip.location),
+        ...(trip.meetingPoint ? { description: String(trip.meetingPoint).replace(/\s+/g, ' ').trim() } : {}),
+        address: { '@type': 'PostalAddress', ...(trip.location ? { addressRegion: trip.location } : {}), addressCountry: 'IN' },
       },
     } : {}),
     ...(cheapestOffer && !departure.comingSoon ? { offers: { '@type': 'Offer', price: Math.round(cheapestOffer.price), priceCurrency: 'INR', availability: departure.soldOut ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock', url: canonicalUrl } } : {}),

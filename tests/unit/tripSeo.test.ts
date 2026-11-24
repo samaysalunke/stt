@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateTripSeo, markdownToPlainText } from '../../src/lib/tripSeo';
+import { generateTripSeo, markdownToPlainText, meetingPlaceName } from '../../src/lib/tripSeo';
 
 describe('generateTripSeo', () => {
   it('uses the trip name, location and short description', () => {
@@ -46,5 +46,28 @@ describe('generateTripSeo', () => {
     expect(markdownToPlainText(markdown)).toBe('Hidden valleys A bold and quiet journey. Waterfalls Villages');
     expect(generateTripSeo({ name: 'A Trip', description: markdown }).seoDescription)
       .toBe('Hidden valleys A bold and quiet journey. Waterfalls Villages');
+  });
+});
+
+describe('meetingPlaceName', () => {
+  it.each([
+    ['Guwahati — departure sharp at 7:00 AM. Arrive in Guwahati a day prior.', 'Meghalaya', 'Guwahati'],
+    ['Bagdogra  - we recommend arriving in Bagdogra a day before the trip begins.', 'Sikkim', 'Bagdogra'],
+    ['Srinagar Airport — trip starts and ends in Srinagar.', 'Kashmir', 'Srinagar Airport'],
+    ['Leh Airport', 'Ladakh', 'Leh Airport'],
+    ['Madgaon Railway Station, pickup at 10 AM', 'Goa', 'Madgaon Railway Station'],
+    ['Bir-Billing landing site. Look for the STT host.', 'Himachal', 'Bir-Billing landing site'],
+  ])('takes the place out of %j', (meetingPoint, location, expected) => {
+    expect(meetingPlaceName(meetingPoint, location)).toBe(expected);
+  });
+
+  it('falls back to the trip location when the field opens with a sentence, not a place', () => {
+    expect(meetingPlaceName('We will share the exact pickup location with the group a week before departure', 'Wayanad')).toBe('Wayanad');
+  });
+
+  it('falls back to the trip location when there is no meeting point', () => {
+    expect(meetingPlaceName(null, 'Arunachal Pradesh')).toBe('Arunachal Pradesh');
+    expect(meetingPlaceName('', ' Arunachal Pradesh ')).toBe('Arunachal Pradesh');
+    expect(meetingPlaceName(undefined, undefined)).toBe('');
   });
 });
