@@ -1,0 +1,51 @@
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "fraunces",
+        "createdAt": "2026-11-14T11:49:21.419Z",
+        "reason": "agent: Fraunces is the committed brand display face (DESIGN.md typography, self-hosted in src/styles/fonts.css)"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/pages/admin/trips/new.astro"
+        ],
+        "createdAt": "2026-11-14T11:49:38.322Z",
+        "reason": "agent: hidden upload preview (class img-preview hidden) whose src is set by script after a file is chosen"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/pages/admin/trips/[slug].astro"
+        ],
+        "createdAt": "2026-11-14T11:49:38.352Z",
+        "reason": "agent: hidden upload preview (class img-preview hidden) whose src is set by script after a file is chosen"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "files": [
+          "src/lib/emailTemplates.ts"
+        ],
+        "createdAt": "2026-11-14T11:51:33.963Z",
+        "reason": "agent: HTML email body; email clients can't load the self-hosted brand fonts, so a web-safe Arial stack is correct here"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "files": [
+          "src/lib/emailTemplates.ts"
+        ],
+        "createdAt": "2026-11-14T11:51:33.992Z",
+        "reason": "agent: HTML email body; email clients can't load the self-hosted brand fonts, so a web-safe Arial stack is correct here"
+      }
+    ]
+  }
+}
