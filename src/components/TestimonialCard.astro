@@ -21,7 +21,7 @@ const surfaceClass = surface === 'white' ? 'bg-white' : 'bg-blush';
       {t.photo ? (
         <img data-skeleton-image src={t.photo} alt="" loading="lazy" class="h-10 w-10 shrink-0 rounded-full object-cover" />
       ) : (
-        <span aria-hidden="true" class="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-pill)] bg-cta font-display font-bold text-white">{(t.name ?? '?')[0]}</span>
+        <span aria-hidden="true" class="grid h-10 w-10 shrink-0 place-items-center rounded-[var(--radius-pill)] bg-cta font-sans font-bold text-white">{(t.name ?? '?')[0]}</span>
       )}
       <div class="min-w-0">
         <p class="truncate text-sm font-medium text-navy">{t.name}</p>

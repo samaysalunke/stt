@@ -39,7 +39,7 @@ test.describe('legal pages and navigation drawer', () => {
     const drawer = page.getByRole('dialog', { name: 'Site navigation' });
     await expect(drawer).toBeVisible();
     await expect(drawer.getByText('Seek the Thrill')).toBeVisible();
-    await expect(drawer.getByText('Small groups. Offbeat India.')).toBeVisible();
+    await expect(drawer.getByText('Small-group trips across India, hosted by Zahra Shakir.')).toBeVisible();
     await expect(drawer.getByRole('link', { name: /Sign in/ })).toBeVisible();
     await expect(drawer.getByRole('heading', { name: 'Explore' })).toBeVisible();
     await expect(drawer.getByRole('heading', { name: 'Support' })).toBeVisible();

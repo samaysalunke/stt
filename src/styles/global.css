@@ -13,3 +13,9 @@
 @source not "../layouts/AdminLayout.astro";
 
 @import "./tokens.css";
+
+/* Public headings sit at semibold. Admin shares tokens.css but keeps its own
+   heading weights, so this lives in the public entry only. */
+@layer base {
+  h1, h2, h3, h4, h5, h6 { font-weight: 600; }
+}

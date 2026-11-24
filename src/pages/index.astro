@@ -5,7 +5,6 @@ import { CAROUSEL_SIZES } from '../lib/imageVariants';
 import TestimonialCard from '../components/TestimonialCard.astro';
 import Button from '../components/ui/Button.astro';
 import Section from '../components/ui/Section.astro';
-import Stat from '../components/ui/Stat.astro';
 import Icon from '../components/ui/Icon.astro';
 import { cardLiveSpots } from '../lib/departureCounts';
 import { listTrips, listTestimonials, selectFeaturedTestimonials, readSiteSettings, isTripListable, tripCardSummary, sortTripsByPriority, contentSeededRandom } from '../lib/content';
@@ -13,7 +12,7 @@ import { formatDateIN, formatINR } from '../lib/utils';
 import { GROUP_SIZE } from '../lib/policyFacts';
 import {
   getUserTrips, upcomingTrips, unfinishedBooking, tripPrimaryAction, tripStates,
-  savedTripSlugs, userTravelStats, isNewsletterSubscriber,
+  savedTripSlugs, userTravelStats,
 } from '../lib/userTrips';
 
 const allTrips = listTrips();
@@ -65,19 +64,18 @@ const savedTrips = savedSlugs
   .filter((t): t is (typeof allTrips)[number] => Boolean(t && isTripListable(t)))
   .sort((a, b) => Number(tripCardSummary(a).soldOut || tripCardSummary(a).allComingSoon) - Number(tripCardSummary(b).soldOut || tripCardSummary(b).allComingSoon));
 const savedLiveSpots = savedTrips.length ? cardLiveSpots(savedTrips.map((t) => ({ slug: t.slug, ...tripCardSummary(t) }))) : new Map();
-const subscribed = isNewsletterSubscriber(Astro.locals);
 ---
 
 <BaseLayout
-  title="Seek the Thrill — Offbeat Group Trips Across India"
-  description="Offbeat group trips for people who want to feel alive again. Small groups. Curated routes. Come for the adventure, stay for the people."
+  title="Seek the Thrill: small-group trips across India"
+  description="Small-group trips to Sikkim, Meghalaya, Arunachal, Kashmir and Ladakh, hosted by Zahra Shakir. Come solo or with friends. See dates, prices and itineraries."
   nav="scroll"
 >
 
   <!-- ── HERO ──────────────────────────────────────────────── -->
   <section
     id="homepage-hero"
-    class="relative min-h-screen flex flex-col items-center justify-start sm:justify-center overflow-hidden"
+    class="relative min-h-[78svh] flex flex-col justify-end sm:justify-center overflow-hidden"
   >
     <img
       src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1280&auto=format&fit=crop&q=80"
@@ -90,29 +88,29 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     />
     <div class="u-overlay-scrim-hero absolute inset-0"></div>
 
-    <div class="relative z-10 w-full max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto px-6 pt-8 sm:pt-0 flex flex-col items-center text-center">
+    <div class="container-app relative z-10 w-full pt-24 pb-10 sm:py-0 flex flex-col items-start text-left"
+    ><div class="w-full max-w-xl lg:max-w-2xl">
 
       <!-- Brand mark -->
-      <img src="/logo-192.webp" alt="Seek the Thrill" width="96" height="96" class="anim-fade-up w-16 h-16 mb-3 sm:w-20 sm:h-20 sm:mb-4 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl" />
-      <p class="anim-fade-up font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</p>
-      <p class="anim-fade-up font-display italic text-sm text-white/70 mb-5 sm:mb-10">by Zahra Shakir</p>
+      <img src="/logo-192.webp" alt="Seek the Thrill" width="96" height="96" class="w-16 h-16 mb-3 sm:w-20 sm:h-20 sm:mb-4 lg:w-24 lg:h-24 rounded-2xl object-cover shadow-xl" />
+      <p class="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-white">Seek the Thrill</p>
+      <p class="text-sm text-white/75 mb-5 sm:mb-8">by Zahra Shakir</p>
 
       <!-- Headline -->
-      <h1 class="anim-rise anim-delay-1 font-display font-bold text-display-xl mb-3 sm:mb-4 text-left w-full text-white">
-        Offbeat group trips<br />
-        <span class="italic text-coral">away from the crowds.</span>
+      <h1 class="font-display font-semibold text-display-xl mb-3 sm:mb-4 w-full text-white">
+        Small-group trips to the quieter corners of India.
       </h1>
 
       <!-- Subtext -->
-      <p class="anim-fade-up anim-delay-2 text-base lg:text-lg text-white/75 text-left w-full mb-4 sm:mb-7 leading-relaxed">
-        Group trips for travellers. Offbeat spots, zero fluff.
+      <p class="text-base lg:text-lg text-white/80 w-full mb-5 sm:mb-7 leading-relaxed">
+        Hosted by Zahra Shakir and her team. Come on your own or bring friends. Groups are {GROUP_SIZE} people.
       </p>
 
       {heroVariant && heroVariant !== 'new' ? (
         <div
           data-testid="hero-personal"
           data-variant={heroVariant}
-          class="anim-fade-up anim-delay-2 w-full rounded-2xl p-4 mb-4 sm:p-5 sm:mb-6 text-left bg-[rgba(15,20,35,0.7)] backdrop-blur-md"
+          class="w-full rounded-2xl p-4 mb-4 sm:p-5 sm:mb-6 text-left bg-navy"
         >
           <p class="text-sm text-white/75">Welcome back{firstName && <>, <strong class="font-semibold text-white">{firstName}</strong></>}</p>
 
@@ -178,31 +176,26 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       ) : (
         <>
           {heroVariant === 'new' && (
-            <p data-testid="hero-personal" data-variant="new" class="anim-fade-up anim-delay-2 w-full text-left text-sm text-white/80 mb-3">
+            <p data-testid="hero-personal" data-variant="new" class="w-full text-left text-sm text-white/80 mb-3">
               Hi{firstName && <> <strong class="font-semibold text-white">{firstName}</strong></>}, tap the ♡ on any trip to save it for later.
             </p>
           )}
-        <!-- Stats card -->
-        <div class="anim-fade-up anim-delay-2 w-full rounded-2xl p-3 mb-4 sm:p-4 sm:mb-5 grid grid-cols-2 bg-[rgba(15,20,35,0.65)] backdrop-blur-md">
-          <Stat value={GROUP_SIZE} label="Group Size" tone="light" class="py-1" />
-          <Stat value="10+" label="Destinations" tone="light" class="py-1 border-l border-white/10" />
-        </div>
-
         <!-- CTA -->
         <Button
           href="/trips/"
           variant="cta"
           size="lg"
-          class="anim-fade-up anim-delay-3 w-full sm:w-auto mb-4 sm:mb-6"
+          class="w-full sm:w-auto mb-4 sm:mb-5"
         >
-          <Icon name="users" /> Join a Trip
+          See upcoming trips
         </Button>
 
         <!-- Social proof -->
-        <p class="anim-fade-up anim-delay-4 text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
+        <p class="text-sm text-white/70">Joined by <span class="text-white font-semibold">340+</span> adventurers</p>
         </>
       )}
 
+    </div>
     </div>
   </section>
 
@@ -250,17 +243,11 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     </section>
   )}
 
-  <!-- ── UPCOMING TRIPS ────────────────────────────────────── -->
+  <!-- ── UPCOMING TRIPS + HOW BOOKING WORKS ───────────────── -->
   <section class="py-16 lg:py-20 bg-gray-soft">
     <div class="container-app">
-      <h2 class="font-display font-bold text-display-xl text-navy">
-        {/* On --color-gray-soft, coral is 2.75:1 — under even the 3:1 large-text
-            bound, which the "display size can stay text-coral" rule assumed held
-            everywhere. coral-ink is 4.62:1 on this surface. */}
-        Where to, <span class="italic text-coral-ink">wanderer?</span>
-      </h2>
-      <div class="mt-10 mb-8 flex items-end justify-between gap-6">
-        <h3 class="font-display text-2xl text-navy">Featured Trips</h3>
+      <div class="mb-8 flex items-end justify-between gap-6">
+        <h2 class="font-display font-semibold text-display-md text-navy">Upcoming trips</h2>
         <div class="flex items-center gap-3">
           {showCarouselArrows && (
             <div class="hidden gap-2 lg:flex">
@@ -272,7 +259,7 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
               </button>
             </div>
           )}
-          <a href="/trips/" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">See All <Icon name="arrow-right" class="h-4 w-4" /></a>
+          <a href="/trips/" class="inline-flex items-center gap-1 text-sm font-medium text-coral-ink hover:underline">See all <Icon name="arrow-right" class="h-4 w-4" /></a>
         </div>
       </div>
 
@@ -318,6 +305,30 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       ) : (
         <p class="text-center py-12 text-gray-text">More trips coming soon. Stay tuned.</p>
       )}
+
+      <!-- How booking works -->
+      <div class="mt-16 lg:mt-20 border-t border-peach pt-12 lg:pt-14 max-w-2xl">
+        <h2 class="font-display font-semibold text-display-md text-navy mb-8">How booking works</h2>
+        <ol class="space-y-6">
+          {[
+            'Pick a departure. Every trip page shows the dates, the price and what is included.',
+            'Fill in a short form for each traveller, pay the advance by UPI or bank transfer, and upload your payment screenshot.',
+            'Zahra and the team confirm your spot within 24 hours. The balance is due before the trip, and the trip page shows the date.',
+          ].map((text, i) => (
+            <li class="flex gap-4">
+              <span class="font-sans tabular-nums text-lg font-bold text-coral-ink w-6 shrink-0">{i + 1}</span>
+              <p class="text-navy leading-relaxed">{text}</p>
+            </li>
+          ))}
+          <li class="flex gap-4">
+            <span class="font-sans tabular-nums text-lg font-bold text-coral-ink w-6 shrink-0">4</span>
+            <p class="text-navy leading-relaxed">Questions before you decide? <a href={whatsapp} class="font-medium text-coral-ink underline underline-offset-4 hover:no-underline">Message us on WhatsApp</a>.</p>
+          </li>
+        </ol>
+        <p class="mt-8 text-sm text-gray-text">
+          Read the <a href="/cancellation/" class="underline underline-offset-4 hover:text-navy">cancellation policy</a> or the <a href="/faq/" class="underline underline-offset-4 hover:text-navy">FAQ</a>.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -347,32 +358,12 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
     }
   </script>
 
-  <!-- ── HOW IT WORKS ──────────────────────────────────────── -->
-  <Section as="section" tone="navy" space="md">
-    <h2 class="font-display font-bold text-display-md text-white mb-14">
-      How it works
-    </h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-      {[
-        { num: '01', title: 'Pick a trip', desc: 'Browse upcoming destinations, find one that pulls you.' },
-        { num: '02', title: 'Save your spot', desc: 'Pay a small advance. The rest follows later.' },
-        { num: '03', title: 'Show up', desc: 'We handle the details. You handle the experience.' },
-      ].map((step) => (
-        <div class="reveal pt-6 border-t border-white/15">
-          <div class="font-display text-6xl font-bold mb-4 text-peach/70">{step.num}</div>
-          <h3 class="font-display text-xl font-bold text-white mb-3">{step.title}</h3>
-          <p class="text-white/65 text-sm leading-relaxed">{step.desc}</p>
-        </div>
-      ))}
-    </div>
-  </Section>
-
   <!-- ── COMMUNITY ─────────────────────────────────────────── -->
   {featuredTestimonials.length > 0 && (
     <Section
       tone="blush"
-      title="Who comes on these trips"
-      intro="Solo travelers. Friend groups. People who said yes on a whim. Nobody's left out."
+      title="From past travellers"
+      intro="Unedited notes from people who've been on a trip."
     >
       <div class="flex items-start gap-5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4">
         {featuredTestimonials.map((t, index) => (
@@ -381,51 +372,6 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       </div>
     </Section>
   )}
-
-  <!-- ── NEWSLETTER ─────────────────────────────────────────── -->
-  <section
-    class="py-16 lg:py-20 relative bg-cover bg-center"
-    style="background-image: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1000&auto=format&fit=crop&q=70');"
-  >
-    <div class="u-overlay-scrim-flat absolute inset-0"></div>
-    <div class="container-app relative">
-      <div class="max-w-xl mx-auto text-center">
-        <h2 class="font-display font-bold text-display-md mb-3 text-white">
-          Be first to know
-        </h2>
-        <p class="text-base mb-8 leading-relaxed text-white/75">
-          New trips, new batches, things worth knowing. No spam.
-        </p>
-        {subscribed ? (
-          <p data-testid="home-nl-subscribed" class="text-base font-medium text-white">You're on the list. We'll email {user!.email} when something good is coming.</p>
-        ) : (
-          <>
-            <form id="home-newsletter" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <label for="home-newsletter-email" class="sr-only">Your email address</label>
-              <input
-                id="home-newsletter-email"
-                type="email"
-                name="email"
-                placeholder="Your email address"
-                value={user?.email}
-                required
-                class="flex-1 px-5 py-3.5 rounded-full text-sm border-2 border-white/25 bg-white/10 outline-none text-white placeholder:text-white/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              />
-              <button
-                type="submit"
-                class="px-7 py-3.5 rounded-full text-sm font-semibold text-white bg-cta transition-all hover:-translate-y-0.5 hover:brightness-105 flex-shrink-0"
-              >
-                Keep me posted
-              </button>
-            </form>
-            <p id="home-nl-success" class="hidden text-base mt-6 font-medium text-white">
-              You're in. We'll be in touch when something good is coming.
-            </p>
-          </>
-        )}
-      </div>
-    </div>
-  </section>
 
 </BaseLayout>
 
@@ -438,24 +384,4 @@ const subscribed = isNewsletterSubscriber(Astro.locals);
       { threshold: 0 }
     ).observe(hero);
   }
-</script>
-
-<script>
-  document.getElementById('home-newsletter')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const form = e.currentTarget as HTMLFormElement;
-    const email = form.querySelector<HTMLInputElement>('input[name="email"]')?.value ?? '';
-    try {
-      const res = await fetch('/api/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source: 'homepage' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        form.style.display = 'none';
-        document.getElementById('home-nl-success')?.classList.remove('hidden');
-      }
-    } catch {}
-  });
 </script>

@@ -392,7 +392,7 @@ const tripSchema: Record<string, any> = {
         <!-- Quick pills -->
         <div class="flex min-w-0 flex-wrap gap-1.5 sm:gap-2">
           {trip.location && (
-            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
+            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-navy px-2.5 py-1 text-xs text-white sm:px-3 sm:py-1.5 sm:text-sm">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               </svg>
@@ -406,7 +406,7 @@ const tripSchema: Record<string, any> = {
             </a>
           )}
           {trip.duration && (
-            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
+            <span class="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-navy px-2.5 py-1 text-xs text-white sm:px-3 sm:py-1.5 sm:text-sm">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -453,7 +453,7 @@ const tripSchema: Record<string, any> = {
               {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="ml-1" client:load />}
             </span>
           ) : allComingSoon ? (
-            <span class="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm sm:px-3 sm:py-1.5 sm:text-sm">
+            <span class="flex items-center gap-1.5 rounded-full bg-navy px-2.5 py-1 text-xs font-semibold text-white sm:px-3 sm:py-1.5 sm:text-sm">
               Coming soon
             </span>
           ) : null}
@@ -800,7 +800,7 @@ const tripSchema: Record<string, any> = {
                     {priceSummary.originalFromPrice != null && priceSummary.discountLabel && <span class="mb-1.5 block w-fit rounded-full bg-blush px-2.5 py-0.5 text-xs font-semibold text-coral-ink">{priceSummary.discountLabel}</span>}
                     {priceSummary.originalFromPrice != null && <span class="mr-2 text-sm line-through text-gray-text">₹{priceSummary.originalFromPrice.toLocaleString('en-IN')}</span>}
                     <span class="text-sm mr-1 text-gray-text">from</span>
-                    <span class="text-3xl font-bold font-display text-coral-ink">{formattedLead}</span>
+                    <span class="text-3xl font-bold font-sans tabular-nums text-coral-ink">{formattedLead}</span>
                     <span class="text-sm ml-1 text-gray-text">/ person</span>
                     {priceSummary.discountEndsAt && <DiscountCountdown endsAt={priceSummary.discountEndsAt} reloadOnExpire className="mt-1 block text-xs font-semibold" client:load />}
                   </div>

@@ -34,7 +34,7 @@ function TestimonialCard({ t, highlighted }: { t: Testimonial; highlighted: bool
       }`}
     >
       <StarRating rating={t.rating} />
-      <p className="italic leading-relaxed mb-4 text-sm" style={{ color: 'var(--color-gray-text)' }}>
+      <p className="leading-relaxed mb-4 text-sm" style={{ color: 'var(--color-gray-text)' }}>
         "{t.quote}"
       </p>
       <div className="flex items-center gap-3 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>

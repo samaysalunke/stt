@@ -161,7 +161,8 @@
   --text-display-xl--line-height: 1.05;
 
   /* ── Radii ─────────────────────────────────────────────────── */
-  --radius-card: 1.5rem;   /* the `rounded-3xl` used on every card shell today */
+  --radius-card: 1rem;     /* card shells */
+  --radius-button: 0.75rem; /* buttons and form controls; pills stay for chips and icon buttons */
   --radius-pill: 9999px;   /* the `rounded-full` used on every button today */
 
   /* ── Shadows ───────────────────────────────────────────────── */

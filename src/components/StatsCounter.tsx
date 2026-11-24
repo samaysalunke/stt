@@ -50,7 +50,7 @@ function StatItem({ value, label, suffix = '+', iconPath, shouldStart }: Stat & 
       )}
       <div
         className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2"
-        style={{ fontFamily: 'var(--font-display)', color: iconPath ? 'white' : 'var(--color-navy)' }}
+        style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: iconPath ? 'white' : 'var(--color-navy)' }}
       >
         {count.toLocaleString('en-IN')}{suffix}
       </div>

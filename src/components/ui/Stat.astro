@@ -1,7 +1,7 @@
 ---
 /**
  * A single figure + label tile (the "8–15 / Group Size", "10+ / Destinations"
- * pairs on the homepage and leaderboard). Display font on the value.
+ * pairs on the homepage and leaderboard). Sans, tabular figures on the value.
  */
 interface Props {
   value: string;
@@ -16,6 +16,6 @@ const labelColor = tone === 'dark' ? 'text-gray-text' : 'text-white/45';
 ---
 
 <div class:list={['text-center', className]} {...rest}>
-  <div class:list={['font-display text-2xl lg:text-3xl font-bold', valueColor]}>{value}</div>
+  <div class:list={['font-sans tabular-nums text-2xl lg:text-3xl font-bold', valueColor]}>{value}</div>
   <div class:list={['mt-0.5 text-xs uppercase tracking-wider', labelColor]}>{label}</div>
 </div>
