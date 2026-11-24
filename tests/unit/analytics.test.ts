@@ -11,7 +11,9 @@ import {
   getBookingGrowthWeek,
   indianFinancialYear,
   isDateInIndianFinancialYear,
+  summarizeRevenue,
 } from '../../src/lib/adminDashboard';
+import { NON_REVENUE_STATUSES } from '../../src/lib/registrationsView';
 import { getDb } from '../../src/lib/db';
 
 async function collectText(adapter: ReturnType<typeof createLLMAdapter>) {
@@ -49,6 +51,27 @@ describe('analytics safety and helpers', () => {
     expect(isDateInIndianFinancialYear('2026-04-01', 2026)).toBe(true);
     expect(isDateInIndianFinancialYear('2027-03-31', 2026)).toBe(true);
     expect(isDateInIndianFinancialYear('2027-04-01', 2026)).toBe(false);
+  });
+
+  it('reads the "Sept" abbreviation stored on older registrations', () => {
+    expect(departureDateKey('18 Sept 2026 \u2013 30 Sept 2026')).toBe('2026-09-18');
+    expect(departureDateKey('5 Sep 2026')).toBe('2026-09-05');
+    expect(departureDateKey('5 September 2026')).toBe('2026-09-05');
+  });
+
+  it('sums dashboard revenue with the registrations-page rule and counts trips by slug', () => {
+    const summary = summarizeRevenue([
+      { status: 'confirmed', amount_paid: 10000, trip_slug: 'ladakh', trip_name: 'Across the High Passes' },
+      { status: 'confirmed', amount_paid: 5000, trip_slug: 'ladakh-trip', trip_name: 'Across the High Passes' },
+      { status: 'confirmed', amount_paid: 7000, trip_slug: 'sahyadri', trip_name: 'Monsoon Sahayadri' },
+      { status: 'confirmed', amount_paid: 7000, trip_slug: 'sahyadri', trip_name: 'Mystic trails' },
+      { status: 'lead', amount_paid: 2000, trip_slug: 'sahyadri', trip_name: 'Mystic trails' },
+      { status: 'lead', amount_paid: 0, trip_slug: 'goa', trip_name: 'Goa' },
+      { status: 'wishlist', amount_paid: 900, trip_slug: 'bir', trip_name: 'Bir' },
+      { status: 'cancelled', amount_paid: 3000, trip_slug: 'bir', trip_name: 'Bir' },
+      { status: 'rejected', amount_paid: 1000, trip_slug: 'bir', trip_name: 'Bir' },
+    ], NON_REVENUE_STATUSES);
+    expect(summary).toEqual({ revenue: 31000, payingCount: 5, tripCount: 3 });
   });
 
   it('builds dashboard booking growth in India business time', () => {
