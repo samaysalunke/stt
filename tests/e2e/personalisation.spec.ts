@@ -95,13 +95,13 @@ test.describe('Signed-in home hero', () => {
     await signIn(context, user.token);
     await page.goto('/');
     await expect(page.getByTestId('hero-personal')).toHaveAttribute('data-variant', 'new');
-    await expect(page.getByRole('link', { name: /Join a Trip/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /See upcoming trips/ })).toBeVisible();
   });
 
   test('signed out, the hero is the shared one', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByTestId('hero-personal')).toHaveCount(0);
-    await expect(page.getByRole('link', { name: /Join a Trip/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /See upcoming trips/ })).toBeVisible();
   });
 });
 

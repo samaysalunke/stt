@@ -222,7 +222,7 @@ export default function BookingPanel({
             <span className="text-sm mr-2 line-through" style={{ color: C.gray }}>{formatINR(originalFromPrice)}</span>
           )}
           <span className="text-sm mr-1" style={{ color: C.gray }}>from</span>
-          <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>
+          <span className="text-3xl font-bold" style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: C.coralInk }}>
             {formatINR(fromPrice)}
           </span>
           <span className="text-sm ml-1" style={{ color: C.gray }}>/ person</span>
@@ -345,7 +345,7 @@ export default function BookingPanel({
                       ) : null}
                     </span>
                   </span>
-                  <span className="text-right text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>
+                  <span className="text-right text-sm font-semibold shrink-0" style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: C.coralInk }}>
                     {offer.originalPrice != null && <span className="block text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(offer.originalPrice)}</span>}
                     {formatINR(selectedDiscountActive ? offer.price : (offer.originalPrice ?? offer.price))}
                   </span>
@@ -361,14 +361,14 @@ export default function BookingPanel({
         <div className="mb-5 rounded-xl overflow-hidden border text-sm" style={{ borderColor: C.peach }}>
           <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <span style={{ color: C.gray }}>Per person</span>
-            <span className="font-semibold text-right" style={{ fontFamily: 'var(--font-display)', color: C.navy }}>
+            <span className="font-semibold text-right" style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: C.navy }}>
               {selectedDiscountActive && selectedOffer.originalPrice != null && <span className="mr-2 text-xs line-through font-normal" style={{ color: C.gray }}>{formatINR(selectedOffer.originalPrice)}</span>}
               {formatINR(perPerson)}
             </span>
           </div>
           <div className="flex items-center justify-between px-4 py-3" style={{ background: C.blush, borderBottom: `1px solid ${C.peach}` }}>
             <span className="font-semibold" style={{ color: C.coralInk }}>Advance now</span>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>{formatINR(advanceDue)}</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: C.coralInk }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="px-4 py-3" style={{ borderBottom: `1px solid ${C.peach}` }}>
             <div className="flex items-center justify-between">

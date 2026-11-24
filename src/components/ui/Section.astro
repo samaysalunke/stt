@@ -45,7 +45,7 @@ const hasHeader = Boolean(title || intro);
           align === 'center' ? 'mx-auto text-center' : '',
         ]}
       >
-        {title && <h2 class="text-display-md font-display">{title}</h2>}
+        {title && <h2 class="text-display-md font-display font-semibold">{title}</h2>}
         {intro && (
           <p class:list={['mt-3 leading-relaxed', tone === 'navy' ? 'text-white/75' : 'text-gray-text']}>
             {intro}

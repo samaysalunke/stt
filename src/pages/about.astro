@@ -55,7 +55,7 @@ const aboutSchema = {
         </svg>
       </a>
       <span class="text-[11px] uppercase tracking-[0.25em] text-gray-text">
-        by <span class="font-display italic normal-case tracking-normal text-coral-ink">{bylineName}</span>
+        by <span class="font-display normal-case tracking-normal text-coral-ink">{bylineName}</span>
       </span>
       <button id="about-share" aria-label="Share" class="grid h-9 w-9 place-items-center rounded-[var(--radius-pill)] text-navy transition-colors hover:bg-white/70">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@ const aboutSchema = {
 
     <!-- Pull quote -->
     <section class="mx-auto max-w-2xl px-8 pt-16 pb-6">
-      <blockquote class="font-display italic leading-snug text-display-xs text-navy">
+      <blockquote class="font-display leading-snug text-display-xs text-navy">
         &ldquo;{quote}&rdquo;
       </blockquote>
     </section>
@@ -93,7 +93,7 @@ const aboutSchema = {
         <div class="mt-10 space-y-9 text-center">
           {principles.map((p) => (
             <div>
-              <p class="font-display text-display-md italic text-coral">{p.n}.</p>
+              <p class="font-display text-display-md text-coral">{p.n}.</p>
               <p class="mt-2 font-display text-lg text-white">{p.t}</p>
               <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/65">{p.d}</p>
             </div>

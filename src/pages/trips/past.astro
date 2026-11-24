@@ -108,7 +108,7 @@ const listingSchema = {
                   />
                 </a>
                 {trip.ran && (
-                  <span class="pointer-events-none absolute left-3 top-3 rounded-[var(--radius-pill)] bg-black/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white backdrop-blur-[4px]">
+                  <span class="pointer-events-none absolute left-3 top-3 rounded-[var(--radius-pill)] bg-navy px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white">
                     Ran {trip.ran}
                   </span>
                 )}
@@ -127,7 +127,7 @@ const listingSchema = {
 
                 <a
                   href={`/trips/${trip.slug}/`}
-                  class="mt-auto inline-flex items-center justify-center rounded-[var(--radius-pill)] border border-navy/15 px-6 py-3 font-display text-base font-medium text-navy transition-colors hover:border-coral-ink hover:text-coral-ink"
+                  class="mt-auto inline-flex items-center justify-center rounded-[var(--radius-button)] border border-navy/15 px-6 py-3 font-sans text-base font-semibold text-navy transition-colors hover:border-coral-ink hover:text-coral-ink"
                 >
                   See the route
                 </a>

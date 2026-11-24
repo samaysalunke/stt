@@ -99,7 +99,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
           <img src="/logo-192.webp" alt="" />
           <div>
             <strong>Seek the Thrill</strong>
-            <span>Small groups. Offbeat India.</span>
+            <span>Small-group trips across India, hosted by Zahra Shakir.</span>
           </div>
         </a>
         <button id="menu-close" aria-label="Close menu" class="menu-close">
@@ -244,7 +244,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
 )}
 
 <style is:global>
-  #site-header { background: rgba(27,43,58,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); transition: transform 0.35s ease; }
+  #site-header { background: var(--color-navy); transition: transform 0.35s ease; }
   #site-header.is-hideable { transform: translateY(-100%); }
   #site-header.is-hideable.header-visible { transform: translateY(0); }
   .header-row { display: flex; align-items: center; justify-content: space-between; height: 64px; }
@@ -270,7 +270,7 @@ const owing = user && !logoOnly ? balanceDue(getUserTrips(Astro.locals)) : null;
   .menu-trigger-label { display: none; }
   .menu-trigger svg { width: 1.5rem; height: 1.5rem; }
   .menu-overlay { position: fixed; inset: 0; z-index: 60; }
-  .menu-backdrop { position: absolute; inset: 0; background: rgba(17,29,39,0.48); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); transition: opacity 300ms ease; }
+  .menu-backdrop { position: absolute; inset: 0; background: rgba(17,29,39,0.6); transition: opacity 300ms ease; }
   .menu-panel { position: absolute; inset: 0 0 0 auto; display: flex; flex-direction: column; width: min(92vw, 25rem); height: 100%; padding: 1.25rem; overflow-y: auto; background: var(--color-surface-soft); box-shadow: -20px 0 55px rgba(17,29,39,0.2); transition: transform 300ms cubic-bezier(.22,.8,.28,1), box-shadow 300ms ease; }
   /* Parked off-screen, the panel's shadow still reaches ~75px back into the
      viewport and greys the right edge of every page. Cast it only when open. */

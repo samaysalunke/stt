@@ -716,7 +716,7 @@ export default function BookingCheckout({
               <span className="text-sm font-semibold" style={{ color: C.coralInk }}>Advance now</span>
               <span className="text-xs block" style={{ color: C.gray }}>Pay today to confirm your spot</span>
             </div>
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', color: C.coralInk }}>{formatINR(advanceDue)}</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: C.coralInk }}>{formatINR(advanceDue)}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-3">
             <div>
